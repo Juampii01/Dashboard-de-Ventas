@@ -6,7 +6,7 @@ import { ESCALA_CALLER, ESCALA_CLOSER } from "@/lib/estrellas";
 
 // Selector de estrellas para formularios (envía el campo `name`). Obligatorio.
 // quien = caller (elige de 2 a 5; el 1 lo pone «No contesta») o closer (de 1 a 5).
-export function SelectorEstrellas({ quien, name = "estrellas" }: { quien: "caller" | "closer"; name?: string }) {
+export function SelectorEstrellas({ quien, name = "estrellas", opcional = false }: { quien: "caller" | "closer"; name?: string; opcional?: boolean }) {
   const escala = quien === "caller" ? ESCALA_CALLER : ESCALA_CLOSER;
   const min = quien === "caller" ? 2 : 1;
   const [valor, setValor] = useState(0);
@@ -15,7 +15,7 @@ export function SelectorEstrellas({ quien, name = "estrellas" }: { quien: "calle
   const visto = encima || valor;
   return (
     <fieldset>
-      <legend className="etiqueta-campo">{quien === "caller" ? "¿Cómo fue la llamada?" : "¿Qué tal prospecto era?"}</legend>
+      <legend className="etiqueta-campo">{quien === "caller" ? "¿Cómo fue la llamada?" : "¿Qué tal prospecto era?"}{opcional && " (opcional)"}</legend>
       <div className="flex items-center gap-1" onMouseLeave={() => setEncima(0)}>
         {[1, 2, 3, 4, 5].map((n) => {
           const posible = n >= min;
@@ -25,7 +25,7 @@ export function SelectorEstrellas({ quien, name = "estrellas" }: { quien: "calle
                 type="radio"
                 name={name}
                 value={n}
-                required
+                required={!opcional}
                 disabled={!posible}
                 checked={valor === n}
                 onChange={() => {

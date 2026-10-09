@@ -33,15 +33,15 @@ export function NuevoReporte({ rol, sugeridos }: { rol: "caller" | "closer"; sug
               <div className="flex gap-1.5">{[0, 1].map((i) => <span key={i} className={`h-1 flex-1 rounded-full ${i <= paso ? "bg-primario" : "bg-borde"}`} />)}</div>
               <div className={paso === 0 ? "space-y-4" : "hidden"}>
                 <div>
-                  <label className="etiqueta-campo">Día</label>
-                  <input type="date" name="fecha" defaultValue={hoy} max={hoy} className="campo" />
+                  <label className="etiqueta-campo" htmlFor="formulario-dia">Día</label>
+                  <input id="formulario-dia" type="date" name="fecha" defaultValue={hoy} max={hoy} className="campo" />
                 </div>
                 <p className="text-xs text-texto-3">Hemos rellenado los números con lo que registraste hoy en el panel. Corrígelos si hace falta.</p>
                 <div className="grid grid-cols-2 gap-3">
                   {numeros.map((p) => (
                     <div key={p.clave} className={p.destacada ? "col-span-2 rounded-lg border border-oro/40 bg-oro-suave p-3" : ""}>
-                      <label className="etiqueta-campo">{p.texto}</label>
-                      <input
+                      <label className="etiqueta-campo" htmlFor={`rep-${p.clave}`}>{p.texto}</label>
+                      <input id={`rep-${p.clave}`}
                         name={p.clave}
                         type="number"
                         min={0}
@@ -69,8 +69,8 @@ export function NuevoReporte({ rol, sugeridos }: { rol: "caller" | "closer"; sug
               <div className={paso === 1 ? "space-y-4" : "hidden"}>
                 {textos.map((p) => (
                   <div key={p.clave}>
-                    <label className="etiqueta-campo">{p.texto}</label>
-                    <textarea name={p.clave} rows={3} required className="campo" />
+                    <label className="etiqueta-campo" htmlFor={`rep-${p.clave}`}>{p.texto}</label>
+                    <textarea id={`rep-${p.clave}`} name={p.clave} rows={3} required className="campo" />
                     {p.ayuda && <p className="mt-1 text-xs text-texto-3">{p.ayuda}</p>}
                   </div>
                 ))}

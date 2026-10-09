@@ -49,20 +49,20 @@ export default async function OnboardingPage() {
           <h2 className="text-lg font-semibold">Conecta tus datos</h2>
           <p className="text-sm text-texto-2">Los usamos para avisarte por email y WhatsApp (por ejemplo, de los reportes).</p>
           <div>
-            <label className="etiqueta-campo">Nombre y apellido</label>
-            <input name="nombre" defaultValue={perfil.nombre} required className="campo" />
+            <label className="etiqueta-campo" htmlFor="onboarding-nombre-y-apellido">Nombre y apellido</label>
+            <input id="onboarding-nombre-y-apellido" name="nombre" defaultValue={perfil.nombre} required className="campo" />
           </div>
           <div>
-            <label className="etiqueta-campo">Email</label>
-            <input value={perfil.email} disabled className="campo opacity-70" />
+            <label className="etiqueta-campo" htmlFor="onboarding-email">Email</label>
+            <input id="onboarding-email" value={perfil.email} disabled className="campo opacity-70" />
           </div>
           <div>
-            <label className="etiqueta-campo">Teléfono</label>
-            <input name="telefono" defaultValue={perfil.telefono ?? ""} placeholder="+1 555 000 0000" className="campo" />
+            <label className="etiqueta-campo" htmlFor="onboarding-telefono">Teléfono</label>
+            <input id="onboarding-telefono" name="telefono" defaultValue={perfil.telefono ?? ""} placeholder="+1 555 000 0000" className="campo" />
           </div>
           <div>
-            <label className="etiqueta-campo">WhatsApp</label>
-            <input name="whatsapp" defaultValue={perfil.whatsapp ?? ""} placeholder="+34 600 000 000" className="campo" />
+            <label className="etiqueta-campo" htmlFor="onboarding-whatsapp">WhatsApp</label>
+            <input id="onboarding-whatsapp" name="whatsapp" defaultValue={perfil.whatsapp ?? ""} placeholder="+34 600 000 000" className="campo" />
           </div>
           <button className="btn-primario w-full">Empezar</button>
         </form>

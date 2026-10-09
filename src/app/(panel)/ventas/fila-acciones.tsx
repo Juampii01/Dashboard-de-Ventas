@@ -43,9 +43,9 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe 
             }}
           >
             <p className="text-sm text-texto-2">Cobrado hasta hoy: <b>{cobrado.toFixed(2)}</b>. La comisión que ya se pagó no se descuenta (la asume la empresa).</p>
-            <div><label className="etiqueta-campo">Importe devuelto</label><input name="importe" inputMode="decimal" required defaultValue={cobrado.toFixed(2)} className="campo" /></div>
-            <div><label className="etiqueta-campo">Fecha de la devolución</label><input name="fecha" type="date" className="campo" /></div>
-            <div><label className="etiqueta-campo">Motivo (opcional)</label><textarea name="nota" rows={2} className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">Importe devuelto</span><input name="importe" inputMode="decimal" required defaultValue={cobrado.toFixed(2)} className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Fecha de la devolución</span><input name="fecha" type="date" className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Motivo (opcional)</span><textarea name="nota" rows={2} className="campo" /></label>
             <button className="btn-primario w-full">Guardar devolución</button>
           </form>
         </Modal>
@@ -60,10 +60,10 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe 
             }}
           >
             <p className="text-sm text-texto-2">Queda pendiente: <b>{pendiente.toFixed(2)}</b></p>
-            <div><label className="etiqueta-campo">Importe cobrado</label><input name="importe" inputMode="decimal" required defaultValue={pendiente.toFixed(2)} className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">Importe cobrado</span><input name="importe" inputMode="decimal" required defaultValue={pendiente.toFixed(2)} className="campo" /></label>
             <div>
-              <label className="etiqueta-campo">Método</label>
-              <select name="metodo" className="campo"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></select>
+              <label className="etiqueta-campo" htmlFor="fila-acciones-metodo">Método</label>
+              <select id="fila-acciones-metodo" name="metodo" className="campo"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></select>
             </div>
             <button className="btn-primario w-full">Guardar cobro</button>
           </form>

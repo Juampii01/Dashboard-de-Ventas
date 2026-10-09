@@ -2,15 +2,26 @@ import "server-only";
 import { db, equipo } from "@/lib/datos";
 import type { Proyecto, Respuesta } from "@/lib/tipos";
 import type { LeadEntrada } from "@/lib/csv";
+import { enHorario, horarioValido } from "@/lib/horarios";
 
-// «+34 600-11-22-33» y «34600112233» son el mismo teléfono
-export const telefonoClave = (t: string | null) => (t ?? "").replace(/\D/g, "");
+// «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
+// se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
+export const telefonoClave = (t: string | null) => {
+  const d = (t ?? "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : d;
+};
 const telefonoValido = (t: string | null) => telefonoClave(t).length >= 6;
 export { filaALead, type LeadEntrada } from "@/lib/csv";
 
 // Reparte n leads entre los callers activos (turno rotativo) y avanza el turno.
-export async function turnosRotativos(proyecto: Proyecto, n: number): Promise<(string | null)[]> {
-  const callers = (await equipo(proyecto.id)).filter((p) => p.rol === "caller");
+// Por horarios (V2-11): solo entran los callers que están en su turno; si no hay nadie, todos.
+export async function turnosRotativos(proyecto: Proyecto, n: number, ahora = new Date()): Promise<(string | null)[]> {
+  let callers = (await equipo(proyecto.id)).filter((p) => p.rol === "caller");
+  if (proyecto.modo_reparto === "horarios" && callers.length) {
+    const { data: hs } = await db().from("miembros_proyecto").select("perfil_id, horario").eq("proyecto_id", proyecto.id).in("perfil_id", callers.map((c) => c.id));
+    const enTurno = callers.filter((c) => enHorario(horarioValido(hs?.find((h) => h.perfil_id === c.id)?.horario), ahora, proyecto.zona_horaria));
+    if (enTurno.length) callers = enTurno;
+  }
   if (!callers.length || n === 0) return Array(n).fill(null);
   const { data } = await db().from("proyectos").select("rotacion_indice").eq("id", proyecto.id).single();
   const inicio = data?.rotacion_indice ?? 0;
@@ -82,7 +93,7 @@ export async function guardarLeads(
     else nuevos.push(e);
   }
 
-  const turnos = opciones.repartir && proyecto.modo_reparto === "rotativo" ? await turnosRotativos(proyecto, nuevos.length) : [];
+  const turnos = opciones.repartir && (proyecto.modo_reparto === "rotativo" || proyecto.modo_reparto === "horarios") ? await turnosRotativos(proyecto, nuevos.length) : [];
 
   let insertados = 0;
   for (let i = 0; i < nuevos.length; i += 500) {

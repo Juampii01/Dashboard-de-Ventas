@@ -17,22 +17,22 @@ export function NuevoRecurso() {
       {abierto && (
         <Modal titulo="Nuevo recurso" onCerrar={() => setAbierto(false)} ancho="max-w-lg">
           <form onSubmit={sinVaciar(accion)} className="space-y-3">
-            <div><label className="etiqueta-campo">Título</label><input name="titulo" required className="campo" placeholder="Ej: Guion de apertura" /></div>
+            <label className="block"><span className="etiqueta-campo">Título</span><input name="titulo" required className="campo" placeholder="Ej: Guion de apertura" /></label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="etiqueta-campo">Tipo</label>
-                <select name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo">
+                <label className="etiqueta-campo" htmlFor="cliente-tipo">Tipo</label>
+                <select id="cliente-tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo">
                   <option value="pdf">PDF</option><option value="enlace">Enlace</option><option value="guion">Guion</option><option value="video">Vídeo</option>
                 </select>
               </div>
               <div>
-                <label className="etiqueta-campo">Para</label>
-                <select name="para_rol" className="campo"><option value="todos">Todo el equipo</option><option value="caller">Solo callers</option><option value="closer">Solo closers</option></select>
+                <label className="etiqueta-campo" htmlFor="cliente-para">Para</label>
+                <select id="cliente-para" name="para_rol" className="campo"><option value="todos">Todo el equipo</option><option value="caller">Solo callers</option><option value="closer">Solo closers</option></select>
               </div>
             </div>
-            {tipo === "pdf" && <div><label className="etiqueta-campo">Archivo PDF (máx. 15 MB)</label><input type="file" name="archivo" accept="application/pdf" required className="campo" /></div>}
-            {(tipo === "enlace" || tipo === "video") && <div><label className="etiqueta-campo">{tipo === "video" ? "Enlace del vídeo (YouTube, Loom, Drive…)" : "Enlace"}</label><input name="url" type="url" required className="campo" placeholder="https://" /></div>}
-            {tipo === "guion" && <div><label className="etiqueta-campo">Guion</label><textarea name="contenido" rows={10} required className="campo font-mono text-xs" /></div>}
+            {tipo === "pdf" && <label className="block"><span className="etiqueta-campo">Archivo PDF (máx. 15 MB)</span><input type="file" name="archivo" accept="application/pdf" required className="campo" /></label>}
+            {(tipo === "enlace" || tipo === "video") && <label className="block"><span className="etiqueta-campo">{tipo === "video" ? "Enlace del vídeo (YouTube, Loom, Drive…)" : "Enlace"}</span><input name="url" type="url" required className="campo" placeholder="https://" /></label>}
+            {tipo === "guion" && <label className="block"><span className="etiqueta-campo">Guion</span><textarea name="contenido" rows={10} required className="campo font-mono text-xs" /></label>}
             {estado?.error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{estado.error}</p>}
             {estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
             <button className="btn-primario w-full" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</button>

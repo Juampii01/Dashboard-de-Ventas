@@ -8,7 +8,6 @@ export { getSesion, COOKIE_PROYECTO, type Sesion } from "@/lib/sesion";
 // ---------- Permisos ----------
 export const esJefe = (p: Perfil) => p.rol === "ceo" || p.rol === "director";
 export const puedeAdmin = (p: Perfil) => p.rol === "ceo" || (p.rol === "director" && p.admin_activo);
-export const puedeProductos = (p: Perfil) => p.rol === "ceo";
 export const puedeCrearProyectos = (p: Perfil) => p.rol === "ceo";
 export const puedeRecursos = (p: Perfil) => esJefe(p);
 

@@ -5,6 +5,7 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { db, todas, equipo } from "@/lib/datos";
 import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs } from "@/lib/formato";
 import { nivel } from "@/lib/prioridad";
+import type { Pesos } from "@/lib/cualificacion";
 import { colaCaller } from "@/lib/cola";
 import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio, Avatar } from "@/components/ui";
 import { AccionesLead } from "@/components/acciones-lead";
@@ -38,20 +39,22 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
   }
 
   const hoy = rangoDe("hoy", proyecto.zona_horaria);
-  const [leads, actsHoy, citasHoy, ventasHoy, productos] = await Promise.all([
+  const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring] = await Promise.all([
     todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).range(a, b)),
     db().from("actividades").select("tipo, resultado").eq("perfil_id", caller.id).eq("proyecto_id", proyecto.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("citas").select("id", { count: "exact", head: true }).eq("agendada_por", caller.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("ventas").select("id", { count: "exact", head: true }).eq("vendedor_id", caller.id).gte("fecha", hoy.desde!.toISOString()),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
+    db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
   ]);
+  const pesos = (scoring.data?.pesos ?? null) as Pesos | null; // priorización con IA (V2-11)
   const acts = actsHoy.data ?? [];
   const llamadas = acts.filter((a) => a.tipo === "llamada").length;
   const noContesta = acts.filter((a) => a.tipo === "llamada" && a.resultado === "no_contesta").length;
   const whatsapps = acts.filter((a) => a.tipo === "whatsapp").length;
 
   const ahora = ahoraMs();
-  const filtrados = colaCaller(leads, pestana, ahora);
+  const filtrados = colaCaller(leads, pestana, ahora, pesos);
   const vencidos = leads.filter((l) => l.estado_caller === "llamar_luego" && l.llamar_en && new Date(l.llamar_en).getTime() <= ahora);
   const seleccionado = filtrados.find((l) => l.id === sp.lead) ?? filtrados[0] ?? null;
   const base = (extra: Record<string, string>) => {
@@ -145,7 +148,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                     <p className="mt-1 text-xs text-texto-3">Entró el {fechaHora(seleccionado.creado_en, proyecto)} · {seleccionado.etiquetas.join(", ")}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Insignia tono={nivel(seleccionado.puntos).tono}>{nivel(seleccionado.puntos).texto} · {seleccionado.puntos} pts</Insignia>
+                    <Insignia tono={nivel(seleccionado.puntos).tono}>{nivel(seleccionado.puntos).texto} · {seleccionado.puntos} pts{pesos ? " · IA" : ""}</Insignia>
                     <Link href={`/leads/${seleccionado.id}`} className="text-xs text-primario hover:underline">Ver ficha completa →</Link>
                   </div>
                 </div>

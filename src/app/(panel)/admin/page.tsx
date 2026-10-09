@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSesion, puedeAdmin, puedeCrearProyectos, puedeProductos } from "@/lib/auth";
+import { getSesion, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { db } from "@/lib/datos";
 import { dinero, fechaHora, ETIQUETA_ROL } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Avatar } from "@/components/ui";
-import { Plantilla, AnadirExistente, FormUsuario, FilaMiembro, FormProyecto, FormNuevoProyecto, FormProducto, OrdenReparto, Secreto } from "./cliente";
+import { Plantilla, AnadirExistente, FormUsuario, FilaMiembro, FormProyecto, FormNuevoProyecto, OrdenReparto, Secreto } from "./cliente";
 import type { Perfil, Producto } from "@/lib/tipos";
 import { PLANTILLAS_GHL, CABECERA_SECRETO } from "@/lib/plantillas-ghl";
 import { NuevaEntrada, EditorEntrada } from "./entradas";
+import { ConexionGhl, CalendarioCloser, UsuarioGhl } from "./ghl";
 import { reglasValidas } from "@/lib/entrada";
+import { SECCIONES } from "@/lib/permisos";
+import { TablaPermisos } from "./permisos";
+import { EditorHorario } from "./horarios";
+import { horarioValido } from "@/lib/horarios";
 
 const PESTANAS = [
   { v: "equipo", t: "Equipo" },
@@ -17,6 +22,7 @@ const PESTANAS = [
   { v: "productos", t: "Productos" },
   { v: "entradas", t: "Entradas (landings)" },
   { v: "integraciones", t: "Integraciones GHL" },
+  { v: "permisos", t: "Permisos", soloCeo: true },
 ];
 
 type EventoEntrada = { id: string; entrada_id: string; lead_id: string | null; procesado: boolean; error: string | null; recibido_en: string; payload: Record<string, unknown> };
@@ -38,13 +44,20 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (!puedeAdmin(perfil)) redirect("/");
   const sp = await searchParams;
   const tab = typeof sp.tab === "string" ? sp.tab : "equipo";
+  // Permisos por sección: solo el CEO (V2-8)
+  let permitidos: string[] = [];
+  if (tab === "permisos" && perfil.rol === "ceo") {
+    const { data } = await db().from("permisos_seccion").select("rol, seccion").eq("proyecto_id", proyecto.id).eq("permitido", true);
+    permitidos = (data ?? []).map((x) => `${x.rol}:${x.seccion}`);
+  }
 
   const [{ data: miembros }, { data: productos }, { data: eventos }] = await Promise.all([
-    db().from("miembros_proyecto").select("orden, perfiles(*)").eq("proyecto_id", proyecto.id).order("orden"),
+    db().from("miembros_proyecto").select("orden, horario, perfiles(*)").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("webhook_eventos").select("id, tipo, procesado, error, recibido_en").eq("proyecto_id", proyecto.id).order("recibido_en", { ascending: false }).limit(15),
   ]);
   const gente = ((miembros ?? []) as unknown as { orden: number; perfiles: Perfil }[]).map((m) => m.perfiles);
+  const horarioDe = new Map(((miembros ?? []) as unknown as { horario: unknown; perfiles: Perfil }[]).map((m) => [m.perfiles.id, horarioValido(m.horario)]));
   // Personas de otros proyectos que se pueden añadir a este (solo el CEO)
   let deFuera: { id: string; nombre: string; rol: string }[] = [];
   if (perfil.rol === "ceo") {
@@ -54,6 +67,24 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const h = await headers();
   const origen = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const urlWebhook = `${origen}/api/webhooks/ghl/${proyecto.id}`;
+
+  // GHL por API (calendarios): el token no sale del servidor, solo si existe o no
+  let ghl: { location: string; tieneToken: boolean; sincronizado: string | null; resultado: string | null; closers: { id: string; nombre: string; cal: string; user: string }[]; otros: { id: string; nombre: string; rol: string; user: string }[] } | null = null;
+  if (tab === "integraciones") {
+    const [{ data: pg }, { data: mc }, { data: mo }] = await Promise.all([
+      db().from("proyectos").select("ghl_location_id, ghl_token, ghl_sincronizado_en, ghl_ultimo_resultado").eq("id", proyecto.id).single(),
+      db().from("miembros_proyecto").select("perfil_id, ghl_calendar_id, ghl_user_id, perfiles!inner(nombre, rol)").eq("proyecto_id", proyecto.id).eq("perfiles.rol", "closer"),
+      db().from("miembros_proyecto").select("perfil_id, ghl_user_id, perfiles!inner(nombre, rol, activo)").eq("proyecto_id", proyecto.id).in("perfiles.rol", ["caller", "director"]),
+    ]);
+    ghl = {
+      location: pg?.ghl_location_id ?? "",
+      tieneToken: !!pg?.ghl_token,
+      sincronizado: pg?.ghl_sincronizado_en ?? null,
+      resultado: pg?.ghl_ultimo_resultado ?? null,
+      otros: ((mo ?? []) as unknown as { perfil_id: string; ghl_user_id: string | null; perfiles: { nombre: string; rol: string; activo: boolean } }[]).filter((m) => m.perfiles.activo).map((m) => ({ id: m.perfil_id, nombre: m.perfiles.nombre, rol: m.perfiles.rol, user: m.ghl_user_id ?? "" })),
+      closers: ((mc ?? []) as unknown as { perfil_id: string; ghl_calendar_id: string | null; ghl_user_id: string | null; perfiles: { nombre: string } }[]).map((m) => ({ id: m.perfil_id, nombre: m.perfiles.nombre, cal: m.ghl_calendar_id ?? "", user: m.ghl_user_id ?? "" })),
+    };
+  }
 
   // Entradas: solo se cargan en su pestaña
   let entradas: { id: string; nombre: string; token: string; activa: boolean; pipeline_id: string | null; etapa_id: string | null; reglas: unknown }[] = [];
@@ -77,7 +108,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       <Cabecera titulo="Administración" subtitulo={`${proyecto.nombre} · ${perfil.rol === "ceo" ? "acceso total" : "acceso de director"}`} />
       <Contenido>
         <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
-          {PESTANAS.map((p) => (
+          {PESTANAS.filter((p) => !("soloCeo" in p) || perfil.rol === "ceo").map((p) => (
             <Link key={p.v} href={`/admin?tab=${p.v}`} className={`rounded-lg px-3 py-1.5 text-sm ${tab === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>{p.t}</Link>
           ))}
         </div>
@@ -124,6 +155,12 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
             <Seccion titulo="Orden del reparto rotativo (callers)">
               <OrdenReparto callers={gente.filter((g) => g.rol === "caller" && g.activo).map((g) => ({ id: g.id, nombre: g.nombre }))} />
             </Seccion>
+            <Seccion titulo={`Horarios de los callers (hora de ${proyecto.zona_horaria})`}>
+              <p className="mb-3 text-xs text-texto-3">Solo se usan con el reparto «Por horarios». Un turno que pasa de medianoche (22:00 a 02:00) cuenta para el día en que empieza.</p>
+              <div className="space-y-2">
+                {gente.filter((g) => g.rol === "caller" && g.activo).map((g) => <EditorHorario key={g.id} perfilId={g.id} nombre={g.nombre} horario={horarioDe.get(g.id) ?? null} />)}
+              </div>
+            </Seccion>
             {puedeCrearProyectos(perfil) && (
               <Seccion titulo={`Proyectos (${proyectos.length})`}>
                 <ul className="mb-4 space-y-1 text-sm">
@@ -137,22 +174,23 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           </div>
         )}
 
+        {tab === "permisos" && perfil.rol === "ceo" && (
+          <Seccion titulo="Quién ve las secciones de «Empresa»">
+            <p className="mb-4 text-sm text-texto-2">Por defecto solo las ves tú. Abre una sección a un rol y la ven <b>todas</b> las personas de ese rol en este proyecto (todos los directores iguales). Lo demás (Agendas, CRM, Ventas…) sigue igual que siempre, según el rol.</p>
+            <TablaPermisos secciones={SECCIONES.map((x) => ({ v: x.v, t: x.t, d: x.d }))} permitidos={permitidos} />
+            <p className="mt-3 text-xs text-texto-3">Ojo: quien tenga Finanzas ve todo el dinero del negocio, y quien tenga Equipo puede dar de alta personas y cambiar comisiones.</p>
+          </Seccion>
+        )}
+
         {tab === "productos" && (
           <Seccion titulo="Productos y precios">
-            {!puedeProductos(perfil) && <p className="mb-3 rounded-lg bg-aviso-suave px-3 py-2 text-sm text-aviso">Solo el CEO puede crear o editar productos y precios.</p>}
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {((productos ?? []) as Producto[]).map((p) =>
-                puedeProductos(perfil) ? (
-                  <FormProducto key={p.id} producto={p} />
-                ) : (
-                  <div key={p.id} className="rounded-lg border border-borde bg-panel-2 p-3">
-                    <div className="font-medium">{p.nombre}</div>
-                    <div className="text-sm text-oro">{p.precio !== null ? dinero(Number(p.precio), proyecto) : "Personalizado"}</div>
-                  </div>
-                )
-              )}
-              {puedeProductos(perfil) && <FormProducto />}
-            </div>
+            <p className="text-sm text-texto-2">Desde la v2, los productos se crean y se editan en <b>Empresa → Programas</b> (precio, forma de pago, back-end y comisiones).</p>
+            <Link href="/programas" className="btn-primario mt-3 inline-flex">Ir a Programas</Link>
+            <ul className="mt-4 space-y-1 text-sm">
+              {((productos ?? []) as Producto[]).map((p) => (
+                <li key={p.id} className="flex justify-between rounded-lg bg-panel-2 px-3 py-1.5"><span>{p.nombre}{!p.activo && <span className="text-texto-3"> · inactivo</span>}</span><span className="tabular-nums text-oro">{p.precio !== null ? dinero(Number(p.precio), proyecto) : "Personalizado"}</span></li>
+              ))}
+            </ul>
           </Seccion>
         )}
 
@@ -207,6 +245,25 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
 
         {tab === "integraciones" && (
           <div className="grid gap-5 xl:grid-cols-2">
+            {ghl && (
+              <Seccion titulo="Calendario de GHL de cada closer (por API)" className="xl:col-span-2">
+                <p className="mb-3 text-sm text-texto-2">La app pregunta a GHL por las citas de cada closer (desde hace 30 días hasta dentro de 60) al pulsar «Sincronizar GHL» en Agendas y, sola, al abrir Agendas si han pasado más de 10 minutos. Funciona también en local.</p>
+                <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
+                  <ConexionGhl locationId={ghl.location} tieneToken={ghl.tieneToken} />
+                  <div className="space-y-2">
+                    {ghl.closers.length === 0 ? <p className="text-sm text-texto-3">No hay closers en este proyecto.</p> : ghl.closers.map((c) => <CalendarioCloser key={c.id} perfilId={c.id} nombre={c.nombre} calendarId={c.cal} userId={c.user} />)}
+                    <p className="text-xs text-texto-3">Basta con uno de los dos: el id del calendario del closer o su id de usuario en GHL.</p>
+                    {ghl.sincronizado && <p className="text-xs text-texto-2">Última sincronización: {fechaHora(ghl.sincronizado, proyecto)} · {ghl.resultado}</p>}
+                  </div>
+                </div>
+              </Seccion>
+            )}
+            {ghl && (
+              <Seccion titulo="Llamadas de GHL: quién es quién" className="xl:col-span-2">
+                <p className="mb-3 text-sm text-texto-2">«Llamadas de GHL» trae todas las llamadas contestadas de más de 1 minuto. Para saber quién hizo cada una, pon aquí el <b>id de usuario de GHL</b> de cada caller (los closers ya lo tienen arriba si usan usuario). El token necesita además el permiso <code>conversations/message.readonly</code>.</p>
+                <div className="space-y-2">{ghl.otros.length === 0 ? <p className="text-sm text-texto-3">No hay callers ni directores.</p> : ghl.otros.map((x) => <UsuarioGhl key={x.id} perfilId={x.id} nombre={x.nombre} rol={ETIQUETA_ROL[x.rol]} userId={x.user} />)}</div>
+              </Seccion>
+            )}
             <Seccion titulo="Webhook de entrada (GHL → Eternity)">
               <p className="text-sm text-texto-2">
                 En cada workflow de GHL añade la acción <b>Custom Webhook</b>, con <b>Event = CUSTOM</b>, <b>Method = POST</b> y <b>Content-Type = application/json</b>. Paso a paso en <code className="rounded bg-panel-2 px-1">GUIA-GHL.md</code>.

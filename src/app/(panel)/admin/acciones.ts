@@ -2,9 +2,11 @@
 
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
-import { exigir, puedeAdmin, puedeCrearProyectos, puedeProductos } from "@/lib/auth";
+import { exigir, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { db } from "@/lib/datos";
 import { reglasValidas } from "@/lib/entrada";
+import { SECCIONES } from "@/lib/permisos";
+import { horarioValido } from "@/lib/horarios";
 import type { Rol } from "@/lib/tipos";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
@@ -89,7 +91,7 @@ export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
     const { proyecto } = await exigir(puedeAdmin);
     const modo = texto(fd, "modo_reparto");
     const aviso = texto(fd, "aviso_webhook_url");
-    if (!["manual", "rotativo"].includes(modo)) return { error: "Modo de reparto no válido." };
+    if (!["manual", "rotativo", "horarios"].includes(modo)) return { error: "Modo de reparto no válido." };
     if (aviso) {
       try {
         if (new URL(aviso).protocol !== "https:") return { error: "El webhook de avisos tiene que empezar por https://" };
@@ -135,29 +137,6 @@ export async function regenerarSecreto() {
     await db().from("proyectos").update({ webhook_secreto: nuevo }).eq("id", proyecto.id);
     refrescar();
   });
-}
-
-// ---------- Productos (solo CEO) ----------
-export async function guardarProducto(_prev: Res, fd: FormData): Promise<Res> {
-  try {
-    const { proyecto } = await exigir(puedeProductos);
-    const id = texto(fd, "id");
-    const nombre = texto(fd, "nombre");
-    const precioTxt = texto(fd, "precio").replace(",", ".");
-    const precio = precioTxt === "" ? null : Number(precioTxt);
-    if (!nombre) return { error: "Pon un nombre." };
-    if (precio !== null && !(precio >= 0)) return { error: "Precio no válido." };
-    const fila = { nombre, precio, vende_caller: fd.get("vende_caller") === "on", activo: fd.get("activo") === "on" };
-    if (id) await db().from("productos").update(fila).eq("id", id).eq("proyecto_id", proyecto.id);
-    else {
-      const { count } = await db().from("productos").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-      await db().from("productos").insert({ ...fila, proyecto_id: proyecto.id, orden: count ?? 0 });
-    }
-    refrescar();
-    return { ok: "Producto guardado." };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
 }
 
 // ---------- Personas en varios proyectos ----------
@@ -248,6 +227,86 @@ export async function borrarEntrada(id: string) {
     await entradaDelProyecto(id, proyecto.id);
     // Los envíos ya recibidos y sus leads se quedan; solo se borra la dirección
     await db().from("entradas").delete().eq("id", id);
+    refrescar();
+  });
+}
+
+// ---------- GHL por API: calendarios de los closers (V2-3) ----------
+// El token solo se escribe; la pantalla nunca lo vuelve a enseñar entero.
+export async function guardarConexionGhl(token: string, locationId: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const t = token.trim();
+    const loc = locationId.trim();
+    if (!loc) throw new ErrorUsuario("Pon el id de la subcuenta (Location ID) de GHL.");
+    if (t && t.length < 20) throw new ErrorUsuario("Ese token parece incompleto.");
+    await db().from("proyectos").update({ ghl_location_id: loc, ...(t ? { ghl_token: t } : {}) }).eq("id", proyecto.id);
+    refrescar();
+  });
+}
+
+export async function guardarCalendarioCloser(perfilId: string, calendarId: string, userId: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const { data } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).eq("perfiles.rol", "closer").maybeSingle();
+    if (!data) throw new ErrorUsuario("Esa persona no es closer de este proyecto.");
+    await db().from("miembros_proyecto").update({ ghl_calendar_id: calendarId.trim() || null, ghl_user_id: userId.trim() || null }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId);
+    refrescar();
+  });
+}
+
+export async function probarConexionGhl() {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const { data: p } = await db().from("proyectos").select("ghl_token, ghl_location_id").eq("id", proyecto.id).single();
+    if (!p?.ghl_token || !p.ghl_location_id) throw new ErrorUsuario("Primero guarda el token y el id de la subcuenta.");
+    const { data: m } = await db().from("miembros_proyecto").select("ghl_calendar_id, ghl_user_id").eq("proyecto_id", proyecto.id).or("ghl_calendar_id.not.is.null,ghl_user_id.not.is.null").limit(1).maybeSingle();
+    if (!m) throw new ErrorUsuario("Pon el calendario de GHL de al menos un closer para poder probar.");
+    const { eventosGhl } = await import("@/lib/ghl");
+    try {
+      const ev = await eventosGhl({ token: p.ghl_token, locationId: p.ghl_location_id, calendarId: m.ghl_calendar_id, userId: m.ghl_user_id, desde: new Date(Date.now() - 7 * 86_400_000), hasta: new Date(Date.now() + 30 * 86_400_000) });
+      return { ok: `Conexión correcta: ${ev.length} citas encontradas en el calendario (últimos 7 días y próximos 30).` };
+    } catch (e) {
+      throw new ErrorUsuario(e instanceof Error ? e.message : "No se pudo conectar con GHL.");
+    }
+  });
+}
+
+// ---------- Permisos por sección (V2-8) ----------
+// Solo el CEO abre o cierra una sección a un rol entero (todos los directores iguales, decisión de Cristian)
+export async function guardarPermisoSeccion(rol: "director" | "closer" | "caller", seccion: string, permitido: boolean) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigir(puedeAdmin);
+    if (perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO cambia los permisos.");
+    if (!["director", "closer", "caller"].includes(rol)) throw new ErrorUsuario("Rol no válido.");
+    if (!SECCIONES.some((s) => s.v === seccion)) throw new ErrorUsuario("Sección no válida.");
+    const { error } = await db().from("permisos_seccion").upsert({ proyecto_id: proyecto.id, rol, seccion, permitido: !!permitido });
+    if (error) throw new ErrorUsuario(error.message);
+    refrescar();
+  });
+}
+
+// ---------- Horario de cada caller (reparto por horarios, V2-11) ----------
+export async function guardarHorario(perfilId: string, horario: { dias: number[]; desde: string; hasta: string } | null) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const h = horario ? horarioValido(horario) : null;
+    if (horario && !h) throw new ErrorUsuario("Elige al menos un día y una hora de inicio y de fin distintas (HH:MM).");
+    const { data, error } = await db().from("miembros_proyecto").update({ horario: h }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).select("perfil_id");
+    if (error) throw new ErrorUsuario(error.message);
+    if (!data?.length) throw new ErrorUsuario("Esa persona no está en este proyecto.");
+    refrescar();
+  });
+}
+
+// Usuario de GHL de cada persona (para saber quién hizo cada llamada de GHL, V2-11)
+export async function guardarUsuarioGhl(perfilId: string, userId: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const u = userId.trim();
+    if (u && !/^[A-Za-z0-9_-]{6,64}$/.test(u)) throw new ErrorUsuario("El id de usuario de GHL no parece válido.");
+    const { data } = await db().from("miembros_proyecto").update({ ghl_user_id: u || null }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).select("perfil_id");
+    if (!data?.length) throw new ErrorUsuario("Esa persona no está en este proyecto.");
     refrescar();
   });
 }

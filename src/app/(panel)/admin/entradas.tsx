@@ -44,9 +44,9 @@ export function NuevaEntrada({ pipelines }: { pipelines: Pipe[] }) {
   const [destino, setDestino] = useState<{ p: string | null; e: string | null }>({ p: pipelines[0]?.id ?? null, e: null });
   return (
     <form onSubmit={sinVaciar(accion)} className="space-y-3">
-      <div><label className="etiqueta-campo">Nombre (el de la landing)</label><input name="nombre" required className="campo" placeholder="Ej. Opt-in masterclass" /></div>
+      <label className="block"><span className="etiqueta-campo">Nombre (el de la landing)</span><input name="nombre" required className="campo" placeholder="Ej. Opt-in masterclass" /></label>
       <div>
-        <label className="etiqueta-campo">Pipeline y columna por defecto</label>
+        <span className="etiqueta-campo">Pipeline y columna por defecto</span>
         <SelectorDestino pipelines={pipelines} pipeline={destino.p} etapa={destino.e} onCambio={(p, e) => setDestino({ p, e })} />
         <input type="hidden" name="pipeline_id" value={destino.p ?? ""} />
         <input type="hidden" name="etapa_id" value={destino.e ?? ""} />
@@ -82,7 +82,7 @@ export function EditorEntrada({ entrada, pipelines }: { entrada: EntradaVista; p
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div><label className="etiqueta-campo">Nombre</label><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+        <label className="block"><span className="etiqueta-campo">Nombre</span><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
         <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" checked={activa} onChange={(e) => setActiva(e.target.checked)} /> Activa</label>
       </div>
 

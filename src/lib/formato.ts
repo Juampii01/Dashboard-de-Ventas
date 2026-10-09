@@ -134,6 +134,7 @@ export const ETIQUETA_ESTADO_CALLER: Record<string, string> = {
 
 export const ETIQUETA_ESTADO_CITA: Record<string, string> = {
   pendiente: "Pendiente",
+  confirmacion_pendiente: "Confirmación pendiente",
   confirmada: "Confirmada",
   no_califica: "No califica",
   cerrada: "Cerrada",

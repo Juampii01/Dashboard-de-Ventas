@@ -101,14 +101,12 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
         const { data: c } = await db().from("perfiles").select("id").eq("email", closerEmail).eq("rol", "closer").maybeSingle();
         closerId = c?.id ?? null;
       }
-      await db().from("citas").insert({
-        proyecto_id: proyecto.id,
-        lead_id: lead.id,
-        closer_id: closerId,
-        fecha: fecha.toISOString(),
-        origen: "ghl",
-        ghl_cita_id: primero(body, ["calendar.appointmentId", "appointment.id", "appointment_id"]) || null,
-      });
+      // Si GHL reenvía la misma cita, se actualiza la que ya existe (no se duplica)
+      const ghlCitaId = primero(body, ["calendar.appointmentId", "appointment.id", "appointment_id"]) || null;
+      const { data: yaExiste } = ghlCitaId ? await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ghlCitaId).maybeSingle() : { data: null };
+      if (yaExiste) await db().from("citas").update({ fecha: fecha.toISOString(), ...(closerId ? { closer_id: closerId } : {}) }).eq("id", yaExiste.id);
+      else
+        await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId });
       await db().from("leads").update({ estado_caller: "agendado", ...(closerId ? { closer_id: closerId } : {}) }).eq("id", lead.id);
       await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cita", resultado: "agendada", nota: "Cita agendada en el calendario de GHL" });
     } else if (tipo === "cambio_etapa") {

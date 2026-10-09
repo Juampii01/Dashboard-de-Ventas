@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, PhoneCall, Check } from "lucide-react";
 import { agendarCita, anadirNota, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
 import { Modal } from "@/components/modal";
+import { CoachIa } from "@/components/coach";
 import { SelectorEstrellas } from "@/components/estrellas";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
@@ -91,6 +92,7 @@ export function AccionesLead({
         <button className={boton} disabled={pendiente} onClick={() => ejecutar(() => registrarLlamada(leadId, "no_contesta", ""), "Guardado: no contesta")}>
           <PhoneOff className="h-4 w-4 text-texto-3" /> No contesta
         </button>
+        <CoachIa leadId={leadId} className={boton} />
         <button className={boton} disabled={pendiente} onClick={() => setModal("luego")}>
           <Clock className="h-4 w-4 text-aviso" /> Llamar luego
         </button>
@@ -120,8 +122,8 @@ export function AccionesLead({
               setModal(null);
             }}
           >
-            <div><label className="etiqueta-campo">¿Cuándo?</label><input type="datetime-local" name="cuando" required className="campo" /></div>
-            <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={3} className="campo" placeholder="Lo que te dijo, tal cual" /></div>
+            <label className="block"><span className="etiqueta-campo">¿Cuándo?</span><input type="datetime-local" name="cuando" required className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={3} className="campo" placeholder="Lo que te dijo, tal cual" /></label>
             <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Guardar</button>
           </form>
@@ -137,7 +139,7 @@ export function AccionesLead({
             }}
           >
             <SelectorEstrellas quien="caller" />
-            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" placeholder="Por qué no le interesa" /></div>
+            <label className="block"><span className="etiqueta-campo">Nota (opcional)</span><textarea name="nota" rows={2} className="campo" placeholder="Por qué no le interesa" /></label>
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
@@ -147,19 +149,19 @@ export function AccionesLead({
           <form
             className="space-y-3"
             action={(fd) => {
-              ejecutar(() => agendarCita(leadId, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? ""), Number(fd.get("estrellas"))), "Cita agendada");
+              ejecutar(() => agendarCita(leadId, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? ""), fd.get("estrellas") ? Number(fd.get("estrellas")) : undefined), "Cita agendada");
               setModal(null);
             }}
           >
             <div>
-              <label className="etiqueta-campo">Closer</label>
-              <select name="closer" required className="campo">
+              <label className="etiqueta-campo" htmlFor="acciones-lead-closer">Closer</label>
+              <select id="acciones-lead-closer" name="closer" required className="campo">
                 {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </div>
-            <div><label className="etiqueta-campo">Fecha y hora (hora del proyecto)</label><input type="datetime-local" name="fecha" required className="campo" /></div>
-            <div><label className="etiqueta-campo">Nota para el closer</label><textarea name="nota" rows={3} className="campo" placeholder="Situación, dolor, cifra…" /></div>
-            <SelectorEstrellas quien="caller" />
+            <label className="block"><span className="etiqueta-campo">Fecha y hora (hora del proyecto)</span><input type="datetime-local" name="fecha" required className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Nota para el closer</span><textarea name="nota" rows={3} className="campo" placeholder="Situación, dolor, cifra…" /></label>
+            <SelectorEstrellas quien="caller" opcional={rol !== "caller"} />
             <button className="btn-primario w-full">Agendar</button>
           </form>
         </Modal>
@@ -214,21 +216,23 @@ export function FormVenta({
   const [productoId, setProductoId] = useState(productos[0]?.id ?? "");
   const producto = productos.find((p) => p.id === productoId);
   const [facturacion, setFacturacion] = useState(String(producto?.precio ?? ""));
-  const [tipo, setTipo] = useState("completo");
+  const [tipo, setTipo] = useState(producto?.modo_pago === "cuotas" ? "cuotas" : "completo");
   const [cash, setCash] = useState(String(producto?.precio ?? ""));
   const simbolo = moneda === "EUR" ? "€" : "$";
   return (
     <form action={onEnviar} className="space-y-3">
       <div>
-        <label className="etiqueta-campo">Producto</label>
-        <select
+        <label className="etiqueta-campo" htmlFor="acciones-lead-producto">Producto</label>
+        <select id="acciones-lead-producto"
           name="producto"
           value={productoId}
           onChange={(e) => {
             setProductoId(e.target.value);
             const p = productos.find((x) => x.id === e.target.value);
             setFacturacion(String(p?.precio ?? ""));
-            if (tipo === "completo") setCash(String(p?.precio ?? ""));
+            const t = p?.modo_pago === "cuotas" ? "cuotas" : "completo";
+            setTipo(t);
+            setCash(t === "completo" ? String(p?.precio ?? "") : "");
           }}
           className="campo"
         >
@@ -241,8 +245,8 @@ export function FormVenta({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="etiqueta-campo">Facturación (valor del contrato)</label>
-          <input
+          <label className="etiqueta-campo" htmlFor="acciones-lead-facturacion-valor-del-contrato">Facturación (valor del contrato)</label>
+          <input id="acciones-lead-facturacion-valor-del-contrato"
             name="facturacion"
             inputMode="decimal"
             required
@@ -255,8 +259,8 @@ export function FormVenta({
           />
         </div>
         <div>
-          <label className="etiqueta-campo">Tipo de pago</label>
-          <select
+          <label className="etiqueta-campo" htmlFor="acciones-lead-tipo-de-pago">Tipo de pago</label>
+          <select id="acciones-lead-tipo-de-pago"
             name="tipo_pago"
             value={tipo}
             onChange={(e) => {
@@ -271,15 +275,15 @@ export function FormVenta({
           </select>
         </div>
         <div>
-          <label className="etiqueta-campo">Cash collected hoy</label>
-          <input name="cash" inputMode="decimal" required value={cash} onChange={(e) => setCash(e.target.value)} className="campo" />
+          <label className="etiqueta-campo" htmlFor="acciones-lead-cash-collected-hoy">Cash collected hoy</label>
+          <input id="acciones-lead-cash-collected-hoy" name="cash" inputMode="decimal" required value={cash} onChange={(e) => setCash(e.target.value)} className="campo" />
         </div>
         {tipo === "cuotas" ? (
-          <div><label className="etiqueta-campo">Número de cuotas</label><input name="num_cuotas" type="number" min={2} defaultValue={3} className="campo" /></div>
+          <label className="block"><span className="etiqueta-campo">Número de cuotas</span><input name="num_cuotas" type="number" min={2} key={productoId} defaultValue={producto?.num_cuotas ?? 3} className="campo" /></label>
         ) : (
           <div>
-            <label className="etiqueta-campo">Método</label>
-            <select name="metodo" className="campo">
+            <label className="etiqueta-campo" htmlFor="acciones-lead-metodo">Método</label>
+            <select id="acciones-lead-metodo" name="metodo" className="campo">
               <option value="stripe">Stripe</option>
               <option value="transferencia">Transferencia</option>
               <option value="otro">Otro</option>
@@ -288,26 +292,26 @@ export function FormVenta({
         )}
         {tipo === "cuotas" && (
           <div>
-            <label className="etiqueta-campo">Método</label>
-            <select name="metodo" className="campo">
+            <label className="etiqueta-campo" htmlFor="acciones-lead-metodo-2">Método</label>
+            <select id="acciones-lead-metodo-2" name="metodo" className="campo">
               <option value="stripe">Stripe</option>
               <option value="transferencia">Transferencia</option>
               <option value="otro">Otro</option>
             </select>
           </div>
         )}
-        <div><label className="etiqueta-campo">Fecha de la venta</label><input name="fecha" type="date" className="campo" /></div>
+        <label className="block"><span className="etiqueta-campo">Fecha de la venta</span><input name="fecha" type="date" className="campo" /></label>
       </div>
       {vendedores && vendedores.length > 0 && (
         <div>
-          <label className="etiqueta-campo">Vendedor (si no eres tú)</label>
-          <select name="vendedor" defaultValue="" className="campo">
+          <label className="etiqueta-campo" htmlFor="acciones-lead-vendedor-si-no-eres-tu">Vendedor (si no eres tú)</label>
+          <select id="acciones-lead-vendedor-si-no-eres-tu" name="vendedor" defaultValue="" className="campo">
             <option value="">Yo</option>
             {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
         </div>
       )}
-      <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={2} className="campo" /></div>
+      <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={2} className="campo" /></label>
       {desdeCita && (
         <>
           <input type="hidden" name="desde_cita" value="1" />

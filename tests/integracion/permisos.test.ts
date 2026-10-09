@@ -7,7 +7,11 @@ import { registrarLlamada, agendarCita, registrarVenta, cambiarEtapaLead, asigna
 import { cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 import { registrarCobro, borrarVenta } from "@/app/(panel)/ventas/acciones";
 import { crearRecurso, guardarLinkPago } from "@/app/(panel)/recursos/acciones";
-import { crearUsuario, actualizarMiembro, guardarProducto, crearProyecto, anadirAlProyecto, cambiarPassword } from "@/app/(panel)/admin/acciones";
+import { crearUsuario, actualizarMiembro, crearProyecto, anadirAlProyecto, cambiarPassword } from "@/app/(panel)/admin/acciones";
+import { guardarPrograma, type DatosPrograma } from "@/app/(panel)/programas/acciones";
+
+// Productos: desde V2-5 se crean en Programas (sección «programas», solo el CEO por defecto)
+const programa = (nombre: string, precio: string): DatosPrograma => ({ id: null, nombre, descripcion: "", categoria: "", color: "#7c3aed", activo: true, backend_offer: false, vende_caller: false, modo_pago: "unico", num_cuotas: null, precio, precios_divisa: {}, comisiones: {}, link_pago: "" });
 import { enviarReporte } from "@/app/(panel)/reportes/acciones";
 
 let e: Escenario;
@@ -52,7 +56,7 @@ describe("Caller", () => {
     expect((await crearRecurso(null, formulario({ titulo: "x", tipo: "enlace", url: "https://x.test" })))?.error).toMatch(/permiso/);
     await falla(guardarLinkPago(e.productos["Low ticket"], "https://x.test"), /permiso/);
     expect((await crearUsuario(null, formulario({ nombre: "x", email: `${e.pref}-hack@eternity.test`, rol: "ceo", password: "12345678" })))?.error).toMatch(/permiso/);
-    expect((await guardarProducto(null, formulario({ nombre: "Gratis", precio: "0" })))?.error).toMatch(/permiso/);
+    await falla(guardarPrograma(programa("Gratis", "1")), /No tienes acceso/);
   });
   it("no puede cambiar contraseñas de otros", async () => {
     como(e, e.p.callerA);
@@ -117,7 +121,7 @@ describe("Director", () => {
   });
   it("no puede crear productos ni proyectos, ni añadir gente de otros proyectos", async () => {
     como(e, e.p.directorAdmin);
-    expect((await guardarProducto(null, formulario({ nombre: "X", precio: "1" })))?.error).toMatch(/permiso/);
+    await falla(guardarPrograma(programa("X", "1")), /No tienes acceso/);
     expect((await crearProyecto(null, formulario({ nombre: `TEST-AUTO ${e.id} hack`, region: "us" })))?.error).toMatch(/permiso/);
     await falla(anadirAlProyecto(e.p.callerA.id), /permiso/);
   });

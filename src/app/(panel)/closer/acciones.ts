@@ -3,12 +3,12 @@
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
-import { db, registrarActividad } from "@/lib/datos";
+import { db, registrarActividad, todas } from "@/lib/datos";
 import { localAIso, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import type { Cita, EstadoCita } from "@/lib/tipos";
 
-const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida", "cerrada"];
+const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida", "cerrada"];
 // Después de la llamada el closer dice qué tal prospecto era (1 a 5); «No califica» = 1.
 const PIDEN_ESTRELLAS: EstadoCita[] = ["seguimiento", "perdida"];
 
@@ -68,6 +68,111 @@ export async function reagendarCita(citaId: string, fechaLocal: string) {
       nota: cita.nota,
     });
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: cita.lead_id, perfil_id: perfil.id, tipo: "cita", resultado: "reagendada", nota: "Cita reagendada" });
+    revalidatePath("/", "layout");
+  });
+}
+
+// ---------- Llamadas (V2-2) ----------
+// Buscar un lead para «Crear llamada»: los jefes buscan en todo el proyecto; el closer, en los suyos.
+export async function buscarLeadsParaLlamada(q: string) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await getSesion();
+    if (!esJefe(perfil) && perfil.rol !== "closer") throw new ErrorUsuario("Sin permiso.");
+    const t = q.trim().replace(/[%,()]/g, " ").slice(0, 60);
+    if (t.length < 2) return [];
+    let consulta = db()
+      .from("leads")
+      .select("id, nombre, apellido, telefono, email")
+      .eq("proyecto_id", proyecto.id)
+      .or(`nombre.ilike.%${t}%,apellido.ilike.%${t}%,email.ilike.%${t}%,telefono.ilike.%${t}%`)
+      .limit(10);
+    if (!esJefe(perfil)) consulta = consulta.eq("closer_id", perfil.id);
+    const { data } = await consulta;
+    return data ?? [];
+  });
+}
+
+// Importar citas desde un CSV: columnas email o telefono, fecha («2026-10-20 17:00», hora del proyecto),
+// closer_email y nota (opcional). Solo director y CEO.
+export async function importarCitas(texto: string) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await getSesion();
+    if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO importan citas.");
+    const { default: Papa } = await import("papaparse");
+    const res = Papa.parse<Record<string, string>>(texto.replace(/^﻿/, ""), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim().toLowerCase() });
+    if (!res.data.length) throw new ErrorUsuario("El CSV está vacío.");
+    if (res.data.length > 2000) throw new ErrorUsuario("Como mucho 2.000 citas por archivo.");
+    const { data: closers } = await db().from("miembros_proyecto").select("perfiles!inner(id, email, rol)").eq("proyecto_id", proyecto.id).eq("perfiles.rol", "closer");
+    const porEmail = new Map(((closers ?? []) as unknown as { perfiles: { id: string; email: string } }[]).map((c) => [c.perfiles.email.toLowerCase(), c.perfiles.id]));
+    // Los leads del proyecto se cargan una vez (por email y por teléfono, solo dígitos)
+    const leads = await todas<{ id: string; email: string | null; telefono: string | null }>((x, y) => db().from("leads").select("id, email, telefono").eq("proyecto_id", proyecto.id).range(x, y));
+    const porMail = new Map(leads.filter((l) => l.email).map((l) => [l.email!.toLowerCase(), l.id]));
+    const porTel = new Map(leads.filter((l) => (l.telefono ?? "").replace(/\D/g, "").length >= 6).map((l) => [l.telefono!.replace(/\D/g, ""), l.id]));
+    let creadas = 0;
+    const fallos: string[] = [];
+    for (const [i, fila] of res.data.entries()) {
+      const n = i + 2; // fila del archivo (la 1 es la cabecera)
+      const email = (fila.email ?? "").trim().toLowerCase();
+      const tel = (fila.telefono ?? fila["teléfono"] ?? "").replace(/\D/g, "");
+      const closerId = porEmail.get((fila.closer_email ?? "").trim().toLowerCase());
+      const f = (fila.fecha ?? "").trim().replace(" ", "T");
+      if (!closerId) { fallos.push(`Fila ${n}: closer no encontrado`); continue; }
+      let fecha: string;
+      try { fecha = localAIso(f, proyecto.zona_horaria); } catch { fallos.push(`Fila ${n}: fecha no válida («${fila.fecha ?? ""}»)`); continue; }
+      const leadId = (email && porMail.get(email)) || (tel.length >= 6 ? porTel.get(tel) : undefined);
+      if (!leadId) { fallos.push(`Fila ${n}: no hay ningún lead con ese ${email ? "email" : "teléfono"}`); continue; }
+      await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: (fila.nota ?? "").trim() || null });
+      await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId }).eq("id", leadId);
+      creadas++;
+    }
+    revalidatePath("/", "layout");
+    return { creadas, fallos };
+  });
+}
+
+// ---------- Calendario de GHL (V2-3) ----------
+export async function sincronizarGhl(soloSiHaceMas?: number) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await getSesion();
+    if (!esJefe(perfil) && perfil.rol !== "closer") throw new ErrorUsuario("Sin permiso.");
+    const { data: p } = await db().from("proyectos").select("ghl_token, ghl_location_id, ghl_sincronizado_en").eq("id", proyecto.id).single();
+    if (!p?.ghl_token || !p.ghl_location_id) throw new ErrorUsuario("GHL todavía no está conectado (Administración → Integraciones).");
+    // Sincronización automática al abrir: solo si ha pasado bastante desde la última
+    if (soloSiHaceMas && p.ghl_sincronizado_en && Date.now() - new Date(p.ghl_sincronizado_en).getTime() < soloSiHaceMas) return { saltada: true };
+    const { sincronizarCalendarios } = await import("@/lib/ghl-sync");
+    try {
+      const r = await sincronizarCalendarios(proyecto.id);
+      revalidatePath("/", "layout");
+      return r;
+    } catch (e) {
+      throw new ErrorUsuario(e instanceof Error ? e.message : "No se pudo sincronizar con GHL.");
+    }
+  });
+}
+
+// Citas de GHL sin unir: unirlas a un lead (se crea la cita) o descartarlas
+export async function unirCitaSinLead(id: string, leadId: string) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await getSesion();
+    if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO revisan las citas sin unir.");
+    const { data: s } = await db().from("citas_sin_lead").select("*").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
+    if (!s) throw new ErrorUsuario("No encontrada.");
+    const { data: lead } = await db().from("leads").select("id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle();
+    if (!lead) throw new ErrorUsuario("Elige un lead de este proyecto.");
+    const { data: ya } = await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", s.ghl_cita_id).maybeSingle();
+    if (!ya) await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: s.closer_id, fecha: s.fecha, origen: "ghl", ghl_cita_id: s.ghl_cita_id, nota: s.titulo });
+    if (s.ghl_contact_id) await db().from("leads").update({ ghl_contact_id: s.ghl_contact_id }).eq("id", leadId).is("ghl_contact_id", null);
+    await db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("id", id);
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: "Cita de GHL unida a mano" });
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function descartarCitaSinLead(id: string) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await getSesion();
+    if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO revisan las citas sin unir.");
+    await db().from("citas_sin_lead").update({ estado: "descartada" }).eq("id", id).eq("proyecto_id", proyecto.id);
     revalidatePath("/", "layout");
   });
 }

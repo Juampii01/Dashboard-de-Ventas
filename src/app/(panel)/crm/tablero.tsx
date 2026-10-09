@@ -320,9 +320,9 @@ export function TableroCrm({
             className="space-y-3"
           >
             <input type="hidden" name="pipeline" value={pipeline?.id ?? ""} />
-            <div><label className="etiqueta-campo">Nombre y apellido</label><input name="nombre" required className="campo" /></div>
-            <div><label className="etiqueta-campo">Email</label><input name="email" type="email" className="campo" /></div>
-            <div><label className="etiqueta-campo">Teléfono</label><input name="telefono" className="campo" placeholder="+1 555 000 0000" /></div>
+            <label className="block"><span className="etiqueta-campo">Nombre y apellido</span><input name="nombre" required className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Email</span><input name="email" type="email" className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Teléfono</span><input name="telefono" className="campo" placeholder="+1 555 000 0000" /></label>
             <button className="btn-primario w-full" disabled={pendiente}>Crear lead</button>
           </form>
         </Modal>
@@ -339,7 +339,7 @@ export function TableroCrm({
             }
             className="space-y-3"
           >
-            <div><label className="etiqueta-campo">Nombre</label><input name="nombre" required className="campo" placeholder="Ej: Webinar 2" /></div>
+            <label className="block"><span className="etiqueta-campo">Nombre</span><input name="nombre" required className="campo" placeholder="Ej: Webinar 2" /></label>
             <p className="text-xs text-texto-3">Se crea con 3 columnas (Nuevos, Agendados, Cerrados). Luego puedes añadir, renombrar o borrar columnas.</p>
             <button className="btn-primario w-full" disabled={pendiente}>Crear pipeline</button>
           </form>
@@ -570,8 +570,8 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
           Sirve la exportación de contactos de GoHighLevel o cualquier CSV. Revisa qué es cada columna; lo que marques como <b>respuesta del formulario</b> se verá en la ficha del lead. Si un lead ya existe (mismo Contact Id o email), se actualiza en vez de duplicarse.
         </p>
         <div>
-          <label className="etiqueta-campo">Archivo CSV</label>
-          <input
+          <label className="etiqueta-campo" htmlFor="tablero-archivo-csv">Archivo CSV</label>
+          <input id="tablero-archivo-csv"
             type="file"
             name="archivo"
             accept=".csv,text/csv"
@@ -609,8 +609,8 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
         <input type="hidden" name="mapa" value={JSON.stringify(mapa)} />
         {sinContacto && <p className="rounded-lg bg-aviso-suave px-3 py-2 text-sm text-aviso">Ninguna columna es email, teléfono ni Contact Id: no se podrá importar ningún lead.</p>}
         <div>
-          <label className="etiqueta-campo">Pipeline donde entran</label>
-          <select name="pipeline" defaultValue={pipelineId} className="campo">
+          <label className="etiqueta-campo" htmlFor="tablero-pipeline-donde-entran">Pipeline donde entran</label>
+          <select id="tablero-pipeline-donde-entran" name="pipeline" defaultValue={pipelineId} className="campo">
             {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>

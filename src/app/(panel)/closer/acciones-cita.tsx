@@ -6,6 +6,7 @@ import { cambiarEstadoCita, reagendarCita } from "./acciones";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
 import { useAccion, Mensajes, FormVenta } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
+import { CoachIa } from "@/components/coach";
 import { SelectorEstrellas } from "@/components/estrellas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 
@@ -23,15 +24,16 @@ export function AccionesCita({
   const { pendiente, error, ok, ejecutar } = useAccion();
   const [modal, setModal] = useState<null | "venta" | "reagendar" | "seguimiento" | "perdida">(null);
   const b = "btn-secundario px-2.5 py-1.5 text-xs";
-  const abierta = cita.estado === "pendiente" || cita.estado === "confirmada";
+  const abierta = cita.estado === "pendiente" || cita.estado === "confirmada" || cita.estado === "confirmacion_pendiente";
   const estado = (e: EstadoCita, msg: string) => ejecutar(() => cambiarEstadoCita(cita.id, e, ""), msg);
 
   return (
     <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
       <div className="flex flex-wrap gap-1.5">
+        {(abierta || cita.estado === "seguimiento") && <CoachIa leadId={cita.lead_id} className={b} />}
         {abierta && !pasada && (
           <>
-            {cita.estado === "pendiente" && <button className={b} disabled={pendiente} onClick={() => estado("confirmada", "Confirmada")}><Check className="h-3.5 w-3.5 text-ok" />Confirmar</button>}
+            {(cita.estado === "pendiente" || cita.estado === "confirmacion_pendiente") && <button className={b} disabled={pendiente} onClick={() => estado("confirmada", "Confirmada")}><Check className="h-3.5 w-3.5 text-ok" />Confirmar</button>}
             <button className={b} disabled={pendiente} onClick={() => estado("no_califica", "Marcada como no califica")}><Ban className="h-3.5 w-3.5 text-mal" />No califica</button>
             <button className={b} disabled={pendiente} onClick={() => setModal("reagendar")}><CalendarClock className="h-3.5 w-3.5" />Reagendar</button>
             <button className={b} disabled={pendiente} onClick={() => estado("cancelada", "Cancelada")}><XCircle className="h-3.5 w-3.5 text-mal" />Cancelar</button>
@@ -72,7 +74,7 @@ export function AccionesCita({
             }}
           >
             <SelectorEstrellas quien="closer" />
-            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" placeholder={modal === "seguimiento" ? "Qué falta para que decida" : "Por qué no compró"} /></div>
+            <label className="block"><span className="etiqueta-campo">Nota (opcional)</span><textarea name="nota" rows={2} className="campo" placeholder={modal === "seguimiento" ? "Qué falta para que decida" : "Por qué no compró"} /></label>
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
@@ -86,7 +88,7 @@ export function AccionesCita({
               setModal(null);
             }}
           >
-            <div><label className="etiqueta-campo">Nueva fecha y hora</label><input type="datetime-local" name="fecha" required className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">Nueva fecha y hora</span><input type="datetime-local" name="fecha" required className="campo" /></label>
             <button className="btn-primario w-full">Reagendar</button>
           </form>
         </Modal>

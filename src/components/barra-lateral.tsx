@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import {
   BarChart3,
   KanbanSquare,
+  AudioLines,
   PhoneCall,
   CalendarCheck,
   ShoppingCart,
@@ -20,6 +21,10 @@ import {
   ChevronDown,
   Menu,
   X,
+  Network,
+  Package,
+  Landmark,
+  UserCheck,
 } from "lucide-react";
 import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
@@ -29,6 +34,7 @@ import type { Perfil } from "@/lib/tipos";
 const ICONOS = {
   funnel: BarChart3,
   crm: KanbanSquare,
+  grabadas: AudioLines,
   caller: PhoneCall,
   closer: CalendarCheck,
   ventas: ShoppingCart,
@@ -36,6 +42,10 @@ const ICONOS = {
   recursos: FolderOpen,
   reportes: ClipboardList,
   admin: Settings,
+  equipo: Network,
+  programas: Package,
+  finanzas: Landmark,
+  clientes: UserCheck,
 };
 
 export type ItemMenu = { href: string; texto: string; icono: keyof typeof ICONOS; exacto?: boolean; insignia?: number };

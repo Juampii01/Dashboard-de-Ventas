@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, registrarActividad } from "@/lib/datos";
 import { localAIso } from "@/lib/formato";
+import { leerNumero } from "@/lib/numero";
 
 async function ventaPermitida(ventaId: string) {
   const { perfil, proyecto } = await getSesion();
@@ -18,7 +19,7 @@ async function ventaPermitida(ventaId: string) {
 export async function registrarCobro(ventaId: string, importeTxt: string, metodo: string) {
   return seguro(async () => {
     const { venta, perfil, proyecto } = await ventaPermitida(ventaId);
-    const importe = Number(importeTxt.replace(",", "."));
+    const importe = leerNumero(importeTxt);
     if (!(importe > 0)) throw new ErrorUsuario("El importe tiene que ser mayor que 0.");
     const { data: pagos } = await db().from("pagos").select("importe").eq("venta_id", ventaId);
     const cobrado = Number(venta.cash_collected) + (pagos ?? []).reduce((s, p) => s + Number(p.importe), 0);
@@ -36,7 +37,7 @@ export async function registrarDevolucion(ventaId: string, importeTxt: string, f
     const { venta, perfil, proyecto } = await ventaPermitida(ventaId);
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO registran devoluciones.");
     if (venta.devuelto) throw new ErrorUsuario("Esta venta ya tiene una devolución registrada.");
-    const importe = Number(importeTxt.replace(",", "."));
+    const importe = leerNumero(importeTxt);
     if (!(importe > 0)) throw new ErrorUsuario("El importe tiene que ser mayor que 0.");
     const { data: pagos } = await db().from("pagos").select("importe").eq("venta_id", ventaId);
     const cobrado = Number(venta.cash_collected) + (pagos ?? []).reduce((s, p) => s + Number(p.importe), 0);

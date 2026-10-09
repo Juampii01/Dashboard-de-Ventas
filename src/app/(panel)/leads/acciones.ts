@@ -6,7 +6,9 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { db, registrarActividad } from "@/lib/datos";
 import { localAIso } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
+import { planDePagos } from "@/lib/finanzas";
 import type { Lead, Perfil, Proyecto } from "@/lib/tipos";
+import { leerNumero } from "@/lib/numero";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -77,7 +79,8 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
   return seguro(async () => {
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
-    const n = estrellasEntre(estrellas, 2, 5);
+    // El caller dice cómo fue su llamada (2 a 5); si agenda un jefe o un closer, es opcional
+    const n = perfil.rol === "caller" || estrellas !== undefined ? estrellasEntre(estrellas, 2, 5) : null;
     const { data: closer } = await db()
       .from("miembros_proyecto")
       .select("perfil_id, perfiles!inner(rol, nombre)")
@@ -90,7 +93,7 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
     await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
     await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, estrellas_caller: n }).eq("id", leadId);
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;
-    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser} · ${n}★${nota ? ` · ${nota}` : ""}` });
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser}${n ? ` · ${n}★` : ""}${nota ? ` · ${nota}` : ""}` });
     await moverAColumna(lead, ["agendados", "agendado"]);
     refrescar();
   });
@@ -106,7 +109,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (perfil.rol === "caller" && !producto.vende_caller) throw new ErrorUsuario("Como caller solo puedes registrar productos que vende el caller (low ticket).");
   
     const num = (k: string) => {
-      const v = Number(String(formData.get(k) ?? "").replace(",", "."));
+      const v = leerNumero(formData.get(k));
       return Number.isFinite(v) ? v : NaN;
     };
     const facturacion = num("facturacion");
@@ -136,7 +139,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (formData.get("desde_cita") && cita?.closer_id) vendedor = cita.closer_id;
     else if (esJefe(perfil) && vendedorForm) vendedor = vendedorForm;
   
-    const { error } = await db().from("ventas").insert({
+    const { data: nueva, error } = await db().from("ventas").insert({
       proyecto_id: proyecto.id,
       lead_id: leadId,
       producto_id: producto.id,
@@ -148,8 +151,11 @@ export async function registrarVenta(leadId: string, formData: FormData) {
       metodo,
       nota: String(formData.get("nota") ?? "") || null,
       fecha,
-    });
+    }).select("id").single();
     if (error) throw new ErrorUsuario(error.message);
+    // Reserva o cuotas: lo que falta queda en «Pagos pendientes» con sus fechas (se pueden cambiar en Finanzas)
+    const plazos = planDePagos({ facturacion, cobradoHoy: cash, tipo, numCuotas: cuotas, fecha });
+    if (plazos.length) await db().from("vencimientos").insert(plazos.map((x) => ({ ...x, proyecto_id: proyecto.id, venta_id: nueva.id, lead_id: leadId })));
   
     await db().from("leads").update({ estado_caller: "vendido" }).eq("id", leadId);
     if (cita) await db().from("citas").update({ estado: "cerrada", ...(estrellasCloser ? { estrellas_closer: estrellasCloser } : {}) }).eq("id", cita.id);

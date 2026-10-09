@@ -38,8 +38,8 @@ export function SelectoresLead({
   return (
     <div className="space-y-3">
       <div>
-        <label className="etiqueta-campo">Pipeline y columna</label>
-        <select className="campo" value={etapaId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => cambiarEtapaLead(leadId, e.target.value), "Lead movido")}>
+        <label className="etiqueta-campo" htmlFor="selectores-pipeline-y-columna">Pipeline y columna</label>
+        <select id="selectores-pipeline-y-columna" className="campo" value={etapaId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => cambiarEtapaLead(leadId, e.target.value), "Lead movido")}>
           {!etapaId && <option value="">Sin columna</option>}
           {pipelines.map((p) => (
             <optgroup key={p.id} label={p.nombre}>
@@ -50,15 +50,15 @@ export function SelectoresLead({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="etiqueta-campo">Caller</label>
-          <select className="campo" value={callerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "caller_id", e.target.value), "Caller asignado")}>
+          <label className="etiqueta-campo" htmlFor="selectores-caller">Caller</label>
+          <select id="selectores-caller" className="campo" value={callerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "caller_id", e.target.value), "Caller asignado")}>
             <option value="">Sin asignar</option>
             {callers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
         </div>
         <div>
-          <label className="etiqueta-campo">Closer</label>
-          <select className="campo" value={closerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "closer_id", e.target.value), "Closer asignado")}>
+          <label className="etiqueta-campo" htmlFor="selectores-closer">Closer</label>
+          <select id="selectores-closer" className="campo" value={closerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "closer_id", e.target.value), "Closer asignado")}>
             <option value="">Sin asignar</option>
             {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>

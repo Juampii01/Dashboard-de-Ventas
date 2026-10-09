@@ -1,0 +1,172 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { ErrorUsuario, seguro } from "@/lib/resultado";
+import { db } from "@/lib/datos";
+import { exigirSeccion } from "@/lib/permisos";
+import type { ComisionPersona } from "@/lib/comisiones";
+import type { Rol } from "@/lib/tipos";
+import { leerNumero } from "@/lib/numero";
+
+const refrescar = () => revalidatePath("/", "layout");
+const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
+
+function pct(v: unknown, campo: string) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = leerNumero(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100) throw new ErrorUsuario(`${campo}: pon un porcentaje entre 0 y 100.`);
+  return Math.round(n * 100) / 100;
+}
+
+// Comisión propia de la persona (null = usa la de su rol)
+async function comisionValida(proyectoId: string, c: ComisionPersona): Promise<ComisionPersona> {
+  if (!c) return null;
+  const por: Record<string, number> = {};
+  const ids = Object.keys(c.por_producto ?? {});
+  if (ids.length) {
+    const { data } = await db().from("productos").select("id").eq("proyecto_id", proyectoId).in("id", ids);
+    for (const id of ids) {
+      if (!data?.some((p) => p.id === id)) continue; // un producto de otro proyecto se ignora
+      const v = pct(c.por_producto![id], "Comisión por producto");
+      if (v) por[id] = v;
+    }
+  }
+  return { pct_venta: pct(c.pct_venta, "Comisión por venta"), pct_agenda: pct(c.pct_agenda, "Comisión por agenda"), por_producto: Object.keys(por).length ? por : null };
+}
+
+async function deEsteProyecto(tabla: "areas" | "puestos" | "miembros_equipo", id: string | null, proyectoId: string) {
+  if (!id) return;
+  const { data } = await db().from(tabla).select("id").eq("id", id).eq("proyecto_id", proyectoId).maybeSingle();
+  if (!data) throw new ErrorUsuario("Ese dato no es de este proyecto.");
+}
+
+export type AltaMiembro = {
+  nombres: string[]; // uno o varios a la vez
+  area_id: string | null;
+  puesto_id: string | null;
+  puesto_nuevo?: { nombre: string; rol_base: Rol | "otro" } | null;
+  comision: ComisionPersona; // null = la de su rol
+  acceso: { modo: "crear"; email: string; password: string; rol: Rol } | { modo: "organigrama" };
+  lider: boolean;
+};
+
+// Alta de miembro en 6 pasos (persona, puesto, comisión, acceso, rol, revisión)
+export async function crearMiembro(a: AltaMiembro) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigirSeccion("equipo");
+    const nombres = a.nombres.map((n) => n.trim()).filter(Boolean);
+    if (!nombres.length) throw new ErrorUsuario("Pon el nombre de la persona.");
+    if (nombres.length > 50) throw new ErrorUsuario("Como mucho 50 personas a la vez.");
+    await deEsteProyecto("areas", a.area_id, proyecto.id);
+    await deEsteProyecto("puestos", a.puesto_id, proyecto.id);
+    let puestoId = a.puesto_id;
+    if (a.puesto_nuevo?.nombre.trim()) {
+      const rolBase = [...ROLES, "otro"].includes(a.puesto_nuevo.rol_base) ? a.puesto_nuevo.rol_base : "otro";
+      const { data, error } = await db().from("puestos").insert({ proyecto_id: proyecto.id, area_id: a.area_id, nombre: a.puesto_nuevo.nombre.trim(), rol_base: rolBase }).select("id").single();
+      if (error) throw new ErrorUsuario(error.message);
+      puestoId = data.id;
+    }
+    const comision = await comisionValida(proyecto.id, a.comision);
+
+    let perfilId: string | null = null;
+    let email: string | null = null;
+    if (a.acceso.modo === "crear") {
+      if (nombres.length > 1) throw new ErrorUsuario("Para crear acceso, da de alta a las personas de una en una.");
+      email = a.acceso.email.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ErrorUsuario("Pon un email válido.");
+      if (a.acceso.password.length < 8) throw new ErrorUsuario("La contraseña temporal necesita al menos 8 caracteres.");
+      if (!ROLES.includes(a.acceso.rol)) throw new ErrorUsuario("Rol no válido.");
+      if (a.acceso.rol === "ceo" && perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO puede crear otro CEO.");
+      const { data, error } = await db().auth.admin.createUser({ email, password: a.acceso.password, email_confirm: true });
+      if (error) throw new ErrorUsuario(error.message.includes("already") ? "Ya existe un usuario con ese email." : error.message);
+      const { error: e2 } = await db().from("perfiles").insert({ id: data.user.id, nombre: nombres[0], email, rol: a.acceso.rol });
+      if (e2) {
+        await db().auth.admin.deleteUser(data.user.id);
+        throw new ErrorUsuario(e2.message);
+      }
+      const { count } = await db().from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
+      await db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 });
+      perfilId = data.user.id;
+    }
+    const { error } = await db().from("miembros_equipo").insert(nombres.map((nombre) => ({ proyecto_id: proyecto.id, perfil_id: perfilId, nombre, email, area_id: a.area_id, puesto_id: puestoId, comision, lider: a.lider })));
+    if (error) throw new ErrorUsuario(error.message);
+    refrescar();
+    return { creados: nombres.length };
+  });
+}
+
+export async function actualizarMiembroEquipo(id: string, c: { nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona }) {
+  return seguro(async () => {
+    const { proyecto } = await exigirSeccion("equipo");
+    await deEsteProyecto("miembros_equipo", id, proyecto.id);
+    await deEsteProyecto("areas", c.area_id, proyecto.id);
+    await deEsteProyecto("puestos", c.puesto_id, proyecto.id);
+    if (!c.nombre.trim()) throw new ErrorUsuario("Pon el nombre.");
+    await db().from("miembros_equipo").update({ nombre: c.nombre.trim(), area_id: c.area_id, puesto_id: c.puesto_id, lider: c.lider, activo: c.activo, comision: await comisionValida(proyecto.id, c.comision) }).eq("id", id);
+    refrescar();
+  });
+}
+
+// A quien estaba «solo en el organigrama», darle acceso más tarde
+export async function darAccesoMiembro(id: string, emailTxt: string, password: string, rol: Rol) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigirSeccion("equipo");
+    const { data: m } = await db().from("miembros_equipo").select("*").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
+    if (!m) throw new ErrorUsuario("Persona no encontrada.");
+    if (m.perfil_id) throw new ErrorUsuario("Esta persona ya tiene acceso.");
+    const email = emailTxt.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ErrorUsuario("Pon un email válido.");
+    if (password.length < 8) throw new ErrorUsuario("La contraseña temporal necesita al menos 8 caracteres.");
+    if (!ROLES.includes(rol) || (rol === "ceo" && perfil.rol !== "ceo")) throw new ErrorUsuario("Rol no válido.");
+    const { data, error } = await db().auth.admin.createUser({ email, password, email_confirm: true });
+    if (error) throw new ErrorUsuario(error.message.includes("already") ? "Ya existe un usuario con ese email." : error.message);
+    const { error: e2 } = await db().from("perfiles").insert({ id: data.user.id, nombre: m.nombre, email, rol });
+    if (e2) {
+      await db().auth.admin.deleteUser(data.user.id);
+      throw new ErrorUsuario(e2.message);
+    }
+    const { count } = await db().from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
+    await db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 });
+    await db().from("miembros_equipo").update({ perfil_id: data.user.id, email }).eq("id", id);
+    refrescar();
+  });
+}
+
+// ---------- Áreas, puestos y comisión de cada rol ----------
+export async function guardarArea(id: string | null, nombre: string, color: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigirSeccion("equipo");
+    if (!nombre.trim()) throw new ErrorUsuario("Pon un nombre.");
+    const c = /^#[0-9a-f]{6}$/i.test(color) ? color : "#64748b";
+    if (id) {
+      await deEsteProyecto("areas", id, proyecto.id);
+      await db().from("areas").update({ nombre: nombre.trim(), color: c }).eq("id", id);
+    } else {
+      const { count } = await db().from("areas").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
+      await db().from("areas").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), color: c, orden: count ?? 0 });
+    }
+    refrescar();
+  });
+}
+
+export async function borrarArea(id: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigirSeccion("equipo");
+    await deEsteProyecto("areas", id, proyecto.id);
+    const { count } = await db().from("miembros_equipo").select("id", { count: "exact", head: true }).eq("area_id", id).eq("activo", true);
+    if (count) throw new ErrorUsuario("Esta área tiene personas: muévelas a otra antes de borrarla.");
+    await db().from("areas").delete().eq("id", id);
+    refrescar();
+  });
+}
+
+export async function guardarComisionRol(rol: Rol, pctVenta: string, pctAgenda: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigirSeccion("equipo");
+    if (!ROLES.includes(rol)) throw new ErrorUsuario("Rol no válido.");
+    const venta = pct(pctVenta, "Comisión por venta") ?? 0;
+    const agenda = rol === "caller" ? pct(pctAgenda, "Comisión por agenda") ?? 0 : 0;
+    await db().from("comisiones_rol").upsert({ proyecto_id: proyecto.id, rol, pct_venta: venta, pct_agenda: agenda });
+    refrescar();
+  });
+}

@@ -19,7 +19,7 @@ export type Proyecto = {
   nombre: string;
   moneda: "USD" | "EUR";
   zona_horaria: "America/New_York" | "Europe/Madrid";
-  modo_reparto: "manual" | "rotativo";
+  modo_reparto: "manual" | "rotativo" | "horarios";
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   color: string;
@@ -62,6 +62,7 @@ export type Lead = {
 
 export type EstadoCita =
   | "pendiente"
+  | "confirmacion_pendiente"
   | "confirmada"
   | "no_califica"
   | "cerrada"
@@ -95,6 +96,15 @@ export type Producto = {
   vende_caller: boolean;
   activo: boolean;
   orden: number;
+  // v2 (Programas)
+  descripcion?: string | null;
+  categoria?: string | null;
+  color?: string;
+  backend_offer?: boolean;
+  modo_pago?: "unico" | "cuotas";
+  num_cuotas?: number | null;
+  precios_divisa?: Record<string, number> | null;
+  comisiones?: Partial<Record<"ceo" | "director" | "closer" | "caller" | "caller_agenda", number>> | null;
 };
 
 export type Venta = {

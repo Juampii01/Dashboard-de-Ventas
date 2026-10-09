@@ -173,8 +173,8 @@ export function TableroCaller({
               setModal(null);
             }}
           >
-            <div><label className="etiqueta-campo">¿Cuándo?</label><input type="datetime-local" name="cuando" required className="campo" /></div>
-            <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={3} className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">¿Cuándo?</span><input type="datetime-local" name="cuando" required className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={3} className="campo" /></label>
             <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Guardar</button>
           </form>
@@ -191,11 +191,11 @@ export function TableroCaller({
             }}
           >
             <div>
-              <label className="etiqueta-campo">Closer</label>
-              <select name="closer" required className="campo">{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+              <label className="etiqueta-campo" htmlFor="tablero-caller-closer">Closer</label>
+              <select id="tablero-caller-closer" name="closer" required className="campo">{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
             </div>
-            <div><label className="etiqueta-campo">Fecha y hora (hora del proyecto)</label><input type="datetime-local" name="fecha" required className="campo" /></div>
-            <div><label className="etiqueta-campo">Nota para el closer</label><textarea name="nota" rows={3} className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">Fecha y hora (hora del proyecto)</span><input type="datetime-local" name="fecha" required className="campo" /></label>
+            <label className="block"><span className="etiqueta-campo">Nota para el closer</span><textarea name="nota" rows={3} className="campo" /></label>
             <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Agendar</button>
           </form>
@@ -212,7 +212,7 @@ export function TableroCaller({
             }}
           >
             <SelectorEstrellas quien="caller" />
-            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" /></div>
+            <label className="block"><span className="etiqueta-campo">Nota (opcional)</span><textarea name="nota" rows={2} className="campo" /></label>
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>

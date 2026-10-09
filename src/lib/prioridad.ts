@@ -1,4 +1,5 @@
 import type { Respuesta } from "@/lib/tipos";
+import { notaLead, type Pesos } from "@/lib/cualificacion";
 
 // Puntuación simple (sin IA) para ordenar a quién llamar primero,
 // según las respuestas del formulario. Más alto = antes.
@@ -20,4 +21,11 @@ export function nivel(p: number): { texto: string; tono: "ok" | "aviso" | "neutr
   if (p >= 70) return { texto: "Prioridad A", tono: "ok" };
   if (p >= 40) return { texto: "Prioridad B", tono: "aviso" };
   return { texto: "Prioridad C", tono: "neutro" };
+}
+
+// Priorización con IA (V2-11, decisión de Cristian): si hay Scoring IA, la nota 0-100 que sale de él
+// (50 = neutro si sus respuestas no aparecen en el scoring); si no, la puntuación simple de siempre.
+export function puntosLead(respuestas: Respuesta[], pesos: Pesos | null) {
+  if (pesos && Object.keys(pesos).length) return notaLead(respuestas, pesos) ?? 50;
+  return puntuacion(respuestas);
 }

@@ -4,6 +4,7 @@ import { BarraLateral, type ItemMenu } from "@/components/barra-lateral";
 import { ProveedorToasts } from "@/components/toasts";
 import { db } from "@/lib/datos";
 import { proyectoParaMenu } from "@/lib/formato";
+import { seccionesPermitidas, SECCIONES } from "@/lib/permisos";
 
 export default async function PanelLayout({ children }: LayoutProps<"/">) {
   const { perfil, proyectos, proyecto } = await getSesion();
@@ -25,6 +26,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       .lte("llamar_en", new Date().toISOString());
     vencidos = count ?? 0;
   }
+  const secciones = await seccionesPermitidas(perfil, proyecto.id);
+  const empresa: ItemMenu[] = SECCIONES.filter((s) => secciones.has(s.v)).map((s) => ({ href: `/${s.v}`, texto: s.t, icono: s.v }));
   const menu: { grupo: string; items: ItemMenu[] }[] = [
     {
       grupo: "Ventas",
@@ -34,17 +37,19 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
         ...(perfil.rol === "caller" || jefe ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),
         ...(perfil.rol === "caller" || jefe ? [{ href: "/caller/crm", texto: jefe ? "CRM de callers" : "Mi CRM", icono: "crm" as const }] : []),
         ...(perfil.rol === "closer" || jefe ? [{ href: "/closer", texto: jefe ? "Agendas" : "Mis agendas", icono: "closer" as const }] : []),
+        { href: "/caller/grabadas", texto: jefe ? "Llamadas de GHL" : "Mis llamadas grabadas", icono: "grabadas" as const },
         ...(perfil.rol !== "caller" ? [{ href: "/ventas", texto: "Ventas", icono: "ventas" as const }] : []),
         { href: "/ranking", texto: "Ranking del equipo", icono: "ranking" as const },
       ],
     },
     {
-      grupo: "Equipo",
+      grupo: "Día a día",
       items: [
         { href: "/recursos", texto: "Links y recursos", icono: "recursos" as const },
         { href: "/reportes", texto: "Reportes", icono: "reportes" as const },
       ],
     },
+    ...(empresa.length ? [{ grupo: "Empresa", items: empresa }] : []),
     ...(puedeAdmin(perfil)
       ? [{ grupo: "Gestión", items: [{ href: "/admin", texto: "Administración", icono: "admin" as const }] }]
       : []),

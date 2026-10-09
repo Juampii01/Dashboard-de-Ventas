@@ -3,9 +3,9 @@
 import { sinVaciar } from "@/components/sin-vaciar";
 import { useActionState, useState } from "react";
 import { ArrowUp, ArrowDown, Copy, Check, KeyRound, RefreshCw } from "lucide-react";
-import { actualizarMiembro, anadirAlProyecto, cambiarPassword, quitarDelProyecto, crearProyecto, crearUsuario, guardarProducto, guardarProyecto, moverEnReparto, regenerarSecreto } from "./acciones";
+import { actualizarMiembro, anadirAlProyecto, cambiarPassword, quitarDelProyecto, crearProyecto, crearUsuario, guardarProyecto, moverEnReparto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
-import type { Producto, Rol } from "@/lib/tipos";
+import type { Rol } from "@/lib/tipos";
 
 type Res = { ok?: string; error?: string } | null;
 function Resultado({ estado }: { estado: Res }) {
@@ -16,18 +16,18 @@ export function FormUsuario({ soyCeo }: { soyCeo: boolean }) {
   const [estado, accion, enviando] = useActionState(crearUsuario, null as Res);
   return (
     <form onSubmit={sinVaciar(accion)} className="space-y-3">
-      <div><label className="etiqueta-campo">Nombre y apellido</label><input name="nombre" required className="campo" /></div>
-      <div><label className="etiqueta-campo">Email</label><input name="email" type="email" required className="campo" /></div>
+      <label className="block"><span className="etiqueta-campo">Nombre y apellido</span><input name="nombre" required className="campo" /></label>
+      <label className="block"><span className="etiqueta-campo">Email</span><input name="email" type="email" required className="campo" /></label>
       <div>
-        <label className="etiqueta-campo">Rol</label>
-        <select name="rol" className="campo" defaultValue="caller">
+        <label className="etiqueta-campo" htmlFor="cliente-rol">Rol</label>
+        <select id="cliente-rol" name="rol" className="campo" defaultValue="caller">
           <option value="caller">Caller</option>
           <option value="closer">Closer</option>
           <option value="director">Director de ventas</option>
           {soyCeo && <option value="ceo">CEO</option>}
         </select>
       </div>
-      <div><label className="etiqueta-campo">Contraseña temporal (mín. 8)</label><input name="password" type="text" minLength={8} required className="campo" autoComplete="off" /></div>
+      <label className="block"><span className="etiqueta-campo">Contraseña temporal (mín. 8)</span><input name="password" type="text" minLength={8} required className="campo" autoComplete="off" /></label>
       <Resultado estado={estado} />
       <button className="btn-primario w-full" disabled={enviando}>{enviando ? "Creando…" : "Crear usuario"}</button>
     </form>
@@ -98,10 +98,14 @@ export function FormProyecto({ modo, aviso }: { modo: string; aviso: string }) {
           <input type="radio" name="modo_reparto" value="rotativo" defaultChecked={modo === "rotativo"} />
           <span><b>Rotativo equitativo</b><br /><span className="text-texto-3">Cada lead nuevo va al siguiente caller de la lista, por turnos.</span></span>
         </label>
+        <label className="flex gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
+          <input type="radio" name="modo_reparto" value="horarios" defaultChecked={modo === "horarios"} />
+          <span><b>Por horarios</b><br /><span className="text-texto-3">Rotativo, pero solo entre los callers que están en su turno en ese momento (pon el horario de cada uno abajo). Si no hay nadie en turno, entre todos.</span></span>
+        </label>
       </fieldset>
       <div>
-        <label className="etiqueta-campo">Webhook de avisos (GHL «Inbound Webhook»)</label>
-        <input name="aviso_webhook_url" defaultValue={aviso} placeholder="https://services.leadconnectorhq.com/hooks/…" className="campo" />
+        <label className="etiqueta-campo" htmlFor="cliente-webhook-de-avisos-ghl-inbound-">Webhook de avisos (GHL «Inbound Webhook»)</label>
+        <input id="cliente-webhook-de-avisos-ghl-inbound-" name="aviso_webhook_url" defaultValue={aviso} placeholder="https://services.leadconnectorhq.com/hooks/…" className="campo" />
         <p className="mt-1 text-xs text-texto-3">Cuando alguien envía su reporte, la app manda los datos aquí y el workflow de GHL envía el email y el WhatsApp al director y al CEO.</p>
       </div>
       <Resultado estado={estado} />
@@ -133,36 +137,18 @@ export function FormNuevoProyecto() {
   return (
     <form onSubmit={sinVaciar(accion)} className="space-y-3 border-t border-borde pt-4">
       <div className="grid grid-cols-[1fr_auto] gap-3">
-        <div><label className="etiqueta-campo">Nombre del nuevo proyecto</label><input name="nombre" required className="campo" /></div>
-        <div><label className="etiqueta-campo">Color</label><input name="color" type="color" defaultValue="#2f55d4" className="h-[38px] w-14 cursor-pointer rounded-lg border border-borde bg-panel-2" /></div>
+        <label className="block"><span className="etiqueta-campo">Nombre del nuevo proyecto</span><input name="nombre" required className="campo" /></label>
+        <label className="block"><span className="etiqueta-campo">Color</span><input name="color" type="color" defaultValue="#2f55d4" className="h-[38px] w-14 cursor-pointer rounded-lg border border-borde bg-panel-2" /></label>
       </div>
       <div>
-        <label className="etiqueta-campo">Moneda y zona horaria</label>
-        <select name="region" className="campo">
+        <label className="etiqueta-campo" htmlFor="cliente-moneda-y-zona-horaria">Moneda y zona horaria</label>
+        <select id="cliente-moneda-y-zona-horaria" name="region" className="campo">
           <option value="us">USD · Nueva York (EE. UU.)</option>
           <option value="es">EUR · Madrid (España)</option>
         </select>
       </div>
       <Resultado estado={estado} />
       <button className="btn-primario" disabled={enviando}>Crear proyecto</button>
-    </form>
-  );
-}
-
-export function FormProducto({ producto }: { producto?: Producto }) {
-  const [estado, accion, enviando] = useActionState(guardarProducto, null as Res);
-  return (
-    <form onSubmit={sinVaciar(accion)} className={`space-y-2 rounded-lg border p-3 ${producto ? "border-borde bg-panel-2" : "border-dashed border-borde-fuerte"}`}>
-      <input type="hidden" name="id" value={producto?.id ?? ""} />
-      {!producto && <div className="text-sm font-medium">Nuevo producto</div>}
-      <input name="nombre" defaultValue={producto?.nombre} placeholder="Nombre" required className="campo" />
-      <input name="precio" defaultValue={producto?.precio ?? ""} placeholder="Precio (vacío = personalizado)" inputMode="decimal" className="campo" />
-      <div className="flex flex-wrap gap-3 text-xs text-texto-2">
-        <label className="flex items-center gap-1"><input type="checkbox" name="vende_caller" defaultChecked={producto?.vende_caller} />Lo vende el caller</label>
-        <label className="flex items-center gap-1"><input type="checkbox" name="activo" defaultChecked={producto?.activo ?? true} />Activo</label>
-      </div>
-      <Resultado estado={estado} />
-      <button className="btn-secundario w-full" disabled={enviando}>{producto ? "Guardar" : "Crear"}</button>
     </form>
   );
 }

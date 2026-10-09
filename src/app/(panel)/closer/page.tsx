@@ -1,155 +1,219 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckCircle2, UserX, Percent, DollarSign, Wallet, Inbox, Trophy } from "lucide-react";
+import { FileDown, Star, Undo2, Hourglass, Target, Ticket } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
-import { db, todas, equipo } from "@/lib/datos";
-import { dinero, fechaHora, rangoDe, porcentaje, ahoraMs, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
-import { Cabecera, Contenido, Kpi, Insignia, Vacio, Avatar } from "@/components/ui";
-import { AccionesCita } from "./acciones-cita";
-import type { Cita, Lead, Producto } from "@/lib/tipos";
+import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
+import { metricasAgendas, type MetricasAgendas } from "@/lib/metricas-agendas";
+import { leerPeriodo, rangoNav } from "@/lib/periodos";
+import { dinero } from "@/lib/formato";
+import { Cabecera, Contenido, Kpi, Seccion, Anillo } from "@/components/ui";
+import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
+import { PestanasAgendas } from "./pestanas";
 
-const PESTANAS = [
-  { v: "pre", t: "Pre-call", d: "Próximas: confírmalas antes de la llamada" },
-  { v: "post", t: "Post-call", d: "Ya pasaron: registra el resultado" },
-  { v: "seguimiento", t: "Seguimiento", d: "Leads pendientes de decidir" },
-  { v: "historial", t: "Historial", d: "Todas las citas cerradas" },
-];
-const ABIERTAS = ["pendiente", "confirmada"];
-
-type CitaConLead = Cita & { leads: Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "email" | "respuestas"> };
-
-export default async function CloserPage({ searchParams }: PageProps<"/closer">) {
+export default async function AgendasMetricasPage({ searchParams }: PageProps<"/closer">) {
   const { perfil, proyecto } = await getSesion();
   const jefe = esJefe(perfil);
   if (!jefe && perfil.rol !== "closer") redirect("/");
   const sp = await searchParams;
-  const gente = await equipo(proyecto.id);
-  const closers = gente.filter((g) => g.rol === "closer");
-  const filtro = jefe ? (typeof sp.closer === "string" ? sp.closer : "") : perfil.id;
-  const pestana = typeof sp.vista === "string" ? sp.vista : "pre";
+  const p = leerPeriodo(sp);
+  const rango = rangoNav(p.periodo, p.n, proyecto.zona_horaria, p.desde, p.hasta);
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : null);
+  const comparativa = jefe && str("vista") === "comparativa";
 
-  const [citas, productos] = await Promise.all([
-    todas<CitaConLead>((a, b) => {
-      let q = db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, respuestas)").eq("proyecto_id", proyecto.id);
-      if (filtro) q = q.eq("closer_id", filtro);
-      return q.order("fecha").range(a, b);
-    }),
-    db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
-  ]);
-  const mes = rangoDe("mes", proyecto.zona_horaria);
-  const hoy = rangoDe("hoy", proyecto.zona_horaria);
-  let qv = db().from("ventas").select("facturacion, cash_collected").eq("proyecto_id", proyecto.id).gte("fecha", mes.desde!.toISOString()).lt("fecha", mes.hasta!.toISOString());
-  if (filtro) qv = qv.eq("vendedor_id", filtro);
-  const { data: ventasMes } = await qv;
-
-  const ahora = ahoraMs();
-  const citasMes = citas.filter((c) => new Date(c.fecha) >= mes.desde! && new Date(c.fecha) < mes.hasta! && new Date(c.fecha).getTime() < ahora);
-  const asistidas = citasMes.filter((c) => ["cerrada", "seguimiento", "perdida"].includes(c.estado)).length;
-  const noShow = citasMes.filter((c) => c.estado === "no_show").length;
-  const cerradas = citasMes.filter((c) => c.estado === "cerrada").length;
-  const facturacion = (ventasMes ?? []).reduce((s, v) => s + Number(v.facturacion), 0);
-  const cash = (ventasMes ?? []).reduce((s, v) => s + Number(v.cash_collected), 0);
-  const deHoy = citas.filter((c) => new Date(c.fecha) >= hoy.desde! && new Date(c.fecha) < hoy.hasta! && c.estado !== "reagendada").length;
-
-  const lista = citas
-    .filter((c) => {
-      const pasada = new Date(c.fecha).getTime() < ahora;
-      if (pestana === "pre") return ABIERTAS.includes(c.estado) && !pasada;
-      if (pestana === "post") return ABIERTAS.includes(c.estado) && pasada;
-      if (pestana === "seguimiento") return c.estado === "seguimiento";
-      return !ABIERTAS.includes(c.estado);
-    })
-    .sort((a, b) => (pestana === "historial" ? b.fecha.localeCompare(a.fecha) : a.fecha.localeCompare(b.fecha)));
-  const conteo = (v: string) =>
-    citas.filter((c) => {
-      const pasada = new Date(c.fecha).getTime() < ahora;
-      if (v === "pre") return ABIERTAS.includes(c.estado) && !pasada;
-      if (v === "post") return ABIERTAS.includes(c.estado) && pasada;
-      if (v === "seguimiento") return c.estado === "seguimiento";
-      return !ABIERTAS.includes(c.estado);
-    }).length;
-  const nombre = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
+  const datos = await cargarAgendas(proyecto);
+  const vis = closersVisibles(perfil, datos.gente, str("closer"));
+  const filtros = { productoId: str("producto"), evento: str("evento") };
+  const m = metricasAgendas(datos, rango, { closerIds: vis.ids, ...filtros });
+  const porCloser = comparativa ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })) : [];
+  const $ = (n: number) => dinero(n, proyecto);
+  const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]);
+  const conVista = (v: string | null) => {
+    const q = new URLSearchParams(qs);
+    if (v) q.set("vista", v);
+    else q.delete("vista");
+    return `/closer?${q}`;
+  };
 
   return (
     <>
       <Cabecera
-        titulo={jefe ? "Agendas" : "Mis agendas"}
-        subtitulo={`${proyecto.nombre} · ${filtro ? nombre(filtro) : "todos los closers"}`}
+        titulo="Agendas"
+        subtitulo={`${proyecto.nombre} · ${jefe ? (vis.ids.length === 1 && str("closer") ? vis.closers[0]?.nombre : "todos los closers") : perfil.nombre} · ${rango.etiqueta}`}
         acciones={
-          <>
-            {jefe && (
-              <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
-                <Link href={`/closer?vista=${pestana}`} className={`rounded-lg px-2.5 py-1.5 text-sm ${!filtro ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>Todos</Link>
-                {closers.map((c) => (
-                  <Link key={c.id} href={`/closer?closer=${c.id}&vista=${pestana}`} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm ${filtro === c.id ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
-                    <Avatar nombre={c.nombre} tamano="h-6 w-6 text-[9px]" />{c.nombre.split(" ")[0]}
-                  </Link>
-                ))}
-              </div>
-            )}
-            <Link href="/ranking" className="btn-secundario"><Trophy className="h-4 w-4 text-oro" /> Ranking</Link>
-          </>
+          <a href={`/closer/reporte?${qs}`} className="btn-secundario" title="Descarga un PDF con las métricas de este periodo">
+            <FileDown className="h-4 w-4" /> Generar reporte
+          </a>
         }
       />
       <Contenido>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-6">
-          <Kpi titulo="Citas hoy" valor={deHoy} icono={CalendarDays} />
-          <Kpi titulo="Asistieron (mes)" valor={asistidas} icono={CheckCircle2} tono="ok" detalle={`${porcentaje(asistidas, asistidas + noShow)}% de asistencia`} />
-          <Kpi titulo="No show (mes)" valor={noShow} icono={UserX} tono="mal" />
-          <Kpi titulo="% cierre (mes)" valor={`${porcentaje(cerradas, asistidas)}%`} icono={Percent} tono="morado" detalle={`${cerradas} cerradas de ${asistidas}`} />
-          <Kpi titulo="Facturación (mes)" valor={dinero(facturacion, proyecto)} icono={DollarSign} tono="oro" destacado />
-          <Kpi titulo="Cash collected (mes)" valor={dinero(cash, proyecto)} icono={Wallet} tono="ok" />
+        <PestanasAgendas activa="/closer" />
+        <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
+          {jefe && (
+            <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
+              <Link href={conVista(null)} className={`rounded-md px-3 py-1.5 text-sm ${!comparativa ? "bg-primario text-white" : "text-texto-2"}`}>Individual</Link>
+              <Link href={conVista("comparativa")} className={`rounded-md px-3 py-1.5 text-sm ${comparativa ? "bg-primario text-white" : "text-texto-2"}`}>Comparativa</Link>
+            </div>
+          )}
+          {jefe && !comparativa && <FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
+          <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={datos.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
+          {datos.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={datos.eventos.map((e) => ({ v: e, t: e }))} />}
+          <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
         </div>
 
-        <div className="tarjeta overflow-hidden">
-          <div className="flex flex-wrap gap-1 border-b border-borde p-2">
-            {PESTANAS.map((p, i) => (
-              <Link key={p.v} href={`/closer?${new URLSearchParams({ ...(jefe && filtro ? { closer: filtro } : {}), vista: p.v })}`} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${pestana === p.v ? "bg-primario-suave font-medium text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
-                <span className="font-mono text-[10px] text-oro">0{i + 1}</span>
-                {p.t}
-                <span className="rounded-full bg-panel-2 px-1.5 text-[11px] tabular-nums">{conteo(p.v)}</span>
-              </Link>
-            ))}
-          </div>
-          <p className="border-b border-borde px-4 py-2 text-xs text-texto-3">{PESTANAS.find((p) => p.v === pestana)?.d}</p>
-          {lista.length === 0 ? (
-            <Vacio icono={Inbox} texto="No hay citas en esta pestaña." />
-          ) : (
-            <ul className="divide-y divide-borde">
-              {lista.map((c) => {
-                const invertir = c.leads?.respuestas?.find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta;
-                return (
-                  <li key={c.id} className="flex flex-wrap items-center gap-4 px-4 py-3">
-                    <div className="w-36 shrink-0">
-                      <div className="text-sm font-semibold">{fechaHora(c.fecha, proyecto)}</div>
-                      <div className="text-xs text-texto-3">{c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombre(c.agendada_por)}`}</div>
-                    </div>
-                    <div className="min-w-48 flex-1">
-                      <Link href={`/leads/${c.lead_id}`} className="font-medium hover:text-primario">{`${c.leads?.nombre ?? ""} ${c.leads?.apellido ?? ""}`.trim() || "Lead"}</Link>
-                      <div className="text-xs text-texto-3">{c.leads?.telefono} · {c.leads?.email}</div>
-                      {c.nota && <div className="mt-0.5 text-xs text-texto-2">📝 {c.nota}</div>}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {invertir && <Insignia tono={invertir.startsWith("Sí") ? "ok" : "neutro"}>💰 {invertir}</Insignia>}
-                      {jefe && <Insignia>{nombre(c.closer_id)}</Insignia>}
-                      <Insignia tono={c.estado === "cerrada" ? "ok" : c.estado === "confirmada" ? "primario" : ["no_show", "perdida", "cancelada", "no_califica"].includes(c.estado) ? "mal" : "aviso"}>
-                        {ETIQUETA_ESTADO_CITA[c.estado]}
-                      </Insignia>
-                    </div>
-                    <AccionesCita
-                      cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }}
-                      pasada={new Date(c.fecha).getTime() < ahora}
-                      productos={(productos.data ?? []) as Producto[]}
-                      moneda={proyecto.moneda}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <p className="text-xs text-texto-3">Las citas del calendario de GHL entrarán solas cuando se conecte el webhook (al publicar). Mientras tanto, se crean desde la ficha del lead con «Agendar».</p>
+        {comparativa ? <Comparativa filas={porCloser} moneda={$} /> : <Individual m={m} moneda={$} />}
+
+        <details className="tarjeta p-4 text-xs text-texto-2">
+          <summary className="cursor-pointer font-medium text-texto">¿Cómo se calcula cada número?</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li><b>Agendadas:</b> citas con fecha en el periodo (una cita reagendada no cuenta dos veces).</li>
+            <li><b>Asistencias:</b> citas cerradas, en seguimiento o perdidas (hubo llamada).</li>
+            <li><b>% cierre:</b> cerradas ÷ asistencias. <b>Call/close:</b> cerradas ÷ agendadas.</li>
+            <li><b>Facturación:</b> valor de las ventas de los closers con fecha en el periodo.</li>
+            <li><b>Cash collected:</b> lo cobrado al vender + las cuotas cobradas en el periodo − las devoluciones del periodo.</li>
+            <li><b>Calificados 4★+:</b> asistencias a las que el closer puso 4 o 5 estrellas.</li>
+          </ul>
+        </details>
       </Contenido>
     </>
+  );
+}
+
+function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) => string }) {
+  const max = Math.max(m.agendadas, 1);
+  const pasos = [
+    { t: "Agendadas", n: m.agendadas },
+    { t: "Asistencias", n: m.asistencias },
+    { t: "Cerradas", n: m.cerradas },
+  ];
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <Seccion titulo="Embudo de conversión">
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-ok/30 bg-ok-suave p-3">
+            <div className="text-xl font-semibold tabular-nums">{$(m.cash)}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ok">Cash collected</div>
+            <div className="text-[11px] text-texto-3">cobrado, neto de devoluciones</div>
+          </div>
+          <div className="rounded-lg border border-oro/30 bg-oro-suave p-3">
+            <div className="text-xl font-semibold tabular-nums">{$(m.facturacion)}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-oro">Facturación</div>
+            <div className="text-[11px] text-texto-3">contratos cerrados</div>
+          </div>
+        </div>
+        <ul className="space-y-3">
+          {pasos.map((x, i) => (
+            <li key={x.t}>
+              <div className="mb-1 flex items-baseline justify-between text-sm">
+                <span className="font-medium">{x.t}</span>
+                <span className="tabular-nums"><b>{x.n}</b> <span className="text-xs text-texto-3">· {i === 0 ? "100" : Math.round((x.n / max) * 1000) / 10}%</span></span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-panel-2" title={`${x.t}: ${x.n}`}>
+                <div className="h-full rounded-full bg-primario" style={{ width: `${(x.n / max) * 100}%`, opacity: 1 - i * 0.22 }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-texto-2">
+          <span>Perdidas <b>{m.perdidas}</b></span>
+          <span>No-show <b>{m.noShow}</b></span>
+          <span>Reagendadas <b>{m.reagendadas}</b></span>
+          <span>Canceladas <b>{m.canceladas}</b></span>
+          <span>No califica <b>{m.noCalifica}</b></span>
+        </div>
+        <p className="mt-2 text-xs text-texto-3">Tasa de cierre <b className="text-texto">{m.pctCierre}%</b> sobre asistencias</p>
+      </Seccion>
+
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
+          <Kpi titulo="% cierre / asist." valor={`${m.pctCierre}%`} icono={Target} tono="ok" detalle={`Call/close ${m.pctCallClose}%`} />
+          <Kpi titulo="Ticket medio" valor={$(m.ticketMedio)} icono={Ticket} tono="oro" detalle="por venta cerrada" />
+          <Kpi titulo="Calificados 4★+" valor={m.calificados} icono={Star} tono="morado" detalle={`${m.con5} con 5★`} />
+          <Kpi titulo="Media estrellas" valor={m.mediaEstrellasCloser ?? "—"} icono={Star} tono="oro" detalle={`del closer · caller ${m.mediaEstrellasCaller ?? "—"}`} />
+          <Kpi titulo="Pendientes" valor={m.pendientes} icono={Hourglass} tono="aviso" detalle={`${m.perdidas} perd. · ${m.canceladas} canc.`} />
+          <Kpi titulo="Devoluciones" valor={m.devoluciones} icono={Undo2} tono="mal" detalle={`${m.pctDevoluciones}% de las ventas · ${$(m.devuelto)}`} />
+        </div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Seccion titulo="Agendas por fuente">
+            <Barras titulo="Por pipeline" filas={m.porPipeline} />
+            <div className="mt-5"><Barras titulo="Por UTM (utm_source)" filas={m.porUtm} /></div>
+          </Seccion>
+          <Seccion titulo="% Cierre">
+            <div className="flex items-center gap-4">
+              <Anillo valor={m.pctCierre} color="var(--ok)" tamano={92} />
+              <ul className="flex-1 space-y-1 text-sm">
+                {[["Cerradas", m.cerradas], ["Perdidas", m.perdidas], ["En seguimiento", m.seguimiento], ["No-show", m.noShow], ["Reagendadas", m.reagendadas], ["Canceladas", m.canceladas]].map(([t, n]) => (
+                  <li key={t} className="flex justify-between"><span className="text-texto-2">{t}</span><b className="tabular-nums">{n}</b></li>
+                ))}
+              </ul>
+            </div>
+            <dl className="mt-4 divide-y divide-borde border-t border-borde text-sm">
+              {[["Tasa de asistencia", `${m.tasaAsistencia}%`], ["Tasa de cancelación", `${m.tasaCancelacion}%`], ["Calificados 4★+", m.calificados], ["Ticket medio", $(m.ticketMedio)], ["Media de estrellas (closer)", m.mediaEstrellasCloser ?? "—"]].map(([t, v]) => (
+                <div key={t} className="flex justify-between py-1.5"><dt className="text-texto-2">{t}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
+              ))}
+            </dl>
+          </Seccion>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Barras({ titulo, filas }: { titulo: string; filas: { nombre: string; n: number }[] }) {
+  const total = filas.reduce((s, f) => s + f.n, 0);
+  const max = Math.max(...filas.map((f) => f.n), 1);
+  return (
+    <div>
+      <div className="mb-2 text-xs font-medium text-texto-2">{titulo}</div>
+      {filas.length === 0 ? (
+        <p className="text-sm text-texto-3">Sin agendas en este periodo.</p>
+      ) : (
+        <ul className="space-y-2">
+          {filas.slice(0, 8).map((f) => (
+            <li key={f.nombre} title={`${f.nombre}: ${f.n} (${Math.round((f.n / total) * 100)}%)`}>
+              <div className="flex justify-between text-sm"><span className="truncate">{f.nombre}</span><span className="tabular-nums text-texto-2">{f.n}</span></div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-panel-2"><div className="h-full rounded-full bg-primario" style={{ width: `${(f.n / max) * 100}%` }} /></div>
+            </li>
+          ))}
+          {filas.length > 8 && <li className="text-xs text-texto-3">+ {filas.length - 8} fuentes más</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Comparativa({ filas, moneda: $ }: { filas: { c: { id: string; nombre: string }; m: MetricasAgendas }[]; moneda: (n: number) => string }) {
+  const cols: [string, (m: MetricasAgendas) => string | number][] = [
+    ["Agendadas", (m) => m.agendadas],
+    ["Asistencias", (m) => m.asistencias],
+    ["Cerradas", (m) => m.cerradas],
+    ["% cierre", (m) => `${m.pctCierre}%`],
+    ["No-show", (m) => m.noShow],
+    ["Facturación", (m) => $(m.facturacion)],
+    ["Cash", (m) => $(m.cash)],
+    ["Ticket medio", (m) => $(m.ticketMedio)],
+    ["4★+", (m) => m.calificados],
+    ["Media ★", (m) => m.mediaEstrellasCloser ?? "—"],
+    ["Devol.", (m) => m.devoluciones],
+  ];
+  return (
+    <Seccion titulo="Comparativa de closers">
+      {filas.length === 0 ? (
+        <p className="text-sm text-texto-3">No hay closers en este proyecto.</p>
+      ) : (
+        <div className="-mx-4 overflow-x-auto sm:-mx-5">
+          <table className="tabla">
+            <thead><tr><th>Closer</th>{cols.map(([t]) => <th key={t} className="text-right">{t}</th>)}</tr></thead>
+            <tbody>
+              {filas.map(({ c, m }) => (
+                <tr key={c.id}>
+                  <td className="font-medium"><Link href={`/closer?closer=${c.id}`} className="hover:text-primario">{c.nombre}</Link></td>
+                  {cols.map(([t, f]) => <td key={t} className="text-right tabular-nums">{f(m)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Seccion>
   );
 }

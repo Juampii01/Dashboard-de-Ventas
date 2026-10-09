@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { Users, List } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, todas, equipo } from "@/lib/datos";
-import { puntuacion } from "@/lib/prioridad";
+import { puntosLead } from "@/lib/prioridad";
+import type { Pesos } from "@/lib/cualificacion";
 import { Cabecera, Contenido, Vacio, Avatar } from "@/components/ui";
 import { TableroCaller, type TarjetaCaller } from "./tablero-caller";
 import { Refresco } from "@/components/refresco";
@@ -27,17 +28,19 @@ export default async function CrmCallerPage({ searchParams }: PageProps<"/caller
     );
   }
 
-  const [leads, { data: productos }] = await Promise.all([
+  const [leads, { data: productos }, { data: scoring }] = await Promise.all([
     todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).order("creado_en", { ascending: false }).range(a, b)),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).eq("vende_caller", true).order("orden"),
+    db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
   ]);
+  const pesos = (scoring?.pesos ?? null) as Pesos | null; // priorización con IA (V2-11)
   const tarjetas: TarjetaCaller[] = leads.map((l) => ({
     id: l.id,
     nombre: `${l.nombre} ${l.apellido}`.trim() || "Sin nombre",
     telefono: l.telefono,
     estado: l.estado_caller,
     llamar_en: l.llamar_en,
-    puntos: puntuacion(l.respuestas),
+    puntos: puntosLead(l.respuestas, pesos),
     invertir: l.respuestas.find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta ?? null,
   }));
 
