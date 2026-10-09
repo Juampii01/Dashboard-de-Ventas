@@ -1,0 +1,170 @@
+import type { Proyecto } from "@/lib/tipos";
+
+const LOCALE = { USD: "en-US", EUR: "es-ES" } as const;
+
+export function dinero(valor: number, proyecto: Pick<Proyecto, "moneda">, decimales = 0) {
+  return new Intl.NumberFormat(LOCALE[proyecto.moneda], {
+    style: "currency",
+    currency: proyecto.moneda,
+    maximumFractionDigits: decimales,
+    minimumFractionDigits: decimales,
+  }).format(valor);
+}
+
+export function fechaHora(iso: string, proyecto: Pick<Proyecto, "zona_horaria">) {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: proyecto.zona_horaria,
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+export function fecha(iso: string, proyecto: Pick<Proyecto, "zona_horaria">) {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: proyecto.zona_horaria,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+export function porcentaje(parte: number, total: number) {
+  if (!total) return 0;
+  return Math.round((parte / total) * 1000) / 10;
+}
+
+export function iniciales(nombre: string) {
+  return nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+}
+
+// ---------- Periodos ----------
+export type Periodo = "hoy" | "semana" | "mes" | "todo" | "rango";
+
+// Fecha "YYYY-MM-DD" de hoy en la zona del proyecto.
+export function hoyEnZona(zona: string) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: zona }).format(new Date());
+}
+
+// Desplazamiento (en minutos) de una zona para una fecha concreta.
+function offsetMin(zona: string, d: Date) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: zona,
+    timeZoneName: "longOffset",
+  }).formatToParts(d);
+  const tz = partes.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  const m = tz.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  if (!m) return 0;
+  const signo = m[1] === "-" ? -1 : 1;
+  return signo * (Number(m[2]) * 60 + Number(m[3] ?? 0));
+}
+
+// Inicio del día "YYYY-MM-DD" en la zona dada, como Date UTC.
+export function inicioDia(ymd: string, zona: string) {
+  const base = new Date(`${ymd}T00:00:00Z`);
+  return new Date(base.getTime() - offsetMin(zona, base) * 60_000);
+}
+
+function sumarDias(ymd: string, dias: number) {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+export type Rango = { desde: Date | null; hasta: Date | null; etiqueta: string; previo: { desde: Date; hasta: Date } | null };
+
+export function rangoDe(periodo: Periodo, zona: string, desdeTxt?: string, hastaTxt?: string): Rango {
+  const hoy = hoyEnZona(zona);
+  if (periodo === "todo") return { desde: null, hasta: null, etiqueta: "Todo el histórico", previo: null };
+  let d: string;
+  let h: string;
+  let etiqueta: string;
+  if (periodo === "hoy") {
+    d = hoy;
+    h = sumarDias(hoy, 1);
+    etiqueta = "Hoy";
+  } else if (periodo === "semana") {
+    const dow = (new Date(`${hoy}T12:00:00Z`).getUTCDay() + 6) % 7; // lunes = 0
+    d = sumarDias(hoy, -dow);
+    h = sumarDias(d, 7);
+    etiqueta = "Esta semana";
+  } else if (periodo === "rango" && desdeTxt && hastaTxt) {
+    d = desdeTxt;
+    h = sumarDias(hastaTxt, 1);
+    etiqueta = `Del ${desdeTxt} al ${hastaTxt}`;
+  } else {
+    d = `${hoy.slice(0, 8)}01`;
+    const sig = new Date(`${d}T12:00:00Z`);
+    sig.setUTCMonth(sig.getUTCMonth() + 1);
+    h = sig.toISOString().slice(0, 10);
+    etiqueta = "Desde el día 1 de este mes";
+  }
+  const desde = inicioDia(d, zona);
+  const hasta = inicioDia(h, zona);
+  const dur = hasta.getTime() - desde.getTime();
+  return {
+    desde,
+    hasta,
+    etiqueta,
+    previo: { desde: new Date(desde.getTime() - dur), hasta: desde },
+  };
+}
+
+export const ETIQUETA_ESTADO_CALLER: Record<string, string> = {
+  nuevo: "Nuevo",
+  no_contesta: "No contesta",
+  llamar_luego: "Llamar luego",
+  agendado: "Agendado",
+  no_interesa: "No interesa",
+  vendido: "Vendido",
+};
+
+export const ETIQUETA_ESTADO_CITA: Record<string, string> = {
+  pendiente: "Pendiente",
+  confirmada: "Confirmada",
+  no_califica: "No califica",
+  cerrada: "Cerrada",
+  seguimiento: "En seguimiento",
+  no_show: "No show",
+  reagendada: "Reagendada",
+  cancelada: "Cancelada",
+  perdida: "Perdida",
+};
+
+export const ETIQUETA_ROL: Record<string, string> = {
+  ceo: "CEO",
+  director: "Director de ventas",
+  closer: "Closer",
+  caller: "Caller",
+};
+
+// Momento de la petición (los Server Components se renderizan una vez por petición).
+export function ahoraMs() {
+  return Date.now();
+}
+
+// "2026-10-15T16:30" (hora local del proyecto) -> ISO en UTC.
+// Calcula el desfase para esa hora exacta (vale también en los días de cambio de hora).
+export function localAIso(local: string, zona: string) {
+  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
+  if (!m) throw new Error("Fecha no válida.");
+  const [, y, mo, d, hh = "00", mm = "00"] = m;
+  const comoUtc = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), Number(mm));
+  let t = comoUtc - offsetMinPublico(zona, new Date(comoUtc)) * 60_000;
+  t = comoUtc - offsetMinPublico(zona, new Date(t)) * 60_000;
+  return new Date(t).toISOString();
+}
+
+function offsetMinPublico(zona: string, d: Date) {
+  const partes = new Intl.DateTimeFormat("en-US", { timeZone: zona, timeZoneName: "longOffset" }).formatToParts(d);
+  const tz = partes.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  const x = tz.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  if (!x) return 0;
+  return (x[1] === "-" ? -1 : 1) * (Number(x[2]) * 60 + Number(x[3] ?? 0));
+}

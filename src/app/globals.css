@@ -1,26 +1,156 @@
 @import "tailwindcss";
 
+/* Tema por clase: <html class="dark"> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Tokens: tema claro ---------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --fondo: #f3f6fb;
+  --fondo-2: #e9eef8;
+  --panel: #ffffff;
+  --panel-2: #f7f9fd;
+  --borde: #e1e8f3;
+  --borde-fuerte: #cdd7e8;
+  --texto: #0f1a33;
+  --texto-2: #4a5878;
+  --texto-3: #7d8aa6;
+  --primario: #2b59d1;
+  --primario-2: #3f6ee6;
+  --primario-suave: #e6edfd;
+  --oro: #c98a12;
+  --oro-suave: #fdf3dc;
+  --ok: #15924a;
+  --ok-suave: #e3f6ea;
+  --mal: #d0303f;
+  --mal-suave: #fde8ea;
+  --aviso: #c46a08;
+  --aviso-suave: #fdf0e1;
+  --morado: #7c4ddb;
+  --sombra: 0 1px 2px rgb(15 26 51 / 0.04), 0 4px 16px rgb(15 26 51 / 0.05);
+  --marca-eternity: #7b1a22;
+}
+
+/* ---------- Tokens: tema oscuro (azul profundo, sin brillos) ---------- */
+.dark {
+  --fondo: #070c1c;
+  --fondo-2: #0b1328;
+  --panel: #0d1630;
+  --panel-2: #111c3b;
+  --borde: #1b2a52;
+  --borde-fuerte: #263a6d;
+  --texto: #e8eefc;
+  --texto-2: #a8b6d8;
+  --texto-3: #6f80a8;
+  --primario: #4f7cf0;
+  --primario-2: #6a92f7;
+  --primario-suave: #15275a;
+  --oro: #e5ac35;
+  --oro-suave: #2a2210;
+  --ok: #3ccf7a;
+  --ok-suave: #0f2a1d;
+  --mal: #f2606c;
+  --mal-suave: #2d1218;
+  --aviso: #f0a24a;
+  --aviso-suave: #2c1d0d;
+  --morado: #a07cf5;
+  --sombra: 0 1px 0 rgb(255 255 255 / 0.02) inset, 0 8px 24px rgb(0 0 0 / 0.25);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-fondo: var(--fondo);
+  --color-fondo-2: var(--fondo-2);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
+  --color-texto: var(--texto);
+  --color-texto-2: var(--texto-2);
+  --color-texto-3: var(--texto-3);
+  --color-primario: var(--primario);
+  --color-primario-2: var(--primario-2);
+  --color-primario-suave: var(--primario-suave);
+  --color-oro: var(--oro);
+  --color-oro-suave: var(--oro-suave);
+  --color-ok: var(--ok);
+  --color-ok-suave: var(--ok-suave);
+  --color-mal: var(--mal);
+  --color-mal-suave: var(--mal-suave);
+  --color-aviso: var(--aviso);
+  --color-aviso-suave: var(--aviso-suave);
+  --color-morado: var(--morado);
+  --color-eternity: var(--marca-eternity);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-panel: var(--sombra);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--fondo);
+  color: var(--texto);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Fondo del tema oscuro: un degradado muy suave, nada chillón */
+.dark body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(43 89 209 / 0.12), transparent 60%),
+    var(--fondo);
+  background-attachment: fixed;
+}
+
+/* ---------- Piezas reutilizables ---------- */
+@layer components {
+  .tarjeta {
+    @apply rounded-xl border border-borde bg-panel shadow-panel;
+  }
+  .titulo-seccion {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-2;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 bg-primario text-white hover:bg-primario-2;
+  }
+  .btn-secundario {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border border-borde bg-panel text-texto hover:bg-panel-2;
+  }
+  .btn-peligro {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border border-mal/30 bg-mal-suave text-mal hover:bg-mal/15;
+  }
+  .campo {
+    @apply w-full rounded-lg border border-borde bg-panel-2 px-3 py-2 text-sm text-texto outline-none placeholder:text-texto-3 focus:border-primario focus:ring-2 focus:ring-primario/20;
+  }
+  .etiqueta-campo {
+    @apply mb-1 block text-xs font-medium text-texto-2;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+  }
+  .tabla {
+    @apply w-full text-left text-sm;
+  }
+  .tabla th {
+    @apply border-b border-borde px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-texto-3;
+  }
+  .tabla td {
+    @apply border-b border-borde px-3 py-2.5 text-texto;
+  }
+  .tabla tr:last-child td {
+    @apply border-b-0;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--borde-fuerte);
+  border-radius: 999px;
+  border: 2px solid var(--fondo);
 }

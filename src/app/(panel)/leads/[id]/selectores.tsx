@@ -1,0 +1,70 @@
+"use client";
+
+import { asignarDesdeFicha, cambiarEtapaLead } from "../acciones";
+import { useAccion, Mensajes } from "@/components/acciones-lead";
+import type { Etapa, Pipeline } from "@/lib/tipos";
+
+type Persona = { id: string; nombre: string };
+
+export function SelectoresLead({
+  leadId,
+  jefe,
+  etapaId,
+  callerId,
+  closerId,
+  pipelines,
+  callers,
+  closers,
+}: {
+  leadId: string;
+  jefe: boolean;
+  etapaId: string | null;
+  callerId: string | null;
+  closerId: string | null;
+  pipelines: (Pipeline & { etapas: Etapa[] })[];
+  callers: Persona[];
+  closers: Persona[];
+}) {
+  const { pendiente, error, ok, ejecutar } = useAccion();
+  const nombre = (lista: Persona[], id: string | null) => lista.find((p) => p.id === id)?.nombre ?? "Sin asignar";
+  if (!jefe) {
+    return (
+      <dl className="grid grid-cols-2 gap-2 text-sm">
+        <dt className="text-texto-3">Caller</dt><dd>{nombre(callers, callerId)}</dd>
+        <dt className="text-texto-3">Closer</dt><dd>{nombre(closers, closerId)}</dd>
+      </dl>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="etiqueta-campo">Pipeline y columna</label>
+        <select className="campo" value={etapaId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => cambiarEtapaLead(leadId, e.target.value), "Lead movido")}>
+          {!etapaId && <option value="">Sin columna</option>}
+          {pipelines.map((p) => (
+            <optgroup key={p.id} label={p.nombre}>
+              {p.etapas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="etiqueta-campo">Caller</label>
+          <select className="campo" value={callerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "caller_id", e.target.value), "Caller asignado")}>
+            <option value="">Sin asignar</option>
+            {callers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="etiqueta-campo">Closer</label>
+          <select className="campo" value={closerId ?? ""} disabled={pendiente} onChange={(e) => ejecutar(() => asignarDesdeFicha(leadId, "closer_id", e.target.value), "Closer asignado")}>
+            <option value="">Sin asignar</option>
+            {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        </div>
+      </div>
+      <Mensajes error={error} ok={ok} />
+    </div>
+  );
+}

@@ -1,0 +1,126 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { DollarSign, Wallet, Hourglass, ShoppingCart, Receipt } from "lucide-react";
+import { getSesion, esJefe } from "@/lib/auth";
+import { db, todas, equipo } from "@/lib/datos";
+import { dinero, fechaHora, rangoDe, type Periodo, ETIQUETA_ROL } from "@/lib/formato";
+import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio } from "@/components/ui";
+import { Filtros } from "@/components/filtros";
+import { FilaVentaAcciones } from "./fila-acciones";
+
+type VentaFila = {
+  id: string;
+  lead_id: string;
+  vendedor_id: string | null;
+  facturacion: number;
+  cash_collected: number;
+  tipo_pago: string;
+  num_cuotas: number | null;
+  metodo: string;
+  fecha: string;
+  nota: string | null;
+  productos: { nombre: string } | null;
+  leads: { nombre: string; apellido: string } | null;
+  pagos: { importe: number }[];
+};
+const TIPO: Record<string, string> = { completo: "Completo", reserva: "Reserva", cuotas: "Cuotas" };
+
+export default async function VentasPage({ searchParams }: PageProps<"/ventas">) {
+  const { perfil, proyecto } = await getSesion();
+  if (perfil.rol === "caller") redirect("/caller");
+  const jefe = esJefe(perfil);
+  const sp = await searchParams;
+  const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
+  const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
+  const vendedorId = jefe ? (typeof sp.vendedor === "string" ? sp.vendedor : "") : perfil.id;
+  const gente = await equipo(proyecto.id);
+
+  const ventas = (
+    await todas<VentaFila>((a, b) => {
+      let q = db().from("ventas").select("*, productos(nombre), leads(nombre, apellido), pagos(importe)").eq("proyecto_id", proyecto.id);
+      if (rango.desde) q = q.gte("fecha", rango.desde.toISOString());
+      if (rango.hasta) q = q.lt("fecha", rango.hasta.toISOString());
+      if (vendedorId) q = q.eq("vendedor_id", vendedorId);
+      return q.order("fecha", { ascending: false }).range(a, b);
+    })
+  ).map((v) => {
+    const cobrado = Number(v.cash_collected) + v.pagos.reduce((s, p) => s + Number(p.importe), 0);
+    return { ...v, facturacion: Number(v.facturacion), cobrado, pendiente: Math.max(0, Number(v.facturacion) - cobrado) };
+  });
+
+  const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
+  const cobrado = ventas.reduce((s, v) => s + v.cobrado, 0);
+  const pendiente = ventas.reduce((s, v) => s + v.pendiente, 0);
+  const porProducto = Object.entries(
+    ventas.reduce<Record<string, { n: number; f: number }>>((acc, v) => {
+      const k = v.productos?.nombre ?? "Sin producto";
+      acc[k] = { n: (acc[k]?.n ?? 0) + 1, f: (acc[k]?.f ?? 0) + v.facturacion };
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1].f - a[1].f);
+  const nombre = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
+  const $ = (n: number) => dinero(n, proyecto);
+
+  return (
+    <>
+      <Cabecera titulo="Ventas" subtitulo={`${proyecto.nombre} · ${rango.etiqueta}${vendedorId && jefe ? ` · ${nombre(vendedorId)}` : ""}`} />
+      <Contenido>
+        <Filtros vendedores={jefe ? gente.filter((g) => g.rol !== "ceo" && g.rol !== "director").map((g) => ({ id: g.id, nombre: g.nombre, rol: ETIQUETA_ROL[g.rol] })) : undefined} />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <Kpi titulo="Facturación" valor={$(facturacion)} icono={DollarSign} tono="oro" destacado detalle="Valor de los contratos cerrados" />
+          <Kpi titulo="Cash collected" valor={$(cobrado)} icono={Wallet} tono="ok" detalle="Cobrado de estas ventas (incluye cuotas)" />
+          <Kpi titulo="Pendiente de cobro" valor={$(pendiente)} icono={Hourglass} tono="aviso" detalle="Reservas y cuotas por cobrar" />
+          <Kpi titulo="Ventas" valor={ventas.length} icono={ShoppingCart} detalle={ventas.length ? `Ticket medio ${$(facturacion / ventas.length)}` : undefined} />
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+          <Seccion titulo="Ventas registradas">
+            {ventas.length === 0 ? (
+              <Vacio icono={Receipt} texto="No hay ventas en este periodo." />
+            ) : (
+              <div className="-mx-4 overflow-x-auto sm:-mx-5">
+                <table className="tabla">
+                  <thead>
+                    <tr><th>Fecha</th><th>Lead</th><th>Producto</th><th>Vendedor</th><th>Pago</th><th className="text-right">Facturación</th><th className="text-right">Cobrado</th><th className="text-right">Pendiente</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {ventas.map((v) => (
+                      <tr key={v.id}>
+                        <td className="whitespace-nowrap text-texto-2">{fechaHora(v.fecha, proyecto)}</td>
+                        <td><Link href={`/leads/${v.lead_id}`} className="font-medium hover:text-primario">{`${v.leads?.nombre ?? ""} ${v.leads?.apellido ?? ""}`.trim()}</Link></td>
+                        <td>{v.productos?.nombre ?? "—"}</td>
+                        <td className="text-texto-2">{nombre(v.vendedor_id)}</td>
+                        <td><Insignia tono={v.tipo_pago === "completo" ? "ok" : "aviso"}>{TIPO[v.tipo_pago]}{v.num_cuotas ? ` · ${v.num_cuotas}` : ""}</Insignia> <span className="text-xs text-texto-3">{v.metodo}</span></td>
+                        <td className="text-right tabular-nums">{$(v.facturacion)}</td>
+                        <td className="text-right tabular-nums text-ok">{$(v.cobrado)}</td>
+                        <td className="text-right tabular-nums text-aviso">{v.pendiente ? $(v.pendiente) : "—"}</td>
+                        <td><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} jefe={jefe} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Seccion>
+          <Seccion titulo="Por producto">
+            {porProducto.length === 0 ? (
+              <Vacio icono={ShoppingCart} texto="Sin datos." />
+            ) : (
+              <ul className="space-y-3">
+                {porProducto.map(([n, d]) => (
+                  <li key={n}>
+                    <div className="flex justify-between text-sm"><span className="font-medium">{n}</span><span className="tabular-nums">{$(d.f)}</span></div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-panel-2">
+                      <div className="h-full rounded-full bg-primario" style={{ width: `${facturacion ? (d.f / facturacion) * 100 : 0}%` }} />
+                    </div>
+                    <div className="mt-0.5 text-xs text-texto-3">{d.n} ventas</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Seccion>
+        </div>
+      </Contenido>
+    </>
+  );
+}
