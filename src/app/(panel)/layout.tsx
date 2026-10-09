@@ -3,6 +3,7 @@ import { getSesion, esJefe, puedeAdmin } from "@/lib/auth";
 import { BarraLateral, type ItemMenu } from "@/components/barra-lateral";
 import { ProveedorToasts } from "@/components/toasts";
 import { db } from "@/lib/datos";
+import { proyectoParaMenu } from "@/lib/formato";
 
 export default async function PanelLayout({ children }: LayoutProps<"/">) {
   const { perfil, proyectos, proyecto } = await getSesion();
@@ -52,7 +53,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
   return (
     <ProveedorToasts>
       <div className="flex min-h-screen">
-        <BarraLateral perfil={perfil} proyectos={proyectos} proyecto={proyecto} menu={menu} />
+        <BarraLateral perfil={perfil} proyectos={proyectos.map(proyectoParaMenu)} proyecto={proyectoParaMenu(proyecto)} menu={menu} />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
     </ProveedorToasts>

@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
-import { iniciales, ETIQUETA_ROL } from "@/lib/formato";
-import type { Perfil, Proyecto } from "@/lib/tipos";
+import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
+import type { Perfil } from "@/lib/tipos";
 
 const ICONOS = {
   funnel: BarChart3,
@@ -47,8 +47,8 @@ export function BarraLateral({
   menu,
 }: {
   perfil: Perfil;
-  proyectos: Proyecto[];
-  proyecto: Proyecto;
+  proyectos: ProyectoMenu[];
+  proyecto: ProyectoMenu;
   menu: { grupo: string; items: ItemMenu[] }[];
 }) {
   const ruta = usePathname();

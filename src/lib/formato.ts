@@ -2,6 +2,13 @@ import type { Proyecto } from "@/lib/tipos";
 
 const LOCALE = { USD: "en-US", EUR: "es-ES" } as const;
 
+// Lo único del proyecto que puede llegar al navegador de cualquier usuario (barra lateral).
+// Nunca el secreto del webhook ni la URL de avisos.
+export type ProyectoMenu = Pick<Proyecto, "id" | "nombre" | "color">;
+export function proyectoParaMenu(p: Proyecto): ProyectoMenu {
+  return { id: p.id, nombre: p.nombre, color: p.color };
+}
+
 export function dinero(valor: number, proyecto: Pick<Proyecto, "moneda">, decimales = 0) {
   return new Intl.NumberFormat(LOCALE[proyecto.moneda], {
     style: "currency",

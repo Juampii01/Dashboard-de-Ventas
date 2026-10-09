@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dinero, hoyEnZona, inicioDia, localAIso, porcentaje, rangoDe } from "@/lib/formato";
+import { dinero, hoyEnZona, inicioDia, localAIso, porcentaje, proyectoParaMenu, rangoDe } from "@/lib/formato";
 
 const NY = "America/New_York";
 const MAD = "Europe/Madrid";
@@ -84,5 +84,16 @@ describe("dinero y porcentaje", () => {
   it("porcentaje con un decimal y sin dividir entre cero", () => {
     expect(porcentaje(1, 3)).toBe(33.3);
     expect(porcentaje(5, 0)).toBe(0);
+  });
+});
+
+describe("proyectoParaMenu", () => {
+  it("no deja pasar el secreto del webhook ni la URL de avisos al navegador", () => {
+    const p = proyectoParaMenu({
+      id: "1", nombre: "Maestria", color: "#2f55d4", moneda: "USD", zona_horaria: "America/New_York",
+      modo_reparto: "manual", webhook_secreto: "SECRETO", aviso_webhook_url: "https://avisos",
+    });
+    expect(p).toEqual({ id: "1", nombre: "Maestria", color: "#2f55d4" });
+    expect(JSON.stringify(p)).not.toContain("SECRETO");
   });
 });
