@@ -13,15 +13,15 @@ export async function iniciarSesion(_prev: { error: string; email?: string }, fo
   // Frenar a quien prueba contraseñas: 8 fallos por email y 40 por conexión cada 15 minutos
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const quince = 15 * 60_000;
-  if (bloqueado(`login:email:${email}`, 8, quince) || bloqueado(`login:ip:${ip}`, 40, quince)) {
+  const [porEmail, porIp] = await Promise.all([bloqueado(`login:email:${email}`, 8, quince), bloqueado(`login:ip:${ip}`, 40, quince)]);
+  if (porEmail || porIp) {
     return { error: "Demasiados intentos fallidos. Espera 15 minutos y vuelve a probar.", email };
   }
 
   const supabase = await createSessionClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    anotar(`login:email:${email}`);
-    anotar(`login:ip:${ip}`);
+    await Promise.all([anotar(`login:email:${email}`), anotar(`login:ip:${ip}`)]);
     return { error: "Email o contraseña incorrectos.", email };
   }
   redirect("/");

@@ -49,21 +49,34 @@ describe("Base de datos cerrada (RLS)", () => {
   });
 });
 
+// Arreglo 4: el límite se cuenta en la base de datos (compartido por todas las copias del servidor)
 describe("Límites de intentos", () => {
-  it("ventana deslizante: corta al llegar al máximo y se libera al pasar el tiempo", () => {
-    reiniciarLimites();
+  it("ventana deslizante: corta al llegar al máximo y se libera al pasar el tiempo", async () => {
+    await reiniciarLimites();
     const t0 = 1_000_000;
-    for (let i = 0; i < 3; i++) expect(dentroDelLimite("x", 3, 60_000, t0 + i)).toBe(true);
-    expect(dentroDelLimite("x", 3, 60_000, t0 + 10)).toBe(false);
-    expect(dentroDelLimite("x", 3, 60_000, t0 + 61_000)).toBe(true);
+    for (let i = 0; i < 3; i++) expect(await dentroDelLimite("x", 3, 60_000, t0 + i)).toBe(true);
+    expect(await dentroDelLimite("x", 3, 60_000, t0 + 10)).toBe(false);
+    expect(await dentroDelLimite("x", 3, 60_000, t0 + 61_000)).toBe(true);
+    expect((await db.from("limite_intentos").select("id").eq("clave", "x")).data).toHaveLength(4);
   });
-  it("login: solo cuentan los fallos", () => {
-    reiniciarLimites();
-    for (let i = 0; i < 7; i++) anotar("login:email:a@b.c", 1000 + i);
-    expect(bloqueado("login:email:a@b.c", 8, 900_000, 2000)).toBe(false);
-    anotar("login:email:a@b.c", 1010);
-    expect(bloqueado("login:email:a@b.c", 8, 900_000, 2000)).toBe(true);
-    expect(bloqueado("login:email:a@b.c", 8, 900_000, 1010 + 900_001)).toBe(false);
+  it("login: solo cuentan los fallos", async () => {
+    await reiniciarLimites();
+    for (let i = 0; i < 7; i++) await anotar("login:email:a@b.c", 1000 + i);
+    expect(await bloqueado("login:email:a@b.c", 8, 900_000, 2000)).toBe(false);
+    await anotar("login:email:a@b.c", 1010);
+    expect(await bloqueado("login:email:a@b.c", 8, 900_000, 2000)).toBe(true);
+    expect(await bloqueado("login:email:a@b.c", 8, 900_000, 1010 + 900_001)).toBe(false);
+  });
+  it("20 peticiones a la vez con hueco para 5: pasan exactamente 5", async () => {
+    await reiniciarLimites();
+    const r = await Promise.all(Array.from({ length: 20 }, () => dentroDelLimite("a-la-vez", 5, 60_000)));
+    expect(r.filter(Boolean)).toHaveLength(5);
+  });
+  it("con la clave pública no se puede leer la tabla ni llamar a las funciones", async () => {
+    const anon = createClient(URL_DB, PUBLICA, { auth: { persistSession: false } });
+    expect((await anon.from("limite_intentos").select("*").limit(1)).data ?? []).toHaveLength(0);
+    expect((await anon.rpc("limite_dentro", { p_clave: "hack", p_maximo: 1, p_ventana_ms: 1000 })).error).not.toBeNull();
+    expect((await anon.rpc("limite_anotar", { p_clave: "hack" })).error).not.toBeNull();
   });
 });
 
@@ -81,7 +94,7 @@ describe("Webhook", () => {
     expect((await enviar("x", "{}", { "content-length": "900000" })).status).toBe(413);
   });
   it("quien prueba claves se bloquea tras 30 fallos", async () => {
-    reiniciarLimites();
+    await reiniciarLimites();
     for (let i = 0; i < 30; i++) expect((await enviar("mala")).status).toBe(401);
     expect((await enviar("mala")).status).toBe(429);
   });

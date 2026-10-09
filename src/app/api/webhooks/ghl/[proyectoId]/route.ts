@@ -60,11 +60,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
   // Tamaño: se corta antes de leer el cuerpo si el remitente ya dice que es enorme
   if (Number(request.headers.get("content-length") ?? 0) > 500_000) return NextResponse.json({ ok: false, error: "Demasiado grande" }, { status: 413 });
   // Ritmo: como mucho 300 eventos por minuto y proyecto (y 30 intentos fallidos por conexión)
-  if (!dentroDelLimite(`webhook:${proyectoId}`, 300, 60_000)) return NextResponse.json({ ok: false, error: "Demasiadas peticiones" }, { status: 429 });
+  if (!(await dentroDelLimite(`webhook:${proyectoId}`, 300, 60_000))) return NextResponse.json({ ok: false, error: "Demasiadas peticiones" }, { status: 429 });
   const { data: proyecto } = await db().from("proyectos").select("*").eq("id", proyectoId).maybeSingle<Proyecto>();
   if (!proyecto || !secreto || !igual(secreto, proyecto.webhook_secreto)) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    if (!dentroDelLimite(`webhook-fallo:${ip}`, 30, 15 * 60_000)) return NextResponse.json({ ok: false, error: "Demasiados intentos" }, { status: 429 });
+    if (!(await dentroDelLimite(`webhook-fallo:${ip}`, 30, 15 * 60_000))) return NextResponse.json({ ok: false, error: "Demasiados intentos" }, { status: 429 });
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   }
 

@@ -30,12 +30,12 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
   const { token } = await ctx.params;
   if (!/^[0-9a-f]{48}$/.test(token)) return responder({ ok: false, error: "No encontrada" }, 404);
   if (Number(request.headers.get("content-length") ?? 0) > 500_000) return responder({ ok: false, error: "Demasiado grande" }, 413);
-  if (!dentroDelLimite(`entrada:${token}`, 300, 60_000)) return responder({ ok: false, error: "Demasiadas peticiones" }, 429);
+  if (!(await dentroDelLimite(`entrada:${token}`, 300, 60_000))) return responder({ ok: false, error: "Demasiadas peticiones" }, 429);
 
   const { data: entrada } = await db().from("entradas").select("*").eq("token", token).maybeSingle<Entrada>();
   if (!entrada || !entrada.activa) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    if (!dentroDelLimite(`entrada-fallo:${ip}`, 30, 15 * 60_000)) return responder({ ok: false, error: "Demasiados intentos" }, 429);
+    if (!(await dentroDelLimite(`entrada-fallo:${ip}`, 30, 15 * 60_000))) return responder({ ok: false, error: "Demasiados intentos" }, 429);
     return responder({ ok: false, error: "No encontrada" }, 404);
   }
 

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { beforeAll, vi } from "vitest";
 
 // Variables de Supabase LOCAL
 try {
@@ -16,3 +16,15 @@ vi.mock("@/lib/sesion", () => ({
 }));
 // Fuera de Next no hay caché que refrescar
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
+
+// Los límites de intentos se guardan en la base (arreglo 4): cada archivo empieza con la cuenta a cero
+// para que los envíos fallidos de pasadas anteriores no acaben en «429». Sin base (unitarios), nada.
+beforeAll(async () => {
+  if (!process.env.SUPABASE_SECRET_KEY) return;
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } }).from("limite_intentos").delete().gte("id", 0);
+  } catch {
+    // sin base de datos local
+  }
+});
