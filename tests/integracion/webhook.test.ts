@@ -1,0 +1,106 @@
+// Webhook de GHL con datos simulados (el formato real de GHL se comprobará al publicar).
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
+import { crearEscenario, borrarEscenario, db, type Escenario } from "../apoyo/escenario";
+import { POST } from "@/app/api/webhooks/ghl/[proyectoId]/route";
+
+let e: Escenario;
+let secreto: string;
+beforeAll(async () => {
+  e = await crearEscenario();
+  secreto = (await db.from("proyectos").select("webhook_secreto").eq("id", e.proyecto.id).single()).data!.webhook_secreto;
+});
+afterAll(async () => {
+  if (e) await borrarEscenario(e);
+});
+
+function enviar(cuerpo: unknown, clave = secreto, proyectoId = e.proyecto.id) {
+  const req = new NextRequest(`http://localhost/api/webhooks/ghl/${proyectoId}?secreto=${clave}`, {
+    method: "POST",
+    body: typeof cuerpo === "string" ? cuerpo : JSON.stringify(cuerpo),
+    headers: { "content-type": "application/json" },
+  });
+  return POST(req, { params: Promise.resolve({ proyectoId }) } as never);
+}
+
+describe("Webhook de GHL", () => {
+  it("rechaza una clave incorrecta o un proyecto que no existe", async () => {
+    expect((await enviar({ tipo: "lead_nuevo" }, "mala")).status).toBe(401);
+    expect((await enviar({ tipo: "lead_nuevo" }, secreto, "00000000-0000-0000-0000-000000000000")).status).toBe(401);
+    expect((await enviar({ tipo: "lead_nuevo" }, secreto, "no-es-un-id")).status).toBe(404);
+  });
+  it("rechaza JSON roto", async () => {
+    expect((await enviar("{roto")).status).toBe(400);
+  });
+  it("lead nuevo con respuestas del formulario", async () => {
+    const r = await enviar({
+      tipo: "lead_nuevo",
+      contact_id: `${e.pref}-wh1`,
+      first_name: "Web",
+      last_name: "Hook",
+      email: `${e.pref}-wh1@x.test`,
+      phone: "+15550000099",
+      tags: "webinar1, form completado",
+      customData: { "¿Cuándo quieres empezar?": "Ya mismo" },
+    });
+    expect(r.status).toBe(200);
+    const { data } = await db.from("leads").select("*").eq("ghl_contact_id", `${e.pref}-wh1`).single();
+    expect(data).toMatchObject({ nombre: "Web", apellido: "Hook", origen: "ghl", etiquetas: ["webinar1", "form completado"] });
+    expect(data!.respuestas).toEqual([{ pregunta: "¿Cuándo quieres empezar?", respuesta: "Ya mismo" }]);
+  });
+  it("el mismo lead dos veces no se duplica", async () => {
+    await enviar({ tipo: "lead_nuevo", contact_id: `${e.pref}-wh1`, email: `${e.pref}-wh1@x.test`, first_name: "Web" });
+    expect((await db.from("leads").select("id").eq("ghl_contact_id", `${e.pref}-wh1`)).data).toHaveLength(1);
+  });
+  it("cita agendada: se asigna al closer por su email y el lead pasa a «agendado»", async () => {
+    const r = await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-wh1`, calendar: { startTime: "2026-10-12T15:00:00-04:00" }, closer_email: e.p.closerA.email });
+    expect(r.status).toBe(200);
+    const { data: lead } = await db.from("leads").select("id, estado_caller, closer_id").eq("ghl_contact_id", `${e.pref}-wh1`).single();
+    expect(lead).toMatchObject({ estado_caller: "agendado", closer_id: e.p.closerA.id });
+    const { data: cita } = await db.from("citas").select("fecha, origen").eq("lead_id", lead!.id).single();
+    expect(cita!.origen).toBe("ghl");
+    expect(new Date(cita!.fecha).toISOString()).toBe("2026-10-12T19:00:00.000Z");
+  });
+  it("cita sin fecha: error claro y queda registrado", async () => {
+    const r = await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-wh1` });
+    expect(r.status).toBe(422);
+    const { data } = await db.from("webhook_eventos").select("procesado, error").eq("proyecto_id", e.proyecto.id).eq("tipo", "cita_agendada").order("recibido_en", { ascending: false }).limit(1).single();
+    expect(data).toMatchObject({ procesado: false, error: "La cita no trae fecha" });
+  });
+  it("cambio de etapa por nombre de columna", async () => {
+    expect((await enviar({ tipo: "cambio_etapa", contact_id: `${e.pref}-wh1`, pipeline_stage: "Cerrados" })).status).toBe(200);
+    const { data } = await db.from("leads").select("etapa_id").eq("ghl_contact_id", `${e.pref}-wh1`).single();
+    expect(data!.etapa_id).toBe(e.etapas.Cerrados);
+    expect((await enviar({ tipo: "cambio_etapa", contact_id: `${e.pref}-wh1`, pipeline_stage: "No existe" })).status).toBe(422);
+  });
+  it("tipo desconocido", async () => {
+    expect((await enviar({ tipo: "venta" })).status).toBe(422);
+  });
+});
+
+describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
+  const conCabecera = (cuerpo: unknown, clave = secreto) =>
+    POST(
+      new NextRequest(`http://localhost/api/webhooks/ghl/${e.proyecto.id}`, {
+        method: "POST",
+        body: JSON.stringify(cuerpo),
+        headers: { "content-type": "application/json", "x-eternity-secreto": clave },
+      }),
+      { params: Promise.resolve({ proyectoId: e.proyecto.id }) } as never
+    );
+  it("la clave en la cabecera x-eternity-secreto funciona y una mala no", async () => {
+    expect((await conCabecera({ tipo: "lead_nuevo", contact_id: `${e.pref}-cab`, email: `${e.pref}-cab@x.test`, first_name: "Cab" })).status).toBe(200);
+    expect((await conCabecera({ tipo: "lead_nuevo" }, "mala")).status).toBe(401);
+  });
+  it("las plantillas de cita y de etapa (campos «fecha» y «etapa»)", async () => {
+    expect((await conCabecera({ tipo: "cita_agendada", contact_id: `${e.pref}-cab`, fecha: "2026-10-20T10:00:00-04:00", closer_email: e.p.closerB.email })).status).toBe(200);
+    const { data: lead } = await db.from("leads").select("id, closer_id").eq("ghl_contact_id", `${e.pref}-cab`).single();
+    expect(lead!.closer_id).toBe(e.p.closerB.id);
+    expect((await conCabecera({ tipo: "cambio_etapa", contact_id: `${e.pref}-cab`, pipeline: "Pipeline test", etapa: "Agendados" })).status).toBe(200);
+    expect((await db.from("leads").select("etapa_id").eq("id", lead!.id).single()).data!.etapa_id).toBe(e.etapas.Agendados);
+  });
+  it("las plantillas son JSON válido una vez rellenadas", async () => {
+    const { PLANTILLAS_GHL } = await import("@/lib/plantillas-ghl");
+    for (const p of PLANTILLAS_GHL) expect(() => JSON.parse(p.cuerpo), p.clave).not.toThrow();
+  });
+});

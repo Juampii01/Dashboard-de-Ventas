@@ -1,0 +1,157 @@
+// Permisos de las acciones del servidor: cada rol intenta lo que NO debe poder hacer.
+// Se llama a las acciones directamente (como haría alguien que se salta la pantalla).
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
+import { moverLead, asignarLeads, importarCsv, crearPipeline, borrarPipeline } from "@/app/(panel)/crm/acciones";
+import { registrarLlamada, agendarCita, registrarVenta, cambiarEtapaLead, asignarDesdeFicha } from "@/app/(panel)/leads/acciones";
+import { cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
+import { registrarCobro, borrarVenta } from "@/app/(panel)/ventas/acciones";
+import { crearRecurso, guardarLinkPago } from "@/app/(panel)/recursos/acciones";
+import { crearUsuario, actualizarMiembro, guardarProducto, crearProyecto, anadirAlProyecto, cambiarPassword } from "@/app/(panel)/admin/acciones";
+import { enviarReporte } from "@/app/(panel)/reportes/acciones";
+
+let e: Escenario;
+beforeAll(async () => {
+  e = await crearEscenario();
+});
+afterAll(async () => {
+  if (e) await borrarEscenario(e);
+});
+
+describe("Caller", () => {
+  it("no puede mover leads en el CRM ni asignarlos", async () => {
+    como(e, e.p.callerA);
+    await falla(moverLead(e.leads.LeadA, e.etapas.Cerrados), /permiso/);
+    await falla(asignarLeads([e.leads.LeadLibre], e.p.callerA.id), /permiso/);
+    await falla(cambiarEtapaLead(e.leads.LeadA, e.etapas.Cerrados));
+    await falla(asignarDesdeFicha(e.leads.LeadA, "caller_id", e.p.callerA.id));
+  });
+  it("no puede tocar un lead de otro caller ni uno sin asignar", async () => {
+    como(e, e.p.callerA);
+    await falla(registrarLlamada(e.leads.LeadB, "no_contesta", ""), /no está asignado a ti/);
+    await falla(registrarLlamada(e.leads.LeadLibre, "no_contesta", ""), /no está asignado a ti/);
+  });
+  it("sí puede registrar la llamada de su propio lead", async () => {
+    como(e, e.p.callerA);
+    await ok(registrarLlamada(e.leads.LeadA, "no_contesta", ""));
+    const { data } = await db.from("leads").select("estado_caller").eq("id", e.leads.LeadA).single();
+    expect(data?.estado_caller).toBe("no_contesta");
+  });
+  it("solo puede vender productos marcados para callers (low ticket)", async () => {
+    como(e, e.p.callerA);
+    const fd = formulario({ producto: e.productos["Mentoría grupal"], facturacion: "1997", cash: "1997", tipo_pago: "completo", metodo: "stripe" });
+    await falla(registrarVenta(e.leads.LeadA, fd), /solo puedes registrar/);
+  });
+  it("no puede subir CSV, crear pipelines, recursos, usuarios ni productos", async () => {
+    como(e, e.p.callerA);
+    const csv = new File(["Email\nx@x.test\n"], "a.csv", { type: "text/csv" });
+    const fd = new FormData();
+    fd.set("archivo", csv);
+    expect((await importarCsv(null, fd))?.error).toMatch(/permiso/);
+    await falla(crearPipeline("Hack"), /permiso/);
+    expect((await crearRecurso(null, formulario({ titulo: "x", tipo: "enlace", url: "https://x.test" })))?.error).toMatch(/permiso/);
+    await falla(guardarLinkPago(e.productos["Low ticket"], "https://x.test"), /permiso/);
+    expect((await crearUsuario(null, formulario({ nombre: "x", email: `${e.pref}-hack@eternity.test`, rol: "ceo", password: "12345678" })))?.error).toMatch(/permiso/);
+    expect((await guardarProducto(null, formulario({ nombre: "Gratis", precio: "0" })))?.error).toMatch(/permiso/);
+  });
+  it("no puede cambiar contraseñas de otros", async () => {
+    como(e, e.p.callerA);
+    await falla(cambiarPassword(e.p.ceo.id, "nuevaclave123"), /permiso/);
+  });
+});
+
+describe("Closer", () => {
+  let citaDeB: string;
+  let ventaDeB: string;
+  beforeAll(async () => {
+    const { data: cita } = await db
+      .from("citas")
+      .insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadB, closer_id: e.p.closerB.id, fecha: "2026-10-01T14:00:00Z" })
+      .select("id")
+      .single();
+    citaDeB = cita!.id;
+    const { data: venta } = await db
+      .from("ventas")
+      .insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadB, vendedor_id: e.p.closerB.id, facturacion: 1997, cash_collected: 500, tipo_pago: "reserva" })
+      .select("id")
+      .single();
+    ventaDeB = venta!.id;
+  });
+  it("no puede cambiar la cita de otro closer", async () => {
+    como(e, e.p.closerA);
+    await falla(cambiarEstadoCita(citaDeB, "cerrada", ""), /no es tuya/);
+  });
+  it("no puede cobrar ni borrar la venta de otro", async () => {
+    como(e, e.p.closerA);
+    await falla(registrarCobro(ventaDeB, "100", "stripe"), /no es tuya/);
+    await falla(borrarVenta(ventaDeB));
+  });
+  it("tampoco puede borrar su propia venta (solo director o CEO)", async () => {
+    como(e, e.p.closerB);
+    await falla(borrarVenta(ventaDeB), /director o el CEO/);
+  });
+  it("no puede agendar sobre un lead que no es suyo", async () => {
+    como(e, e.p.closerA);
+    await falla(agendarCita(e.leads.LeadLibre, e.p.closerA.id, "2026-10-20T10:00", ""), /no está asignado/);
+  });
+});
+
+describe("Director", () => {
+  it("sin acceso de admin no puede crear usuarios", async () => {
+    como(e, e.p.director);
+    expect((await crearUsuario(null, formulario({ nombre: "x", email: `${e.pref}-x@eternity.test`, rol: "caller", password: "12345678" })))?.error).toMatch(/permiso/);
+  });
+  it("con acceso de admin crea usuarios, pero nunca un CEO", async () => {
+    como(e, e.p.directorAdmin);
+    const ok = await crearUsuario(null, formulario({ nombre: "Nuevo caller", email: `${e.pref}-nuevo@eternity.test`, rol: "caller", password: "12345678" }));
+    expect(ok?.ok).toBeTruthy();
+    const ceo = await crearUsuario(null, formulario({ nombre: "Falso CEO", email: `${e.pref}-falsoceo@eternity.test`, rol: "ceo", password: "12345678" }));
+    expect(ceo?.error).toMatch(/Solo el CEO/);
+  });
+  it("no puede subirse a CEO a otro, ni darse admin, ni tocar al CEO", async () => {
+    como(e, e.p.directorAdmin);
+    await falla(actualizarMiembro(e.p.callerC.id, { rol: "ceo" }), /Solo el CEO/);
+    await falla(actualizarMiembro(e.p.director.id, { admin_activo: true }), /Solo el CEO/);
+    await falla(actualizarMiembro(e.p.ceo.id, { activo: false }), /Solo el CEO/);
+    await falla(actualizarMiembro(e.p.directorAdmin.id, { rol: "ceo" }), /propio/);
+  });
+  it("no puede crear productos ni proyectos, ni añadir gente de otros proyectos", async () => {
+    como(e, e.p.directorAdmin);
+    expect((await guardarProducto(null, formulario({ nombre: "X", precio: "1" })))?.error).toMatch(/permiso/);
+    expect((await crearProyecto(null, formulario({ nombre: `TEST-AUTO ${e.id} hack`, region: "us" })))?.error).toMatch(/permiso/);
+    await falla(anadirAlProyecto(e.p.callerA.id), /permiso/);
+  });
+  it("sí puede mover y asignar leads", async () => {
+    como(e, e.p.director);
+    await ok(asignarLeads([e.leads.LeadLibre], e.p.callerC.id));
+    await ok(moverLead(e.leads.LeadLibre, e.etapas.Agendados));
+    const { data } = await db.from("leads").select("caller_id, etapa_id").eq("id", e.leads.LeadLibre).single();
+    expect(data).toEqual({ caller_id: e.p.callerC.id, etapa_id: e.etapas.Agendados });
+  });
+});
+
+describe("Proyectos ajenos", () => {
+  it("nadie puede tocar un pipeline o lead de otro proyecto", async () => {
+    const otro = await crearEscenario();
+    try {
+      como(e, e.p.ceo); // CEO, pero con la sesión puesta en el proyecto de e
+      await falla(borrarPipeline(otro.pipeline.id), /no encontrado/i);
+      await falla(moverLead(otro.leads.LeadA, e.etapas.Cerrados), /no encontrado/i);
+      await falla(moverLead(e.leads.LeadA, otro.etapas.Cerrados), /no encontrada/i);
+    } finally {
+      await borrarEscenario(otro);
+    }
+  });
+});
+
+describe("Reportes", () => {
+  it("el director no hace reportes de fin de día (son de callers y closers)", async () => {
+    como(e, e.p.director);
+    expect((await enviarReporte(null, new FormData()))?.error).toMatch(/callers y closers/);
+  });
+  it("un número negativo se rechaza", async () => {
+    como(e, e.p.callerA);
+    const fd = formulario({ llamadas: "-3", no_responden: "0", agendas: "0", whatsapps: "0", seguimientos: "0", inconvenientes: "x", mejoras: "x", otros: "x" });
+    expect((await enviarReporte(null, fd))?.error).toMatch(/número entero/);
+  });
+});
