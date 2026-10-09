@@ -6,6 +6,7 @@ import { Phone, Search } from "lucide-react";
 import { agendarCita, registrarLlamada, registrarVenta, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { useAccion, Mensajes, FormVenta } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
+import { SelectorEstrellas } from "@/components/estrellas";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { nivel } from "@/lib/prioridad";
 import type { EstadoCaller, Producto } from "@/lib/tipos";
@@ -29,7 +30,7 @@ const COLUMNAS: { estado: EstadoCaller; titulo: string; color: string; ayuda: st
   { estado: "vendido", titulo: "Vendido", color: "#16a34a", ayuda: "Low ticket u otra venta" },
 ];
 const POR_COLUMNA = 40;
-type Pendiente = { lead: TarjetaCaller; destino: "llamar_luego" | "agendado" | "vendido" };
+type Pendiente = { lead: TarjetaCaller; destino: "llamar_luego" | "agendado" | "vendido" | "no_interesa" };
 
 export function TableroCaller({
   leads: iniciales,
@@ -84,13 +85,13 @@ export function TableroCaller({
     setArrastrando(null);
     const lead = leads.find((l) => l.id === idArrastrado);
     if (!lead || lead.estado === destino) return;
-    if (destino === "llamar_luego" || destino === "agendado" || destino === "vendido") {
+    if (destino === "llamar_luego" || destino === "agendado" || destino === "vendido" || destino === "no_interesa") {
       if (destino === "vendido" && productos.length === 0) return;
       setModal({ lead, destino });
       return;
     }
     if (destino === "nuevo") mover(lead, destino, () => volverANuevo(lead.id), `${lead.nombre} → Nuevo`);
-    else mover(lead, destino, () => registrarLlamada(lead.id, destino, ""), `${lead.nombre} → ${destino === "no_contesta" ? "No contesta" : "No interesa"}`);
+    else mover(lead, destino, () => registrarLlamada(lead.id, "no_contesta", ""), `${lead.nombre} → No contesta`);
   }
 
   return (
@@ -100,7 +101,7 @@ export function TableroCaller({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o teléfono…" className="campo pl-9" />
         </div>
-        <p className="text-xs text-texto-3">Al soltar en «Llamar luego», «Agendado» o «Vendido» te pedimos los datos que faltan.</p>
+        <p className="text-xs text-texto-3">Al soltar en «Llamar luego», «Agendado», «No interesa» o «Vendido» te pedimos los datos que faltan.</p>
       </div>
       <Mensajes error={error} ok={ok} />
 
@@ -168,12 +169,13 @@ export function TableroCaller({
             className="space-y-3"
             action={(fd) => {
               const l = modal.lead;
-              mover(l, "llamar_luego", () => registrarLlamada(l.id, "llamar_luego", String(fd.get("nota") ?? ""), String(fd.get("cuando") ?? "")), `${l.nombre} → Llamar luego`);
+              mover(l, "llamar_luego", () => registrarLlamada(l.id, "llamar_luego", String(fd.get("nota") ?? ""), String(fd.get("cuando") ?? ""), Number(fd.get("estrellas"))), `${l.nombre} → Llamar luego`);
               setModal(null);
             }}
           >
             <div><label className="etiqueta-campo">¿Cuándo?</label><input type="datetime-local" name="cuando" required className="campo" /></div>
             <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={3} className="campo" /></div>
+            <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
@@ -184,7 +186,7 @@ export function TableroCaller({
             className="space-y-3"
             action={(fd) => {
               const l = modal.lead;
-              mover(l, "agendado", () => agendarCita(l.id, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? "")), `${l.nombre} → Agendado`);
+              mover(l, "agendado", () => agendarCita(l.id, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? ""), Number(fd.get("estrellas"))), `${l.nombre} → Agendado`);
               setModal(null);
             }}
           >
@@ -194,7 +196,24 @@ export function TableroCaller({
             </div>
             <div><label className="etiqueta-campo">Fecha y hora (hora del proyecto)</label><input type="datetime-local" name="fecha" required className="campo" /></div>
             <div><label className="etiqueta-campo">Nota para el closer</label><textarea name="nota" rows={3} className="campo" /></div>
+            <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Agendar</button>
+          </form>
+        </Modal>
+      )}
+      {modal?.destino === "no_interesa" && (
+        <Modal titulo={`${modal.lead.nombre}: no le interesa`} onCerrar={() => setModal(null)}>
+          <form
+            className="space-y-3"
+            action={(fd) => {
+              const l = modal.lead;
+              mover(l, "no_interesa", () => registrarLlamada(l.id, "no_interesa", String(fd.get("nota") ?? ""), undefined, Number(fd.get("estrellas"))), `${l.nombre} → No interesa`);
+              setModal(null);
+            }}
+          >
+            <SelectorEstrellas quien="caller" />
+            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" /></div>
+            <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
       )}

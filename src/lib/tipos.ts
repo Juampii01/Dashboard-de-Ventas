@@ -51,6 +51,13 @@ export type Lead = {
   llamar_en: string | null;
   creado_en: string;
   ultima_actividad: string | null;
+  // v2: de dónde viene y todo lo que mandó
+  fuente: string | null;
+  evento: string | null;
+  seguimiento: Record<string, string>;
+  quiz_score: number | null;
+  datos: Record<string, unknown>;
+  estrellas_caller: number | null;
 };
 
 export type EstadoCita =
@@ -75,6 +82,8 @@ export type Cita = {
   origen: "manual" | "ghl";
   nota: string | null;
   creado_en: string;
+  estrellas_caller: number | null;
+  estrellas_closer: number | null;
 };
 
 export type Producto = {
@@ -101,6 +110,9 @@ export type Venta = {
   metodo: "stripe" | "transferencia" | "otro";
   nota: string | null;
   fecha: string;
+  devuelto: number | null;
+  devuelto_en: string | null;
+  devolucion_nota: string | null;
 };
 
 export type Actividad = {

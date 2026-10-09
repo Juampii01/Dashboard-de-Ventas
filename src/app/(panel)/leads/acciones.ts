@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, registrarActividad } from "@/lib/datos";
 import { localAIso } from "@/lib/formato";
+import { estrellasEntre } from "@/lib/estrellas";
 import type { Lead, Perfil, Proyecto } from "@/lib/tipos";
 
 const refrescar = () => revalidatePath("/", "layout");
@@ -29,18 +30,26 @@ async function moverAColumna(lead: Lead, nombres: string[]) {
 const aIso = localAIso;
 
 // ---------- Caller: resultado de la llamada ----------
-export async function registrarLlamada(leadId: string, resultado: "no_contesta" | "llamar_luego" | "no_interesa" | "contestado", nota: string, llamarEn?: string) {
+export async function registrarLlamada(
+  leadId: string,
+  resultado: "no_contesta" | "llamar_luego" | "no_interesa" | "contestado",
+  nota: string,
+  llamarEn?: string,
+  estrellas?: number
+) {
   return seguro(async () => {
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     const estado = resultado === "contestado" ? lead.estado_caller : resultado;
+    const n = resultado === "no_contesta" ? 1 : resultado === "contestado" && estrellas === undefined ? null : estrellasEntre(estrellas, 2, 5);
     await db()
       .from("leads")
       .update({
         estado_caller: estado,
         llamar_en: resultado === "llamar_luego" && llamarEn ? aIso(llamarEn, proyecto.zona_horaria) : null,
+        ...(n ? { estrellas_caller: n } : {}),
       })
       .eq("id", leadId);
-    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "llamada", resultado, nota: nota || null });
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "llamada", resultado, nota: [n ? `${n}★` : "", nota].filter(Boolean).join(" · ") || null });
     if (resultado === "no_interesa") await moverAColumna(lead, ["descartados", "descartado"]);
     refrescar();
   });
@@ -64,10 +73,11 @@ export async function anadirNota(leadId: string, nota: string) {
 }
 
 // ---------- Agendar cita con un closer ----------
-export async function agendarCita(leadId: string, closerId: string, fechaLocal: string, nota: string) {
+export async function agendarCita(leadId: string, closerId: string, fechaLocal: string, nota: string, estrellas?: number) {
   return seguro(async () => {
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
+    const n = estrellasEntre(estrellas, 2, 5);
     const { data: closer } = await db()
       .from("miembros_proyecto")
       .select("perfil_id, perfiles!inner(rol, nombre)")
@@ -77,10 +87,10 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
       .maybeSingle();
     if (!closer) throw new ErrorUsuario("Elige un closer del proyecto.");
     const fecha = aIso(fechaLocal, proyecto.zona_horaria);
-    await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null });
-    await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null }).eq("id", leadId);
+    await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
+    await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, estrellas_caller: n }).eq("id", leadId);
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;
-    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser}${nota ? ` · ${nota}` : ""}` });
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser} · ${n}★${nota ? ` · ${nota}` : ""}` });
     await moverAColumna(lead, ["agendados", "agendado"]);
     refrescar();
   });
@@ -108,9 +118,23 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     const metodo = String(formData.get("metodo") ?? "stripe");
     const fechaTxt = String(formData.get("fecha") ?? "");
     const fecha = fechaTxt ? aIso(`${fechaTxt}T12:00`, proyecto.zona_horaria) : new Date().toISOString();
+    // Desde la cita (closer), las estrellas de cómo era el prospecto son obligatorias
+    const estrellasCloser = formData.get("desde_cita") ? estrellasEntre(formData.get("estrellas"), 1, 5) : null;
+    // La cita abierta de este lead (pasará a «cerrada»)
+    const { data: cita } = await db()
+      .from("citas")
+      .select("id, closer_id")
+      .eq("lead_id", leadId)
+      .in("estado", ["pendiente", "confirmada", "seguimiento"])
+      .order("fecha", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    // Vendedor: al cerrar una cita, la venta es del closer de esa cita aunque la cierre
+    // el director o el CEO; si no, quien la registra (o a quien elija un jefe).
     let vendedor = perfil.id;
     const vendedorForm = String(formData.get("vendedor") ?? "");
-    if (esJefe(perfil) && vendedorForm) vendedor = vendedorForm;
+    if (formData.get("desde_cita") && cita?.closer_id) vendedor = cita.closer_id;
+    else if (esJefe(perfil) && vendedorForm) vendedor = vendedorForm;
   
     const { error } = await db().from("ventas").insert({
       proyecto_id: proyecto.id,
@@ -128,16 +152,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (error) throw new ErrorUsuario(error.message);
   
     await db().from("leads").update({ estado_caller: "vendido" }).eq("id", leadId);
-    // La cita pendiente de este lead pasa a "cerrada"
-    const { data: cita } = await db()
-      .from("citas")
-      .select("id")
-      .eq("lead_id", leadId)
-      .in("estado", ["pendiente", "confirmada", "seguimiento"])
-      .order("fecha", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (cita) await db().from("citas").update({ estado: "cerrada" }).eq("id", cita.id);
+    if (cita) await db().from("citas").update({ estado: "cerrada", ...(estrellasCloser ? { estrellas_closer: estrellasCloser } : {}) }).eq("id", cita.id);
     await registrarActividad({
       proyecto_id: proyecto.id,
       lead_id: leadId,

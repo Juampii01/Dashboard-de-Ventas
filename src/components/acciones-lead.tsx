@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, PhoneCall, Check } from "lucide-react";
 import { agendarCita, anadirNota, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
 import { Modal } from "@/components/modal";
+import { SelectorEstrellas } from "@/components/estrellas";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import type { Producto } from "@/lib/tipos";
@@ -62,7 +63,7 @@ export function AccionesLead({
   compacto?: boolean;
 }) {
   const { pendiente, error, ok, ejecutar } = useAccion();
-  const [modal, setModal] = useState<null | "luego" | "agendar" | "venta" | "nota">(null);
+  const [modal, setModal] = useState<null | "luego" | "agendar" | "venta" | "nota" | "no_interesa">(null);
   const [nota, setNota] = useState("");
   const telLimpio = (telefono ?? "").replace(/[^\d]/g, "");
   const productosVisibles = rol === "caller" ? productos.filter((p) => p.vende_caller) : productos;
@@ -96,7 +97,7 @@ export function AccionesLead({
         <button className={boton} disabled={pendiente} onClick={() => setModal("agendar")}>
           <CalendarPlus className="h-4 w-4 text-primario" /> Agendar
         </button>
-        <button className={boton} disabled={pendiente} onClick={() => ejecutar(() => registrarLlamada(leadId, "no_interesa", ""), "Guardado: no interesa")}>
+        <button className={boton} disabled={pendiente} onClick={() => setModal("no_interesa")}>
           <ThumbsDown className="h-4 w-4 text-mal" /> No interesa
         </button>
         {productosVisibles.length > 0 && (
@@ -115,12 +116,28 @@ export function AccionesLead({
           <form
             className="space-y-3"
             action={(fd) => {
-              ejecutar(() => registrarLlamada(leadId, "llamar_luego", String(fd.get("nota") ?? ""), String(fd.get("cuando") ?? "")), "Guardado: llamar luego");
+              ejecutar(() => registrarLlamada(leadId, "llamar_luego", String(fd.get("nota") ?? ""), String(fd.get("cuando") ?? ""), Number(fd.get("estrellas"))), "Guardado: llamar luego");
               setModal(null);
             }}
           >
             <div><label className="etiqueta-campo">¿Cuándo?</label><input type="datetime-local" name="cuando" required className="campo" /></div>
             <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={3} className="campo" placeholder="Lo que te dijo, tal cual" /></div>
+            <SelectorEstrellas quien="caller" />
+            <button className="btn-primario w-full">Guardar</button>
+          </form>
+        </Modal>
+      )}
+      {modal === "no_interesa" && (
+        <Modal titulo="No interesa" onCerrar={() => setModal(null)}>
+          <form
+            className="space-y-3"
+            action={(fd) => {
+              ejecutar(() => registrarLlamada(leadId, "no_interesa", String(fd.get("nota") ?? ""), undefined, Number(fd.get("estrellas"))), "Guardado: no interesa");
+              setModal(null);
+            }}
+          >
+            <SelectorEstrellas quien="caller" />
+            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" placeholder="Por qué no le interesa" /></div>
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
@@ -130,7 +147,7 @@ export function AccionesLead({
           <form
             className="space-y-3"
             action={(fd) => {
-              ejecutar(() => agendarCita(leadId, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? "")), "Cita agendada");
+              ejecutar(() => agendarCita(leadId, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? ""), Number(fd.get("estrellas"))), "Cita agendada");
               setModal(null);
             }}
           >
@@ -142,6 +159,7 @@ export function AccionesLead({
             </div>
             <div><label className="etiqueta-campo">Fecha y hora (hora del proyecto)</label><input type="datetime-local" name="fecha" required className="campo" /></div>
             <div><label className="etiqueta-campo">Nota para el closer</label><textarea name="nota" rows={3} className="campo" placeholder="Situación, dolor, cifra…" /></div>
+            <SelectorEstrellas quien="caller" />
             <button className="btn-primario w-full">Agendar</button>
           </form>
         </Modal>
@@ -185,11 +203,13 @@ export function FormVenta({
   vendedores,
   moneda,
   onEnviar,
+  desdeCita = false,
 }: {
   productos: Producto[];
   vendedores?: Persona[];
   moneda: string;
   onEnviar: (fd: FormData) => void;
+  desdeCita?: boolean; // el closer cierra su cita: pide las estrellas del prospecto
 }) {
   const [productoId, setProductoId] = useState(productos[0]?.id ?? "");
   const producto = productos.find((p) => p.id === productoId);
@@ -288,6 +308,12 @@ export function FormVenta({
         </div>
       )}
       <div><label className="etiqueta-campo">Nota</label><textarea name="nota" rows={2} className="campo" /></div>
+      {desdeCita && (
+        <>
+          <input type="hidden" name="desde_cita" value="1" />
+          <SelectorEstrellas quien="closer" />
+        </>
+      )}
       <button className="btn-primario w-full">Guardar venta</button>
     </form>
   );

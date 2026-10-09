@@ -5,9 +5,12 @@ import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, registrarActividad } from "@/lib/datos";
 import { localAIso, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
+import { estrellasEntre } from "@/lib/estrellas";
 import type { Cita, EstadoCita } from "@/lib/tipos";
 
 const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida", "cerrada"];
+// Después de la llamada el closer dice qué tal prospecto era (1 a 5); «No califica» = 1.
+const PIDEN_ESTRELLAS: EstadoCita[] = ["seguimiento", "perdida"];
 
 async function citaPermitida(citaId: string) {
   const { perfil, proyecto } = await getSesion();
@@ -17,18 +20,19 @@ async function citaPermitida(citaId: string) {
   return { cita, perfil, proyecto };
 }
 
-export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota: string) {
+export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota: string, estrellas?: number) {
   return seguro(async () => {
     if (!PERMITIDOS.includes(estado)) throw new ErrorUsuario("Estado no válido.");
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
-    await db().from("citas").update({ estado, nota: nota || cita.nota }).eq("id", citaId);
+    const n = estado === "no_califica" ? 1 : PIDEN_ESTRELLAS.includes(estado) ? estrellasEntre(estrellas, 1, 5) : null;
+    await db().from("citas").update({ estado, nota: nota || cita.nota, ...(n ? { estrellas_closer: n } : {}) }).eq("id", citaId);
     await registrarActividad({
       proyecto_id: proyecto.id,
       lead_id: cita.lead_id,
       perfil_id: perfil.id,
       tipo: "cita",
       resultado: estado,
-      nota: `Cita → ${ETIQUETA_ESTADO_CITA[estado]}${nota ? ` · ${nota}` : ""}`,
+      nota: `Cita → ${ETIQUETA_ESTADO_CITA[estado]}${n ? ` · ${n}★` : ""}${nota ? ` · ${nota}` : ""}`,
     });
     // Mover el lead en el CRM según el resultado
     const columna: Partial<Record<EstadoCita, string[]>> = {

@@ -1,7 +1,11 @@
 import "server-only";
 import { db, equipo } from "@/lib/datos";
-import type { Proyecto } from "@/lib/tipos";
+import type { Proyecto, Respuesta } from "@/lib/tipos";
 import type { LeadEntrada } from "@/lib/csv";
+
+// «+34 600-11-22-33» y «34600112233» son el mismo teléfono
+export const telefonoClave = (t: string | null) => (t ?? "").replace(/\D/g, "");
+const telefonoValido = (t: string | null) => telefonoClave(t).length >= 6;
 export { filaALead, type LeadEntrada } from "@/lib/csv";
 
 // Reparte n leads entre los callers activos (turno rotativo) y avanza el turno.
@@ -19,25 +23,40 @@ export async function primeraEtapa(pipelineId: string) {
   return data?.id ?? null;
 }
 
-// Inserta o actualiza leads (por Contact Id de GHL o por email).
+// Une respuestas sin perder ninguna: las nuevas sustituyen a la misma pregunta, el resto se queda.
+export function unirRespuestas(antes: Respuesta[], nuevas: Respuesta[]) {
+  const m = new Map(antes.map((r) => [r.pregunta.toLowerCase(), r]));
+  for (const r of nuevas) if (r.respuesta) m.set(r.pregunta.toLowerCase(), r);
+  return [...m.values()];
+}
+
+// Inserta o actualiza leads (por Contact Id de GHL, por email o, si no hay email, por teléfono).
 export async function guardarLeads(
   proyecto: Proyecto,
   entradas: LeadEntrada[],
-  opciones: { pipelineId: string | null; origen: "csv" | "ghl"; perfilId: string | null; repartir: boolean }
+  opciones: {
+    pipelineId: string | null;
+    etapaId?: string | null; // si no se da, la primera columna del pipeline
+    origen: "csv" | "ghl";
+    perfilId: string | null;
+    repartir: boolean;
+    notaActividad?: string;
+  }
 ) {
-  const etapaId = opciones.pipelineId ? await primeraEtapa(opciones.pipelineId) : null;
+  const etapaId = opciones.etapaId !== undefined && opciones.etapaId !== null ? opciones.etapaId : opciones.pipelineId ? await primeraEtapa(opciones.pipelineId) : null;
 
   // Leads ya existentes del proyecto
   const existentes = new Map<string, string>();
   for (let i = 0; ; i += 1000) {
     const { data } = await db()
       .from("leads")
-      .select("id, ghl_contact_id, email")
+      .select("id, ghl_contact_id, email, telefono")
       .eq("proyecto_id", proyecto.id)
       .range(i, i + 999);
     (data ?? []).forEach((l) => {
       if (l.ghl_contact_id) existentes.set(`g:${l.ghl_contact_id}`, l.id);
       if (l.email) existentes.set(`e:${l.email.toLowerCase()}`, l.id);
+      if (telefonoValido(l.telefono)) existentes.set(`t:${telefonoClave(l.telefono)}`, l.id);
     });
     if (!data || data.length < 1000) break;
   }
@@ -51,10 +70,14 @@ export async function guardarLeads(
       invalidos++;
       continue;
     }
-    const clave = e.ghl_contact_id ? `g:${e.ghl_contact_id}` : `e:${e.email}`;
+    const clave = e.ghl_contact_id ? `g:${e.ghl_contact_id}` : e.email ? `e:${e.email}` : `t:${telefonoClave(e.telefono)}`;
     if (vistos.has(clave)) continue; // duplicado dentro del mismo archivo
     vistos.add(clave);
-    const id = (e.ghl_contact_id && existentes.get(`g:${e.ghl_contact_id}`)) || (e.email && existentes.get(`e:${e.email}`));
+    // El teléfono solo se usa para reconocer al lead cuando no trae email
+    const id =
+      (e.ghl_contact_id && existentes.get(`g:${e.ghl_contact_id}`)) ||
+      (e.email && existentes.get(`e:${e.email}`)) ||
+      (!e.email && telefonoValido(e.telefono) && existentes.get(`t:${telefonoClave(e.telefono)}`));
     if (id) actualizar.push({ id, e });
     else nuevos.push(e);
   }
@@ -77,6 +100,7 @@ export async function guardarLeads(
       etapa_id: etapaId,
       caller_id: turnos[i + j] ?? null,
       ...(e.creado_en ? { creado_en: e.creado_en } : {}),
+      ...(e.extra ? { fuente: e.extra.fuente, evento: e.extra.evento, seguimiento: e.extra.seguimiento, quiz_score: e.extra.quiz_score, datos: e.extra.datos } : {}),
     }));
     const { data, error } = await db().from("leads").insert(lote).select("id");
     if (error) throw new Error(`Error guardando leads: ${error.message}`);
@@ -89,19 +113,39 @@ export async function guardarLeads(
           lead_id: d.id,
           perfil_id: opciones.perfilId,
           tipo: opciones.origen === "csv" ? "importacion" : "webhook",
-          nota: opciones.origen === "csv" ? "Importado desde CSV" : "Entró desde GHL",
+          nota: opciones.notaActividad ?? (opciones.origen === "csv" ? "Importado desde CSV" : "Entró desde GHL"),
         }))
       );
   }
 
-  // Actualiza datos y respuestas de los que ya existían (no toca pipeline ni asignación)
+  // Actualiza los que ya existían SIN perder nada (no toca pipeline ni asignación):
+  // etiquetas y respuestas se suman; el origen (fuente, evento, UTM) se queda el primero.
   for (const { id, e } of actualizar) {
-    const cambios: Record<string, unknown> = { etiquetas: e.etiquetas };
-    if (e.respuestas.some((r) => r.respuesta)) cambios.respuestas = e.respuestas;
+    const { data: antes } = await db().from("leads").select("etiquetas, respuestas, fuente, evento, seguimiento, quiz_score, datos, email").eq("id", id).single();
+    const cambios: Record<string, unknown> = {
+      etiquetas: [...new Set([...(antes?.etiquetas ?? []), ...e.etiquetas])],
+      respuestas: unirRespuestas(antes?.respuestas ?? [], e.respuestas),
+    };
     if (e.telefono) cambios.telefono = e.telefono;
+    if (e.email && !antes?.email) cambios.email = e.email;
     if (e.nombre) cambios.nombre = e.nombre;
     if (e.apellido) cambios.apellido = e.apellido;
     if (e.ghl_contact_id) cambios.ghl_contact_id = e.ghl_contact_id;
+    if (e.extra) {
+      if (!antes?.fuente && e.extra.fuente) cambios.fuente = e.extra.fuente;
+      if (!antes?.evento && e.extra.evento) cambios.evento = e.extra.evento;
+      if (antes?.quiz_score == null && e.extra.quiz_score != null) cambios.quiz_score = e.extra.quiz_score;
+      cambios.seguimiento = { ...e.extra.seguimiento, ...(antes?.seguimiento ?? {}) };
+      cambios.datos = { ...(antes?.datos ?? {}), ...e.extra.datos };
+      const otraVez = [e.extra.evento && e.extra.evento !== antes?.evento ? `evento «${e.extra.evento}»` : "", e.extra.fuente && e.extra.fuente !== antes?.fuente ? `fuente «${e.extra.fuente}»` : ""].filter(Boolean);
+      await db().from("actividades").insert({
+        proyecto_id: proyecto.id,
+        lead_id: id,
+        perfil_id: opciones.perfilId,
+        tipo: "webhook",
+        nota: `${opciones.notaActividad ?? "Volvió a entrar"}${otraVez.length ? ` · ${otraVez.join(" · ")}` : ""}`,
+      });
+    }
     await db().from("leads").update(cambios).eq("id", id);
   }
 

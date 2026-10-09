@@ -1,19 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { borrarVenta, registrarCobro } from "./acciones";
+import { Plus, Trash2, Undo2 } from "lucide-react";
+import { borrarVenta, registrarCobro, registrarDevolucion } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 
-export function FilaVentaAcciones({ ventaId, pendiente, jefe }: { ventaId: string; pendiente: number; jefe: boolean }) {
+export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean }) {
   const { pendiente: cargando, error, ok, ejecutar } = useAccion();
   const [abierto, setAbierto] = useState(false);
+  const [devolucion, setDevolucion] = useState(false);
   return (
     <div className="flex items-center justify-end gap-1">
       {pendiente > 0 && (
         <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} onClick={() => setAbierto(true)} title="Registrar cobro de cuota o resto">
           <Plus className="h-3.5 w-3.5" /> Cobro
+        </button>
+      )}
+      {jefe && !devuelta && cobrado > 0 && (
+        <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} onClick={() => setDevolucion(true)} title="Registrar una devolución">
+          <Undo2 className="h-3.5 w-3.5" /> Devolución
         </button>
       )}
       {jefe && (
@@ -27,6 +33,23 @@ export function FilaVentaAcciones({ ventaId, pendiente, jefe }: { ventaId: strin
         </button>
       )}
       {(error || ok) && <div className="absolute"><Mensajes error={error} ok={ok} /></div>}
+      {devolucion && (
+        <Modal titulo="Registrar devolución" onCerrar={() => setDevolucion(false)}>
+          <form
+            className="space-y-3"
+            action={(fd) => {
+              ejecutar(() => registrarDevolucion(ventaId, String(fd.get("importe")), String(fd.get("fecha") ?? ""), String(fd.get("nota") ?? "")), "Devolución registrada");
+              setDevolucion(false);
+            }}
+          >
+            <p className="text-sm text-texto-2">Cobrado hasta hoy: <b>{cobrado.toFixed(2)}</b>. La comisión que ya se pagó no se descuenta (la asume la empresa).</p>
+            <div><label className="etiqueta-campo">Importe devuelto</label><input name="importe" inputMode="decimal" required defaultValue={cobrado.toFixed(2)} className="campo" /></div>
+            <div><label className="etiqueta-campo">Fecha de la devolución</label><input name="fecha" type="date" className="campo" /></div>
+            <div><label className="etiqueta-campo">Motivo (opcional)</label><textarea name="nota" rows={2} className="campo" /></div>
+            <button className="btn-primario w-full">Guardar devolución</button>
+          </form>
+        </Modal>
+      )}
       {abierto && (
         <Modal titulo="Registrar cobro" onCerrar={() => setAbierto(false)}>
           <form

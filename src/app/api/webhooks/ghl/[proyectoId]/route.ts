@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardarLeads, type LeadEntrada } from "@/lib/leads";
 import { dentroDelLimite } from "@/lib/limite";
-import type { Proyecto, Respuesta } from "@/lib/tipos";
+import { interpretar } from "@/lib/entrada";
+import type { Proyecto } from "@/lib/tipos";
 
 // Recibe eventos de los workflows de GHL (acción «Webhook»).
 // Campo `tipo`: lead_nuevo | cita_agendada | cambio_etapa.
@@ -32,32 +33,10 @@ function primero(o: Json, claves: string[]) {
   return "";
 }
 
+// Todo lo que llega se interpreta igual que en las «Entradas» (src/lib/entrada.ts): no se pierde nada.
 function aLead(b: Json): LeadEntrada {
-  const tagsBruto = b.tags ?? b.contact_tags;
-  const etiquetas = Array.isArray(tagsBruto) ? tagsBruto.map(str).filter(Boolean) : str(tagsBruto).split(",").map((t) => t.trim()).filter(Boolean);
-  // Respuestas del formulario: el objeto customData (lo que se añade en la acción Webhook)
-  // o, si no hay, los campos cuyo nombre es una pregunta.
-  const respuestas: Respuesta[] = [];
-  const custom = (b.customData ?? b.custom_data) as Json | undefined;
-  const fuente = custom && typeof custom === "object" ? custom : b;
-  for (const [k, v] of Object.entries(fuente)) {
-    if (k === "tipo") continue;
-    if (fuente === custom || /[?¿]/.test(k)) {
-      const s = str(v);
-      if (s && !["contact_id", "email", "phone", "first_name", "last_name", "closer_email"].includes(k)) respuestas.push({ pregunta: k, respuesta: s });
-    }
-  }
-  const fecha = primero(b, ["date_created", "dateAdded", "created_at"]);
-  return {
-    ghl_contact_id: primero(b, ["contact_id", "contactId", "contact.id", "id"]) || null,
-    nombre: primero(b, ["first_name", "firstName", "contact.first_name", "full_name"]),
-    apellido: primero(b, ["last_name", "lastName", "contact.last_name"]),
-    email: primero(b, ["email", "contact.email"]).toLowerCase() || null,
-    telefono: primero(b, ["phone", "contact.phone"]) || null,
-    etiquetas,
-    respuestas,
-    creado_en: fecha && !isNaN(new Date(fecha).getTime()) ? new Date(fecha).toISOString() : null,
-  };
+  const r = interpretar(b);
+  return { ...r.lead, extra: { fuente: r.fuente, evento: r.evento, seguimiento: r.seguimiento, quiz_score: r.quiz_score, datos: r.datos } };
 }
 
 async function buscarOCrearLead(proyecto: Proyecto, b: Json) {

@@ -69,6 +69,14 @@ export type LeadEntrada = {
   etiquetas: string[];
   respuestas: Respuesta[];
   creado_en: string | null;
+  // Solo de landings y webhooks (v2): de dónde viene y todo lo que mandó
+  extra?: {
+    fuente: string | null;
+    evento: string | null;
+    seguimiento: Record<string, string>;
+    quiz_score: number | null;
+    datos: Record<string, unknown>;
+  };
 };
 
 export function filaALead(fila: Record<string, string>, mapa?: Record<string, Campo>): LeadEntrada {

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Tag, FileText, History, CalendarDays, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Tag, FileText, History, CalendarDays, ShoppingCart, Compass } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, equipo } from "@/lib/datos";
 import { dinero, fechaHora, ETIQUETA_ESTADO_CALLER, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio } from "@/components/ui";
 import { AccionesLead } from "@/components/acciones-lead";
 import { SelectoresLead } from "./selectores";
+import { VerEstrellas } from "@/components/estrellas";
 import type { Actividad, Cita, Etapa, Lead, Pipeline, Producto, Venta } from "@/lib/tipos";
 
 const ICONO_ACT: Record<string, string> = {
@@ -29,6 +30,22 @@ const RESULTADO: Record<string, string> = {
   completo: "Pago completo",
   reserva: "Reserva",
   cuotas: "Cuotas",
+  cobro: "Cobro",
+  devolucion: "Devolución",
+};
+// Cómo se enseña cada dato de seguimiento
+const SEGUIMIENTO: Record<string, string> = {
+  utm_source: "UTM source",
+  utm_medium: "UTM medium",
+  utm_campaign: "UTM campaign",
+  utm_content: "UTM content",
+  utm_term: "UTM term",
+  utm_id: "UTM id",
+  fbclid: "Clic de Facebook (fbclid)",
+  gclid: "Clic de Google (gclid)",
+  ttclid: "Clic de TikTok (ttclid)",
+  page_url: "Página",
+  referrer: "Venía de",
 };
 
 export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
@@ -87,6 +104,27 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
               )}
             </Seccion>
 
+            <Seccion titulo="Origen y seguimiento">
+              {!lead.fuente && !lead.evento && lead.quiz_score === null && Object.keys(lead.seguimiento ?? {}).length === 0 ? (
+                <Vacio icono={Compass} texto="Este lead no trae datos de origen (por ejemplo, vino de un CSV)." />
+              ) : (
+                <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+                  {lead.fuente && <div><dt className="text-xs text-texto-3">Fuente</dt><dd className="font-medium">{lead.fuente}</dd></div>}
+                  {lead.evento && <div><dt className="text-xs text-texto-3">Evento</dt><dd className="font-medium">{lead.evento}</dd></div>}
+                  {lead.quiz_score !== null && <div><dt className="text-xs text-texto-3">Puntuación del cuestionario</dt><dd className="font-medium">{lead.quiz_score}</dd></div>}
+                  {Object.entries(lead.seguimiento ?? {}).map(([k, v]) => (
+                    <div key={k} className="min-w-0"><dt className="text-xs text-texto-3">{SEGUIMIENTO[k] ?? k}</dt><dd className="truncate font-medium" title={v}>{v}</dd></div>
+                  ))}
+                </dl>
+              )}
+              {Object.keys(lead.datos ?? {}).length > 0 && (
+                <details className="mt-4 rounded-lg border border-borde bg-panel-2">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium">Todo lo que se recibió ({Object.keys(lead.datos).length} campos)</summary>
+                  <pre className="max-h-80 overflow-auto border-t border-borde p-3 text-xs">{JSON.stringify(lead.datos, null, 2)}</pre>
+                </details>
+              )}
+            </Seccion>
+
             <Seccion titulo="Historial">
               {(acts.data as Actividad[]).length === 0 ? (
                 <Vacio icono={History} texto="Sin actividad todavía." />
@@ -116,6 +154,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 <li className="flex items-center gap-2 break-all"><Mail className="h-4 w-4 shrink-0 text-texto-3" />{lead.email ?? "—"}</li>
                 <li className="flex flex-wrap items-center gap-1.5"><Tag className="h-4 w-4 text-texto-3" />{lead.etiquetas.length ? lead.etiquetas.map((t) => <Insignia key={t}>{t}</Insignia>) : "—"}</li>
                 {lead.llamar_en && <li className="text-aviso">Llamar el {fechaHora(lead.llamar_en, proyecto)}</li>}
+                <li><span className="mr-1.5 text-xs text-texto-3">Caller:</span><VerEstrellas n={lead.estrellas_caller} quien="caller" /></li>
               </ul>
               <div className="mt-4 border-t border-borde pt-4">
                 <SelectoresLead
@@ -154,6 +193,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                       <div>
                         <div className="font-medium">{fechaHora(c.fecha, proyecto)}</div>
                         <div className="text-xs text-texto-3">con {nombre(c.closer_id)}</div>
+                        {c.estrellas_caller && <div><span className="text-xs text-texto-3">Caller: </span><VerEstrellas n={c.estrellas_caller} quien="caller" /></div>}
+                        {c.estrellas_closer && <div><span className="text-xs text-texto-3">Closer: </span><VerEstrellas n={c.estrellas_closer} quien="closer" /></div>}
                       </div>
                       <Insignia tono={c.estado === "cerrada" ? "ok" : c.estado === "no_show" || c.estado === "perdida" ? "mal" : "primario"}>{ETIQUETA_ESTADO_CITA[c.estado]}</Insignia>
                     </li>
@@ -171,6 +212,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                     <li key={v.id} className="rounded-lg border border-borde bg-panel-2 px-3 py-2">
                       <div className="flex justify-between font-medium"><span>{v.productos?.nombre ?? "Producto"}</span><span className="text-oro">{dinero(Number(v.facturacion), proyecto)}</span></div>
                       <div className="text-xs text-texto-3">Cobrado {dinero(Number(v.cash_collected), proyecto)} · {RESULTADO[v.tipo_pago]} · {nombre(v.vendedor_id)} · {fechaHora(v.fecha, proyecto)}</div>
+                      {v.devuelto && <div className="text-xs text-mal">Devuelto {dinero(Number(v.devuelto), proyecto)}{v.devuelto_en ? ` el ${fechaHora(v.devuelto_en, proyecto)}` : ""}{v.devolucion_nota ? ` · ${v.devolucion_nota}` : ""}</div>}
                     </li>
                   ))}
                 </ul>

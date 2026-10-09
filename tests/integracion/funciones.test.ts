@@ -115,7 +115,7 @@ describe("Ventas y cobros", () => {
 describe("Citas", () => {
   it("al reagendar, la agenda sigue siendo mérito del caller y la nueva hora es correcta", async () => {
     como(e, e.p.callerB);
-    await ok(agendarCita(e.leads.LeadB, e.p.closerA.id, "2026-11-01T09:00", "nota"));
+    await ok(agendarCita(e.leads.LeadB, e.p.closerA.id, "2026-11-01T09:00", "nota", 4));
     const { data: cita } = await db.from("citas").select("*").eq("lead_id", e.leads.LeadB).eq("agendada_por", e.p.callerB.id).single();
     expect(cita!.fecha).toMatch(/^2026-11-01T14:00:00/); // día del cambio de hora en NY
     como(e, e.p.closerA);
@@ -134,7 +134,7 @@ describe("Citas", () => {
   it("«seguimiento» mueve el lead a la columna de seguimiento si existe; si no, no rompe", async () => {
     como(e, e.p.closerA);
     const { data } = await db.from("citas").select("id").eq("lead_id", e.leads.LeadB).eq("estado", "pendiente").single();
-    await ok(cambiarEstadoCita(data!.id, "seguimiento", ""));
+    await ok(cambiarEstadoCita(data!.id, "seguimiento", "", 3));
     expect((await db.from("citas").select("estado").eq("id", data!.id).single()).data!.estado).toBe("seguimiento");
   });
 });
@@ -142,7 +142,7 @@ describe("Citas", () => {
 describe("Caller: llamar luego y volver a nuevo", () => {
   it("«llamar luego» guarda la hora en la zona del proyecto y «volver a nuevo» la borra", async () => {
     como(e, e.p.callerA);
-    await ok(registrarLlamada(e.leads.LeadA, "llamar_luego", "Me dijo que a las 5", "2026-10-15T17:00"));
+    await ok(registrarLlamada(e.leads.LeadA, "llamar_luego", "Me dijo que a las 5", "2026-10-15T17:00", 3));
     let l = await leerLead(e.leads.LeadA);
     expect(l.estado_caller).toBe("llamar_luego");
     expect(new Date(l.llamar_en).toISOString()).toBe("2026-10-15T21:00:00.000Z");
@@ -153,7 +153,7 @@ describe("Caller: llamar luego y volver a nuevo", () => {
   });
   it("«no interesa» manda el lead a «Descartados»", async () => {
     como(e, e.p.callerA);
-    await ok(registrarLlamada(e.leads.LeadA, "no_interesa", ""));
+    await ok(registrarLlamada(e.leads.LeadA, "no_interesa", "", undefined, 2));
     expect((await leerLead(e.leads.LeadA)).etapa_id).toBe(e.etapas.Descartados);
   });
 });

@@ -19,6 +19,8 @@ type VentaFila = {
   metodo: string;
   fecha: string;
   nota: string | null;
+  devuelto: number | null;
+  devuelto_en: string | null;
   productos: { nombre: string } | null;
   leads: { nombre: string; apellido: string } | null;
   pagos: { importe: number }[];
@@ -92,9 +94,12 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
                         <td className="text-texto-2">{nombre(v.vendedor_id)}</td>
                         <td><Insignia tono={v.tipo_pago === "completo" ? "ok" : "aviso"}>{TIPO[v.tipo_pago]}{v.num_cuotas ? ` · ${v.num_cuotas}` : ""}</Insignia> <span className="text-xs text-texto-3">{v.metodo}</span></td>
                         <td className="text-right tabular-nums">{$(v.facturacion)}</td>
-                        <td className="text-right tabular-nums text-ok">{$(v.cobrado)}</td>
+                        <td className="text-right tabular-nums text-ok">
+                          {$(v.cobrado)}
+                          {v.devuelto && <div className="text-xs text-mal" title={v.devuelto_en ? `Devuelto el ${fechaHora(v.devuelto_en, proyecto)}` : ""}>Devuelto {$(Number(v.devuelto))}</div>}
+                        </td>
                         <td className="text-right tabular-nums text-aviso">{v.pendiente ? $(v.pendiente) : "—"}</td>
-                        <td><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} jefe={jefe} /></td>
+                        <td><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={!!v.devuelto} jefe={jefe} /></td>
                       </tr>
                     ))}
                   </tbody>

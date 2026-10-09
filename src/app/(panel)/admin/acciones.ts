@@ -4,6 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeAdmin, puedeCrearProyectos, puedeProductos } from "@/lib/auth";
 import { db } from "@/lib/datos";
+import { reglasValidas } from "@/lib/entrada";
 import type { Rol } from "@/lib/tipos";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
@@ -182,6 +183,71 @@ export async function quitarDelProyecto(perfilId: string) {
     if (!objetivo) throw new ErrorUsuario("Esa persona no existe.");
     if (perfil.rol !== "ceo" && objetivo.rol === "ceo") throw new ErrorUsuario("Solo el CEO puede tocar a otro CEO.");
     await db().from("miembros_proyecto").delete().eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId);
+    refrescar();
+  });
+}
+
+// ---------- Entradas (una dirección por landing) ----------
+// Comprueba que el pipeline y la columna son de este proyecto (y que la columna es de ese pipeline).
+async function destinoValido(proyectoId: string, pipelineId: string | null, etapaId: string | null) {
+  if (!pipelineId) return { pipeline_id: null, etapa_id: null };
+  const { data: p } = await db().from("pipelines").select("id").eq("id", pipelineId).eq("proyecto_id", proyectoId).maybeSingle();
+  if (!p) throw new ErrorUsuario("Ese pipeline no es de este proyecto.");
+  if (etapaId) {
+    const { data: e } = await db().from("etapas").select("id").eq("id", etapaId).eq("pipeline_id", pipelineId).maybeSingle();
+    if (!e) throw new ErrorUsuario("Esa columna no es de ese pipeline.");
+  }
+  return { pipeline_id: pipelineId, etapa_id: etapaId || null };
+}
+
+async function entradaDelProyecto(id: string, proyectoId: string) {
+  const { data } = await db().from("entradas").select("id").eq("id", id).eq("proyecto_id", proyectoId).maybeSingle();
+  if (!data) throw new ErrorUsuario("Entrada no encontrada.");
+}
+
+export async function crearEntrada(_prev: Res, fd: FormData): Promise<Res> {
+  const r = await seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const nombre = texto(fd, "nombre");
+    if (!nombre) throw new ErrorUsuario("Pon un nombre (por ejemplo, el de la landing).");
+    const destino = await destinoValido(proyecto.id, texto(fd, "pipeline_id") || null, texto(fd, "etapa_id") || null);
+    const { error } = await db().from("entradas").insert({ proyecto_id: proyecto.id, nombre, ...destino });
+    if (error) throw new ErrorUsuario(error.message);
+    refrescar();
+    return { ok: "Entrada creada. Copia su dirección y pégala en la landing." };
+  });
+  return r;
+}
+
+export async function guardarEntrada(id: string, cambios: { nombre: string; pipeline_id: string | null; etapa_id: string | null; reglas: unknown; activa: boolean }) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    await entradaDelProyecto(id, proyecto.id);
+    if (!cambios.nombre.trim()) throw new ErrorUsuario("Pon un nombre.");
+    const destino = await destinoValido(proyecto.id, cambios.pipeline_id, cambios.etapa_id);
+    const reglas = reglasValidas(cambios.reglas);
+    for (const r of reglas) if (r.pipeline_id || r.etapa_id) await destinoValido(proyecto.id, r.pipeline_id ?? null, r.etapa_id ?? null);
+    await db().from("entradas").update({ nombre: cambios.nombre.trim(), ...destino, reglas, activa: cambios.activa }).eq("id", id);
+    refrescar();
+  });
+}
+
+export async function nuevaDireccionEntrada(id: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    await entradaDelProyecto(id, proyecto.id);
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("");
+    await db().from("entradas").update({ token }).eq("id", id);
+    refrescar();
+  });
+}
+
+export async function borrarEntrada(id: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    await entradaDelProyecto(id, proyecto.id);
+    // Los envíos ya recibidos y sus leads se quedan; solo se borra la dirección
+    await db().from("entradas").delete().eq("id", id);
     refrescar();
   });
 }

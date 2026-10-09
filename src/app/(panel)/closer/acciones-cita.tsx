@@ -6,6 +6,7 @@ import { cambiarEstadoCita, reagendarCita } from "./acciones";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
 import { useAccion, Mensajes, FormVenta } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
+import { SelectorEstrellas } from "@/components/estrellas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 
 export function AccionesCita({
@@ -20,7 +21,7 @@ export function AccionesCita({
   moneda: string;
 }) {
   const { pendiente, error, ok, ejecutar } = useAccion();
-  const [modal, setModal] = useState<null | "venta" | "reagendar">(null);
+  const [modal, setModal] = useState<null | "venta" | "reagendar" | "seguimiento" | "perdida">(null);
   const b = "btn-secundario px-2.5 py-1.5 text-xs";
   const abierta = cita.estado === "pendiente" || cita.estado === "confirmada";
   const estado = (e: EstadoCita, msg: string) => ejecutar(() => cambiarEstadoCita(cita.id, e, ""), msg);
@@ -39,9 +40,9 @@ export function AccionesCita({
         {(pasada && abierta) || cita.estado === "seguimiento" ? (
           <>
             <button className="btn-primario px-2.5 py-1.5 text-xs" disabled={pendiente} onClick={() => setModal("venta")}><ShoppingCart className="h-3.5 w-3.5" />Cerrada</button>
-            {cita.estado !== "seguimiento" && <button className={b} disabled={pendiente} onClick={() => estado("seguimiento", "En seguimiento")}><ListChecks className="h-3.5 w-3.5 text-aviso" />Seguimiento</button>}
+            {cita.estado !== "seguimiento" && <button className={b} disabled={pendiente} onClick={() => setModal("seguimiento")}><ListChecks className="h-3.5 w-3.5 text-aviso" />Seguimiento</button>}
             {cita.estado !== "seguimiento" && <button className={b} disabled={pendiente} onClick={() => estado("no_show", "No show")}><UserX className="h-3.5 w-3.5 text-mal" />No show</button>}
-            <button className={b} disabled={pendiente} onClick={() => estado("perdida", "Perdida")}><ThumbsDown className="h-3.5 w-3.5 text-mal" />Perdida</button>
+            <button className={b} disabled={pendiente} onClick={() => setModal("perdida")}><ThumbsDown className="h-3.5 w-3.5 text-mal" />Perdida</button>
             {cita.estado !== "seguimiento" && <button className={b} disabled={pendiente} onClick={() => setModal("reagendar")}><CalendarClock className="h-3.5 w-3.5" />Reagendar</button>}
           </>
         ) : null}
@@ -52,11 +53,28 @@ export function AccionesCita({
           <FormVenta
             productos={productos}
             moneda={moneda}
+            desdeCita
             onEnviar={(fd) => {
               ejecutar(() => registrarVenta(cita.lead_id, fd), "Venta registrada");
               setModal(null);
             }}
           />
+        </Modal>
+      )}
+      {(modal === "seguimiento" || modal === "perdida") && (
+        <Modal titulo={modal === "seguimiento" ? "Pasar a seguimiento" : "Marcar como perdida"} onCerrar={() => setModal(null)}>
+          <form
+            className="space-y-3"
+            action={(fd) => {
+              const e = modal;
+              ejecutar(() => cambiarEstadoCita(cita.id, e, String(fd.get("nota") ?? ""), Number(fd.get("estrellas"))), e === "seguimiento" ? "En seguimiento" : "Perdida");
+              setModal(null);
+            }}
+          >
+            <SelectorEstrellas quien="closer" />
+            <div><label className="etiqueta-campo">Nota (opcional)</label><textarea name="nota" rows={2} className="campo" placeholder={modal === "seguimiento" ? "Qué falta para que decida" : "Por qué no compró"} /></div>
+            <button className="btn-primario w-full">Guardar</button>
+          </form>
         </Modal>
       )}
       {modal === "reagendar" && (

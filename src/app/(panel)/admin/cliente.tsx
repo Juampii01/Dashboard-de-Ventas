@@ -167,7 +167,7 @@ export function FormProducto({ producto }: { producto?: Producto }) {
   );
 }
 
-function Copiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
+export function Copiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
   const [copiado, setCopiado] = useState(false);
   return (
     <button
