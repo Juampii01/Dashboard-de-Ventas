@@ -4,6 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { db } from "@/lib/datos";
+import { cifrar, descifrar } from "@/lib/cifrado";
 import { reglasValidas } from "@/lib/entrada";
 import { SECCIONES } from "@/lib/permisos";
 import { horarioValido } from "@/lib/horarios";
@@ -240,7 +241,7 @@ export async function guardarConexionGhl(token: string, locationId: string) {
     const loc = locationId.trim();
     if (!loc) throw new ErrorUsuario("Pon el id de la subcuenta (Location ID) de GHL.");
     if (t && t.length < 20) throw new ErrorUsuario("Ese token parece incompleto.");
-    await db().from("proyectos").update({ ghl_location_id: loc, ...(t ? { ghl_token: t } : {}) }).eq("id", proyecto.id);
+    await db().from("proyectos").update({ ghl_location_id: loc, ...(t ? { ghl_token: cifrar(t) } : {}) }).eq("id", proyecto.id);
     refrescar();
   });
 }
@@ -264,7 +265,7 @@ export async function probarConexionGhl() {
     if (!m) throw new ErrorUsuario("Pon el calendario de GHL de al menos un closer para poder probar.");
     const { eventosGhl } = await import("@/lib/ghl");
     try {
-      const ev = await eventosGhl({ token: p.ghl_token, locationId: p.ghl_location_id, calendarId: m.ghl_calendar_id, userId: m.ghl_user_id, desde: new Date(Date.now() - 7 * 86_400_000), hasta: new Date(Date.now() + 30 * 86_400_000) });
+      const ev = await eventosGhl({ token: descifrar(p.ghl_token, "el token de GHL"), locationId: p.ghl_location_id, calendarId: m.ghl_calendar_id, userId: m.ghl_user_id, desde: new Date(Date.now() - 7 * 86_400_000), hasta: new Date(Date.now() + 30 * 86_400_000) });
       return { ok: `Conexión correcta: ${ev.length} citas encontradas en el calendario (últimos 7 días y próximos 30).` };
     } catch (e) {
       throw new ErrorUsuario(e instanceof Error ? e.message : "No se pudo conectar con GHL.");

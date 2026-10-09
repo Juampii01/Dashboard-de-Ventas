@@ -1,5 +1,6 @@
 import "server-only";
 import { db, todas } from "@/lib/datos";
+import { descifrar } from "@/lib/cifrado";
 import { conciliarGrabacion, reunionesFathom, type CitaC } from "@/lib/fathom";
 import { encolarAnalisis } from "@/lib/ia";
 
@@ -16,7 +17,7 @@ export async function sincronizarFathom(proyectoId: string, o: { perfilIds?: str
   for (const c of (cuentas ?? []) as Cuenta[]) {
     try {
       const desde = new Date(c.sincronizado_en ? new Date(c.sincronizado_en).getTime() - 86_400_000 : ahora.getTime() - 60 * 86_400_000);
-      const reuniones = await reunionesFathom({ apiKey: c.api_key, desde, fetchImpl: o.fetchImpl });
+      const reuniones = await reunionesFathom({ apiKey: descifrar(c.api_key, "la API key de Fathom"), desde, fetchImpl: o.fetchImpl });
       const { data: ya } = await db().from("grabaciones").select("recording_id").eq("proyecto_id", proyectoId).in("recording_id", reuniones.length ? reuniones.map((r) => r.recording_id) : [-1]);
       const existentes = new Set((ya ?? []).map((x) => Number(x.recording_id)));
       if (reuniones.length) {

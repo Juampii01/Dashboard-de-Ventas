@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { procesarLlamadasGhl, sincronizarLlamadasGhl } from "@/lib/ghl-llamadas-sync";
+import { cifrar } from "@/lib/cifrado";
 import { turnosRotativos } from "@/lib/leads";
 import { guardarHorario, guardarUsuarioGhl } from "@/app/(panel)/admin/acciones";
 import { coachIa } from "@/app/(panel)/leads/coach";
@@ -11,7 +12,7 @@ import type { Proyecto } from "@/lib/tipos";
 let e: Escenario;
 beforeAll(async () => {
   e = await crearEscenario();
-  await db.from("proyectos").update({ ghl_token: "pit-falso", ghl_location_id: "loc1" }).eq("id", e.proyecto.id);
+  await db.from("proyectos").update({ ghl_token: cifrar("pit-falso"), ghl_location_id: "loc1" }).eq("id", e.proyecto.id);
   await db.from("leads").update({ ghl_contact_id: "cA", telefono: "+34 600 000 001", email: "privado@lead.test" }).eq("id", e.leads.LeadA);
 });
 afterAll(async () => {

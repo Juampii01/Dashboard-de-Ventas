@@ -3,6 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { sincronizarFathom } from "@/lib/fathom-sync";
+import { cifrar } from "@/lib/cifrado";
 import { conciliarGrabacionManual, desunirGrabacion, guardarCuentaFathom } from "@/app/(panel)/closer/llamadas/acciones-fathom";
 
 let e: Escenario;
@@ -47,8 +48,10 @@ describe("Fathom", () => {
     await falla(guardarCuentaFathom(null, { nombre: "Mía", apiKey: "", formato: "", perfilId: e.p.closerA.id }), /Pega la API key/);
     await falla(guardarCuentaFathom(null, { nombre: "Mía", apiKey: KEY, formato: "Sesión", perfilId: e.p.closerA.id }), /\{nombre cliente\}/);
     await ok(guardarCuentaFathom(null, { nombre: "Fathom de A", apiKey: KEY, formato: "{nombre cliente}: Sesión…", perfilId: e.p.closerB.id }));
-    const { data } = await db.from("cuentas_fathom").select("perfil_id").eq("proyecto_id", e.proyecto.id);
-    expect(data).toEqual([{ perfil_id: e.p.closerA.id }]); // aunque pidiera la de B, se guarda como suya
+    const { data } = await db.from("cuentas_fathom").select("perfil_id, api_key").eq("proyecto_id", e.proyecto.id);
+    expect(data!.map((c) => c.perfil_id)).toEqual([e.p.closerA.id]); // aunque pidiera la de B, se guarda como suya
+    expect(data![0].api_key).toMatch(/^v1:/); // arreglo 3: cifrada en la base
+    expect(data![0].api_key).not.toContain(KEY);
     como(e, e.p.callerA);
     await falla(guardarCuentaFathom(null, { nombre: "X", apiKey: KEY, formato: "", perfilId: e.p.closerA.id }), /No tienes permiso/);
   });
@@ -99,7 +102,7 @@ describe("Fathom", () => {
   });
 
   it("una clave rechazada queda explicada en la cuenta, sin romper", async () => {
-    await db.from("cuentas_fathom").update({ api_key: "otra-clave-que-no-vale" }).eq("proyecto_id", e.proyecto.id);
+    await db.from("cuentas_fathom").update({ api_key: cifrar("otra-clave-que-no-vale") }).eq("proyecto_id", e.proyecto.id);
     const { f } = fathomFalso([[]]);
     const [r] = await sincronizarFathom(e.proyecto.id, { fetchImpl: f });
     expect(r.error).toMatch(/no acepta la API key/);

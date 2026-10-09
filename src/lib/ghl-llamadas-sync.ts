@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/datos";
+import { descifrar } from "@/lib/cifrado";
 import { grabacionGhl, llamadasGhl, textoLineas, transcribirDeepgram, transcripcionGhl, type Linea } from "@/lib/ghl-llamadas";
 import { configPara, hayClaveIa, pedirJson, peticion, type LlamarClaude } from "@/lib/ia";
 
@@ -11,7 +12,7 @@ export async function sincronizarLlamadasGhl(proyectoId: string, o: Opciones = {
   const { data: p } = await db().from("proyectos").select("ghl_token, ghl_location_id, ghl_llamadas_sincronizado_en").eq("id", proyectoId).single();
   if (!p?.ghl_token || !p.ghl_location_id) throw new Error("Conecta GHL en Administración → Integraciones (token y subcuenta).");
   const desde = new Date(p.ghl_llamadas_sincronizado_en ? new Date(p.ghl_llamadas_sincronizado_en).getTime() - 86_400_000 : ahora.getTime() - 14 * 86_400_000);
-  const ms = await llamadasGhl({ token: p.ghl_token, locationId: p.ghl_location_id, desde, fetchImpl: o.fetchImpl });
+  const ms = await llamadasGhl({ token: descifrar(p.ghl_token, "el token de GHL"), locationId: p.ghl_location_id, desde, fetchImpl: o.fetchImpl });
   let nuevas = 0;
   if (ms.length) {
     const contactos = [...new Set(ms.map((m) => m.contactId).filter((x): x is string => !!x))];
@@ -65,6 +66,7 @@ export async function procesarLlamadasGhl(proyectoId: string, o: Opciones = {}) 
   const puedeIa = !!o.llamar || hayClaveIa();
   const { data: p } = await db().from("proyectos").select("nombre, ghl_token, ghl_location_id").eq("id", proyectoId).single();
   if (!p?.ghl_token || !p.ghl_location_id) return 0;
+  const token = descifrar(p.ghl_token, "el token de GHL");
   const atascadas = new Date(Date.now() - 10 * 60_000).toISOString();
   const { data: cola } = await db().from("llamadas_ghl").select("*").eq("proyecto_id", proyectoId).or(`estado.eq.pendiente,and(estado.eq.procesando,empezado_en.lt.${atascadas})`).order("fecha", { ascending: false }).limit(o.max ?? 5);
   const cfg = await configPara(proyectoId, null);
@@ -74,7 +76,7 @@ export async function procesarLlamadasGhl(proyectoId: string, o: Opciones = {}) 
       let lineas = (l.transcripcion as Linea[] | null) ?? null;
       let fuente = l.fuente as string | null;
       if (!lineas?.length) {
-        const ctx = { token: p.ghl_token, locationId: p.ghl_location_id, messageId: l.ghl_message_id, fetchImpl: o.fetchImpl };
+        const ctx = { token, locationId: p.ghl_location_id, messageId: l.ghl_message_id, fetchImpl: o.fetchImpl };
         lineas = await transcripcionGhl(ctx);
         fuente = "ghl";
         if (!lineas) {

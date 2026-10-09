@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/datos";
+import { descifrar } from "@/lib/cifrado";
 import { guardarLeads, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoDesdeGhl, eventosGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
 import type { Proyecto } from "@/lib/tipos";
@@ -13,7 +14,7 @@ const DIA = 86_400_000;
 export async function sincronizarCalendarios(proyectoId: string, opciones: { fetchImpl?: typeof fetch; ahora?: Date } = {}): Promise<ResultadoSync> {
   const { data: proyecto } = await db().from("proyectos").select("*").eq("id", proyectoId).single<ProyectoGhl>();
   if (!proyecto?.ghl_token || !proyecto.ghl_location_id) throw new Error("Falta conectar GHL (token e id de la subcuenta) en Administración → Integraciones.");
-  const token = proyecto.ghl_token;
+  const token = descifrar(proyecto.ghl_token, "el token de GHL");
   const fetchImpl = opciones.fetchImpl;
   const ahora = opciones.ahora ?? new Date();
   const desde = new Date(ahora.getTime() - 30 * DIA);

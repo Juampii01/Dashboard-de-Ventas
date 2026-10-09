@@ -50,6 +50,10 @@ describe("Sincronizar calendarios de GHL", () => {
     await falla(guardarConexionGhl("x".repeat(30), "loc"), /permiso/i);
     como(e, e.p.ceo);
     await ok(guardarConexionGhl("pit-" + "x".repeat(30), "loc-123"));
+    // Arreglo 3: en la base el token está cifrado (el test de cabeceras de abajo comprueba que a GHL llega bien)
+    const { data: p } = await db.from("proyectos").select("ghl_token").eq("id", e.proyecto.id).single();
+    expect(p!.ghl_token).toMatch(/^v1:/);
+    expect(p!.ghl_token).not.toContain("xxxxxxxxxx");
     await expect(sync()).rejects.toThrow(/Ningún closer/);
     await falla(guardarCalendarioCloser(e.p.callerA.id, "cal", ""), /no es closer/);
     await ok(guardarCalendarioCloser(e.p.closerA.id, "cal-A", ""));
