@@ -4,7 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { PASSWORD, borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
 import { guardarLeads } from "@/lib/leads";
-import { crearPipeline, renombrarPipeline, borrarPipeline, crearEtapa, borrarEtapa, moverEtapa, importarCsv } from "@/app/(panel)/crm/acciones";
+import { crearPipeline, renombrarPipeline, borrarPipeline, crearEtapa, borrarEtapa, moverEtapa, importarCsv, prepararSubidaCsv } from "@/app/(panel)/crm/acciones";
+import { subirDelFormulario } from "@/lib/subir-cliente";
 import { registrarLlamada, registrarVenta, agendarCita, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { reagendarCita, cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 import { registrarCobro, borrarVenta } from "@/app/(panel)/ventas/acciones";
@@ -180,17 +181,26 @@ describe("Pipelines y columnas", () => {
     expect(l.pipeline_id).toBeNull(); // el lead NO se borra
     expect(l.etapa_id).toBeNull();
   });
-  it("subir CSV desde la acción con mapeo elegido", async () => {
+  it("subir CSV (directo a Supabase) con mapeo elegido; el archivo se borra al importarlo", async () => {
     como(e, e.p.director);
-    const fd = new FormData();
-    fd.set("archivo", new File([`Correo,Nombre completo,Ciudad\n${e.pref}-csv@x.test,Pepe Lopez,Miami\n`], "a.csv", { type: "text/csv" }));
-    fd.set("pipeline", e.pipeline.id);
-    fd.set("mapa", JSON.stringify({ Correo: "email", "Nombre completo": "nombre_completo", Ciudad: "ignorar" }));
+    // Como el navegador: sube el archivo con el enlace firmado y la acción recibe solo la ruta
+    const formularioCsv = async () => {
+      const fd = new FormData();
+      fd.set("archivo", new File([`Correo,Nombre completo,Ciudad\n${e.pref}-csv@x.test,Pepe Lopez,Miami\n`], "a.csv", { type: "text/csv" }));
+      fd.set("pipeline", e.pipeline.id);
+      fd.set("mapa", JSON.stringify({ Correo: "email", "Nombre completo": "nombre_completo", Ciudad: "ignorar" }));
+      await subirDelFormulario(fd, "archivo", "text/csv", prepararSubidaCsv);
+      return fd;
+    };
+    const fd = await formularioCsv();
     expect((await importarCsv(null, fd))?.ok).toMatch(/Importados 1/);
     const { data } = await db.from("leads").select("nombre, apellido, respuestas").eq("email", `${e.pref}-csv@x.test`).single();
     expect(data).toEqual({ nombre: "Pepe", apellido: "Lopez", respuestas: [] });
+    expect((await db.storage.from("importaciones").list(e.proyecto.id)).data ?? []).toHaveLength(0);
+    // La misma ruta ya no sirve (el archivo se borró)
+    expect((await importarCsv(null, fd))?.error).toMatch(/No se encontró/);
     // Subirlo otra vez no duplica
-    expect((await importarCsv(null, fd))?.ok).toMatch(/0 leads nuevos · 1 actualizados/);
+    expect((await importarCsv(null, await formularioCsv()))?.ok).toMatch(/0 leads nuevos · 1 actualizados/);
   });
 });
 

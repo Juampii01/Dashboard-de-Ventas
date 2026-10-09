@@ -2,11 +2,11 @@
 // Se llama a las acciones directamente (como haría alguien que se salta la pantalla).
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
-import { moverLead, asignarLeads, importarCsv, crearPipeline, borrarPipeline } from "@/app/(panel)/crm/acciones";
+import { moverLead, asignarLeads, importarCsv, prepararSubidaCsv, crearPipeline, borrarPipeline } from "@/app/(panel)/crm/acciones";
 import { registrarLlamada, agendarCita, registrarVenta, cambiarEtapaLead, asignarDesdeFicha } from "@/app/(panel)/leads/acciones";
 import { cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 import { registrarCobro, borrarVenta } from "@/app/(panel)/ventas/acciones";
-import { crearRecurso, guardarLinkPago } from "@/app/(panel)/recursos/acciones";
+import { crearRecurso, guardarLinkPago, prepararSubidaPdf } from "@/app/(panel)/recursos/acciones";
 import { crearUsuario, actualizarMiembro, crearProyecto, anadirAlProyecto, cambiarPassword } from "@/app/(panel)/admin/acciones";
 import { guardarPrograma, type DatosPrograma } from "@/app/(panel)/programas/acciones";
 
@@ -48,10 +48,10 @@ describe("Caller", () => {
   });
   it("no puede subir CSV, crear pipelines, recursos, usuarios ni productos", async () => {
     como(e, e.p.callerA);
-    const csv = new File(["Email\nx@x.test\n"], "a.csv", { type: "text/csv" });
-    const fd = new FormData();
-    fd.set("archivo", csv);
-    expect((await importarCsv(null, fd))?.error).toMatch(/permiso/);
+    // Ni puede pedir el enlace para subir, ni importar una ruta aunque la conozca
+    await falla(prepararSubidaCsv(), /permiso/);
+    await falla(prepararSubidaPdf(), /permiso/);
+    expect((await importarCsv(null, formulario({ archivo_ruta: `${e.proyecto.id}/${crypto.randomUUID()}.csv` })))?.error).toMatch(/permiso/);
     await falla(crearPipeline("Hack"), /permiso/);
     expect((await crearRecurso(null, formulario({ titulo: "x", tipo: "enlace", url: "https://x.test" })))?.error).toMatch(/permiso/);
     await falla(guardarLinkPago(e.productos["Low ticket"], "https://x.test"), /permiso/);

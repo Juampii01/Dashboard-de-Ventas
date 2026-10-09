@@ -1,9 +1,9 @@
 "use client";
 
-import { sinVaciar } from "@/components/sin-vaciar";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { Plus, Trash2, Copy, Check, Pencil } from "lucide-react";
-import { borrarRecurso, crearRecurso, guardarLinkPago } from "./acciones";
+import { borrarRecurso, crearRecurso, guardarLinkPago, prepararSubidaPdf } from "./acciones";
+import { subirDelFormulario } from "@/lib/subir-cliente";
 import { useAccion } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 
@@ -11,12 +11,31 @@ export function NuevoRecurso() {
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState("pdf");
   const [estado, accion, enviando] = useActionState(crearRecurso, null as null | { ok?: string; error?: string });
+  const [subiendo, setSubiendo] = useState(false);
+  const [errorSubida, setErrorSubida] = useState("");
+  const enviar = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    setErrorSubida("");
+    if (tipo === "pdf") {
+      setSubiendo(true);
+      try {
+        await subirDelFormulario(fd, "archivo", "application/pdf", prepararSubidaPdf);
+      } catch (err) {
+        return setErrorSubida(err instanceof Error ? err.message : "No se pudo subir el archivo.");
+      } finally {
+        setSubiendo(false);
+      }
+    }
+    startTransition(() => accion(fd));
+  };
+  const error = errorSubida || estado?.error;
   return (
     <>
       <button className="btn-primario" onClick={() => setAbierto(true)}><Plus className="h-4 w-4" /> Nuevo recurso</button>
       {abierto && (
         <Modal titulo="Nuevo recurso" onCerrar={() => setAbierto(false)} ancho="max-w-lg">
-          <form onSubmit={sinVaciar(accion)} className="space-y-3">
+          <form onSubmit={enviar} className="space-y-3">
             <label className="block"><span className="etiqueta-campo">Título</span><input name="titulo" required className="campo" placeholder="Ej: Guion de apertura" /></label>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -33,9 +52,9 @@ export function NuevoRecurso() {
             {tipo === "pdf" && <label className="block"><span className="etiqueta-campo">Archivo PDF (máx. 15 MB)</span><input type="file" name="archivo" accept="application/pdf" required className="campo" /></label>}
             {(tipo === "enlace" || tipo === "video") && <label className="block"><span className="etiqueta-campo">{tipo === "video" ? "Enlace del vídeo (YouTube, Loom, Drive…)" : "Enlace"}</span><input name="url" type="url" required className="campo" placeholder="https://" /></label>}
             {tipo === "guion" && <label className="block"><span className="etiqueta-campo">Guion</span><textarea name="contenido" rows={10} required className="campo font-mono text-xs" /></label>}
-            {estado?.error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{estado.error}</p>}
-            {estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
-            <button className="btn-primario w-full" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</button>
+            {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
+            {!error && estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
+            <button className="btn-primario w-full" disabled={enviando || subiendo}>{subiendo ? "Subiendo…" : enviando ? "Guardando…" : "Guardar"}</button>
           </form>
         </Modal>
       )}

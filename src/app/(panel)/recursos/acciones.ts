@@ -4,6 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeRecursos } from "@/lib/auth";
 import { db } from "@/lib/datos";
+import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 
 const TIPOS = ["pdf", "enlace", "guion", "video"] as const;
 const ROLES = ["todos", "caller", "closer"] as const;
@@ -15,6 +16,14 @@ function urlValida(u: string) {
   } catch {
     return false;
   }
+}
+
+// Enlace firmado para que el navegador suba el PDF directo a Supabase (sin pasar por Vercel)
+export async function prepararSubidaPdf() {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeRecursos);
+    return prepararSubida("recursos", proyecto.id);
+  });
 }
 
 export async function crearRecurso(_prev: unknown, formData: FormData) {
@@ -32,16 +41,18 @@ export async function crearRecurso(_prev: unknown, formData: FormData) {
       if (!contenido) return { error: "Escribe el guion." };
       fila.contenido = contenido;
     } else if (tipo === "pdf") {
-      const archivo = formData.get("archivo");
-      if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elige un PDF." };
-      if (archivo.type !== "application/pdf") return { error: "El archivo tiene que ser PDF." };
-      if (archivo.size > 15 * 1024 * 1024) return { error: "El PDF pesa más de 15 MB." };
+      // El navegador ya lo subió directo a Supabase (prepararSubidaPdf); aquí llega solo la ruta
+      const ruta = String(formData.get("archivo_ruta") ?? "");
+      if (!ruta) return { error: "Elige un PDF." };
+      const { count } = await db().from("recursos").select("id", { count: "exact", head: true }).eq("archivo_path", ruta);
+      if (count) return { error: "Ese archivo ya está guardado. Vuelve a elegirlo." };
+      const archivo = await leerSubida("recursos", ruta, proyecto.id);
       // El tipo lo dice el navegador y se puede falsear: se comprueba que el archivo empieza como un PDF de verdad
       const cabecera = new TextDecoder().decode(new Uint8Array(await archivo.slice(0, 5).arrayBuffer()));
-      if (cabecera !== "%PDF-") return { error: "El archivo no es un PDF válido." };
-      const ruta = `${proyecto.id}/${crypto.randomUUID()}.pdf`;
-      const { error } = await db().storage.from("recursos").upload(ruta, archivo, { contentType: "application/pdf" });
-      if (error) return { error: `No se pudo subir: ${error.message}` };
+      if (cabecera !== "%PDF-") {
+        await borrarSubida("recursos", ruta);
+        return { error: "El archivo no es un PDF válido." };
+      }
       fila.archivo_path = ruta;
     } else {
       const url = String(formData.get("url") ?? "").trim();
@@ -49,7 +60,10 @@ export async function crearRecurso(_prev: unknown, formData: FormData) {
       fila.url = url;
     }
     const { error } = await db().from("recursos").insert(fila);
-    if (error) return { error: error.message };
+    if (error) {
+      if (fila.archivo_path) await borrarSubida("recursos", fila.archivo_path as string);
+      return { error: error.message };
+    }
     revalidatePath("/recursos");
     return { ok: "Recurso añadido." };
   } catch (e) {

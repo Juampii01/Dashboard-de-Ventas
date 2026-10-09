@@ -3,14 +3,16 @@ import type { NextConfig } from "next";
 const desarrollo = process.env.NODE_ENV === "development";
 
 // Política de seguridad del navegador (guía «CSP without nonces» de Next 16).
-// El navegador no habla nunca con Supabase: todo pasa por el servidor, así que 'self' basta.
+// El navegador solo habla con Supabase para subir archivos (PDF y CSV) con un enlace firmado
+// que crea el servidor; todo lo demás pasa por el servidor.
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : "";
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${desarrollo ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  `connect-src 'self'${supabase ? ` ${supabase}` : ""}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -40,7 +42,8 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
-    serverActions: { bodySizeLimit: "20mb" },
+    // Los archivos ya no pasan por las acciones (van directos a Supabase); por debajo de los 4,5 MB de Vercel
+    serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
     return [{ source: "/(.*)", headers: cabeceras }];

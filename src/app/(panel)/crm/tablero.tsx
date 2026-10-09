@@ -1,9 +1,9 @@
 "use client";
 
-import { sinVaciar } from "@/components/sin-vaciar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { startTransition, useActionState, useMemo, useState, useTransition, type FormEvent } from "react";
+import { subirDelFormulario } from "@/lib/subir-cliente";
 import {
   Plus,
   Upload,
@@ -28,6 +28,7 @@ import {
   crearPipeline,
   editarEtapa,
   importarCsv,
+  prepararSubidaCsv,
   moverEtapa,
   moverLead,
   renombrarPipeline,
@@ -563,9 +564,26 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
   const [vista, setVista] = useState<{ columnas: string[]; ejemplo: Record<string, string>; filas: number } | null>(null);
   const [mapa, setMapa] = useState<Record<string, Campo>>({});
   const sinContacto = vista && !Object.values(mapa).some((c) => c === "email" || c === "telefono" || c === "ghl_contact_id");
+  const [subiendo, setSubiendo] = useState(false);
+  const [errorSubida, setErrorSubida] = useState("");
+  const enviar = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    setErrorSubida("");
+    setSubiendo(true);
+    try {
+      await subirDelFormulario(fd, "archivo", "text/csv", prepararSubidaCsv);
+    } catch (err) {
+      return setErrorSubida(err instanceof Error ? err.message : "No se pudo subir el archivo.");
+    } finally {
+      setSubiendo(false);
+    }
+    startTransition(() => accion(fd));
+  };
+  const error = errorSubida || estado?.error;
   return (
     <Modal titulo="Subir CSV de leads" onCerrar={onCerrar} ancho="max-w-2xl">
-      <form onSubmit={sinVaciar(accion)} className="space-y-4">
+      <form onSubmit={enviar} className="space-y-4">
         <p className="text-sm text-texto-2">
           Sirve la exportación de contactos de GoHighLevel o cualquier CSV. Revisa qué es cada columna; lo que marques como <b>respuesta del formulario</b> se verá en la ficha del lead. Si un lead ya existe (mismo Contact Id o email), se actualiza en vez de duplicarse.
         </p>
@@ -618,9 +636,9 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
           <input type="checkbox" name="repartir" className="accent-[var(--primario)]" />
           Repartir los nuevos entre los callers (solo si el reparto está en «rotativo»)
         </label>
-        {estado?.error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{estado.error}</p>}
-        {estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
-        <button className="btn-primario w-full" disabled={enviando || !!sinContacto}>{enviando ? "Importando…" : "Importar"}</button>
+        {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
+        {!error && estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
+        <button className="btn-primario w-full" disabled={enviando || subiendo || !!sinContacto}>{subiendo ? "Subiendo…" : enviando ? "Importando…" : "Importar"}</button>
       </form>
     </Modal>
   );

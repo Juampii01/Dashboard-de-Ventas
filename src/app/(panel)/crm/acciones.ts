@@ -7,17 +7,27 @@ import { exigir, esJefe } from "@/lib/auth";
 import { db, registrarActividad } from "@/lib/datos";
 import { guardarLeads, primeraEtapa } from "@/lib/leads";
 import { filaALead, mapaValido } from "@/lib/csv";
+import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 
 const refrescar = () => revalidatePath("/", "layout");
 
 // ---------- Importar CSV ----------
+// Enlace firmado para que el navegador suba el CSV directo a Supabase (sin pasar por Vercel)
+export async function prepararSubidaCsv() {
+  return seguro(async () => {
+    const { proyecto } = await exigir(esJefe);
+    return prepararSubida("importaciones", proyecto.id);
+  });
+}
+
 export async function importarCsv(_prev: unknown, formData: FormData) {
+  const ruta = String(formData.get("archivo_ruta") ?? "");
   try {
     const { perfil, proyecto } = await exigir(esJefe);
-    const archivo = formData.get("archivo");
-    if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elige un archivo CSV." };
-    if (archivo.size > 15 * 1024 * 1024) return { error: "El archivo pesa más de 15 MB." };
-    const texto = await archivo.text();
+    if (!ruta) return { error: "Elige un archivo CSV." };
+    const texto = await (await leerSubida("importaciones", ruta, proyecto.id)).text();
+    // Ya está leído: el archivo no se guarda
+    await borrarSubida("importaciones", ruta);
     const res = Papa.parse<Record<string, string>>(texto.replace(/^﻿/, ""), { header: true, skipEmptyLines: true });
     if (!res.data.length) return { error: "El CSV no tiene filas." };
     const pipelineId = String(formData.get("pipeline") ?? "") || null;
