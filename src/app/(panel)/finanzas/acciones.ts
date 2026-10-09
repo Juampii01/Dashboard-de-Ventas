@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db, todas, equipo } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
+import { exigirNoEsPropia } from "@/lib/auth";
 import { inicioDia, localAIso } from "@/lib/formato";
 import { cargarFinanzas } from "@/lib/finanzas-datos";
 import { liquidacionesMes, type CitaL, type PersonaL } from "@/lib/finanzas";
@@ -244,6 +245,7 @@ export async function pagarLiquidacion(id: string, cuentaId: string | null) {
     await delProyecto("cuentas", cuentaId, proyecto.id);
     const { data: l } = await db().from("liquidaciones").select("*, perfiles(nombre)").eq("id", id).single();
     if (l.estado === "pagada") throw new ErrorUsuario("Ya está pagada.");
+    exigirNoEsPropia(perfil, l.perfil_id, "marcar como pagada");
     let movimiento: string | null = null;
     if (Number(l.comision_cobrado) > 0) {
       const { data: cat } = await db().from("categorias_finanzas").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "egreso").eq("nombre", "Comisiones").maybeSingle();
@@ -257,9 +259,10 @@ export async function pagarLiquidacion(id: string, cuentaId: string | null) {
 
 export async function desmarcarLiquidacion(id: string) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("finanzas");
+    const { perfil, proyecto } = await exigirSeccion("finanzas");
     await delProyecto("liquidaciones", id, proyecto.id);
-    const { data: l } = await db().from("liquidaciones").select("movimiento_id").eq("id", id).single();
+    const { data: l } = await db().from("liquidaciones").select("movimiento_id, perfil_id").eq("id", id).single();
+    exigirNoEsPropia(perfil, l?.perfil_id ?? null, "desmarcar");
     await db().from("liquidaciones").update({ estado: "pendiente", pagada_en: null, movimiento_id: null }).eq("id", id);
     if (l?.movimiento_id) await db().from("movimientos").delete().eq("id", l.movimiento_id);
     refrescar();

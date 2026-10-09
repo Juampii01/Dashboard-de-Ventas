@@ -7,6 +7,7 @@ import { exigirSeccion } from "@/lib/permisos";
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
+import { exigirCambiarComisionPersona, exigirCambiarComisionRol, exigirPuedeDarRol } from "@/lib/auth";
 
 const refrescar = () => revalidatePath("/", "layout");
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
@@ -32,6 +33,13 @@ async function comisionValida(proyectoId: string, c: ComisionPersona): Promise<C
     }
   }
   return { pct_venta: pct(c.pct_venta, "Comisión por venta"), pct_agenda: pct(c.pct_agenda, "Comisión por agenda"), por_producto: Object.keys(por).length ? por : null };
+}
+
+// Misma comisión aunque las claves vengan en otro orden
+function mismaComision(a: ComisionPersona, b: ComisionPersona) {
+  const ordenar = (x: unknown): unknown =>
+    x && typeof x === "object" ? Object.fromEntries(Object.entries(x).sort(([k1], [k2]) => k1.localeCompare(k2)).map(([k, v]) => [k, ordenar(v)])) : x ?? null;
+  return JSON.stringify(ordenar(a ?? null)) === JSON.stringify(ordenar(b ?? null));
 }
 
 async function deEsteProyecto(tabla: "areas" | "puestos" | "miembros_equipo", id: string | null, proyectoId: string) {
@@ -67,6 +75,7 @@ export async function crearMiembro(a: AltaMiembro) {
       puestoId = data.id;
     }
     const comision = await comisionValida(proyecto.id, a.comision);
+    if (comision) exigirCambiarComisionPersona(perfil, null);
 
     let perfilId: string | null = null;
     let email: string | null = null;
@@ -77,6 +86,7 @@ export async function crearMiembro(a: AltaMiembro) {
       if (a.acceso.password.length < 8) throw new ErrorUsuario("La contraseña temporal necesita al menos 8 caracteres.");
       if (!ROLES.includes(a.acceso.rol)) throw new ErrorUsuario("Rol no válido.");
       if (a.acceso.rol === "ceo" && perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO puede crear otro CEO.");
+      exigirPuedeDarRol(perfil, a.acceso.rol);
       const { data, error } = await db().auth.admin.createUser({ email, password: a.acceso.password, email_confirm: true });
       if (error) throw new ErrorUsuario(error.message.includes("already") ? "Ya existe un usuario con ese email." : error.message);
       const { error: e2 } = await db().from("perfiles").insert({ id: data.user.id, nombre: nombres[0], email, rol: a.acceso.rol });
@@ -97,12 +107,15 @@ export async function crearMiembro(a: AltaMiembro) {
 
 export async function actualizarMiembroEquipo(id: string, c: { nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona }) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("equipo");
-    await deEsteProyecto("miembros_equipo", id, proyecto.id);
+    const { perfil, proyecto } = await exigirSeccion("equipo");
+    const { data: m } = await db().from("miembros_equipo").select("perfil_id, comision").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
+    if (!m) throw new ErrorUsuario("Ese dato no es de este proyecto.");
     await deEsteProyecto("areas", c.area_id, proyecto.id);
     await deEsteProyecto("puestos", c.puesto_id, proyecto.id);
     if (!c.nombre.trim()) throw new ErrorUsuario("Pon el nombre.");
-    await db().from("miembros_equipo").update({ nombre: c.nombre.trim(), area_id: c.area_id, puesto_id: c.puesto_id, lider: c.lider, activo: c.activo, comision: await comisionValida(proyecto.id, c.comision) }).eq("id", id);
+    const comision = await comisionValida(proyecto.id, c.comision);
+    if (!mismaComision(comision, m.comision as ComisionPersona)) exigirCambiarComisionPersona(perfil, m.perfil_id);
+    await db().from("miembros_equipo").update({ nombre: c.nombre.trim(), area_id: c.area_id, puesto_id: c.puesto_id, lider: c.lider, activo: c.activo, comision }).eq("id", id);
     refrescar();
   });
 }
@@ -118,6 +131,7 @@ export async function darAccesoMiembro(id: string, emailTxt: string, password: s
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ErrorUsuario("Pon un email válido.");
     if (password.length < 8) throw new ErrorUsuario("La contraseña temporal necesita al menos 8 caracteres.");
     if (!ROLES.includes(rol) || (rol === "ceo" && perfil.rol !== "ceo")) throw new ErrorUsuario("Rol no válido.");
+    exigirPuedeDarRol(perfil, rol);
     const { data, error } = await db().auth.admin.createUser({ email, password, email_confirm: true });
     if (error) throw new ErrorUsuario(error.message.includes("already") ? "Ya existe un usuario con ese email." : error.message);
     const { error: e2 } = await db().from("perfiles").insert({ id: data.user.id, nombre: m.nombre, email, rol });
@@ -162,8 +176,9 @@ export async function borrarArea(id: string) {
 
 export async function guardarComisionRol(rol: Rol, pctVenta: string, pctAgenda: string) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("equipo");
+    const { perfil, proyecto } = await exigirSeccion("equipo");
     if (!ROLES.includes(rol)) throw new ErrorUsuario("Rol no válido.");
+    exigirCambiarComisionRol(perfil, rol);
     const venta = pct(pctVenta, "Comisión por venta") ?? 0;
     const agenda = rol === "caller" ? pct(pctAgenda, "Comisión por agenda") ?? 0 : 0;
     await db().from("comisiones_rol").upsert({ proyecto_id: proyecto.id, rol, pct_venta: venta, pct_agenda: agenda });

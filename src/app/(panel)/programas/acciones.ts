@@ -5,6 +5,8 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
 import { leerNumero } from "@/lib/numero";
+import { exigirCambiarComisionRol } from "@/lib/auth";
+import type { Rol } from "@/lib/tipos";
 
 export type DatosPrograma = {
   id: string | null;
@@ -32,7 +34,7 @@ const num = (v: string, campo: string, max = 1e9) => {
 
 export async function guardarPrograma(d: DatosPrograma) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("programas");
+    const { perfil, proyecto } = await exigirSeccion("programas");
     if (!d.nombre.trim()) throw new ErrorUsuario("Falta el nombre del programa.");
     const precio = num(d.precio, "Precio");
     if (precio === 0) throw new ErrorUsuario("El precio del programa está en cero (déjalo vacío si es personalizado).");
@@ -65,9 +67,14 @@ export async function guardarPrograma(d: DatosPrograma) {
       comisiones: Object.keys(comisiones).length ? comisiones : null,
       link_pago: link || null,
     };
+    // Comisiones: solo el CEO o el director, y el director no la de su propio rol (arreglo 2)
+    const antes = d.id ? (await db().from("productos").select("comisiones").eq("id", d.id).eq("proyecto_id", proyecto.id).maybeSingle()).data : null;
+    if (d.id && !antes) throw new ErrorUsuario("Programa no encontrado.");
+    const previas = (antes?.comisiones ?? {}) as Record<string, number>;
+    for (const k of new Set([...Object.keys(previas), ...Object.keys(comisiones)])) {
+      if ((previas[k] ?? 0) !== (comisiones[k] ?? 0)) exigirCambiarComisionRol(perfil, (k === "caller_agenda" ? "caller" : k) as Rol);
+    }
     if (d.id) {
-      const { data } = await db().from("productos").select("id").eq("id", d.id).eq("proyecto_id", proyecto.id).maybeSingle();
-      if (!data) throw new ErrorUsuario("Programa no encontrado.");
       await db().from("productos").update(fila).eq("id", d.id);
     } else {
       const { count } = await db().from("productos").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
