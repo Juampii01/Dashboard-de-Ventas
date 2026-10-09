@@ -6,6 +6,7 @@ import { useAccion } from "@/components/acciones-lead";
 import { activarPrograma, guardarPrograma, type DatosPrograma } from "./acciones";
 import type { Producto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
+import { pct } from "@/lib/formato";
 
 const COLORES = ["#2f55d4", "#7c3aed", "#db2777", "#d97706", "#15803d", "#0891b2", "#b91c1c"];
 const ROLES = [
@@ -116,7 +117,7 @@ function Ventana({ programa, moneda, comisionesRol, onCerrar }: { programa: Prod
                   {ROLES.map((r) => (
                     <div key={r.k} className="flex items-center gap-3 px-3 py-2 text-sm">
                       <span className="flex-1">{r.t}</span>
-                      <span className="text-xs text-texto-3">del rol: {rolDe(r.k)}%</span>
+                      <span className="text-xs text-texto-3">del rol: {pct(rolDe(r.k))}</span>
                       <input className="campo w-20 py-1 text-right" inputMode="decimal" value={d.comisiones[r.k] ?? ""} onChange={(e) => poner({ comisiones: { ...d.comisiones, [r.k]: e.target.value } })} placeholder="—" aria-label={`% ${r.t}`} />%
                     </div>
                   ))}

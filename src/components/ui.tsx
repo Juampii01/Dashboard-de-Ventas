@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { pct } from "@/lib/formato";
 
 export function Cabecera({ titulo, subtitulo, acciones }: { titulo: string; subtitulo?: ReactNode; acciones?: ReactNode }) {
   return (
@@ -74,7 +75,7 @@ export function Cambio({ valor }: { valor: number }) {
   if (valor === 0)
     return (
       <span className="inline-flex items-center gap-0.5 text-texto-3">
-        <Minus className="h-3 w-3" />0%
+        <Minus className="h-3 w-3" />0 %
       </span>
     );
   const sube = valor > 0;
@@ -82,7 +83,7 @@ export function Cambio({ valor }: { valor: number }) {
   return (
     <span className={`inline-flex items-center gap-0.5 font-medium ${sube ? "text-ok" : "text-mal"}`}>
       <Icono className="h-3 w-3" />
-      {Math.abs(valor)}%
+      {pct(Math.abs(valor), 0)}
     </span>
   );
 }
@@ -106,7 +107,7 @@ export function Anillo({ valor, color = "var(--primario)", tamano = 76 }: { valo
         transform="rotate(-90 38 38)"
       />
       <text x="38" y="42.5" textAnchor="middle" fontSize="14" fontWeight="600" fill="var(--texto)">
-        {v}%
+        {pct(v)}
       </text>
     </svg>
   );

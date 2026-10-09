@@ -1,3 +1,4 @@
+import { pct as formatoPct } from "@/lib/formato";
 // Preguntas del reporte de fin de día según el rol.
 export type Pregunta = { clave: string; texto: string; tipo: "numero" | "texto"; ayuda?: string; destacada?: boolean };
 
@@ -34,7 +35,7 @@ export function tasasCloser(r: Record<string, string | number | undefined>) {
   const pct = (a: unknown, b: unknown) => {
     const x = Number(a);
     const y = Number(b);
-    return Number.isFinite(x) && Number.isFinite(y) && y > 0 ? `${Math.round((x / y) * 100)}%` : "—";
+    return Number.isFinite(x) && Number.isFinite(y) && y > 0 ? formatoPct(Math.round((x / y) * 100)) : "—";
   };
   return {
     agendamiento: pct(r.llamadas_agendadas, r.llamadas_realizadas),

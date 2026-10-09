@@ -5,7 +5,7 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
 import { metricasAgendas, type MetricasAgendas } from "@/lib/metricas-agendas";
 import { leerPeriodo, rangoNav } from "@/lib/periodos";
-import { dinero } from "@/lib/formato";
+import { dinero, pct } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Seccion, Anillo } from "@/components/ui";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
 import { PestanasAgendas } from "./pestanas";
@@ -105,10 +105,10 @@ function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) 
             <li key={x.t}>
               <div className="mb-1 flex items-baseline justify-between text-sm">
                 <span className="font-medium">{x.t}</span>
-                <span className="tabular-nums"><b>{x.n}</b> <span className="text-xs text-texto-3">· {i === 0 ? "100" : Math.round((x.n / max) * 1000) / 10}%</span></span>
+                <span className="tabular-nums"><b>{x.n}</b> <span className="text-xs text-texto-3">· {pct(i === 0 ? "100" : Math.round((x.n / max) * 1000) / 10)}</span></span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-panel-2" title={`${x.t}: ${x.n}`}>
-                <div className="h-full rounded-full bg-primario" style={{ width: `${(x.n / max) * 100}%`, opacity: 1 - i * 0.22 }} />
+                <div className="h-full rounded-full bg-primario" style={{ width: `${pct((x.n / max) * 100)}`, opacity: 1 - i * 0.22 }} />
               </div>
             </li>
           ))}
@@ -120,17 +120,17 @@ function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) 
           <span>Canceladas <b>{m.canceladas}</b></span>
           <span>No califica <b>{m.noCalifica}</b></span>
         </div>
-        <p className="mt-2 text-xs text-texto-3">Tasa de cierre <b className="text-texto">{m.pctCierre}%</b> sobre asistencias</p>
+        <p className="mt-2 text-xs text-texto-3">Tasa de cierre <b className="text-texto">{pct(m.pctCierre)}</b> sobre asistencias</p>
       </Seccion>
 
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
-          <Kpi titulo="% cierre / asist." valor={`${m.pctCierre}%`} icono={Target} tono="ok" detalle={`Call/close ${m.pctCallClose}%`} />
+          <Kpi titulo="% cierre / asist." valor={`${pct(m.pctCierre)}`} icono={Target} tono="ok" detalle={`Call/close ${pct(m.pctCallClose)}`} />
           <Kpi titulo="Ticket medio" valor={$(m.ticketMedio)} icono={Ticket} tono="oro" detalle="por venta cerrada" />
           <Kpi titulo="Calificados 4★+" valor={m.calificados} icono={Star} tono="morado" detalle={`${m.con5} con 5★`} />
           <Kpi titulo="Media estrellas" valor={m.mediaEstrellasCloser ?? "—"} icono={Star} tono="oro" detalle={`del closer · caller ${m.mediaEstrellasCaller ?? "—"}`} />
           <Kpi titulo="Pendientes" valor={m.pendientes} icono={Hourglass} tono="aviso" detalle={`${m.perdidas} perd. · ${m.canceladas} canc.`} />
-          <Kpi titulo="Devoluciones" valor={m.devoluciones} icono={Undo2} tono="mal" detalle={`${m.pctDevoluciones}% de las ventas · ${$(m.devuelto)}`} />
+          <Kpi titulo="Devoluciones" valor={m.devoluciones} icono={Undo2} tono="mal" detalle={`${pct(m.pctDevoluciones)} de las ventas · ${$(m.devuelto)}`} />
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <Seccion titulo="Agendas por fuente">
@@ -147,7 +147,7 @@ function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) 
               </ul>
             </div>
             <dl className="mt-4 divide-y divide-borde border-t border-borde text-sm">
-              {[["Tasa de asistencia", `${m.tasaAsistencia}%`], ["Tasa de cancelación", `${m.tasaCancelacion}%`], ["Calificados 4★+", m.calificados], ["Ticket medio", $(m.ticketMedio)], ["Media de estrellas (closer)", m.mediaEstrellasCloser ?? "—"]].map(([t, v]) => (
+              {[["Tasa de asistencia", `${pct(m.tasaAsistencia)}`], ["Tasa de cancelación", `${pct(m.tasaCancelacion)}`], ["Calificados 4★+", m.calificados], ["Ticket medio", $(m.ticketMedio)], ["Media de estrellas (closer)", m.mediaEstrellasCloser ?? "—"]].map(([t, v]) => (
                 <div key={t} className="flex justify-between py-1.5"><dt className="text-texto-2">{t}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
               ))}
             </dl>
@@ -169,9 +169,9 @@ function Barras({ titulo, filas }: { titulo: string; filas: { nombre: string; n:
       ) : (
         <ul className="space-y-2">
           {filas.slice(0, 8).map((f) => (
-            <li key={f.nombre} title={`${f.nombre}: ${f.n} (${Math.round((f.n / total) * 100)}%)`}>
+            <li key={f.nombre} title={`${f.nombre}: ${f.n} (${pct(Math.round((f.n / total) * 100))})`}>
               <div className="flex justify-between text-sm"><span className="truncate">{f.nombre}</span><span className="tabular-nums text-texto-2">{f.n}</span></div>
-              <div className="mt-1 h-2 overflow-hidden rounded-full bg-panel-2"><div className="h-full rounded-full bg-primario" style={{ width: `${(f.n / max) * 100}%` }} /></div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-panel-2"><div className="h-full rounded-full bg-primario" style={{ width: `${pct((f.n / max) * 100)}` }} /></div>
             </li>
           ))}
           {filas.length > 8 && <li className="text-xs text-texto-3">+ {filas.length - 8} fuentes más</li>}
@@ -186,7 +186,7 @@ function Comparativa({ filas, moneda: $ }: { filas: { c: { id: string; nombre: s
     ["Agendadas", (m) => m.agendadas],
     ["Asistencias", (m) => m.asistencias],
     ["Cerradas", (m) => m.cerradas],
-    ["% cierre", (m) => `${m.pctCierre}%`],
+    ["% cierre", (m) => `${pct(m.pctCierre)}`],
     ["No-show", (m) => m.noShow],
     ["Facturación", (m) => $(m.facturacion)],
     ["Cash", (m) => $(m.cash)],

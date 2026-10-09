@@ -2,7 +2,7 @@ import { DollarSign, Wallet, PiggyBank, Megaphone, Hourglass, Receipt, TrendingU
 import { resumenFinanzas, cambio } from "@/lib/finanzas";
 import { diaEnZona } from "@/lib/llamadas";
 import { rangoNav } from "@/lib/periodos";
-import { dinero, hoyEnZona, type Rango } from "@/lib/formato";
+import { dinero, hoyEnZona, type Rango, pct } from "@/lib/formato";
 import { Kpi, Seccion } from "@/components/ui";
 import type { Proyecto } from "@/lib/tipos";
 import type { DatosFinanzas } from "./cargar";
@@ -56,9 +56,9 @@ export function TabResumen({ d, rango, proyecto }: { d: DatosFinanzas; rango: Ra
                 <div key={t as string}>
                   <div className="flex items-baseline justify-between text-sm">
                     <span>{t} <span className="text-xs text-texto-3">· {ayuda}</span></span>
-                    <span className="font-medium tabular-nums">{$(v as number)} <span className="text-xs text-texto-3">{Math.round(((v as number) / totalCash) * 100)}%</span></span>
+                    <span className="font-medium tabular-nums">{$(v as number)} <span className="text-xs text-texto-3">{pct(Math.round(((v as number) / totalCash) * 100))}</span></span>
                   </div>
-                  <div className="mt-1 h-2 rounded-full bg-panel-2"><div className="h-2 rounded-full bg-primario" style={{ width: `${((v as number) / totalCash) * 100}%` }} /></div>
+                  <div className="mt-1 h-2 rounded-full bg-panel-2"><div className="h-2 rounded-full bg-primario" style={{ width: `${pct(((v as number) / totalCash) * 100)}` }} /></div>
                 </div>
               ))}
               {r.devuelto > 0 && <p className="text-xs text-texto-3">Menos {$(r.devuelto)} de devoluciones = {$(r.cash)} de cash collected.</p>}
@@ -144,7 +144,7 @@ function MapaCobros({ porDia, rango, zona, moneda }: { porDia: Map<string, numbe
         {dias.map((x) => {
           const v = porDia.get(x) ?? 0;
           return (
-            <div key={x} title={`${Number(x.slice(8))}/${Number(x.slice(5, 7))}: ${moneda(v)}`} className={`flex aspect-square items-center justify-center rounded-md text-[11px] ${x === hoy ? "ring-1 ring-primario" : ""} ${v ? "text-white" : "bg-panel-2 text-texto-3"}`} style={v ? { background: `color-mix(in oklab, var(--primario) ${Math.round(35 + (v / max) * 65)}%, var(--panel))` } : undefined}>
+            <div key={x} title={`${Number(x.slice(8))}/${Number(x.slice(5, 7))}: ${moneda(v)}`} className={`flex aspect-square items-center justify-center rounded-md text-[11px] ${x === hoy ? "ring-1 ring-primario" : ""} ${v ? "text-white" : "bg-panel-2 text-texto-3"}`} style={v ? { background: `color-mix(in oklab, var(--primario) ${pct(Math.round(35 + (v / max) * 65))}, var(--panel))` } : undefined}>
               {Number(x.slice(8))}
             </div>
           );

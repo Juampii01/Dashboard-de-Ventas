@@ -42,6 +42,14 @@ export function porcentaje(parte: number, total: number) {
   return Math.round((parte / total) * 1000) / 10;
 }
 
+// Porcentaje como en España (decisión de Cristian, 9 oct 2026): coma decimal y espacio duro antes del % → «66,7 %»
+export function pct(n: number | string | null | undefined, decimales = 1) {
+  if (n === null || n === undefined || n === "") return "—";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "—";
+  return `${v.toLocaleString("es-ES", { maximumFractionDigits: decimales })}\u00a0%`;
+}
+
 export function iniciales(nombre: string) {
   return nombre
     .split(/\s+/)

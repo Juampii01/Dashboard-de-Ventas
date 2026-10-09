@@ -72,7 +72,7 @@ describe("Prioridad A/B/C", () => {
 
 describe("Reporte del closer: tasas", () => {
   it("igual que el formulario antiguo", () => {
-    expect(tasasCloser({ llamadas_realizadas: 8, llamadas_agendadas: 6, ventas: 2 })).toEqual({ agendamiento: "75%", cierre: "33%" });
+    expect(tasasCloser({ llamadas_realizadas: 8, llamadas_agendadas: 6, ventas: 2 })).toEqual({ agendamiento: "75\u00a0%", cierre: "33\u00a0%" });
   });
   it("sin llamadas no divide entre cero", () => {
     expect(tasasCloser({ llamadas_realizadas: 0, llamadas_agendadas: 0, ventas: 0 })).toEqual({ agendamiento: "—", cierre: "—" });

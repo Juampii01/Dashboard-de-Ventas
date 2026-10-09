@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Phone, CalendarCheck, MessageCircle, ShoppingCart, PhoneOff, Users, Inbox, Trophy } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, todas, equipo } from "@/lib/datos";
-import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs } from "@/lib/formato";
+import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs, pct } from "@/lib/formato";
 import { nivel } from "@/lib/prioridad";
 import type { Pesos } from "@/lib/cualificacion";
 import { colaCaller } from "@/lib/cola";
@@ -100,8 +100,8 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
         )}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
           <Kpi titulo="Llamadas hoy" valor={llamadas} icono={Phone} detalle={`${leads.length} leads asignados`} />
-          <Kpi titulo="No contestan" valor={noContesta} icono={PhoneOff} tono="mal" detalle={`${porcentaje(noContesta, llamadas)}% de las llamadas`} />
-          <Kpi titulo="Agendas hoy" valor={citasHoy.count ?? 0} icono={CalendarCheck} tono="ok" detalle={`${porcentaje(citasHoy.count ?? 0, llamadas - noContesta)}% de los contactos`} />
+          <Kpi titulo="No contestan" valor={noContesta} icono={PhoneOff} tono="mal" detalle={`${pct(porcentaje(noContesta, llamadas))} de las llamadas`} />
+          <Kpi titulo="Agendas hoy" valor={citasHoy.count ?? 0} icono={CalendarCheck} tono="ok" detalle={`${pct(porcentaje(citasHoy.count ?? 0, llamadas - noContesta))} de los contactos`} />
           <Kpi titulo="WhatsApps hoy" valor={whatsapps} icono={MessageCircle} tono="ok" />
           <Kpi titulo="Ventas low ticket hoy" valor={ventasHoy.count ?? 0} icono={ShoppingCart} tono="oro" />
         </div>

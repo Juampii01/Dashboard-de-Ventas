@@ -6,7 +6,7 @@ import { db, equipo, todas } from "@/lib/datos";
 import { closersVisibles } from "@/lib/agendas-datos";
 import { coincide } from "@/lib/llamadas";
 import { leerPeriodo, rangoNav, enRango } from "@/lib/periodos";
-import { fechaHora } from "@/lib/formato";
+import { fechaHora, pct } from "@/lib/formato";
 import { hayClaveIa } from "@/lib/ia";
 import { Cabecera, Contenido, Insignia, Kpi, Seccion, Vacio } from "@/components/ui";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
@@ -82,7 +82,7 @@ export default async function AnalisisPage({ searchParams }: PageProps<"/closer/
               <Kpi titulo="Llamadas analizadas" valor={hechos.length} icono={ScanSearch} />
               <Kpi titulo="Puntuación media" valor={media ?? "—"} icono={Sparkles} tono="oro" detalle="de 0 a 100" />
               <Kpi titulo="Puntuación más alta" valor={maxima ?? "—"} icono={Sparkles} tono="ok" />
-              <Kpi titulo="Tasa de cierre" valor={`${cierre}%`} icono={ScanSearch} tono="ok" detalle="de las analizadas" />
+              <Kpi titulo="Tasa de cierre" valor={`${pct(cierre)}`} icono={ScanSearch} tono="ok" detalle="de las analizadas" />
             </div>
             <Seccion titulo="Últimas analizadas">
               {hechos.length === 0 ? <Vacio icono={ScanSearch} texto="No hay llamadas analizadas en este periodo. Se analizan solas al unir una grabación de Fathom con su cita." /> : <ListaLlamadas filas={hechos.slice(0, 8)} nombre={nombre} proyecto={proyecto} />}

@@ -9,6 +9,7 @@ import { Cabecera, Contenido, Seccion, Insignia } from "@/components/ui";
 import { AltaMiembro } from "./alta";
 import { ComisionRolForm, EditarMiembro, EditorAreas } from "./cliente";
 import type { Rol } from "@/lib/tipos";
+import { pct } from "@/lib/formato";
 
 const ROL_TXT: Record<string, string> = { ceo: "CEO", director: "Director", closer: "Closer", caller: "Caller" };
 
@@ -23,7 +24,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
   const puesto = (id: string | null) => eq.puestos.find((p) => p.id === id)?.nombre;
   const resumenComision = (m: (typeof miembros)[number]) => {
     if (!m.comision) return null;
-    const partes = [m.comision.pct_venta ? `${m.comision.pct_venta}% venta` : "", m.comision.pct_agenda ? `${m.comision.pct_agenda}% agenda` : "", m.comision.por_producto && Object.keys(m.comision.por_producto).length ? "por producto" : ""].filter(Boolean);
+    const partes = [m.comision.pct_venta ? `${pct(m.comision.pct_venta)} venta` : "", m.comision.pct_agenda ? `${pct(m.comision.pct_agenda)} agenda` : "", m.comision.por_producto && Object.keys(m.comision.por_producto).length ? "por producto" : ""].filter(Boolean);
     return partes.length ? `Propia: ${partes.join(" · ")}` : null;
   };
   const tarjeta = (m: (typeof miembros)[number]) => (

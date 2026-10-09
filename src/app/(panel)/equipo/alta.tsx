@@ -8,6 +8,7 @@ import { crearMiembro } from "./acciones";
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
+import { pct } from "@/lib/formato";
 
 type Area = { id: string; nombre: string; color: string };
 type Puesto = { id: string; area_id: string | null; nombre: string; rol_base: Rol | "otro" };
@@ -103,7 +104,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
 
         {/* Paso actual */}
         <section className="flex min-w-0 flex-1 flex-col">
-          <div className="h-1 bg-panel-2"><div className="h-full bg-oro transition-all" style={{ width: `${((paso + 1) / PASOS.length) * 100}%` }} /></div>
+          <div className="h-1 bg-panel-2"><div className="h-full bg-oro transition-all" style={{ width: `${pct(((paso + 1) / PASOS.length) * 100)}` }} /></div>
           <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-7">
             <div className="font-mono text-xs text-oro">0{paso + 1} · {PASOS[paso].t.toUpperCase()}</div>
             {paso === 0 && (
@@ -163,7 +164,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setPropia(false)} className={`btn-secundario ${!propia ? "border-oro text-oro" : ""}`}>La de su rol ({ROL_TXT[rolFinal]}: {deRol.pct_venta}%{rolFinal === "caller" ? ` · ${deRol.pct_agenda}% por agenda` : ""})</button>
+                  <button type="button" onClick={() => setPropia(false)} className={`btn-secundario ${!propia ? "border-oro text-oro" : ""}`}>La de su rol ({ROL_TXT[rolFinal]}: {pct(deRol.pct_venta)}{rolFinal === "caller" ? ` · ${pct(deRol.pct_agenda)} por agenda` : ""})</button>
                   <button type="button" onClick={() => setPropia(true)} className={`btn-secundario ${propia ? "border-oro text-oro" : ""}`}>Una propia</button>
                 </div>
                 {propia && (
@@ -239,7 +240,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
                   {[
                     ["Miembro", nombres.length > 1 ? `${nombres.length} personas` : nombres[0], areaObj?.nombre ?? "Sin área", 0],
                     ["Puesto", puestoTxt, ROL_TXT[rolBase] ?? "", 1],
-                    ["Compensación", propia ? `${pctMostrado}% por venta${rolFinal === "caller" && pctAgenda ? ` · ${pctAgenda}% por agenda` : ""}` : `La de su rol (${deRol.pct_venta}%)`, porProducto && propia ? "Distinta por producto" : "Igual en todos", 2],
+                    ["Compensación", propia ? `${pct(pctMostrado)} por venta${rolFinal === "caller" && pctAgenda ? ` · ${pct(pctAgenda)} por agenda` : ""}` : `La de su rol (${pct(deRol.pct_venta)})`, porProducto && propia ? "Distinta por producto" : "Igual en todos", 2],
                     ["Cuenta", accesoReal === "crear" ? email : "Sin cuenta por ahora", accesoReal === "crear" ? "Acceso nuevo" : "Se la das más tarde", 3],
                     ["Rol", accesoReal === "crear" ? ROL_TXT[rolFinal] : "—", "", 4],
                   ].map(([t, v, d, i]) => (
@@ -284,7 +285,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
               <div><div className="font-semibold">{nombres.length > 1 ? `${nombres.length} personas` : nombres[0] || "Nuevo miembro"}</div><div className="text-sm text-texto-2">{areaObj?.nombre ?? "Sin área"}{puestoTxt !== "—" ? ` · ${puestoTxt}` : ""}</div></div>
             </div>
             <dl className="mt-3 space-y-3 text-sm">
-              <div><dt className="titulo-seccion">Compensación</dt><dd className="font-medium">{pctMostrado}% por venta{rolFinal === "caller" ? ` · ${propia && pctAgenda ? pctAgenda : deRol.pct_agenda}% por agenda` : ""}</dd></div>
+              <div><dt className="titulo-seccion">Compensación</dt><dd className="font-medium">{pct(pctMostrado)} por venta{rolFinal === "caller" ? ` · ${pct(propia && pctAgenda ? pctAgenda : deRol.pct_agenda)} por agenda` : ""}</dd></div>
               <div><dt className="titulo-seccion">Acceso</dt><dd className="font-medium">{accesoReal === "crear" ? "Cuenta nueva" : "Sin cuenta (por ahora)"}</dd></div>
               <div><dt className="titulo-seccion">Rol</dt><dd className="font-medium">{accesoReal === "crear" ? ROL_TXT[rolFinal] : "—"}</dd></div>
             </dl>

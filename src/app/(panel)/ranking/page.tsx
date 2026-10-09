@@ -1,7 +1,7 @@
 import { Trophy, Medal, Phone, TrendingUp } from "lucide-react";
 import { getSesion } from "@/lib/auth";
 import { cargarBase, calcularVendedores } from "@/lib/metricas";
-import { dinero, rangoDe, type Periodo } from "@/lib/formato";
+import { dinero, rangoDe, type Periodo, pct } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Avatar, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
 
@@ -40,7 +40,7 @@ export default async function RankingPage({ searchParams }: PageProps<"/ranking"
                         <span className="font-medium">{c.perfil.nombre}{c.perfil.id === perfil.id && <span className="text-primario"> (tú)</span>}</span>
                         <span className="font-semibold tabular-nums">{c.agendas} agendas</span>
                       </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-fondo-2"><div className="h-full rounded-full bg-primario" style={{ width: `${(c.agendas / maxAg) * 100}%` }} /></div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-fondo-2"><div className="h-full rounded-full bg-primario" style={{ width: `${pct((c.agendas / maxAg) * 100)}` }} /></div>
                       <div className="mt-1 text-xs text-texto-3">{c.llamadas} llamadas · {c.contactos} contactos · {c.ventas} ventas low ticket</div>
                     </div>
                   </li>
@@ -60,8 +60,8 @@ export default async function RankingPage({ searchParams }: PageProps<"/ranking"
                         <span className="font-medium">{c.perfil.nombre}{c.perfil.id === perfil.id && <span className="text-primario"> (tú)</span>}</span>
                         <span className="font-semibold tabular-nums text-oro">{dinero(c.facturacion, proyecto)}</span>
                       </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-fondo-2"><div className="h-full rounded-full bg-oro" style={{ width: `${(c.facturacion / maxFac) * 100}%` }} /></div>
-                      <div className="mt-1 text-xs text-texto-3">{c.ventas} ventas · {c.tasaCierre}% cierre · {c.asistidas} citas asistidas · {c.noShow} no show</div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-fondo-2"><div className="h-full rounded-full bg-oro" style={{ width: `${pct((c.facturacion / maxFac) * 100)}` }} /></div>
+                      <div className="mt-1 text-xs text-texto-3">{c.ventas} ventas · {pct(c.tasaCierre)} cierre · {c.asistidas} citas asistidas · {c.noShow} no show</div>
                     </div>
                   </li>
                 ))}

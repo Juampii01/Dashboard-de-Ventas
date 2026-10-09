@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileDown, Microscope } from "lucide-react";
 import { db, todas } from "@/lib/datos";
-import { dinero, fecha } from "@/lib/formato";
+import { dinero, fecha, pct } from "@/lib/formato";
 import { notaLead, preguntasDe, type LeadQ, type Pesos } from "@/lib/cualificacion";
 import { datosEstudio } from "@/lib/cualificacion-datos";
 import { Seccion, Vacio } from "@/components/ui";
@@ -90,9 +90,9 @@ export async function Cualificacion({ proyecto, sp, baseQs }: { proyecto: Proyec
                       <td className="text-right tabular-nums">{f.leads}</td>
                       <td className="text-right tabular-nums">{f.llamadas}</td>
                       <td className="text-right tabular-nums">{f.cerradas}</td>
-                      <td className="text-right tabular-nums">{f.llamadas ? `${f.cierre}%` : "—"}</td>
+                      <td className="text-right tabular-nums">{f.llamadas ? `${pct(f.cierre)}` : "—"}</td>
                       <td className="text-right tabular-nums">{$(f.cash)}</td>
-                      <td><div className="flex items-center gap-2"><div className="h-2 flex-1 rounded-full bg-panel-2"><div className="h-2 rounded-full bg-primario" style={{ width: `${(f.cashPorLlamada / max) * 100}%` }} /></div><span className="w-20 text-right text-xs tabular-nums">{f.llamadas ? $(f.cashPorLlamada) : "—"}</span></div></td>
+                      <td><div className="flex items-center gap-2"><div className="h-2 flex-1 rounded-full bg-panel-2"><div className="h-2 rounded-full bg-primario" style={{ width: `${pct((f.cashPorLlamada / max) * 100)}` }} /></div><span className="w-20 text-right text-xs tabular-nums">{f.llamadas ? $(f.cashPorLlamada) : "—"}</span></div></td>
                     </tr>
                   ))}
                 </tbody>

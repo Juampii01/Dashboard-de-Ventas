@@ -5,7 +5,7 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { db, equipo } from "@/lib/datos";
 import { puedeSeccion } from "@/lib/permisos";
 import { coincide } from "@/lib/llamadas";
-import { dinero, fecha, hoyEnZona } from "@/lib/formato";
+import { dinero, fecha, hoyEnZona, pct } from "@/lib/formato";
 import { grupoSeguimiento, progresoOnboarding, ESTADOS_CLIENTE } from "@/lib/clientes";
 import { Cabecera, Contenido, Insignia, Anillo } from "@/components/ui";
 import { BuscadorUrl } from "@/app/(panel)/closer/llamadas/cliente";
@@ -100,7 +100,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
                         <td className="whitespace-nowrap text-texto-2">{fecha(f.desde, proyecto)}</td>
                         <td className="text-right tabular-nums">{$(f.comprado)}</td>
                         <td className="text-right tabular-nums">{f.falta > 0 ? <span className="text-aviso">{$(f.falta)}</span> : "—"}</td>
-                        <td className="tabular-nums">{progresoOnboarding(f.ficha.onboarding, d.pasos)}%</td>
+                        <td className="tabular-nums">{pct(progresoOnboarding(f.ficha.onboarding, d.pasos))}</td>
                         <td className="whitespace-nowrap">{f.ficha.proximo_contacto ? f.ficha.proximo_contacto.split("-").reverse().join("/") : "—"}</td>
                         <td><Insignia tono={TONO_ESTADO[f.ficha.estado]}>{ESTADOS_CLIENTE.find((x) => x.v === f.ficha.estado)?.t}</Insignia></td>
                         <td className="text-right"><GestionarCliente leadId={f.lead_id} nombre={f.lead.nombre} ficha={f.ficha} pasos={d.pasos} notas={f.notas} /></td>
@@ -230,7 +230,7 @@ function Onboardings({ d }: { d: DatosClientes }) {
             <tr key={f.lead_id}>
               <td><Link href={`/leads/${f.lead_id}`} className="hover:text-primario">{f.lead.nombre}</Link></td>
               {d.pasos.map((p) => <td key={p.id} className="text-center">{f.ficha.onboarding[p.id] ? <span className="text-ok" aria-label="Hecho">✓</span> : <span className="text-texto-3" aria-label="Pendiente">·</span>}</td>)}
-              <td className="text-right tabular-nums">{progresoOnboarding(f.ficha.onboarding, d.pasos)}%</td>
+              <td className="text-right tabular-nums">{pct(progresoOnboarding(f.ficha.onboarding, d.pasos))}</td>
               <td className="text-right"><GestionarCliente leadId={f.lead_id} nombre={f.lead.nombre} ficha={f.ficha} pasos={d.pasos} notas={f.notas} pestana="onboarding" texto="Marcar" /></td>
             </tr>
           ))}

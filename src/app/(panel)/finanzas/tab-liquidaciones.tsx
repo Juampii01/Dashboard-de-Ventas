@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/datos";
-import { dinero, hoyEnZona, ETIQUETA_ROL } from "@/lib/formato";
+import { dinero, hoyEnZona, ETIQUETA_ROL, pct } from "@/lib/formato";
 import { Insignia, Seccion } from "@/components/ui";
 import type { LineaL } from "@/lib/finanzas";
 import type { Proyecto } from "@/lib/tipos";
@@ -79,7 +79,7 @@ export async function TabLiquidaciones({ d, proyecto, sp }: { d: DatosFinanzas; 
                             <td><Link href={`/leads/${x.lead_id}`} className="hover:text-primario">{d.leads.get(x.lead_id)?.nombre ?? "—"}</Link></td>
                             <td className="text-texto-2">{d.producto.get(x.producto_id ?? "") ?? "—"}</td>
                             <td>{x.tipo === "agenda" ? "Agenda cerrada" : "Venta"}</td>
-                            <td className="text-right tabular-nums">{x.pct}%</td>
+                            <td className="text-right tabular-nums">{pct(x.pct)}</td>
                             <td className="text-right tabular-nums">{$(x.facturado)}</td>
                             <td className="text-right tabular-nums">{$(x.cobrado)}</td>
                             <td className="text-right font-medium tabular-nums">{$(x.com_cobrado)}</td>

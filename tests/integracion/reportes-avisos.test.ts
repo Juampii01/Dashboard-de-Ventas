@@ -52,7 +52,7 @@ describe("Reporte de fin de día", () => {
     expect(data!.respuestas).toMatchObject({ llamadas_realizadas: 8, ventas: 2, puntos_mejora: "Cerrar antes" });
 
     const aviso = recibidos.at(-1)!;
-    expect(aviso).toMatchObject({ tipo: "reporte_fin_de_dia", persona: e.p.closerA.nombre, rol: "closer", tasa_agendamiento: "75%", tasa_cierre: "33%" });
+    expect(aviso).toMatchObject({ tipo: "reporte_fin_de_dia", persona: e.p.closerA.nombre, rol: "closer", tasa_agendamiento: "75\u00a0%", tasa_cierre: "33\u00a0%" });
     const destinatarios = aviso.destinatarios as { email: string; whatsapp: string | null }[];
     // Solo CEO y directores
     expect(destinatarios.map((d) => d.email).sort()).toEqual([e.p.ceo.email, e.p.director.email, e.p.directorAdmin.email].sort());

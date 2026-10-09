@@ -16,7 +16,7 @@ import {
 import { getSesion, esJefe } from "@/lib/auth";
 import { cargarBase, calcularFunnel, calcularVendedores } from "@/lib/metricas";
 import { db } from "@/lib/datos";
-import { dinero, rangoDe, type Periodo, ETIQUETA_ROL } from "@/lib/formato";
+import { dinero, rangoDe, type Periodo, ETIQUETA_ROL, pct } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Anillo, Seccion, GraficoDiario, Avatar, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
 
@@ -148,7 +148,7 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
                         <td className="tabular-nums">{c.citas}</td>
                         <td className="tabular-nums">{c.asistidas}</td>
                         <td className="tabular-nums">{c.ventas}</td>
-                        <td className="tabular-nums">{c.tasaCierre}%</td>
+                        <td className="tabular-nums">{pct(c.tasaCierre)}</td>
                         <td className="tabular-nums">{$(c.facturacion)}</td>
                       </tr>
                     ))}
