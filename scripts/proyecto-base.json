@@ -1,0 +1,17 @@
+{
+  "_nota": "Configuración inicial del proyecto Maestria. La usan seed.mjs (local) y preparar-proyecto.mjs (producción). Los precios de servicios para empresas están pendientes de Cristian.",
+  "proyecto": { "nombre": "Maestria", "moneda": "USD", "zona_horaria": "America/New_York", "color": "#2f55d4" },
+  "colores": ["#64748b", "#2f55d4", "#d97706", "#7c3aed", "#0891b2", "#db2777", "#16a34a", "#dc2626"],
+  "pipelines": [
+    { "nombre": "Webinar 1", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
+    { "nombre": "Biblioteca Recursos", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
+    { "nombre": "Orgánico", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Low ticket", "Grupal", "VIP", "Cerrados", "Descartados"] },
+    { "nombre": "DFY AI Services", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] }
+  ],
+  "productos": [
+    { "nombre": "Low ticket", "precio": 47, "vende_caller": true, "orden": 0 },
+    { "nombre": "Mentoría grupal", "precio": 1997, "vende_caller": false, "orden": 1 },
+    { "nombre": "Mentoría VIP", "precio": 4997, "vende_caller": false, "orden": 2 },
+    { "nombre": "Servicios para empresas (DFY)", "precio": null, "vende_caller": false, "orden": 3 }
+  ]
+}
