@@ -1,6 +1,6 @@
 import "server-only";
-import { db, todas } from "@/lib/datos";
-import { rangoDe, porcentaje, hoyEnZona, type Rango } from "@/lib/formato";
+import { db, todas, equipo, conBajas } from "@/lib/datos";
+import { rangoDe, porcentaje, hoyEnZona, sumarDias, type Rango } from "@/lib/formato";
 import { cashNeto, enRango, type Base } from "@/lib/metricas";
 import { indices, kpiCaller, kpiCloser, type Indices } from "@/lib/kpis";
 import type { Perfil } from "@/lib/tipos";
@@ -200,13 +200,76 @@ async function baseDePersona(proyectoId: string, p: Perfil, desde: Date): Promis
   };
 }
 
-export async function misAvances(proyecto: { id: string; zona_horaria: string }, p: Perfil) {
-  if (p.rol !== "caller" && p.rol !== "closer") return [];
+// Datos de todo el equipo, pero solo desde `desde` (para el objetivo del equipo en «Mis leads» / «Mis agendas»)
+async function baseDelEquipo(proyectoId: string, desde: Date): Promise<Base> {
+  const d = desde.toISOString();
+  const [actividades, citas, pagos, gente] = await Promise.all([
+    todas<Base["actividades"][number]>((a, b) => db().from("actividades").select("lead_id, perfil_id, tipo, resultado, creado_en").eq("proyecto_id", proyectoId).in("tipo", ["llamada", "whatsapp"]).gte("creado_en", d).order("id").range(a, b)),
+    todas<Base["citas"][number]>((a, b) => db().from("citas").select(COLS_CITA).eq("proyecto_id", proyectoId).or(`creado_en.gte.${d},fecha.gte.${d}`).order("id").range(a, b)),
+    todas<{ importe: number; fecha: string; venta_id: string }>((a, b) => db().from("pagos").select("importe, fecha, venta_id, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyectoId).gte("fecha", d).order("id").range(a, b)),
+    equipo(proyectoId),
+  ]);
+  // Ventas del periodo, devueltas en el periodo o con cobros en el periodo (lo que usa el cash)
+  const recientes = await todas<VentaFila>((a, b) => db().from("ventas").select(COLS_VENTA).eq("proyecto_id", proyectoId).or(`fecha.gte.${d},devuelto_en.gte.${d}`).order("id").range(a, b));
+  const faltan = [...new Set(pagos.map((x) => x.venta_id))].filter((id) => !recientes.some((v) => v.id === id));
+  const ventas = [...recientes, ...(await porTrozos<VentaFila>(faltan, (t) => db().from("ventas").select(COLS_VENTA).in("id", t)))];
+  return {
+    leads: [],
+    citas,
+    actividades,
+    ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected) })),
+    pagos: pagos.map((x) => ({ importe: Number(x.importe), fecha: x.fecha, venta_id: x.venta_id })),
+    // Quien se fue a mitad de periodo sigue sumando lo que hizo (como en KPIs)
+    gente: await conBajas(gente, [...ventas.map((v) => v.vendedor_id), ...citas.flatMap((c) => [c.closer_id, c.agendada_por]), ...actividades.map((x) => x.perfil_id)]),
+  };
+}
+
+// Racha: días seguidos (hacia atrás) en que cumplió TODOS sus objetivos diarios (decisión de Cristian).
+// Los días sin objetivo no la cortan; hoy solo suma si ya está cumplido. Se mira hasta 60 días atrás.
+export const RACHA_MAX = 60;
+export function calcularRacha(base: Base, filas: FilaObjetivo[], p: Perfil, zona: string) {
+  const hoy = hoyEnZona(zona);
+  let dias = 0;
+  for (let i = 0; i <= RACHA_MAX; i++) {
+    const fecha = sumarDias(hoy, -i);
+    const rango = rangoDe("rango", zona, fecha, fecha);
+    const vig = vigentes(filas, rango.hasta).filter((f) => f.periodo === "dia");
+    const objetivos = CIFRAS.map((c) => vig.find((f) => f.perfil_id === p.id && f.cifra === c.v) ?? vig.find((f) => f.rol === p.rol && f.cifra === c.v)).filter(
+      (f): f is FilaObjetivo => !!f && f.valor !== null && f.dias.includes(diaSemana(fecha)) && CIFRAS.find((c) => c.v === f.cifra)!.roles.includes(p.rol as RolObjetivo)
+    );
+    if (objetivos.length === 0) continue; // día libre: no corta
+    const ix = indices(base, rango, zona);
+    const memo = new Map<string, unknown>();
+    const cumplido = objetivos.every((f) => hecho(ix, new Set([p.id]), f.cifra, memo) >= f.valor!);
+    if (cumplido) dias++;
+    else if (i > 0) break; // hoy aún puede cumplirlo
+  }
+  return { dias: Math.min(dias, RACHA_MAX), mas: dias > RACHA_MAX };
+}
+
+// Lo que ve cada caller o closer: sus objetivos, su racha y el objetivo del equipo (los del director)
+export async function panelObjetivos(proyecto: { id: string; zona_horaria: string }, p: Perfil) {
   const datos = await cargarObjetivos(proyecto.id);
   const zona = proyecto.zona_horaria;
   const hoy = hoyEnZona(zona);
   const inicios = [rangoDe("semana", zona).desde!, rangoDe("mes", zona).desde!, ...datos.lanzamientos.filter((l) => l.inicio <= hoy && hoy <= l.fin).map((l) => rangoDe("rango", zona, l.inicio, l.fin).desde!)];
   const desde = new Date(Math.min(...inicios.map((x) => x.getTime())));
-  const base = await baseDePersona(proyecto.id, p, desde);
-  return calcularAvances(base, datos, [p], zona).get(p.id) ?? [];
+  const hayDiarios = datos.filas.some((f) => f.periodo === "dia");
+  const hayEquipo = datos.filas.some((f) => f.rol === "director");
+  const desdePersona = hayDiarios ? new Date(Math.min(desde.getTime(), rangoDe("rango", zona, sumarDias(hoy, -RACHA_MAX), hoy).desde!.getTime())) : desde;
+  const [basePersona, baseEquipo] = await Promise.all([
+    p.rol === "caller" || p.rol === "closer" ? baseDePersona(proyecto.id, p, desdePersona) : null,
+    hayEquipo ? baseDelEquipo(proyecto.id, desde) : null,
+  ]);
+  return {
+    mios: basePersona ? calcularAvances(basePersona, datos, [p], zona).get(p.id) ?? [] : [],
+    racha: basePersona && hayDiarios ? calcularRacha(basePersona, datos.filas, p, zona) : null,
+    equipo: baseEquipo ? avancesDelEquipo(baseEquipo, datos, zona) : [],
+  };
+}
+
+// Objetivo del equipo = los objetivos puestos al rol director (ya son del equipo entero)
+export const EQUIPO: Perfil = { id: "__equipo__", nombre: "Equipo", email: "", rol: "director", telefono: null, whatsapp: null, admin_activo: false, onboarding_completo: true, activo: true };
+export function avancesDelEquipo(base: Base, datos: DatosObjetivos, zona: string) {
+  return calcularAvances(base, datos, [EQUIPO], zona).get(EQUIPO.id) ?? [];
 }

@@ -4,7 +4,7 @@ import { CalendarRange, Target } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { cargarBase } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
-import { cargarObjetivos, calcularAvances, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
+import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
 import { dinero, rangoDe, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Avatar, Vacio } from "@/components/ui";
@@ -60,6 +60,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const datos = await cargarObjetivos(proyecto.id);
   const personas = base.gente.filter((g) => !("baja" in g && g.baja) && (g.rol === "caller" || g.rol === "closer" || g.rol === "director"));
   const avances = calcularAvances(base, datos, personas, proyecto.zona_horaria);
+  const delEquipo = avancesDelEquipo(base, datos, proyecto.zona_horaria);
   const actuales = vigentes(datos.filas, null);
   const nombre = new Map(base.gente.map((g) => [g.id, g.nombre]));
   const lanz = new Map(datos.lanzamientos.map((l) => [l.id, l]));
@@ -71,6 +72,10 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Objetivos`} />
       <Contenido>
         {pestanas}
+
+        <Seccion titulo="Objetivo del equipo (lo ven todos en «Mis leads» y «Mis agendas»)">
+          <BarrasObjetivos avances={delEquipo} dinero={$} sinNotaRol vacio="Pon un objetivo a «Directores (equipo entero)» y lo verá todo el equipo." />
+        </Seccion>
 
         <Seccion titulo="Avance de ahora (hoy, esta semana, este mes y lanzamientos en curso)">
           {personas.length === 0 ? (

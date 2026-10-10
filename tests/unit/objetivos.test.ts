@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { calcularAvances, vigentes, type DatosObjetivos, type FilaObjetivo } from "@/lib/objetivos";
+import { calcularAvances, calcularRacha, avancesDelEquipo, vigentes, type DatosObjetivos, type FilaObjetivo } from "@/lib/objetivos";
 import type { Base } from "@/lib/metricas";
 import type { Perfil } from "@/lib/tipos";
 
@@ -112,5 +112,37 @@ describe("calcularAvances", () => {
       ["Masterclass", 1], // solo l2
       ["Todo octubre", 3], // l1, l2 y l3 (la del 5 queda fuera de sus fechas)
     ]);
+  });
+});
+
+describe("Racha (H4): días seguidos cumpliendo todos los objetivos diarios", () => {
+  // carla llama: viernes 9, lunes 12, martes 13; jueves 8 no; hoy (miércoles 14) aún no
+  const conLlamadas = (): Base => ({ ...base(), actividades: ["10-08x", "10-09", "10-12", "10-13"].filter((d) => !d.endsWith("x")).map((d, i) => llamada("carla", `r${i}`, d)) });
+  const diario = (o: Partial<FilaObjetivo> = {}, creado?: string) => obj({ rol: "caller", periodo: "dia", cifra: "llamadas", valor: 1, ...o }, creado);
+
+  it("el fin de semana (sin objetivo) no la corta y hoy sin cumplir tampoco", () => {
+    expect(calcularRacha(conLlamadas(), [diario()], carla, NY)).toEqual({ dias: 3, mas: false }); // V, L, M
+  });
+  it("hoy suma en cuanto se cumple", () => {
+    const b = conLlamadas();
+    b.actividades.push(llamada("carla", "hoy", "10-14"));
+    expect(calcularRacha(b, [diario()], carla, NY).dias).toBe(4);
+  });
+  it("tiene que cumplir todos sus objetivos diarios", () => {
+    expect(calcularRacha(conLlamadas(), [diario(), diario({ cifra: "agendas" })], carla, NY).dias).toBe(0);
+  });
+  it("cada día usa el objetivo que había: antes de ponerlo no cuenta ni corta", () => {
+    expect(calcularRacha(conLlamadas(), [diario({}, "2026-10-12T05:00:00Z")], carla, NY).dias).toBe(2); // L y M
+  });
+  it("un día marcado sin cumplir la corta", () => {
+    expect(calcularRacha(conLlamadas(), [diario({ dias: [1, 2, 3, 4, 5, 6, 7] })], carla, NY).dias).toBe(2); // el domingo 11 no llamó
+  });
+});
+
+describe("Objetivo del equipo (H4)", () => {
+  it("usa los objetivos del rol director y suma todo el equipo; los de una persona director no", () => {
+    const d = datos([obj({ rol: "director", cifra: "llamadas", valor: 8 }), obj({ perfil_id: "dani", cifra: "ventas", valor: 1 })]);
+    const eq = avancesDelEquipo(base(), d, NY);
+    expect(eq.map((a) => [a.cifra, a.hecho, a.pct])).toEqual([["llamadas", 4, 50]]);
   });
 });

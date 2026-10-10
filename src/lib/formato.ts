@@ -87,7 +87,7 @@ export function inicioDia(ymd: string, zona: string) {
   return new Date(base.getTime() - offsetMin(zona, base) * 60_000);
 }
 
-function sumarDias(ymd: string, dias: number) {
+export function sumarDias(ymd: string, dias: number) {
   const d = new Date(`${ymd}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + dias);
   return d.toISOString().slice(0, 10);

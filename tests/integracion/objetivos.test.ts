@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { guardarObjetivo, quitarObjetivo, crearLanzamiento, borrarLanzamiento } from "@/app/(panel)/kpis/acciones";
-import { cargarObjetivos, calcularAvances, misAvances } from "@/lib/objetivos";
+import { cargarObjetivos, calcularAvances, panelObjetivos, avancesDelEquipo, calcularRacha } from "@/lib/objetivos";
 import { cargarBase } from "@/lib/metricas";
 
 let e: Escenario;
@@ -74,8 +74,8 @@ describe("Objetivos", () => {
     }
     const base = await cargarBase(e.proyecto);
     const todos = calcularAvances(base, await cargarObjetivos(pid), [e.p.callerA, e.p.closerA], e.proyecto.zona_horaria);
-    const caller = await misAvances(e.proyecto, e.p.callerA);
-    const closer = await misAvances(e.proyecto, e.p.closerA);
+    const caller = (await panelObjetivos(e.proyecto, e.p.callerA)).mios;
+    const closer = (await panelObjetivos(e.proyecto, e.p.closerA)).mios;
     expect(caller).toEqual(todos.get(e.p.callerA.id));
     expect(closer).toEqual(todos.get(e.p.closerA.id));
     const valor = (lista: typeof caller, cifra: string) => lista.filter((a) => a.etiqueta === "Este mes" && a.cifra === cifra).map((a) => a.hecho);
@@ -83,5 +83,22 @@ describe("Objetivos", () => {
     expect(valor(caller, "agendas")).toEqual([1]);
     expect(valor(closer, "citas_atendidas")).toEqual([1]);
     expect(valor(closer, "cash")).toEqual([500]);
+  });
+
+  it("H4: el objetivo del equipo y la racha salen iguales con la carga ligera que con todo el proyecto", async () => {
+    como(e, e.p.ceo);
+    for (const cifra of ["llamadas", "contactados", "agendas", "citas_atendidas", "ventas", "facturacion", "cash"]) {
+      await ok(guardarObjetivo({ ...nuevo, para: "rol:director", cifra, periodo: "semana", valor: "10" }));
+    }
+    await ok(guardarObjetivo({ ...nuevo, para: "rol:caller", cifra: "llamadas", periodo: "dia", valor: "1", dias: [1, 2, 3, 4, 5, 6, 7] }));
+    const base = await cargarBase(e.proyecto);
+    const datos = await cargarObjetivos(e.proyecto.id);
+    const panel = await panelObjetivos(e.proyecto, e.p.callerA);
+    expect(panel.equipo).toEqual(avancesDelEquipo(base, datos, e.proyecto.zona_horaria));
+    expect(panel.equipo.find((a) => a.cifra === "llamadas")!.hecho).toBe(2); // las 2 llamadas de hoy (callerA y callerB)
+    expect(panel.racha).toEqual(calcularRacha(base, datos.filas, e.p.callerA, e.proyecto.zona_horaria));
+    expect(panel.racha!.dias).toBe(1); // llamó hoy
+    // El closer ve el mismo objetivo del equipo
+    expect((await panelObjetivos(e.proyecto, e.p.closerA)).equipo).toEqual(panel.equipo);
   });
 });

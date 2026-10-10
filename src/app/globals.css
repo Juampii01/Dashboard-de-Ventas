@@ -200,3 +200,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Celebración al cumplir los objetivos de hoy (H4) */
+@keyframes caer-celebracion {
+  to {
+    transform: translateY(110vh) rotate(540deg);
+    opacity: 0.2;
+  }
+}
+.celebracion-pieza {
+  animation: caer-celebracion 2.6s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
