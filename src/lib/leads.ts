@@ -3,6 +3,7 @@ import { db, equipo, escribir } from "@/lib/datos";
 import type { Proyecto, Respuesta } from "@/lib/tipos";
 import type { LeadEntrada } from "@/lib/csv";
 import { enHorario, horarioValido } from "@/lib/horarios";
+import { calcularOferta, normalizarRespuestas } from "@/lib/oferta";
 
 // «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
 // se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
@@ -35,10 +36,11 @@ export async function primeraEtapa(pipelineId: string) {
   return data?.id ?? null;
 }
 
-// Une respuestas sin perder ninguna: las nuevas sustituyen a la misma pregunta, el resto se queda.
+// Une respuestas sin perder ninguna: las nuevas sustituyen a la misma pregunta, el resto se queda. Las 6 de la
+// Biblioteca se guardan con su nombre único, así se sustituyen aunque lleguen con otro nombre (bloque A).
 export function unirRespuestas(antes: Respuesta[], nuevas: Respuesta[]) {
-  const m = new Map(antes.map((r) => [r.pregunta.toLowerCase(), r]));
-  for (const r of nuevas) if (r.respuesta) m.set(r.pregunta.toLowerCase(), r);
+  const m = new Map(normalizarRespuestas(antes).map((r) => [r.pregunta.toLowerCase(), r]));
+  for (const r of normalizarRespuestas(nuevas)) if (r.respuesta) m.set(r.pregunta.toLowerCase(), r);
   return [...m.values()];
 }
 
@@ -135,7 +137,8 @@ export async function guardarLeads(
       email: e.email,
       telefono: e.telefono,
       etiquetas: e.etiquetas,
-      respuestas: e.respuestas,
+      respuestas: normalizarRespuestas(e.respuestas),
+      oferta: calcularOferta({ etiquetas: e.etiquetas, fuente: e.extra?.fuente, respuestas: e.respuestas }),
       origen: opciones.origen,
       pipeline_id: opciones.pipelineId,
       etapa_id: etapaId,
@@ -178,12 +181,15 @@ export async function guardarLeads(
 
   // Actualiza los que ya existían SIN perder nada (no toca pipeline ni asignación):
   // etiquetas y respuestas se suman; el origen (fuente, evento, UTM) se queda el primero.
+  let cambianOferta = 0;
   for (const { id, e } of actualizar) {
-    const { data: antes } = await db().from("leads").select("etiquetas, respuestas, fuente, evento, seguimiento, quiz_score, datos, email").eq("id", id).single();
-    const cambios: Record<string, unknown> = {
-      etiquetas: [...new Set([...(antes?.etiquetas ?? []), ...e.etiquetas])],
-      respuestas: unirRespuestas(antes?.respuestas ?? [], e.respuestas),
-    };
+    const { data: antes } = await db().from("leads").select("etiquetas, respuestas, fuente, evento, seguimiento, quiz_score, datos, email, oferta").eq("id", id).single();
+    const etiquetas = [...new Set([...(antes?.etiquetas ?? []), ...e.etiquetas])];
+    const respuestas = unirRespuestas(antes?.respuestas ?? [], e.respuestas);
+    // Bloque A: la oferta se recalcula con los datos nuevos
+    const oferta = calcularOferta({ etiquetas, fuente: antes?.fuente || e.extra?.fuente, respuestas });
+    if (oferta !== (antes?.oferta ?? null)) cambianOferta++;
+    const cambios: Record<string, unknown> = { etiquetas, respuestas, oferta };
     if (e.telefono) cambios.telefono = e.telefono;
     if (e.email && !antes?.email) cambios.email = e.email;
     if (e.nombre) cambios.nombre = e.nombre;
@@ -207,5 +213,5 @@ export async function guardarLeads(
     await escribir(db().from("leads").update(cambios).eq("id", id), "leads");
   }
 
-  return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length };
+  return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length, cambianOferta };
 }

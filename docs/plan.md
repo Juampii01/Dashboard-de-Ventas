@@ -1,210 +1,293 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Creado: 9 oct 2026 · Compactado: 10 oct 2026, noche (a petición de Cristian). **El plan completo de antes, con todo el detalle (pruebas, fórmulas, respuestas de cada ronda, bloques V2), está en `plan-historial-10oct.md`.** Auditoría del código: `Arreglar-dashboard.md`.
+> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche (a petición de Cristian). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
 
 ---
 
-## 0. En qué nos hemos quedado (léelo primero al retomar)
+## 0. Dónde estamos (léelo primero al retomar)
 
-**Resumen:** la v1 y la v2 están **terminadas en local y probadas**, sin publicar. Los 36 arreglos de la auditoría están hechos. El 10 oct se hicieron las peticiones de Cristian del Paso H (H1-H8), todo con commit (el último, `adb7080`).
+La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H y el Paso 0), **sin publicar**. Último commit `2e3a407`. **Sin guardar todavía (11 oct):** este plan, las 2 guías, `scripts/crear-usuarios.mjs` (teléfono, Administración y contraseñas «Maestria-») y la migración `20261013110000_perfiles_prueba.sql` (ya aplicada en la base local). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Siguiente paso:** la revisión completa de Cristian (Paso A; también los arrastres con su ratón). Paso 0 y pendientes 2-9 guardados en el commit `6a887c6`.
-
-**Pendiente de que decida Cristian:**
-| # | Qué |
-|---|---|
-| **0** | ✅ Pipelines «Callers» y «Closers» (Paso 0): hecho en local, sin commit |
-| 2 | ✅ Limpieza hecha (10 oct, noche; lo que aprobó Cristian, sección 5) |
-| 3 | ✅ `seed.mjs` con la contraseña nueva |
-| 4 | ✅ Rama `diseno-glass` borrada (no tenía nada fuera de `main`) |
-| 5 | ✅ Plan y guías en `app/docs/` |
-| 6 | ✅ Paso G hecho (ver su paso): cargas del Funnel ~2,8 s → ~1,0 s con 30.000 leads |
-| 7 | ✅ Cash unificado: Ventas cuenta como Finanzas (lo que entró dentro del periodo) |
-| 8 | Los criterios que puso Claude sin preguntar (sección 3): cambiar los que no le gusten |
-| 9 | ✅ Objetivos: KPIs → Objetivos enseña periodos pasados (Ahora / Semana pasada / Mes pasado / un día) · «Mis objetivos» solo lee los leads de los lanzamientos en curso |
-
-**Estado comprobado (10 oct 2026, noche):**
-| Qué | Estado |
-|---|---|
-| Código | **26 commits** en `main` de `app/` (`adb7080` H5-H8, `6a887c6` Paso 0 y pendientes 2-9, y este plan al día). Rama `diseno-glass` borrada. `next build` correcto. **No está subido a ningún sitio** |
-| Tests | **343 de 343** pasan (`npm test` en `app/`, 44 archivos) · tsc y eslint limpios · `npm audit` de producción: 0. Medición de velocidad aparte: `MEDIR=1` |
-| Base de datos local | **22 migraciones** · **42 tablas, todas con RLS** |
-| Datos locales | **Maestria** (datos reales, solo mirar): 893 leads, sin ventas, citas ni objetivos (limpia de pruebas) · **Proyecto Prueba** (donde Claude prueba): 3 leads, 1 venta, miembros Ana Closer y CEO Prueba |
-| Nube y GHL | Nada creado (sin GitHub, Supabase ni Vercel). GHL sin conectar |
-
-**Cómo entrar en local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (a veces lo tiene arrancado otro chat; entonces Claude prueba con Playwright contra el 3100). Versión compilada: `npm run build` en `app/` + servidor `eternity-produccion` → http://localhost:3200 (ambos en `PROYECTOS/GENERAL/.claude/launch.json`).
-**Usuarios de prueba** (todos `@eternity.test`, contraseña común la que puso Cristian el 10 oct): ceo@, director@ (tiene Administración), closer1@, closer2@, caller1@, caller2@, caller3@, caller4@.
-
-**Dónde está cada cosa:**
-| Archivo | Qué es |
-|---|---|
-| `app/docs/` | **Desde el 10 oct (noche) aquí están el plan, las guías y la auditoría** (se suben a GitHub con el código) |
-| `plan.md` / `plan-historial-10oct.md` | Este plan / el plan completo de antes de compactar |
-| `GUIA-PUBLICAR.md` | Los 10 pasos para publicar (al día: 42 tablas, 22 migraciones, 340+ tests) |
-| `GUIA-GHL.md` | Conectar GHL: workflows de entrada, avisos, landings directas, token para calendarios y llamadas |
-| `Arreglar-dashboard.md` | Auditoría: los 36 puntos, cómo quedó cada uno y su commit |
-| `app/` | El código · `app/tests/` los tests · `app/.env.example` las variables (3 de Supabase + `CLAVE_CIFRADO`; opcionales `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`) |
-| `app/scripts/` | `preparar-proyecto` (crea Maestria desde `proyecto-base.json`), `crear-usuarios`, `limpiar-pruebas` (todos simulan sin `--confirmar`) y `seed` (solo local) |
-
-## 1. Qué es
-
-App web para el equipo de ventas. La app se llama **Eternity** y tiene **proyectos** (el primero, **Maestria**), cada uno con sus datos, su cuenta de GoHighLevel (GHL), su moneda y su zona horaria. Cada persona ve lo que le toca según su rol y sus permisos. **Publicada, será el único CRM del equipo.**
-
-Equipo: 6 callers, 2 closers, 2 directores y el CEO. Productos de Maestria: Low ticket $47 (lo vende el caller) · Mentoría grupal $1997 · VIP $4997 · Servicios para empresas (precio personalizado).
-
-## 2. Lo que está hecho
-
-| Qué | Estado | Commit |
-|---|---|---|
-| v1: entorno, roles, callers, closers, Funnel, webhooks GHL, CRM, ficha del lead, reportes, CSV | ✅ | — |
-| Bloques 1-5: pruebas, tests, seguridad, mejoras de uso, publicación preparada (guías y scripts) | ✅ | — |
-| v2 (V2-0 a V2-12): entradas de landings, estrellas, devoluciones, Agendas (Métricas, Llamadas, Análisis), calendario GHL por closer, Equipo y comisiones, Programas, Finanzas, Clientes, Permisos por sección, Fathom, IA (Claude Sonnet 5.5), llamadas de GHL + Deepgram, coach IA, reparto por horarios | ✅ | `0334e4c` |
-| Auditoría: los 36 arreglos | ✅ | `c490247` … `4ae7fba` |
-| Velocidad medida (Paso 0.3) y formateador arreglado | ✅ | `9fe7653` |
-| H1 · Diseño glassmorphism estilo iOS con los colores de marca | ✅ aprobado | `0ad6a55` |
-| H2 · KPIs por persona (sección «KPIs» y en el Funnel) | ✅ | `1a5e340` |
-| H3 · Objetivos (diario, semanal, mensual, lanzamiento) en KPIs → Objetivos | ✅ | `62fb93f` |
-| H4 · Objetivos que motivan (anillo de hoy, racha, objetivo del equipo, celebración), un 30 % más pequeño | ✅ visto por Cristian | `5d2367c` |
-| H6 · Arrastre en Pre-call, citas sin duplicar, Post-call como tablero | ✅ | `715af62`, `c4ee7ef` |
-| H6 final · Post-call: mover todo, columna «Cerradas», el closer borra sus ventas, sin arreglo 32 | ✅ (falta el ratón de Cristian) | `adb7080` |
-| H8 · «Mi Funnel» (objetivos + mis KPIs + Funnel filtrado) para caller y closer | ✅ | `adb7080` |
-| H7 · Un solo CRM para todos (columnas unidas a estados, «No contesta» y «Llamar luego», Pre-call configurable) | ✅ (cambia en el Paso 0) | `adb7080` |
-| H5 · Permisos de las 15 secciones, por rol y por persona | ✅ | `adb7080` |
-
-## 3. Decisiones de Cristian que siguen vigentes
-
-**Generales**
-- Al final del todo: limpiar datos de prueba, GHL real y publicar. Primero todo en local; sin túnel.
-- **Sin Stripe ni pasarelas de pago**: cada venta la apunta a mano quien la hace (facturación, cash, reserva, cuotas; método Stripe, transferencia u otro).
-- La app es el CRM; GHL solo envía datos (webhooks + landings directas + API para calendarios y llamadas). Sí se sincroniza el calendario de GHL de cada closer.
-- Diseño: glassmorphism estilo iOS con granate Eternity y azul Maestria, claro y oscuro. Textos en español de España. USD y Nueva York por defecto.
-- Clientes = solo quien ha comprado. Nada de aula, cursos ni certificados.
-- Comisiones: cada rol tiene la suya y se cambia por persona y producto; se paga **sobre lo cobrado**, cada mes; el caller cobra ~3 % cuando cierra el closer; las devoluciones no descuentan comisión ya pagada.
-- Solo el CEO cambia el rol o desactiva a alguien. Solo CEO y director cambian comisiones (el director ni la suya ni la de su rol).
-- Estrellas del caller: 1 no responde · 2 responde sin saber nada · 3 interesado · 4 quiere saber más · 5 quiere comprar. Del closer: 5 encaja y paga ya · 4 paga con plazo · 3 sin dinero ahora · 2 poco encaje · 1 no califica.
-- IA: Claude Sonnet 5.5, clave en el servidor, cada llamada se analiza al conciliar. Llamadas de GHL: todas las contestadas de más de 1 minuto; si GHL no transcribe, Deepgram.
-
-**KPIs (H2)** — fijos para director y CEO; se cuentan **personas**, no llamadas.
-- Caller: *contactado* = llamada **o WhatsApp**; *contesta* = respondió la llamada; **agendar cuenta como contestada**; *cerrados* = de sus agendados, los que compraron al closer desde el día de la agenda; su low ticket va aparte.
-- Closer: % cierre sobre agenda y sobre asistencia; **su parte del total de los closers** en facturación y en cash; **% cobrado** de lo que vendió. Cada closer por separado y una fila de total.
-
-**Objetivos (H3-H4)** — de actividad y de resultados, no de porcentajes. Los ponen CEO o director por rol o por persona (**manda la persona**); el del director = el equipo entero. Semana de lunes a domingo; el diario de lunes a viernes por defecto, personalizable; un cambio vale desde esa semana. Lanzamiento = nombre + fechas (+ evento opcional: solo cuentan sus leads). Cada uno ve los suyos; todos ven el del equipo, también el dinero. Racha = días que cumplió **todos** sus diarios.
-
-**Tableros (H6)** — Pre-call y Post-call con arrastre y «Mover a…» (para el móvil). En Post-call **todo se mueve a cualquier columna**: sacar una venta de Reserva/Cuotas/Cerradas **la borra** (con confirmación) · Reserva ↔ Cuotas cambia la forma de pago · el closer puede borrar sus ventas · cualquier cita se reagenda (arreglo 32 quitado) · «Cerradas» = pagadas del todo y vendidas este mes. Sin «Métricas de la semana» en Pre-call.
-
-**Un solo CRM (H7)** — mismas columnas para todos. CEO y director ven todos los leads con filtro por persona; caller y closer ven «Mi CRM» con los suyos y los mueven. Solo **CEO y director con Administración** tocan columnas, pipelines, la unión columna ↔ estado y las columnas de Pre-call. Soltar en una columna unida = su botón (con su ventana: Agendar, Llamar luego, No interesa, Venta). Post-call no cambia.
-
-**Mi Funnel (H8)** — para caller y closer, primero del menú: sus objetivos, sus KPIs en tarjetas y el Funnel filtrado a él. Los objetivos se siguen viendo también en «Mis leads» / «Mis agendas».
-
-**Permisos (H5)** — 15 secciones, solo «ve / no ve». **Manda la persona, luego el rol, luego lo de siempre**; el CEO, siempre todo. Cambian permisos el CEO y el director con Administración (nunca se da más a sí mismo ni da lo que no tiene). **Nunca** a callers y closers: Administración, Finanzas y Equipo. Si se da a alguien una sección de otro rol, **ve solo lo suyo**: Agendas a un caller = sus citas, solo mirar · Ventas = las suyas · «Mis leads» a un closer = sus leads como closer · Funnel/KPIs = solo sus números · Clientes = los que vendió o agendó · Programas = solo mirar.
-
-**Criterios que puso Claude sin preguntar (Cristian puede cambiarlos):**
-- Agendado → Venta (arreglo 6): personas, compras desde el día de la agenda, cuenta aunque cierre el closer.
-- Si falla guardar el historial de un lead, se apunta en el registro y la acción sigue (22).
-- Al borrar una venta sin cita, el lead vuelve a «nuevo»; con cita, a «agendado» (26).
-- Un director puede cambiar la comisión del rol CEO (2).
-- KPIs: «% del total» frente a los closers (no todo el proyecto); agendados del caller cuentan aunque se reagenden; % cierre sobre asistencia solo con los que asistieron.
-- Racha: hoy solo suma si ya está cumplido; cada día usa su objetivo de ese día; hasta 60 días; celebración una vez al día.
-- Post-call: la cita **cerrada** no se reagenda (se mueve arrastrando su venta); llevar Reserva/Cuotas a «Cerradas» registra el cobro de lo que falta.
-- H7: la migración solo movió a «No contesta» / «Llamar luego» los leads que estaban en «Nuevos» (8 en Maestria).
-- H5: «Nuevo cliente» y editar el onboarding siguen siendo de CEO y director · cobrar vale con «Ventas» **o** «Agendas» · un caller o closer con «Funnel» va a «Mi Funnel».
-- V2: un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas · sin email se le reconoce por teléfono (últimas 9 cifras) · en Agendas solo cuentan las ventas de closers · un gasto sin categoría cuenta en el profit · Fathom se sincroniza con el botón, no solo.
-
-## 4. Qué nos queda para terminar
+**Lo siguiente:** construir 1.0 en orden: «Antes de todo», Bloque A (Biblioteca + reparto manual) y bloques 1 a 7, enseñándote cada uno y después la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
-### Paso 0 · Pipelines «Callers» y «Closers» en el CRM, como GHL ✅ (10 oct 2026, noche; commit `6a887c6`)
-Pedido tal cual: *«no debería ser "columna de callers", debería ser otro pipeline que diga "Callers"»*.
-- **Cómo lo hace GHL** (comprobado en su ayuda oficial, [Pipeline Permissions](https://help.gohighlevel.com/support/solutions/articles/155000006523-pipeline-permissions) y [User Permissions, Assigned Data](https://help.gohighlevel.com/support/solutions/articles/48000982601), y en 2 blogs): una persona puede estar en **varios pipelines a la vez** (en cada uno es una «oportunidad» con su propia columna) · cada pipeline tiene **permisos**: compartir con todos / con algunos / todos menos algunos, y nivel **Solo ver** (mueve tarjetas, no toca columnas), **Editar** (también columnas y el pipeline) o **Sin acceso** (ni lo ve); el admin siempre todo · con «solo sus datos», cada usuario ve solo las oportunidades asignadas a él.
-- **Decisiones de Cristian (10 oct 2026):**
-  - Se **quita el botón «Columnas de Pre-call»** del CRM.
-  - Nuevo pipeline **«Callers»** con las columnas que ya existen (Nuevos, No contesta, Llamar luego, Agendados…); **se pueden añadir y borrar columnas**.
-  - **Un lead está en los dos sitios, como GHL:** sigue en su pipeline de origen (p. ej. «Webinar 1») y además en «Callers» en la columna de su llamada. Las columnas de llamada (No contesta, Llamar luego…) salen de los pipelines de origen y quedan solo en «Callers».
-  - El tablero Pre-call pasa a ser **otro pipeline «Closers»** en el CRM, con columnas que se añaden y borran.
-  - **Permisos por pipeline como GHL** (quién ve cada pipeline y con qué nivel); cada caller y closer, solo sus leads.
-- ⚠ **Aviso de Claude:** es un cambio grande. Deshace parte del H7 (ya en el commit `adb7080`; se cambia con una migración nueva): columnas unidas a estados dentro de cada pipeline, la migración que añadió «No contesta» y «Llamar luego» a todos los pipelines, `precall_columnas`. Toca el CRM, la cola del caller, Pre-call, métricas y permisos.
-- **Respuestas de Cristian a las dudas (10 oct 2026):**
-  - Se hace **después del commit** de H5-H8.
-  - Pipeline «Closers»: las 4 columnas de ahora siguen **unidas a su estado de cita** (Métricas, KPIs y objetivos no cambian); las columnas nuevas son libres.
-  - Permisos por pipeline: **lo decide Claude** → propuesta: **van además** del permiso «CRM» del H5. «CRM» = si la persona ve el CRM; dentro, los permisos de cada pipeline dicen cuáles ve y con qué nivel (Solo ver / Editar / Sin acceso), como GHL. Por defecto: CEO y director con Administración, Editar en todos; «Callers», Solo ver para callers; «Closers», Solo ver para closers; cada caller y closer, solo sus leads.
-  - Pipelines de origen: *«Crea un nuevo pipeline para callers»*.
-- **Últimas respuestas (10 oct 2026):** *«Simplifica, flujo GoHighLevel, que ya lo estamos complicando demasiado»* · «Closers» = **Pre-call y Post-call juntos en un solo pipeline** (Pendiente, Confirmación pendiente, Confirmado, No califica, Reserva, Cuotas, Cerradas, En seguimiento, No-show…) · los pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY) **vuelven a sus columnas de antes del H7: se quitan «No contesta» y «Llamar luego»**, que quedan solo en «Callers» (Cristian corrigió su respuesta: era la A, no la B).
-- **Regla para hacerlo: lo más simple posible, como GHL.**
-- **Cristian (10 oct, al empezar):** las pestañas Pre-call y Post-call de Agendas → Llamadas **se quedan** y enseñan el mismo tablero que CRM → Closers (mismas columnas) · en «Callers» salen **solo los leads con caller**.
-- **Cómo se hace (Claude, 10 oct):**
-  1. Migración: `pipelines.tipo` (normal / callers / closers), un «Callers» y un «Closers» por proyecto (también al crear proyecto, con un disparador de la base) · `leads.etapa_callers_id` (su columna en «Callers») y `citas.etapa_closers_id` (su columna en «Closers» si se mueve a una libre) · `etapas.columna_cita` (une una columna de «Closers» a un estado de Pre-call o Post-call) · disparadores: si cambia el estado del lead o de la cita, la tarjeta va sola a su columna unida · los pipelines de origen pierden «No contesta», «Llamar luego» y las uniones (como antes del H7) · `precall_columnas` pasa a las columnas de «Closers» y se quita · tabla `permisos_pipeline`.
-  2. CRM: pestañas «Callers» y «Closers»; sin botón «Columnas de Pre-call»; «Unir a un estado» solo en sus pipelines; «Callers» y «Closers» no se pueden borrar (sí renombrar).
-  3. Tablero «Closers» común (CRM y Agendas): citas y ventas; columnas unidas = lo de siempre (Pre-call cambia el estado; Post-call como en el H6); columnas libres = la cita se queda ahí hasta que cambie su estado. En Agendas, Pre-call = las columnas hasta la primera de Post-call; Post-call = el resto.
-  4. Permisos por pipeline como GHL: nivel **Editar** (también columnas), **Ver** (mueve sus tarjetas) o **Sin acceso**, por rol y por persona (manda la persona). CEO y director con Administración, siempre Editar. Por defecto: pipelines de origen, Ver para todos · «Callers», Ver para callers y directores · «Closers», Ver para closers y directores.
-  5. Scripts (`proyecto-base.json`), tests, navegador (Proyecto Prueba) y plan.
-- [x] **Hecho:** migración `20261013090000_pipelines_equipo.sql` (21 migraciones; 42 tablas con RLS) · `src/lib/pipelines.ts` (niveles), `src/lib/tablero-closers.ts` (datos), `closer/llamadas/tablero-closers.tsx` (tablero común; sustituye a `tablero-postcall.tsx` y a las tarjetas de Pre-call) · CRM con «Callers», «Closers», menú de uniones y botón de permisos (llave) · los leads solo entran en pipelines de origen (CSV, webhooks, entradas, ficha, GHL) · scripts al día.
-- [x] **Tests:** `crm-unico.test.ts` rehecho (6: pipelines al crear proyecto, uniones, botones → columna, arrastrar en «Callers», permisos por pipeline, columnas libres de «Closers») + `tests/unit/closers.test.ts` (3) + 2 adaptados en `funciones.test.ts` + `permisos_pipeline` en el test de RLS. **340 pasan.** Rotas 3 reglas a propósito (nivel por defecto, unión, columna libre): sus tests fallan.
-- [x] **Navegador:** Carla (Maestria, solo mirar): ve los 4 de origen + «Callers» (sin «Closers»), sus 100 leads repartidos 88/6/3/1/1/1 = igual que la base. CEO (Proyecto Prueba): «Closers» con 13 columnas y «⋯», permisos con los valores de siempre; columna libre de prueba → arrastrar una cita ahí (base: `etapa_closers_id`) → sale también en Agendas → Post-call → «Mover a…» la devuelve. Sin errores de consola. Columna y 2 líneas de historial de prueba borradas.
-- ⚠ No probado en el navegador: soltar en «Callers» con su ventana (Agendar, Llamar luego…), cambiar un permiso desde la ventana (sí en tests), director sin Administración.
+---
 
-### Paso A · Revisión de Cristian 🟡
-- [ ] Con su ratón: arrastrar en el CRM, en Pre-call y en Post-call (Claude solo lo pudo simular).
-- [ ] Mirar el diseño en su móvil (misma wifi, IP del Mac en vez de `localhost`).
-- [ ] Revisión completa de la app (v1 + v2 + arreglos + Paso H). Lo que encuentre se apunta y él decide si se arregla antes de publicar.
+## 1. Lo que me falta a mí (Claude), en orden
 
-### Paso B · Datos que tiene que pasar Cristian ⬜
-- [ ] CSV del equipo (`nombre,email,rol,proyecto`), qué director tiene Administración y los permisos de cada uno.
-- [ ] Precios de los servicios para empresas (o confirmar «personalizado»).
-- [ ] Qué `source` manda cada landing y a qué pipeline va.
-- [ ] Prioridad por formulario y criterios A/B/C (el opt-in de la masterclass no pregunta inversión ni cuándo empezar: hoy saldrían todos «C»).
-- [ ] Columnas reales de los pipelines (o las crea el admin desde la app) y links de pago de cada producto.
-- [ ] Al final: token de GHL (permisos `calendars/events.readonly`, `contacts.readonly`, `conversations/message.readonly`) + id de la subcuenta, calendario/usuario de GHL de cada closer y caller, API key de Fathom de cada closer, claves de Claude y Deepgram.
+### 1.0 Nuevo antes de publicar (pedido por Cristian el 10 oct 2026, noche)
+**Cómo se trabaja:** un bloque cada vez y en este orden (cada uno se apoya en el anterior). Cada bloque termina con: tests (que fallen si se rompe la regla), `next build`, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, y **te lo enseño antes de pasar al siguiente**. **Commit cada 2 bloques** (Cristian, 11 oct): «Antes de todo» + A · 1 + 2 · 3 + 4 · 5 + 6 · 7.
 
-### Paso C · Publicar (sigue `GUIA-PUBLICAR.md`) ⬜
-- [ ] Antes: actualizar la Supabase CLI 2.90 → 2.120 (Homebrew pide `brew trust` de `supabase/tap`: lo hace Cristian).
-- [ ] Cristian crea las cuentas de GitHub, Supabase y Vercel (Claude guía). En Supabase, desactivar «Allow new users to sign up».
-- [ ] Claude sube el código (repositorio privado) y crea las tablas (`supabase db push`, 22 migraciones).
-- [ ] Vercel: `NEXT_PUBLIC_SUPABASE_URL` **antes** del primer despliegue (si no, fallan las subidas de PDF y CSV); carpeta `app`; las 4 variables (`CLAVE_CIFRADO` con `openssl rand -base64 32`, guardada en el gestor de contraseñas) + las 2 de IA.
-- [ ] `preparar-proyecto.mjs --confirmar` → `crear-usuarios.mjs equipo.csv --confirmar` (contraseñas por canal privado) → subir un CSV nuevo de contactos de GHL.
-- [ ] Comprobar en Vercel lo que en local no se puede: subida directa de PDF y CSV, límite de intentos con varias copias del servidor, HTTPS, consola sin bloqueos. (Opcional) dominio propio.
+**Lo que ya existe (comprobado en el código el 10 oct):** horario de los callers con un solo tramo por día (`miembros_proyecto.horario`, V2-11) · reparto al entrar «a mano / rotativo / por horarios» (`proyectos.modo_reparto`) · comisión por persona, producto y rol, de venta y de agenda (`lib/comisiones.ts`), y liquidaciones del mes sobre lo cobrado (`lib/finanzas.ts`) · cambiar contraseña desde Administración · usuario y calendario de GHL de cada persona (`miembros_proyecto.ghl_user_id` / `ghl_calendar_id`, en Integraciones) · cuentas de Fathom por closer · pasos de onboarding de clientes (los edita el CEO) · avisos de reportes por el workflow de GHL · link de pago por producto · la cola ordena por prioridad A/B/C. **No existe:** una página «Mi perfil» · envío de emails propio (sin servidor de correo, Supabase solo manda emails a las direcciones del equipo de Supabase, según su documentación).
 
-### Paso D · Conectar GHL (sigue `GUIA-GHL.md`) ⬜
-- [ ] Workflows «Lead nuevo», «Cita agendada», «Cambio de etapa» (si hace falta) y avisos de reportes; comprobar en Administración → Integraciones → «Últimos eventos».
+**Investigado:** Salesforce no trae reparto por turnos de serie (se hace con reglas o herramientas aparte: por turno, con peso y con tope por persona). GHL ([ayuda oficial](https://help.gohighlevel.com/support/solutions/articles/155000001716)): horario semanal con varios tramos por día, horarios por fecha que mandan sobre el semanal, duración de la cita, intervalo, descanso tras cada cita, aviso mínimo y máximo de citas por día; en sus calendarios con rotación se elige si la persona la elige quien reserva o la asigna la rotación. **No confirmado** que GHL reparta con % por persona: se hace con % como pidió Cristian. Resend con Supabase ([guía de Resend](https://resend.com/docs/send-with-supabase-smtp)): servidor `smtp.resend.com`, puerto 465, usuario `resend`, la clave de Resend como contraseña y un dominio verificado.
+
+#### Antes de todo · «Llamadas de GHL» oculta y 2 perfiles de prueba ✅ (11 oct, sin commit: va con el bloque A)
+Motivo: las llamadas de GHL aún no están configuradas; esos 2 perfiles sirven para probarlas sin que el equipo las vea.
+- [x] Ocultar la sección **«Llamadas de GHL»** (sección `grabadas` de Permisos) a **todos los callers y closers**: se quita de lo que callers y closers tienen **por defecto** en el código (`DEFECTO` en `lib/permisos-constantes.ts`), así vale también en la nube; el CEO o un director con Administración puede volver a abrirla en Permisos.
+- [x] Crear 2 perfiles de prueba que **sí** la ven (permiso por persona): **closer-test@eternity.llc** (closer) y **caller-test@eternity.llc** (caller), con la contraseña que dio Cristian (guardada solo en `scripts/salida/`, fuera de git; no se escribe en el plan). `crear-usuarios` aprende 2 columnas más: `password` (contraseña fija) y `prueba` (si). Se crean en local para probar y en la nube al publicar, junto al equipo.
+- [x] Que esos 2 perfiles **no interfieran en el equipo** (Cristian, 11 oct): marca «perfil de prueba» (`perfiles.es_prueba`, migración ya aplicada en local) → **fuera de cifras** (Ranking, KPIs, Funnel, Ventas, Agendas, Finanzas y el objetivo del equipo: no cuentan sus llamadas, citas ni ventas), **fuera del reparto y de la rotación**, **fuera de liquidaciones** y **ocultos en Equipo** y en los filtros de persona. Ellos sí pueden entrar, usar la app y verse entre ellos (el caller de prueba puede agendar al closer de prueba). La marca se puede poner y quitar en la ficha de la persona (bloque 5).
+- [x] Tests: con la marca, sus llamadas y ventas no cambian ninguna cifra del equipo y nunca les toca un lead del reparto; sin la marca, sí.
+- Cristian (11 oct): **no se publica hasta que esté todo**; se trabaja ya, en orden.
+- La «Grabaciones» de Agendas (Fathom) es otra cosa y no se toca.
+
+- **Hecho y comprobado (11 oct):** `perfiles.es_prueba` · `equipo()` deja fuera a los perfiles de prueba (y los incluye cuando quien mira es uno de ellos) · Funnel, KPIs, Ranking, Agendas, Ventas y Finanzas no cuentan sus llamadas, citas, ventas ni cobros · no entran en el organigrama ni en Liquidaciones · «Llamadas de GHL» fuera de lo de siempre de callers y closers · `crear-usuarios` con `password` y `prueba` (da el permiso de «Llamadas de GHL»). Creados en local closer-test y caller-test (en `scripts/salida/prueba.csv`). Test nuevo `perfiles-prueba.test.ts` (5; fallan 3 si se quita el filtro). **348 tests pasan.** Navegador: caller-test ve «Mis llamadas grabadas»; Carla no; el CEO sí; el organigrama no enseña a los de prueba.
+
+#### Bloque A · «Biblioteca» en KPIs + «Repartir leads» ✅ (11 oct)
+Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pueda actualizar con un CSV; esto nos permitirá hacer el primer reparto de leads manual hasta que conectemos GHL; aunque GHL esté conectado, que siempre se actualice (por lo menos en este proyecto). Llámala "Biblioteca"».* Modelo: `Proyecto dashboard/vista-ventas.html` («Biblioteca de recursos 10 de octubre», 1.005 personas).
+- **Qué tiene la vista (leída entera):** resumen (cuántos dejaron datos, % que puede invertir ya, % «caliente» = ingresos + invertir + empezar) · ¿quiénes son? (situación, experiencia con AI) · ¿qué quieren? (objetivo a 90 días, cuándo empezar) · ¿pueden invertir? · ¿cuánto tiempo tienen? (con el aviso «el programa pide mínimo 4 h al día») · ¿de dónde son? (por prefijo de teléfono) · escalera de ofertas (Membresía 47 $/mes, Grupal 1.997 $, VIP 4.997 $, DFY a medida, con cuántos encajan en cada una) · tabla de todos los leads con filtros por oferta, buscador, columnas ordenables (invertir, tiempo y cuándo empezar ordenados de más a menos listo) y ficha al hacer clic.
+- **Las respuestas** de los leads de la app son **las mismas palabras** que las de la vista (comprobado pregunta a pregunta en la base): la regla y las cifras se calculan tal cual.
+- **Cifras del resumen** (comprobadas con los datos del archivo): «caliente» = objetivo «Llegar a $5,000 al mes» o «Cerrar mi primer cliente en USA» + invertir «Sí, ahora» + empezar «Ya mismo» o «Este mes» → **180 (17,9 %)** · «busca ingresos» = esos 2 objetivos → **47,8 %** · «más de 10 h» = «10 a 20 h» + «Más de 20 h» → **19,2 %** · DFY que invierten ya → **29** · país = por el prefijo del teléfono (+1 EE. UU./Canadá, +34 España, +54 Argentina, +57 Colombia, +58 Venezuela, +52 México, +56 Chile, +51 Perú… y «Otro» para el resto).
+- **Qué leads entran y cómo se leen sus respuestas** (⚠ hueco encontrado al revisar, 11 oct): los leads llegan por 3 sitios y cada uno nombra distinto lo mismo:
+  - **CSV de GHL:** etiqueta «biblioteca recursos» y preguntas con su texto completo («¿En qué situación estás hoy?», «¿Qué experiencia tienes con IA?», «¿Qué quieres lograr en los próximos 90 días?», «¿Cuánto tiempo por semana le puedes dedicar?», «Si encuentras el programa correcto, ¿estás en condiciones de invertir en tu formación?», «¿Cuándo quieres empezar?») — comprobado en la base.
+  - **Landing directa** (envío real del 9 oct en `tests/apoyo/envios.ts`): `source: recursos`, etiqueta «recursos-ia» y preguntas `quiz_situacion`, `quiz_experiencia_ia`, `quiz_objetivo_90_dias`, `quiz_tiempo_semanal`, `quiz_inversion`, `quiz_inicio`, que la app guarda como «Situación», «Experiencia ia», «Objetivo 90 días», «Tiempo semanal», «Inversión», «Inicio». **Las respuestas sí son las mismas palabras.**
+  - **Workflow de GHL:** las preguntas se llaman como las escriba quien monte el workflow (`customData`).
+  - Por eso: entra en la Biblioteca quien tenga la etiqueta «biblioteca recursos» **o** «recursos-ia», **o** `source` «recursos», **o** esté en el pipeline «Biblioteca Recursos»; y cada pregunta se reconoce **por cualquiera de sus nombres** (el del CSV o el de la landing). En `GUIA-GHL.md` se dirá el texto exacto que hay que poner en `customData` para que también cuadre.
+- **Regla de la clasificación** (sacada de los datos del archivo y comprobada: coincide en las **1.005 de 1.005**): **VIP** = puede invertir «Sí, ahora» + empezar «Ya mismo» o «Este mes» + tiene negocio o agencia, o ya automatiza o ya vendió servicios de AI · **Empresas (DFY)** = «Tengo un negocio» + objetivo «Automatizar mi negocio» · los dos → **VIP + Empresas** · puede invertir ya y no encaja en esos → **Grupal** · el resto → **Membresía**.
+- **Decisiones de Cristian (11 oct):** los datos salen **de los leads de la app** (los 893 de Maestria ya traen las 6 preguntas y la etiqueta «biblioteca recursos», comprobado en la base); «Actualizar con CSV» usa la subida de leads que ya existe; con GHL conectado se suma sola · la ven **director y CEO**, como **primera pestaña de KPIs** · **se reparte desde aquí** (filtrar, p. ej. VIP sin caller, y «Repartir leads») · la clasificación se ve **en la Biblioteca, en la ficha del lead y en las tarjetas del CRM**, pero **no ordena la cola** (sigue «los más nuevos primero»).
+- [x] Pestaña **«Biblioteca»** primera en KPIs, con todo lo de la vista adaptado al diseño de la app (claro y oscuro, móvil).
+- [x] Botón **«Actualizar con CSV»** en la Biblioteca (la misma subida del CRM: nuevos y actualizados, sin duplicar).
+- [x] **La clasificación como dato propio de cada lead** («Oferta»: VIP + Empresas, VIP, Empresas, Grupal, Membresía) (Cristian, 11 oct): se calcula para **todos** los leads con sus respuestas, se guarda, se recalcula sola cuando cambian sus respuestas (CSV, landing o GHL), se puede filtrar y se ve en la Biblioteca, en la ficha y en las tarjetas del CRM **junto a la etiqueta de siempre** (la respuesta de «invertir» y la A/B/C: Cristian quiere las dos). No se mezcla con las etiquetas de GHL.
+- [x] **Al subir un CSV nuevo se ponen al día todos los datos** (Cristian, 11 oct): cada lead que ya existe recibe sus respuestas nuevas, que **sustituyen a las de la misma pregunta aunque venga con otro nombre** (hoy solo se sustituyen si el texto es idéntico: con los 3 orígenes se quedarían duplicadas; se guardan con un nombre único por pregunta) · se recalcula su «Oferta» · al terminar, un resumen: «X nuevos · Y actualizados · Z cambian de oferta». Lo mismo cuando entran por la landing o por GHL.
+- [x] **«Repartir leads» manual** (lo del bloque 2: sin asignar o reasignar; equitativo, aleatorio, fijo por persona, con tope; vista previa) desde la Biblioteca y desde el CRM. El reparto **automático** al entrar se queda en el bloque 2 (necesita los horarios del bloque 1).
+- [x] ⚠ **Datos personales:** `vista-ventas.html` tiene nombre, email y teléfono reales de 1.005 personas y está **fuera de git** (se queda así). Para los tests se guarda **solo** las 6 respuestas, el prefijo del teléfono y la oferta esperada de cada persona, **sin nombres, emails ni teléfonos**.
+- [x] Tests: la regla con los 1.005 casos (sin datos de contacto; los 1.005 tienen que salir igual), los 3 orígenes (CSV, landing y GHL) reconocidos igual, las cifras del resumen frente a las del archivo con los mismos datos (180, 47,8 %, 19,2 %, 29, países), y el reparto (equitativo, aleatorio, fijo y con tope; reasignar; nunca a perfiles de prueba).
+- [x] **Datos reales** (Cristian, 11 oct: «esos son los datos reales, usa esos»): sacar las 1.005 personas de `vista-ventas.html` a un CSV y subirlo a **Maestria en local** (permiso dado): los nuevos se añaden y los 893 que ya están se ponen al día (por email o teléfono, sin duplicar). La Biblioteca tiene que dar las mismas cifras que el archivo. La nube empieza limpia y ahí se sube al publicar.
+- [x] **Productos con los nombres de la vista** (Cristian, 11 oct): Low ticket → **Membresía** (47 $, la vende el caller) · Mentoría grupal → **Grupal** (1.997 $) · Mentoría VIP → **VIP** (4.997 $) · Servicios para empresas (DFY) → **DFY** (precio personalizado), con la descripción de la vista (6 meses, llamadas…), en la base local y en `proyecto-base.json`. Cada escalón de la escalera de ofertas sale de su producto de Programas (nombre y precio).
+- [x] **Membresía mensual sin fin** (Cristian, 11 oct): nuevo modo de pago «mensual» en Programas; al venderla queda un cobro de 47 $ pendiente **cada mes** en Finanzas → Pagos pendientes hasta que se marque **baja**; cuenta en comisiones como cualquier cobro.
+  - ⚠ Encontrado al revisar: hoy, al vender, el lead del pipeline «Orgánico» se mueve a la columna «Low ticket», «Grupal» o «VIP» **mirando si el nombre del producto contiene «low», «vip» o «grupal»** (`leads/acciones.ts`). Con «Membresía» dejaría de funcionar. Arreglo: la columna con **el mismo nombre que el producto**, y renombrar la columna «Low ticket» de Orgánico a «Membresía».
+- **Hecho y comprobado (11 oct):** `lib/oferta.ts` (regla y nombre único de las 6 preguntas, venga de CSV, landing o GHL) · `leads.oferta` (migración `20261013120000_biblioteca_oferta.sql`, que trae también la membresía mensual) · el guardado de leads normaliza las preguntas, recalcula la oferta y cuenta «cambian de oferta» · `lib/biblioteca.ts` + `biblioteca-datos.ts` (cifras y carga; al abrir, pone al día las ofertas que falten) · pestaña **Biblioteca** primera en KPIs (resumen, ¿quiénes son?, ¿qué quieren?, invertir, tiempo, países, escalera y tabla con chips, buscador, orden, ficha, «Actualizar con CSV» y «Repartir») · `lib/reparto.ts` + `crm/reparto.ts` + `components/repartir-leads.tsx` (vista previa; también en el CRM) · oferta en tarjetas del CRM y ficha · productos renombrados (Membresía mensual, Grupal, VIP, DFY) y columna «Membresía» en Orgánico; al vender, el lead va a la columna con el nombre del producto · membresía: modo «Cada mes» en Programas y en la venta, un cobro pendiente cada mes, «Dar de baja» en Ventas.
+- **Datos reales en Maestria local:** limpiados los restos de pruebas (121 líneas de historial, 100 callers de prueba quitados) y subidas por la pantalla las 1.005 personas (112 nuevas + 893 al día, sin duplicar): ofertas **627 / 242 / 71 / 40 / 25, iguales que la vista**.
+- **Tests:** `biblioteca.test.ts` (8: las 1.005 ofertas, los 3 nombres de preguntas, todas las cifras de la vista), `reparto` (5 + 5), `membresia` (3 + 2). Rotas a propósito la regla y el reparto: sus tests fallan. **371 tests pasan**, `next build` correcto.
+- **Navegador (CEO, Maestria):** Biblioteca con 1.005, 34 % (342), 17,9 % (180) y la escalera igual que la vista; «Repartir VIP» con vista previa (10 de 71; arreglado un fallo: abría con «Todas»); ficha; oferta en CRM y ficha; móvil sin desbordes; 0 errores de consola. **No se repartió nada de verdad en Maestria** (solo vista previa; el reparto real está probado en tests).
+- Criterio de Claude: en la membresía, la facturación es la del primer mes; los meses siguientes entran como cobros (cash).
+- ⚠ No probado en pantalla: «Dar de baja» y el modo «Cada mes» en Programas (sí en tests).
+
+#### Bloque 1 · Horario y disponibilidad (como GHL) + «Mi perfil»
+- [ ] **Horario semanal con varios tramos por día** (los huecos son los descansos) y **días o fechas sueltas** (vacaciones, festivos, descansos) que mandan sobre el semanal. Para callers y closers. El horario de un tramo que ya tienen los callers se pasa al nuevo formato sin perderlo.
+- [ ] **Ajustes de los closers** (como un calendario de GHL): duración de la llamada (**por defecto 30 min**, el valor general en Administración), **descanso tras cada llamada**, aviso mínimo para agendar y máximo de llamadas por día. Los pone el administrador por proyecto y cada closer puede tener los suyos.
+- [ ] **Página «Mi perfil»** para todos: nombre, teléfono, WhatsApp y **su horario**. Para callers y closers, el horario es también **un paso del onboarding** (ya existe el onboarding con nombre, email, teléfono y WhatsApp).
+- [ ] «Libre a una hora» = está en su horario + no tiene otra cita (con su duración y su descanso) + respeta aviso mínimo y máximo por día. Se usa en el bloque 3.
+
+#### Bloque 2 · Reparto automático de leads entre callers
+- [x] El botón «Repartir leads» manual pasa al bloque A (se necesita ya para el primer reparto). Recordatorio de cómo es: **sin asignar** (filtrando por pipeline, columna, evento u oferta) o **reasignar** los de una o varias personas; entre los callers que marques; **equitativo** (N por turnos), **aleatorio** (N al azar), **fijo por persona** (N a cada uno) y **con tope** (nadie pasa de X leads sin trabajar: nuevos + no contesta + llamar luego); con vista previa «Carla 20 · Diego 20…».
+- [ ] **Reparto automático al entrar** (GHL, landings, CSV) en Administración → Proyecto y reparto: **apagado por defecto**; encendido = **% por caller** (todos empiezan al 0 %) y la opción «solo a quien esté en su horario» (bloque 1). Sustituye a «a mano / rotativo / por horarios» de hoy.
+- [ ] Cada reparto y reasignación queda en el historial del lead.
+
+#### Bloque 3 · Rotación de closers
+- [ ] En Administración: **% por closer** (todos al 0 % = apagada) y **cómo se elige el closer al agendar**: «lo elige quien agenda» (por defecto, como hoy), «lo propone la rotación (se puede cambiar)» o «lo decide la rotación».
+- [ ] Toca el closer con más % pendiente según su peso; si **no está libre** a esa hora (bloque 1), salta al siguiente; si ninguno lo está, avisa y deja elegir.
+- [ ] En todos los sitios donde se agenda: cola del caller, CRM («Agendados»), Crear llamada, ficha del lead y Post-call (reagendar). Con «lo decide la rotación», el servidor pone el closer aunque se intente otro.
+
+#### Bloque 4 · Comisiones por tramos
+- [ ] **Tramos por rol** (editables en Equipo): callers 0-9.999 € → 3 % · 10.000-24.999 € → 3,5 % · 25.000-49.999 € → 4 % · 50.000-74.999 € → 4,5 % · 75.000-99.999 € → 5 % · desde 100.000 € → 5,5 %. Closers: 7 % en todos los tramos (el equipo los define luego).
+- [ ] **Cómo se calcula** (Cristian, 10 oct): cada mes se suma la facturación de sus ventas del mes (caller: las ventas cerradas de los leads que agendó + su low ticket; closer: lo que vendió) · el % del tramo alcanzado se aplica a **toda** esa facturación · se reinicia cada mes · se paga sobre lo cobrado · **lo que se cobra después (cuotas) va con el % del mes en que se hizo la venta**.
+- [ ] **Interruptor por persona** en su ficha: «manda su % propio» o «mandan los tramos» (Cristian: que se pueda elegir con un botón quién manda).
+- [ ] Liquidaciones de Finanzas con los tramos (y el tramo alcanzado a la vista).
+
+#### Bloque 5 · Ficha completa de cada persona (Empresa → Equipo)
+- [ ] Clic en una persona → ventana con todo: la marca «perfil de prueba» · datos (nombre, email, teléfono, WhatsApp, área, puesto) · rol, Administración y permisos de secciones y de pipelines · **comisiones** (su %, el interruptor del bloque 4, por producto) · **reparto y rotación** (su %) · **horario y ajustes de calendario** (bloque 1) · **calendario y usuario de GHL** y **cuenta de Fathom** · **cambiar contraseña** · **cambiar email** (lo cambia el administrador directamente) · **enviar enlace mágico** (bloque 6). La usan **el CEO y los directores con Administración**. Las personas sin acceso a la app (solo en el organigrama) tienen la parte de datos y comisión.
+
+#### Bloque 6 · Emails con Resend
+- [ ] Clave `RESEND_API_KEY` en el servidor y envío de emails de la app (avisos de los reportes por email; el WhatsApp sigue por el workflow de GHL).
+- [ ] Supabase con Resend como servidor de correo (enlaces mágicos y cambios de email), remitente @eternity.llc. Sin email de bienvenida: los accesos se los manda Cristian por WhatsApp.
+- [ ] Guía paso a paso en `GUIA-PUBLICAR.md` (crear la cuenta, verificar eternity.llc con sus registros DNS, poner la clave en Vercel y en Supabase). En local no se pueden enviar emails reales: se prueba con un envío falso en los tests y con la cuenta real al publicar. **Necesita de Cris:** la cuenta de Resend, su clave y quien añada los registros DNS de eternity.llc.
+
+#### Bloque 7 · Reporte, onboarding de closers, recursos y cola
+- [ ] **Preguntas del reporte editables** en Administración (por defecto, las de hoy). Las 3 que usan las tasas del closer (llamadas realizadas, agendadas y ventas) se pueden renombrar pero no borrar. Los reportes ya enviados guardan sus preguntas tal cual.
+- [ ] **Onboarding de los closers:** en el menú del closer, «Onboarding» con **sus clientes cerrados** y una checklist por cliente (Onboarding enviado · Acceso dado · Seguimiento hecho · Llamada de bienvenida), que marca él; los puntos los edita el equipo. Director y CEO ven los de todos. Aparte del onboarding de clientes que ya existe (100 % configurable).
+- [ ] **Links y recursos con diseño nuevo** (hoy «se ve muy Windows XP») y un **link de dossier** encima del link de pago en cada producto (los pone el equipo).
+- [ ] **Cola del caller sin prioridad:** los más nuevos primero (la A/B/C se sigue calculando pero no ordena).
+- [ ] «DFY» (antes «Servicios para empresas») con precio personalizado y editable en Programas: comprobar que ya va (y que se pueden añadir más productos así).
+
+**Documentos que hay que poner al día con cada bloque** (para que no se queden viejos):
+- «Antes de todo»: `GUIA-GHL.md` Parte 4 (la sección «Llamadas de GHL» solo la ven jefes y los 2 perfiles de prueba) · `GUIA-PUBLICAR.md` paso 6 (los 2 perfiles de prueba y las columnas `password` y `prueba`).
+- Bloque A: `GUIA-GHL.md` Workflow 1 (texto exacto de las 6 preguntas en `customData` y la etiqueta) · `GUIA-PUBLICAR.md` paso 7 (subir el CSV de la Biblioteca) y lista final · `proyecto-base.json` (nombres y descripciones de productos, columna «Membresía» en Orgánico).
+- Bloques 1-3: `GUIA-GHL.md` Workflow 1 («si el reparto está en rotativo…» cambia por el reparto con %) y Workflow 2 (rotación de closers).
+- Bloque 4 y Membresía mensual: `GUIA-PUBLICAR.md` lista final (Finanzas: la membresía deja un cobro cada mes).
+- Bloque 6: `.env.example` (`RESEND_API_KEY`) · `GUIA-PUBLICAR.md` (paso de Resend, variable en Vercel, «Si algo falla») · `GUIA-GHL.md` Parte 2 (el email del aviso sale por Resend; el workflow solo para WhatsApp).
+- Siempre: el número de tests, migraciones y tablas en el plan y en `GUIA-PUBLICAR.md`, y mis notas de memoria. `plan-historial-10oct.md` y `Arreglar-dashboard.md` son históricos: no se tocan.
+
+**Criterios míos en 1.0 (puedes cambiarlos):** el tope cuenta como «sin trabajar» los leads en Nuevo, No contesta y Llamar luego · la rotación de closers por defecto «lo elige quien agenda» y apagada · vista previa antes de repartir · el cambio de email lo hace el administrador sin pedir confirmación al usuario · las 3 preguntas de las tasas no se borran.
+
+### 1.1 Antes de tu revisión: probar en pantalla lo que solo está en tests
+- [ ] CRM → «Callers»: soltar una tarjeta en «Agendados», «Llamar luego», «No interesa» y «Cerrados» (se abre su ventana). (Permiso dado por Cristian el 10 oct: Carla un rato en Proyecto Prueba con datos «PRUEBA», borrados al terminar.)
+- [ ] CRM → llave de permisos: cambiar un permiso desde la ventana y ver que la persona deja de ver el pipeline (lo devuelvo como estaba).
+- [ ] Un director **sin** Administración (columnas bloqueadas, sin llave, sin Permisos). (Permiso dado: quitarla un rato y devolverla.)
+- [ ] Permisos «lo suyo» en pantalla: caller con Clientes, Ventas y KPIs · closer con «Mis leads» · Programas solo mirar.
+- [ ] Objetivos: crear y borrar un lanzamiento, quitar un objetivo, el diario con días marcados, el avance del director, la racha con días cumplidos y la celebración.
+- [ ] CRM: crear un pipeline y sus columnas de verdad (solo probado con tests).
+- [ ] Clientes: marcar un paso de onboarding y guardar un caso de éxito.
+- [ ] Administración: usuarios de GHL con callers dentro (solo se han visto vacíos). Los horarios se prueban en el bloque 1.
+- [ ] Finanzas: importar un CSV del banco, transferir entre cuentas, gastos programados, pagar una liquidación.
+- [ ] `preparar-proyecto` sobre una base vacía (que crea Maestria con «Callers» y «Closers»).
+- [ ] Ver la pantalla «Algo ha fallado» con un error de verdad.
+- [ ] Detalle: al crear una entrada de landing, el formulario se queda con el nombre escrito (se podría crear dos veces).
+
+### 1.2 Después de tu revisión
+- [ ] Arreglar lo que encuentres (lo apunto aquí y tú decides qué va antes de publicar).
+- [ ] Cambiar los criterios míos que no te gusten (lista en la sección 4).
+
+### 1.3 Publicar (sigo `GUIA-PUBLICAR.md`)
+- [ ] Actualizar la Supabase CLI de la 2.90 a la 2.120. **Necesita de Cris:** ejecutar `brew trust supabase/tap` (ajuste de seguridad del Mac).
+- [ ] Subir el código a GitHub (repositorio privado). **Necesita de Cris:** la cuenta de GitHub creada.
+- [ ] Crear las tablas en la nube (`supabase db push`: las 22 migraciones de hoy + las de 1.0). **Necesita de Cris:** el proyecto de Supabase creado, con «Allow new users to sign up» desactivado.
+- [ ] Configurar Vercel: carpeta `app`, `NEXT_PUBLIC_SUPABASE_URL` **antes** del primer despliegue, las 3 variables de Supabase, `CLAVE_CIFRADO`, las 2 de IA y `RESEND_API_KEY`. **Necesita de Cris:** la cuenta de Vercel y guardar `CLAVE_CIFRADO` en su gestor de contraseñas.
+- [ ] Resend: verificar eternity.llc (los registros DNS pueden tardar en propagarse: hacerlo al principio), poner Resend como servidor de correo de Supabase y probar un enlace mágico y un aviso de reporte reales. **Necesita de Cris:** cuenta de Resend y quien añada los DNS.
+- [ ] `preparar-proyecto --confirmar` (Maestria con sus pipelines y productos).
+- [ ] `crear-usuarios scripts/salida/equipo.csv --confirmar`: **el CSV ya está hecho** (10 personas, 10 oct; en `scripts/salida/`, fuera de git; simulación correcta). Contraseñas «Maestria-» + 8 caracteres al azar, guardadas solo en `scripts/salida/`. **Necesita de Cris:** mandárselas por WhatsApp (decisión de Cristian). Con ellos se crean también los 2 perfiles de prueba (closer-test y caller-test, marcados «prueba», con «Llamadas de GHL» abierta).
+- [ ] Subir los contactos de GHL. **Necesita de Cris:** un CSV nuevo exportado de GHL.
+- [ ] Comprobar en Vercel lo que en local no se puede: subir PDF y CSV, límite de intentos, HTTPS, consola sin bloqueos y la velocidad de las cifras en la nube.
+- [ ] Dejar la app lista con tus datos (2.3): reparto y horarios de los callers, comisiones, Administración y permisos de cada persona y pipeline, Configurar IA, pasos del onboarding, cuentas y categorías de Finanzas, links y recursos. **Necesita de Cris:** esos datos.
+- [ ] Repasar contigo la lista «Comprobar al terminar» de `GUIA-PUBLICAR.md` (entrar como CEO, un caller hace el onboarding, móvil…).
+
+### 1.4 Conectar GHL (sigo `GUIA-GHL.md`)
+- [ ] Guiarte en los workflows «Lead nuevo», «Cita agendada», «Cambio de etapa» (si hace falta) y avisos de reportes (su URL se pega en Administración → Proyecto), y comprobar en Administración → Integraciones → «Últimos eventos». **Necesita de Cris:** crearlos en GHL (yo no tengo acceso).
+- [ ] Ajustar lo marcado «⚠ comprobar» en las guías (14 cosas: nombres de disparadores y variables de GHL, que la fecha de la cita traiga hora y zona, si director y CEO tienen que ser contactos de GHL, nombre del menú Private Integrations, regiones de Supabase y Vercel, interruptor de registro libre, formato de la transcripción de GHL, versión de la CLI y copias de seguridad de Supabase). **Necesita de Cris:** ver sus pantallas de GHL, Supabase y Vercel.
+- [ ] Landings directas: crear en Administración → Entradas una entrada por landing y que cada landing envíe también a su dirección. **Necesita de Cris:** quien edite las landings (y qué `source` manda cada una).
 - [ ] Comprobar con GHL real lo probado solo simulado: lead por teléfono, cita sin id sin duplicar, closer que no es del proyecto y **que una cita borrada en GHL pasa a «cancelada» sin cancelar ninguna buena**.
-- [ ] Avisos: le llegan al CEO aunque no sea miembro; un segundo reporte del día no repite el aviso.
-- [ ] Probar con las claves reales: calendario GHL, llamadas de GHL + Deepgram, Fathom, Claude (análisis, coach, scoring), landings directas.
+- [ ] Avisos: que le lleguen al CEO aunque no sea miembro y que un segundo reporte del día no repita el aviso.
+- [ ] Probar con las claves reales: calendario de GHL, llamadas de GHL + Deepgram, Fathom, Claude (análisis, coach, scoring). **Necesita de Cris:** las claves (2.3).
+- [ ] Medir el gasto real de Claude y Deepgram los primeros días (calculado ~0,05-0,08 $ por llamada de 1 hora, sin medir).
 
-### Paso E · Día real de prueba ⬜
-- [ ] Antes: Cristian pone los objetivos y lanzamientos reales.
-- [ ] Un caller y un closer trabajan un día; revisar Funnel, KPIs, objetivos, reportes y avisos; ajustes finales.
+### 1.5 Día real y cierre
+- [ ] Revisar contigo el día real: Funnel, KPIs, objetivos, reportes y avisos; ajustes finales.
+- [x] «Pepi» y «Test» (personas de prueba sin acceso del organigrama de Maestria): **borradas** con permiso de Cristian (10 oct).
+- [ ] (Opcional) Limpiar la copia local: en Maestria quedan **100 leads asignados a callers de prueba, 10 con estado de prueba y 121 líneas de historial** de las pruebas del 9-10 oct (sin ventas ni citas). Con `limpiar-pruebas --confirmar`, añadiéndole antes una copia de seguridad. No hace falta para publicar (la nube empieza limpia). (Permiso dado por Cristian el 10 oct: se hace.)
 
-### Paso F · Opcional ⬜
-- [ ] Limpiar la copia local (`limpiar-pruebas.mjs --confirmar`), solo con permiso. No hace falta para publicar (la nube empieza limpia). Añadirle antes una copia de seguridad.
+---
 
-### Paso G · Que las cifras vayan rápido con muchos leads ✅ (10 oct 2026, noche; commit `6a887c6`)
-Cristian: «Ahora, dentro del 0-9». **Lo que medí antes de tocar nada** (30.000 leads, `MEDIR=1`): calcular es rápido (Funnel 167 ms, KPIs 148 ms); **lo lento era cargar** (Funnel 2.774 ms, Agendas 787, Finanzas 759). Por eso no se pasó el cálculo a SQL (mucho trabajo y riesgo de que las cifras cambien) y se arregló la carga:
-- [x] `todas()` (`src/lib/datos.ts`) pide las páginas de 1000 filas **de 8 en 8 a la vez** (antes, una detrás de otra). Mismas filas y mismo orden: comprobado con 60.000 actividades, idénticas, alternando 3 veces: ~1,9 s → ~0,55 s.
-- [x] Migración `20261013100000_indices_carga.sql`: índices (proyecto, id) en leads, actividades, citas y ventas (antes la base reordenaba todo el proyecto en cada página). No cambia datos.
-- [x] Resultado con 30.000 leads (2 mediciones, con el ordenador cargado): **Funnel cargar 1.036 / 1.017 ms** (antes 2.774) · Agendas 455 / 230 (antes 787) · Finanzas 122 / 81 (antes 759). El cálculo no se tocó: las cifras salen de las mismas filas; los 343 tests pasan.
-- ⚠ Sin medir en la nube (cada página es un viaje por internet; pedir 8 a la vez debería ayudar más ahí, sin comprobar).
+## 2. Lo que necesito de ti (Cris), en orden
 
-### Detalles menores (no bloquean)
-- [ ] La pantalla «algo ha fallado» no se ha visto con un error real.
-- [ ] No hay tests de pantallas completas (clics como una persona); los 343 prueban lógica y permisos (Cristian: quedan apuntados).
-- [ ] Tras crear una entrada de landing, el formulario se queda con el nombre escrito.
-- Sin probar en pantalla (sí en tests): director **sin** Administración · caller con Clientes / Ventas / KPIs · closer con «Mis leads» · Programas solo mirar · crear/borrar lanzamientos y quitar objetivos · la celebración · importar CSV del banco, transferir, gastos programados, pagar liquidaciones · `preparar-proyecto` con las columnas unidas sobre una base vacía.
+### 2.1 Ahora
+- [x] Permisos de 1.1 y limpiar Maestria local: **dados** (10 oct, noche).
+- [ ] **Revisión completa de la app** (v1 + v2 + arreglos + Paso H + Paso 0), empezando por la pasada de punta a punta (CSV → caller → agenda → venta → Funnel), que aún no has visto. Usuarios de prueba en la sección 6.
+- [x] Preguntas del reporte: **se quedan las de hoy**, pero editables en Administración (1.0).
+- [ ] Con tu ratón: arrastrar en el CRM (también «Callers» y «Closers»), en Agendas → Pre-call y en Post-call (yo solo puedo simularlo).
+- [ ] Mirar el diseño en tu móvil (misma wifi, la IP del Mac en vez de `localhost`).
+- [ ] Revisar mis criterios (sección 4) y decirme cuáles cambio.
+- [x] Tests de pantallas completas: **después de publicar** (10 oct).
 
-## 5. Datos de prueba que quedan (no se borra nada sin permiso de Cristian)
-- **Limpieza del 10 oct (noche), aprobada por Cristian:** borrados en Maestria los 3 leads «Prueba» (con su cita), las 3 citas del 10 oct de Carla y Ana y el objetivo «Agendas diario 3»; en Proyecto Prueba el gasto de 150,50 €, el cambio 0,92, «Cliente Prueba» (con su venta), la nota de seguimiento, la cuenta «Fathom prueba», la configuración de IA, la grabación + análisis «PRUEBA», los 3 objetivos y la línea «cita confirmada»; los 67 registros de Playwright (65 + 2 de ese día).
-- **Quedan (no estaban en la lista):** ~~Lázaro y Ruben Torresdey~~ ✅ limpiados también (Cristian, 10 oct): como recién importados (Nuevo, sin closer ni estrellas; se quedan la importación y la asignación a Carla), borrados su historial de prueba (20 líneas), sus citas y la venta de prueba de Ruben (Mentoría grupal, reserva) con su plazo; en Proyecto Prueba, sus 3 leads (test, PRUEBA Subida CSV, ana), la venta de 1000 € de «ana» (a nombre del CEO, con 300 € devueltos), la cuenta «Todo», categorías y 3 pasos de onboarding de ejemplo.
+### 2.2 Para publicar
+- [ ] Crear la cuenta de Resend y conseguir a alguien con acceso al DNS de eternity.llc (cuanto antes: la verificación puede tardar).
+- [ ] Ejecutar `brew trust supabase/tap` en tu terminal.
+- [ ] Crear las cuentas de GitHub, Supabase y Vercel (te guío paso a paso).
+- [ ] Guardar `CLAVE_CIFRADO` en tu gestor de contraseñas cuando la generemos.
+- [x] Plan: **los gratuitos para empezar** (10 oct). Riesgo: sin copias de seguridad garantizadas y posible pausa por inactividad (sección 5).
+- [x] Dirección: **la gratuita de Vercel** (sin dominio propio por ahora).
 
-## 6. Riesgos y avisos
-- **Volumen:** con 30.000 leads el Funnel carga en ~1 s en local (Paso G). En la nube cada página es un viaje por internet: sin medir; si fuese lento, el siguiente paso es traer los datos con una sola llamada a la base.
-- **GHL:** algunas variables y disparadores no están documentados; se prueban en el Paso D. La lista de citas de GHL no pagina: si llegara incompleta, la app cancelaría citas buenas. Puede que director y CEO tengan que existir como contactos en GHL para recibir avisos (sin verificar). La API de GHL no deja lanzar llamadas desde la app.
+### 2.3 Datos que tienes que pasarme
+- [x] Equipo (10 oct): CEO «Cris y José» (una cuenta, info@eternity.llc) · directores con Administración: Juan y Junior · callers: Felipe Gaspar Fernández, Miguel Angel Toledo, Hanna Marlene Moya Gutierrez, Lucas Gonzalez Diaz y Tomás Ponce · closers: Andrés Ugalde Brenes y Renzo Iván Quiroga (emails y teléfonos en `scripts/salida/equipo.csv`).
+- [x] DFY (antes «Servicios para empresas»): precio personalizado, editable (1.0).
+- [x] Landings: las reglas de Administración → Entradas (qué `source` va a qué pipeline) las configura el equipo (confirmado por Cristian).
+- [x] Prioridad A/B/C: no ordena la cola (1.0). La clasificación de la Biblioteca (VIP, Grupal…) se ve en la ficha y el CRM, sin ordenar la cola.
+- [x] Columnas: valen las de ahora (personalizables en el CRM). Links de pago y de dossier: los pone el equipo más tarde.
+- [ ] CSV de contactos exportado de GHL: **al final** (Cristian).
+- [x] Reparto y rotación: todo a 0 %; lo configuran los directores.
+- [x] Comisiones: por tramos (1.0).
+- [ ] Contexto del negocio para la IA: lo añade el equipo más tarde en Programas.
+- [x] Onboarding, cuentas y categorías de Finanzas: configurables por el equipo (1.0 para el de los closers).
+- [ ] Recursos (links, PDF, guiones): los pone el equipo.
+- [ ] Las claves de GHL, Fathom, Claude y Deepgram: **al final del todo**, las pones tú a mano.
+- [ ] La clave de Resend (bloque 6 y 1.3).
+
+### 2.4 GHL y día real
+- [ ] Crear en GHL los workflows que te indique (1.4).
+- [ ] Poner los objetivos y lanzamientos reales en KPIs → Objetivos.
+- [ ] Organizar un día real con un caller y un closer usando la app.
+
+---
+
+## 3. Lo que está hecho
+
+| Qué | Commit |
+|---|---|
+| v1: roles, callers, closers, Funnel, webhooks GHL, CRM, ficha del lead, reportes, CSV · bloques 1-5 (tests, seguridad, guías, scripts) | — |
+| v2 (V2-0 a V2-12): landings, estrellas, devoluciones, Agendas, calendario GHL, Equipo y comisiones, Programas, Finanzas, Clientes, Permisos, Fathom, IA, llamadas de GHL + Deepgram, coach IA, reparto por horarios | `0334e4c` |
+| Auditoría: los 36 arreglos | `c490247` … `4ae7fba` |
+| H1 diseño glass iOS · H2 KPIs · H3 objetivos · H4 objetivos que motivan | `0ad6a55`, `1a5e340`, `62fb93f`, `5d2367c` |
+| H6 tableros Pre-call y Post-call con arrastre, citas sin duplicar | `715af62`, `c4ee7ef`, `adb7080` |
+| H5 permisos por rol y persona · H7 un solo CRM · H8 «Mi Funnel» | `adb7080` |
+| Paso 0 pipelines «Callers» y «Closers» como GHL, con permisos por pipeline | `6a887c6` |
+| Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
+
+**Comprobado el 10 oct (noche):** 343 tests pasan · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 24 migraciones (11 oct: `perfiles_prueba` y `biblioteca_oferta`) · 42 tablas, todas con RLS · nada subido a la nube.
+
+---
+
+## 4. Decisiones vigentes
+
+**Tuyas**
+- Sin Stripe ni pasarelas: cada venta la apunta a mano quien la hace (facturación, cash, reserva, cuotas).
+- La app es el CRM; GHL solo envía datos (webhooks, landings directas, API para calendarios y llamadas).
+- Diseño glass iOS con granate Eternity y azul Maestria; español de España; USD y Nueva York por defecto.
+- Clientes = solo quien ha comprado. Comisiones por rol, persona y producto, pagadas sobre lo cobrado cada mes; el caller cobra ~3 % cuando cierra el closer; las devoluciones no descuentan comisión ya pagada.
+- Solo el CEO cambia el rol o desactiva a alguien; solo CEO y director cambian comisiones (el director ni la suya ni la de su rol).
+- Estrellas del caller: 1 no responde · 2 responde sin saber nada · 3 interesado · 4 quiere saber más · 5 quiere comprar. Del closer: 5 paga ya · 4 con plazo · 3 sin dinero ahora · 2 poco encaje · 1 no califica.
+- IA con Claude Sonnet 5.5; cada llamada se analiza al conciliar. Llamadas de GHL: las contestadas de más de 1 minuto; si GHL no transcribe, Deepgram.
+- **KPIs** (director y CEO): se cuentan personas · contactado = llamada o WhatsApp · agendar cuenta como contestada · closer: parte del total de los closers en facturación y cash + % cobrado.
+- **Objetivos:** de actividad y resultados; por rol o persona (manda la persona); el del director = equipo entero; semana de lunes a domingo; diario L-V por defecto; lanzamientos con evento opcional; racha = cumplir todos los diarios.
+- **Post-call:** todo se mueve a cualquier columna; sacar una venta de Reserva/Cuotas/Cerradas la borra (con confirmación); el closer puede borrar sus ventas; «Cerradas» = pagadas del todo este mes.
+- **CRM (Paso 0, como GHL):** pipelines de origen con sus columnas (los botones mueven por el nombre) · «Callers» = leads con caller, por el resultado de su llamada · «Closers» = Pre-call y Post-call juntos (también en Agendas) · columnas libres que se añaden y borran · permisos por pipeline: Editar / Ver / Sin acceso, por rol o persona; CEO y director con Administración, siempre Editar.
+- **Mi Funnel:** caller y closer ven sus objetivos, sus KPIs y su Funnel.
+- **Permisos de secciones:** manda la persona, luego el rol; Administración, Finanzas y Equipo nunca a callers ni closers; una sección de otro rol = solo lo suyo.
+- **Cash:** Ventas, Finanzas, Funnel y Agendas cuentan lo que entró dentro del periodo.
+- **Equipo real** (10 oct): se crea al publicar con `scripts/salida/equipo.csv`; contraseñas «Maestria-…» que Cristian manda por WhatsApp; Juan y Junior, directores con Administración; «Cris y José», una sola cuenta CEO.
+- **Reparto (1.0):** solo entre callers; botón con 4 formas y reasignar; automático al entrar con % por caller, apagado por defecto; todo al 0 % hasta que lo configuren los directores.
+- **Rotación de closers (1.0):** % por closer y modo de elección configurables (como GHL); salta al siguiente si no está libre; disponibilidad como los calendarios de GHL (duración por defecto 30 min, descansos, días libres).
+- **Comisiones (1.0):** tramos mensuales sobre toda la facturación del mes; cuotas posteriores con el % del mes de la venta; interruptor por persona para que mande su % propio o los tramos.
+- **Emails (1.0):** Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos de reportes; sin email de bienvenida.
+- **Cola del caller:** los leads más nuevos primero; la prioridad A/B/C no ordena.
+- **Biblioteca (11 oct):** primera pestaña de KPIs, para director y CEO; datos de los leads de la app (también por CSV y, con GHL, sola); se reparte desde ella; su clasificación es un dato propio de cada lead («Oferta»), calculado para todos y recalculado solo; se ve en la ficha y en el CRM junto a la etiqueta de siempre; cada CSV nuevo pone al día todos los datos.
+- **Productos (11 oct):** se llaman Membresía (47 $/mes, mensual sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (personalizado).
+- **Commits:** cada 2 bloques de 1.0.
+- **Plan de la nube:** gratuito para empezar · dirección de Vercel (sin dominio propio) · tests de pantallas completas después de publicar.
+- **Landings:** las reglas «qué `source` va a qué pipeline» las configura el equipo en Administración → Entradas (confirmado por Cristian).
+
+**Mías, sin preguntarte (puedes cambiarlas, 2.1)**
+- Agendado → Venta: personas, compras desde el día de la agenda, cuenta aunque cierre el closer.
+- Si falla guardar el historial de un lead, se apunta en el registro y la acción sigue.
+- Al borrar una venta sin cita, el lead vuelve a «Nuevo»; con cita, a «Agendado».
+- Un director puede cambiar la comisión del rol CEO.
+- KPIs: agendados del caller cuentan aunque se reagenden; % cierre sobre asistencia solo con los que asistieron.
+- Racha: hoy solo suma si ya está cumplido; cada día usa su objetivo; hasta 60 días; celebración una vez al día.
+- Post-call: la cita cerrada no se reagenda (se mueve su venta); llevar Reserva/Cuotas a «Cerradas» registra el cobro de lo que falta.
+- Permisos: «Nuevo cliente» y el onboarding siguen siendo de CEO y director · cobrar vale con «Ventas» o «Agendas» · un caller o closer con «Funnel» va a «Mi Funnel».
+- Permisos por pipeline por defecto: origen, Ver para todos · «Callers», Ver para callers y directores · «Closers», Ver para closers y directores.
+- Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas · sin email se le reconoce por el teléfono (últimas 9 cifras) · en Agendas solo cuentan las ventas de closers · un gasto sin categoría cuenta en el profit · Fathom se sincroniza con el botón.
+- Paso G: en vez de pasar los cálculos a la base, se aceleró la carga (era lo lento); las cifras no cambian.
+
+---
+
+## 5. Riesgos y avisos
+- **Velocidad en la nube:** sin medir (en local, el Funnel con 30.000 leads carga en ~1 s). Si fuese lento, traer los datos con una sola llamada a la base.
+- **GHL:** algunas variables y disparadores no están documentados (se prueban en 1.4) · la lista de citas de GHL no pagina: si llegara incompleta, se cancelarían citas buenas · puede que director y CEO tengan que existir como contactos en GHL para recibir avisos (sin verificar) · la API no deja lanzar llamadas desde la app.
 - **Llamadas de callers:** solo cuentan las hechas desde GHL (no WhatsApp ni el móvil propio).
-- ~~Ventas frente a Finanzas~~ ✅ Unificado el 10 oct (noche): todas cuentan lo cobrado **dentro** del periodo. La columna «Cobrado» de cada venta en Ventas sigue siendo todo lo cobrado de esa venta.
-- **Post-call «mover todo»:** reagendar una cita terminada crea otra viva; mover una «reagendada» puede contar la misma reunión dos veces en KPIs, Funnel y objetivos; sacar una venta de su columna la borra (con cobros, plazos y comisiones), también el closer con las suyas. Hay confirmación.
-- **Citas:** la base solo impide repetir la misma hora con el mismo closer; un lead puede tener dos citas vivas a horas distintas.
+- **Post-call «mover todo»:** mover una cita «reagendada» puede contar la misma reunión dos veces en KPIs, Funnel y objetivos; sacar una venta de su columna la borra con cobros, plazos y comisiones (hay confirmación).
+- **Citas:** un lead puede tener dos citas vivas a horas distintas (solo se impide la misma hora con el mismo closer).
 - **`CLAVE_CIFRADO`:** si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
-- **Clave del webhook en la URL** (decisión de Cristian): puede quedar en registros intermedios; la guía recomienda la cabecera `x-eternity-secreto`.
+- **Clave del webhook en la URL** (tu decisión): puede quedar en registros intermedios; la guía recomienda la cabecera `x-eternity-secreto`.
+- **Supabase gratuito** (tu decisión): sin copias de seguridad garantizadas y puede pausarse sin uso (sin verificar los límites exactos).
+- **Emails:** sin Resend configurado, los enlaces mágicos y el cambio de email no llegan (Supabase solo envía a las direcciones de su equipo, según su documentación).
 - **Seguridad del navegador:** los estilos admiten código en línea (`unsafe-inline`). Riesgo bajo.
-- **Supabase:** copias de seguridad y pausa por inactividad sin verificar en el plan que se contrate. Supabase local abierto a la red: Cristian decidió no preocuparse.
-- **Dependencias:** producción 0 avisos; en desarrollo, avisos «altos» de `braces` dentro del eslint de Next (no van a la app).
-- **Diseño glass:** en equipos viejos puede ir algo más lento (sin medir); en móvil solo se revisó a fondo el Funnel.
-- **Para programar:** toda ventana o capa flotante nueva va dentro de `<Portal>` (el vidrio encierra lo «fixed») · si el 3100 sirve CSS viejo, borrar `app/.next/dev` (con permiso) y reiniciar · si el login falla, primero `open -a Docker` (Docker Desktop se ha cerrado solo dos veces).
+- **Diseño glass:** en equipos viejos puede ir algo más lento (sin medir).
+- **Para programar:** toda ventana nueva va dentro de `<Portal>` · si el 3100 sirve CSS viejo, borrar `app/.next/dev` (con permiso) y reiniciar · si el login falla, primero `open -a Docker`.
+
+---
+
+## 6. Cómo entrar y dónde está cada cosa
+
+**En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `npm run build` en `app/` + `eternity-produccion` → http://localhost:3200; ambos en `PROYECTOS/GENERAL/.claude/launch.json`).
+**Usuarios de prueba** (todos `@eternity.test`, con la contraseña que pusiste el 10 oct): ceo@, director@ (con Administración), closer1@, closer2@, caller1@, caller2@, caller3@, caller4@.
+**Datos locales:** Maestria = 1.005 leads reales de la biblioteca (limpios de pruebas el 11 oct, con su oferta), sin ventas, citas ni objetivos · Proyecto Prueba = donde pruebo (3 leads, 1 venta de prueba, cuenta «Todo», categorías y 3 pasos de onboarding de ejemplo).
+
+| Dónde | Qué |
+|---|---|
+| `app/docs/plan.md` | Este plan |
+| `app/docs/plan-historial-10oct.md` | El plan completo de antes de compactar |
+| `app/docs/GUIA-PUBLICAR.md` | Los 10 pasos para publicar |
+| `app/docs/GUIA-GHL.md` | Conectar GHL |
+| `app/docs/Arreglar-dashboard.md` | La auditoría (36 puntos) |
+| `app/` · `app/tests/` · `app/.env.example` | El código, los tests y las variables |
+| `app/scripts/` | `preparar-proyecto`, `crear-usuarios`, `limpiar-pruebas` (simulan sin `--confirmar`) y `seed` (solo local) |

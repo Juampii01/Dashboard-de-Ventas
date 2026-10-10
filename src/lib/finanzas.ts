@@ -141,8 +141,10 @@ export function totalPorCobrar(vencs: VencF[], pagos: PagoF[], hoy: string) {
   return redondear(total);
 }
 
-// Plazos al vender: reserva = el resto en un plazo (a 30 días); cuotas = una cada mes
+// Plazos al vender: reserva = el resto en un plazo (a 30 días); cuotas = una cada mes; mensual (membresía sin fin,
+// bloque A) = el mes que viene otra vez el mismo importe (los siguientes los crea asegurarPlazosMensuales)
 export function planDePagos(o: { facturacion: number; cobradoHoy: number; tipo: string; numCuotas: number | null; fecha: string }) {
+  if (o.tipo === "mensual") return [{ numero: 2, importe: redondear(o.facturacion), vence_el: siguienteMes(o.fecha.slice(0, 10)) }];
   const resto = redondear(o.facturacion - o.cobradoHoy);
   if (resto <= 0.009) return [];
   const sumarDias = (d: number) => new Date(new Date(o.fecha).getTime() + d * 86_400_000).toISOString().slice(0, 10);
@@ -157,6 +159,31 @@ export function planDePagos(o: { facturacion: number; cobradoHoy: number; tipo: 
     return Array.from({ length: quedan }, (_, i) => ({ numero: i + (o.cobradoHoy > 0 ? 2 : 1), importe: i === quedan - 1 ? redondear(resto - cada * (quedan - 1)) : cada, vence_el: sumarMeses(i + (o.cobradoHoy > 0 ? 1 : 0)) }));
   }
   return [{ numero: 1, importe: resto, vence_el: sumarDias(30) }];
+}
+
+// El mismo día del mes siguiente («AAAA-MM-DD»); si no existe (31 → 30), el último del mes
+export function siguienteMes(ymd: string) {
+  const [a, m, d] = ymd.split("-").map(Number);
+  const ultimo = new Date(Date.UTC(a, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(a, m, Math.min(d, ultimo))).toISOString().slice(0, 10);
+}
+
+// Membresía (bloque A): siempre hay un cobro del mes siguiente pendiente mientras no se dé de baja. Devuelve los
+// plazos que faltan crear para que el último plazo de cada venta mensual quede después de `hoy`.
+export function plazosMensualesQueFaltan(ventas: { id: string; lead_id: string; facturacion: number; fecha: string; tipo_pago: string; baja_en: string | null }[], plazos: { venta_id: string | null; numero: number; vence_el: string }[], hoy: string) {
+  const nuevos: { venta_id: string; lead_id: string; numero: number; importe: number; vence_el: string }[] = [];
+  for (const v of ventas) {
+    if (v.tipo_pago !== "mensual" || v.baja_en) continue;
+    const suyos = plazos.filter((p) => p.venta_id === v.id);
+    let numero = Math.max(1, ...suyos.map((p) => p.numero));
+    let ultimo = suyos.length ? suyos.map((p) => p.vence_el).sort().at(-1)! : v.fecha.slice(0, 10);
+    while (ultimo <= hoy && nuevos.length < 1000) {
+      ultimo = siguienteMes(ultimo);
+      numero++;
+      nuevos.push({ venta_id: v.id, lead_id: v.lead_id, numero, importe: redondear(v.facturacion), vence_el: ultimo });
+    }
+  }
+  return nuevos;
 }
 
 // ---------- Liquidaciones del mes ----------

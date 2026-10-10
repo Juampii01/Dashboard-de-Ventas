@@ -23,7 +23,7 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : null);
   const comparativa = jefe && str("vista") === "comparativa";
 
-  const datos = await cargarAgendas(proyecto);
+  const datos = await cargarAgendas(proyecto, !!perfil.es_prueba);
   if (mirar) {
     datos.citas = datos.citas.filter((c) => c.agendada_por === perfil.id);
     const leads = new Set(datos.citas.map((c) => c.lead_id));

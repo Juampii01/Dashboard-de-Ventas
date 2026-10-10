@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const sp = Object.fromEntries(request.nextUrl.searchParams);
   const p = leerPeriodo(sp);
   const rango = rangoNav(p.periodo, p.n, proyecto.zona_horaria, p.desde, p.hasta);
-  const datos = await cargarAgendas(proyecto);
+  const datos = await cargarAgendas(proyecto, !!perfil.es_prueba);
   const vis = closersVisibles(perfil, datos.gente, sp.closer ?? null);
   const filtros = { productoId: sp.producto || null, evento: sp.evento || null };
   const m = metricasAgendas(datos, rango, { closerIds: vis.ids, ...filtros });

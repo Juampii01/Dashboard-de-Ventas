@@ -1,21 +1,28 @@
 import "server-only";
-import { db, todas, equipo, conBajas } from "@/lib/datos";
+import { db, todas, equipo, conBajas, idsDePrueba, deVerdad } from "@/lib/datos";
 import { esJefe } from "@/lib/auth";
 import type { CitaM, LeadM, PagoM, VentaM } from "@/lib/metricas-agendas";
 import type { Perfil, Proyecto } from "@/lib/tipos";
 
 // Todo lo que necesitan las métricas de Agendas, de una vez.
-export async function cargarAgendas(proyecto: Proyecto) {
+// `conPrueba`: un closer de prueba que mira lo suyo (sin él, lo de los perfiles de prueba no cuenta; 1.0)
+export async function cargarAgendas(proyecto: Proyecto, conPrueba = false) {
   const pid = proyecto.id;
-  const [citas, ventas, pagos, leads, pipelines, productos, gente] = await Promise.all([
+  const [citasT, ventasT, pagosT, leads, pipelines, productos, gente, prueba] = await Promise.all([
     todas<CitaM>((a, b) => db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, estrellas_caller, estrellas_closer").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<VentaM>((a, b) => db().from("ventas").select("id, lead_id, vendedor_id, producto_id, facturacion, cash_collected, fecha, devuelto, devuelto_en").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<PagoM>((a, b) => db().from("pagos").select("venta_id, importe, fecha, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
     todas<LeadM>((a, b) => db().from("leads").select("id, pipeline_id, evento, seguimiento").eq("proyecto_id", pid).order("id").range(a, b)),
     db().from("pipelines").select("id, nombre").eq("proyecto_id", pid).eq("tipo", "normal").order("orden"),
     db().from("productos").select("id, nombre").eq("proyecto_id", pid).order("orden"),
-    equipo(pid),
+    equipo(pid, conPrueba),
+    conPrueba ? Promise.resolve(new Set<string>()) : idsDePrueba(),
   ]);
+  const ok = deVerdad(prueba);
+  const citas = citasT.filter((c) => ok(c.closer_id) && ok(c.agendada_por));
+  const ventas = ventasT.filter((v) => ok(v.vendedor_id));
+  const quedan = new Set(ventas.map((v) => v.id));
+  const pagos = pagosT.filter((p) => quedan.has(p.venta_id));
   // Arreglo 11: los closers que ya no están siguen contando en los periodos en que trabajaron
   const genteHistorica = await conBajas(gente, [...citas.flatMap((c) => [c.closer_id, c.agendada_por]), ...ventas.map((v) => v.vendedor_id)]);
   const eventos = [...new Set(leads.map((l) => l.evento).filter((e): e is string => !!e))].sort();

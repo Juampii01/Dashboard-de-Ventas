@@ -36,14 +36,16 @@ export async function todas<T>(
   }
 }
 
-export async function equipo(proyectoId: string): Promise<Perfil[]> {
+// 1.0 (Cristian, 11 oct): los perfiles de prueba no salen en el equipo (cifras, reparto, rotación, liquidaciones,
+// Equipo y filtros); `conPrueba` los incluye, para que un perfil de prueba vea a los otros de prueba.
+export async function equipo(proyectoId: string, conPrueba = false): Promise<Perfil[]> {
   const { data, error } = await db()
     .from("miembros_proyecto")
     .select("orden, perfiles(*)")
     .eq("proyecto_id", proyectoId)
     .order("orden");
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as { perfiles: Perfil }[]).map((m) => m.perfiles).filter((p) => p.activo);
+  return ((data ?? []) as unknown as { perfiles: Perfil }[]).map((m) => m.perfiles).filter((p) => p.activo && (conPrueba || !p.es_prueba));
 }
 
 // Arreglos 10 y 11: quien se desactiva o se quita del proyecto deja de estar en equipo(), pero lo que
@@ -55,7 +57,7 @@ export async function conBajas(activos: Perfil[], ids: (string | null | undefine
   if (!faltan.length) return activos;
   const { data, error } = await db().from("perfiles").select("*").in("id", faltan);
   if (error) throw new Error(error.message);
-  return [...activos, ...((data ?? []) as Perfil[]).map((p) => ({ ...p, nombre: `${p.nombre} (baja)`, baja: true as const }))];
+  return [...activos, ...((data ?? []) as Perfil[]).filter((p) => !p.es_prueba).map((p) => ({ ...p, nombre: `${p.nombre} (baja)`, baja: true as const }))];
 }
 
 export async function registrarActividad(a: {
@@ -71,3 +73,14 @@ export async function registrarActividad(a: {
   if (error) console.error("[actividad] no se pudo guardar:", error.message);
   await db().from("leads").update({ ultima_actividad: new Date().toISOString() }).eq("id", a.lead_id);
 }
+
+// Ids de los perfiles de prueba (1.0): sus llamadas, citas y ventas no cuentan en las cifras del equipo
+export async function idsDePrueba(): Promise<Set<string>> {
+  const { data, error } = await db().from("perfiles").select("id").eq("es_prueba", true);
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((p) => p.id as string));
+}
+
+// Quita de las cifras lo hecho por perfiles de prueba (1.0): actividades suyas, citas de un closer de prueba o
+// agendadas por un caller de prueba, ventas de un vendedor de prueba y los cobros de esas ventas
+export const deVerdad = (prueba: Set<string>) => (id: string | null | undefined) => !id || !prueba.has(id);

@@ -1,6 +1,9 @@
 // Crea los usuarios REALES del equipo a partir de un CSV con columnas:
 //   nombre,email,rol,proyecto        (rol: ceo | director | closer | caller)
-// Genera una contraseña temporal para cada uno y la guarda en scripts/salida/ (no en pantalla).
+// y, si se quiere, telefono, admin (si/no: Administración, solo para directores), password (contraseña fija)
+// y prueba (si: perfil de prueba, que no cuenta en cifras ni reparto y ve «Llamadas de GHL»; 1.0, 11 oct 2026).
+// Genera una contraseña temporal «Maestria-…» para cada uno (Cristian, 10 oct 2026) y la guarda en
+// scripts/salida/ (no en pantalla).
 // Al entrar por primera vez, cada persona hace el onboarding.
 //
 //   Simular:  node --env-file=.env.produccion scripts/crear-usuarios.mjs equipo.csv
@@ -21,10 +24,12 @@ const ROLES = ["ceo", "director", "closer", "caller"];
 const filas = Papa.parse(readFileSync(archivo, "utf8").replace(/^﻿/, ""), { header: true, skipEmptyLines: true }).data;
 const errores = [];
 const personas = filas.map((f, i) => {
-  const p = { nombre: (f.nombre ?? "").trim(), email: (f.email ?? "").trim().toLowerCase(), rol: (f.rol ?? "").trim().toLowerCase(), proyecto: (f.proyecto ?? "Maestria").trim() };
+  const p = { nombre: (f.nombre ?? "").trim(), email: (f.email ?? "").trim().toLowerCase(), rol: (f.rol ?? "").trim().toLowerCase(), proyecto: (f.proyecto ?? "Maestria").trim(), telefono: (f.telefono ?? "").trim() || null, admin: /^(si|sí|true|1)$/i.test((f.admin ?? "").trim()), password: (f.password ?? "").trim() || null, prueba: /^(si|sí|true|1)$/i.test((f.prueba ?? "").trim()) };
   if (!p.nombre) errores.push(`Fila ${i + 2}: falta el nombre`);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)) errores.push(`Fila ${i + 2}: email no válido (${p.email})`);
   if (!ROLES.includes(p.rol)) errores.push(`Fila ${i + 2}: rol no válido (${p.rol}); usa ${ROLES.join(", ")}`);
+  if (p.admin && p.rol !== "director") errores.push(`Fila ${i + 2}: «admin» solo vale para directores`);
+  if (p.password && p.password.length < 8) errores.push(`Fila ${i + 2}: la contraseña tiene que tener al menos 8 caracteres`);
   return p;
 });
 if (errores.length) {
@@ -45,23 +50,25 @@ for (const p of personas) {
     continue;
   }
   const existe = lista.users.find((u) => u.email === p.email);
-  console.log(`${existe ? "=" : "+"} ${p.nombre} <${p.email}> · ${p.rol} · ${proyecto.nombre}${existe ? " (ya existe: solo se añade al proyecto)" : ""}`);
+  console.log(`${existe ? "=" : "+"} ${p.nombre} <${p.email}> · ${p.rol}${p.admin ? " con Administración" : ""}${p.prueba ? " · PERFIL DE PRUEBA" : ""} · ${proyecto.nombre}${existe ? " (ya existe: solo se añade al proyecto)" : ""}`);
   if (!confirmar) continue;
   let id = existe?.id;
   if (!existe) {
-    const password = randomBytes(9).toString("base64url"); // 12 caracteres
+    const password = p.password ?? `Maestria-${randomBytes(6).toString("base64url")}`; // la fija del CSV, o «Maestria-» + 8 caracteres al azar
     const { data, error } = await db.auth.admin.createUser({ email: p.email, password, email_confirm: true });
     if (error) {
       console.log(`  ✗ ${error.message}`);
       continue;
     }
     id = data.user.id;
-    const { error: e2 } = await db.from("perfiles").insert({ id, nombre: p.nombre, email: p.email, rol: p.rol, admin_activo: false });
+    const { error: e2 } = await db.from("perfiles").insert({ id, nombre: p.nombre, email: p.email, rol: p.rol, admin_activo: p.admin, telefono: p.telefono, es_prueba: p.prueba });
     if (e2) {
       await db.auth.admin.deleteUser(id);
       console.log(`  ✗ ${e2.message}`);
       continue;
     }
+    // Perfil de prueba: ve «Llamadas de GHL» aunque su rol no la vea
+    if (p.prueba) await db.from("permisos_persona").upsert({ proyecto_id: proyecto.id, perfil_id: id, seccion: "grabadas", permitido: true });
     salida.push({ nombre: p.nombre, email: p.email, rol: p.rol, contrasena_temporal: password });
   }
   const { count } = await db.from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);

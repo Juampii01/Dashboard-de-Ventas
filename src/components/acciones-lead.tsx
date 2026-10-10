@@ -218,8 +218,9 @@ export function FormVenta({
   const [productoId, setProductoId] = useState(productos[0]?.id ?? "");
   const producto = productos.find((p) => p.id === productoId);
   const [facturacion, setFacturacion] = useState(String(producto?.precio ?? ""));
-  const [tipo, setTipo] = useState<string>(tipoInicial ?? (producto?.modo_pago === "cuotas" ? "cuotas" : "completo"));
-  const [cash, setCash] = useState(tipoInicial && tipoInicial !== "completo" ? "" : String(producto?.precio ?? ""));
+  const tipoDe = (p?: Producto) => (p?.modo_pago === "cuotas" ? "cuotas" : p?.modo_pago === "mensual" ? "mensual" : "completo");
+  const [tipo, setTipo] = useState<string>(tipoInicial ?? tipoDe(producto));
+  const [cash, setCash] = useState(tipoInicial && tipoInicial !== "completo" ? "" : tipoDe(producto) === "cuotas" ? "" : String(producto?.precio ?? ""));
   const simbolo = moneda === "EUR" ? "€" : "$";
   return (
     <form action={onEnviar} className="space-y-3">
@@ -232,9 +233,9 @@ export function FormVenta({
             setProductoId(e.target.value);
             const p = productos.find((x) => x.id === e.target.value);
             setFacturacion(String(p?.precio ?? ""));
-            const t = tipoInicial ?? (p?.modo_pago === "cuotas" ? "cuotas" : "completo");
+            const t = tipoInicial ?? tipoDe(p);
             setTipo(t);
-            setCash(t === "completo" ? String(p?.precio ?? "") : "");
+            setCash(t === "completo" || t === "mensual" ? String(p?.precio ?? "") : "");
           }}
           className="campo"
         >
@@ -267,13 +268,14 @@ export function FormVenta({
             value={tipo}
             onChange={(e) => {
               setTipo(e.target.value);
-              if (e.target.value === "completo") setCash(facturacion);
+              if (e.target.value === "completo" || e.target.value === "mensual") setCash(facturacion);
             }}
             className="campo"
           >
             <option value="completo">Pago completo</option>
             <option value="reserva">Reserva (seña)</option>
             <option value="cuotas">Cuotas</option>
+            <option value="mensual">Cada mes (membresía)</option>
           </select>
         </div>
         <div>

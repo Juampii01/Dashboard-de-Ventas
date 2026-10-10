@@ -41,7 +41,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
     }
     return `/programas?${p}`;
   };
-  const pago = (p: Producto) => (p.modo_pago === "cuotas" ? `${p.num_cuotas ?? "—"} cuotas` : "Pago único");
+  const pago = (p: Producto) => (p.modo_pago === "cuotas" ? `${p.num_cuotas ?? "—"} cuotas` : p.modo_pago === "mensual" ? "Cada mes" : "Pago único");
   const categorias = [...new Set(programas.map((p) => p.categoria || ""))].sort();
 
   return (

@@ -11,6 +11,8 @@ import { Filtros } from "@/components/filtros";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
 import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamiento } from "./objetivos-cliente";
+import { Biblioteca } from "./biblioteca";
+import { esJefe } from "@/lib/auth";
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
@@ -18,14 +20,16 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const sp = await searchParams;
   // H5: a un caller o closer con «KPIs», solo su fila y sin la pestaña Objetivos (no puede poner objetivos)
   const propio = soloLoSuyo(perfil, "kpis");
-  const vista = sp.vista === "objetivos" && !propio ? "objetivos" : "personas";
-  const base = await cargarBase(proyecto);
+  // Bloque A (Cristian, 11 oct 2026): «Biblioteca» es lo primero, solo para director y CEO
+  const jefe = esJefe(perfil);
+  const vista = !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "biblioteca" : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
   const pestanas = (
     <div className="tarjeta flex gap-1 p-1.5" role="tablist">
       {[
-        { v: "personas", t: "Por persona", href: "/kpis" },
+        ...(jefe ? [{ v: "biblioteca", t: "Biblioteca", href: "/kpis" }] : []),
+        { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
         { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
       ].map((p) => (
         <Link key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
@@ -34,6 +38,19 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       ))}
     </div>
   );
+
+  if (vista === "biblioteca") {
+    return (
+      <>
+        <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Biblioteca`} />
+        <Contenido>
+          {pestanas}
+          <Biblioteca proyecto={proyecto} />
+        </Contenido>
+      </>
+    );
+  }
+  const base = await cargarBase(proyecto);
 
   if (vista === "personas") {
     const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;

@@ -18,7 +18,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
   const { perfil, proyecto } = await exigirPagina("crm"); // H5
   const jefe = esJefe(perfil);
   const sp = await searchParams;
-  const gente = await equipo(proyecto.id);
+  const gente = await equipo(proyecto.id, !!perfil.es_prueba);
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
   // Los leads de una persona: los que tiene asignados como caller o como closer
   const deLaPersona = <Q extends { or: (f: string) => Q }>(q: Q) => (persona ? q.or(`caller_id.eq.${persona.id},closer_id.eq.${persona.id}`) : q);
@@ -41,7 +41,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
       ? todas<LeadTarjeta & { etapa_callers_id: string | null }>((a, b) => {
           let q = db()
             .from("leads")
-            .select("id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas")
+            .select("id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta")
             .eq("proyecto_id", proyecto.id);
           // «Callers»: solo los leads con caller (Cristian, 10 oct 2026)
           q = pipeline.tipo === "callers" ? q.not("caller_id", "is", null) : q.eq("pipeline_id", pipeline.id);

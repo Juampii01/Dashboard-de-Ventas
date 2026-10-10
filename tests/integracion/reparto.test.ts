@@ -1,0 +1,50 @@
+// Bloque A (Cristian, 11 oct 2026): «Repartir leads» a mano (sin asignar o reasignar), solo jefes, solo callers
+// de verdad (nunca perfiles de prueba), con vista previa y en el historial del lead.
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
+import { previsualizarReparto, repartirLeads } from "@/app/(panel)/crm/reparto";
+
+let e: Escenario;
+let nuevos: string[];
+beforeAll(async () => {
+  e = await crearEscenario();
+  const { data } = await db.from("leads").insert(Array.from({ length: 6 }, (_, i) => ({ proyecto_id: e.proyecto.id, nombre: `R${i}`, apellido: "", email: `${e.pref}-r${i}@x.test`, oferta: i < 4 ? "vip" : "grupal", pipeline_id: e.pipeline.id }))).select("id");
+  nuevos = data!.map((x) => x.id);
+  await db.from("perfiles").update({ es_prueba: true }).eq("id", e.p.callerC.id);
+});
+afterAll(async () => {
+  if (e) await borrarEscenario(e);
+});
+const callerDe = async (ids: string[]) => (await db.from("leads").select("caller_id").in("id", ids)).data!.map((l) => l.caller_id);
+
+describe("Repartir leads", () => {
+  it("solo el CEO y los directores", async () => {
+    como(e, e.p.callerA);
+    await falla(previsualizarReparto({ origen: "sin_asignar", callers: [e.p.callerA.id], modo: "equitativo", n: 2 }), /acceso|CEO/);
+  });
+  it("vista previa sin cambiar nada; un perfil de prueba nunca entra", async () => {
+    como(e, e.p.director);
+    const v = await ok(previsualizarReparto({ origen: "sin_asignar", oferta: "vip", callers: [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id], modo: "equitativo", n: 4 }));
+    expect(v.total).toBe(4);
+    expect(v.porCaller.map((c) => c.n)).toEqual([2, 2]); // callerC (prueba) fuera
+    expect((await callerDe(nuevos)).every((c) => c === null)).toBe(true);
+  });
+  it("repartir de verdad, filtrando por oferta, y queda en el historial", async () => {
+    como(e, e.p.director);
+    const r = await ok(repartirLeads({ origen: "sin_asignar", oferta: "vip", callers: [e.p.callerA.id, e.p.callerB.id], modo: "equitativo", n: 10 }));
+    expect(r.repartidos).toBe(4); // solo hay 4 VIP
+    expect(new Set(await callerDe(nuevos.slice(0, 4)))).toEqual(new Set([e.p.callerA.id, e.p.callerB.id]));
+    expect((await callerDe(nuevos.slice(4))).every((c) => c === null)).toBe(true); // los grupal, no
+    const { count } = await db.from("actividades").select("id", { count: "exact", head: true }).in("lead_id", nuevos).eq("tipo", "asignacion");
+    expect(count).toBe(4);
+  });
+  it("reasignar: se quitan a unos callers y van a otros", async () => {
+    como(e, e.p.ceo);
+    await ok(repartirLeads({ origen: "reasignar", deCallers: [e.p.callerA.id], oferta: "vip", callers: [e.p.callerB.id], modo: "fijo", porPersona: 10 }));
+    expect((await callerDe(nuevos.slice(0, 4))).every((c) => c === e.p.callerB.id)).toBe(true);
+  });
+  it("sin callers válidos, no", async () => {
+    como(e, e.p.ceo);
+    await falla(repartirLeads({ origen: "sin_asignar", callers: [e.p.callerC.id], modo: "equitativo", n: 1 }), /al menos un caller/);
+  });
+});

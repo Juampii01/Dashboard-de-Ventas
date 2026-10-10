@@ -56,7 +56,7 @@ export async function importarCsv(_prev: unknown, formData: FormData) {
       repartir: formData.get("repartir") === "on",
     });
     refrescar();
-    return { ok: `Importados ${r.insertados} leads nuevos · ${r.actualizados} actualizados · ${r.repartidos} repartidos a callers${r.invalidos ? ` · ${r.invalidos} filas sin email ni teléfono` : ""}.` };
+    return { ok: `Importados ${r.insertados} leads nuevos · ${r.actualizados} actualizados${r.cambianOferta ? ` · ${r.cambianOferta} cambian de oferta` : ""} · ${r.repartidos} repartidos a callers${r.invalidos ? ` · ${r.invalidos} filas sin email ni teléfono` : ""}.` };
   });
 }
 

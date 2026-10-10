@@ -59,7 +59,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const zona = proyecto.zona_horaria;
   const ahora = ahoraMs();
 
-  const gente = await equipo(proyecto.id);
+  const gente = await equipo(proyecto.id, !!perfil.es_prueba);
   const vis = closersVisibles(perfil, gente, str("closer") || null);
   const nombrePersona = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
   // Paso 0: las mismas citas, ventas y columnas que el pipeline «Closers» del CRM

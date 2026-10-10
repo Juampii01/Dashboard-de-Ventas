@@ -1,5 +1,6 @@
 import "server-only";
-import { db, todas } from "@/lib/datos";
+import { db, todas, idsDePrueba, deVerdad } from "@/lib/datos";
+import { plazosMensualesQueFaltan } from "@/lib/finanzas";
 import type { CatF, CuentaF, MovF, PagoF, VentaF, VencF } from "@/lib/finanzas";
 
 const CATEGORIAS = [
@@ -23,8 +24,9 @@ export async function asegurarFinanzas(proyectoId: string) {
 }
 
 export async function cargarFinanzas(proyectoId: string) {
+  await asegurarPlazosMensuales(proyectoId); // bloque A: membresías
   await asegurarFinanzas(proyectoId);
-  const [ventas, pagos, movimientos, categorias, cuentas, vencimientos, productos] = await Promise.all([
+  const [ventasT, pagosT, movimientos, categorias, cuentas, vencimientosT, productos, prueba] = await Promise.all([
     todas<VentaF & { tipo_pago: string; num_cuotas: number | null }>((a, b) => db().from("ventas").select("id, lead_id, producto_id, vendedor_id, facturacion, cash_collected, fecha, metodo, tipo_pago, num_cuotas, devuelto, devuelto_en").eq("proyecto_id", proyectoId).order("id").range(a, b)),
     todas<PagoF>((a, b) => db().from("pagos").select("id, venta_id, importe, fecha, metodo, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyectoId).order("id").range(a, b)),
     todas<MovF & { descripcion: string | null; origen: string }>((a, b) => db().from("movimientos").select("*").eq("proyecto_id", proyectoId).order("fecha", { ascending: false }).order("id").range(a, b)),
@@ -32,7 +34,14 @@ export async function cargarFinanzas(proyectoId: string) {
     db().from("cuentas").select("id, nombre, metodos, por_defecto").eq("proyecto_id", proyectoId).order("creado_en"),
     todas<VencF & { lead_id: string | null; nombre: string | null; numero: number; pagado_en: string | null }>((a, b) => db().from("vencimientos").select("*").eq("proyecto_id", proyectoId).order("vence_el").order("id").range(a, b)),
     db().from("productos").select("id, nombre, backend_offer, comisiones").eq("proyecto_id", proyectoId),
+    idsDePrueba(),
   ]);
+  // 1.0: las ventas de los perfiles de prueba (y sus cobros y plazos) no cuentan en Finanzas
+  const ok = deVerdad(prueba);
+  const ventas = ventasT.filter((v) => ok(v.vendedor_id));
+  const quedan = new Set(ventas.map((v) => v.id));
+  const pagos = pagosT.filter((p) => quedan.has(p.venta_id));
+  const vencimientos = vencimientosT.filter((v) => !v.venta_id || quedan.has(v.venta_id));
   const num = <T extends { importe?: number }>(x: T) => ({ ...x, importe: Number(x.importe) });
   return {
     ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected), devuelto: v.devuelto === null ? null : Number(v.devuelto) })),
@@ -45,3 +54,18 @@ export async function cargarFinanzas(proyectoId: string) {
     backend: new Set((productos.data ?? []).filter((p) => p.backend_offer).map((p) => p.id)),
   };
 }
+
+// Membresía mensual sin fin (bloque A): mientras no se dé de baja, siempre queda el cobro del mes siguiente
+export async function asegurarPlazosMensuales(proyectoId: string, hoy = new Date().toISOString().slice(0, 10)) {
+  const { data: ventas, error } = await db().from("ventas").select("id, lead_id, facturacion, fecha, tipo_pago, baja_en").eq("proyecto_id", proyectoId).eq("tipo_pago", "mensual").is("baja_en", null);
+  if (error) throw new Error(error.message);
+  if (!ventas?.length) return 0;
+  const { data: plazos } = await db().from("vencimientos").select("venta_id, numero, vence_el").in("venta_id", ventas.map((v) => v.id));
+  const nuevos = plazosMensualesQueFaltan(ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion) })), plazos ?? [], hoy);
+  if (nuevos.length) {
+    const { error: e2 } = await db().from("vencimientos").insert(nuevos.map((n) => ({ ...n, proyecto_id: proyectoId })));
+    if (e2) throw new Error(`No se pudieron crear los cobros de la membresía: ${e2.message}`);
+  }
+  return nuevos.length;
+}
+

@@ -102,7 +102,7 @@ function Ventana({ programa, moneda, comisionesRol, editables, onCerrar }: { pro
             {tab === "precios" && (
               <>
                 <div><label className="etiqueta-campo" htmlFor="cliente-como-lo-paga-el-cliente">Cómo lo paga el cliente</label>
-                  <select id="cliente-como-lo-paga-el-cliente" className="campo max-w-xs" value={d.modo_pago} onChange={(e) => poner({ modo_pago: e.target.value as "unico" | "cuotas" })}><option value="unico">Una sola vez</option><option value="cuotas">En cuotas</option></select>
+                  <select id="cliente-como-lo-paga-el-cliente" className="campo max-w-xs" value={d.modo_pago} onChange={(e) => poner({ modo_pago: e.target.value as "unico" | "cuotas" | "mensual" })}><option value="unico">Una sola vez</option><option value="cuotas">En cuotas</option><option value="mensual">Cada mes, sin fin (membresía)</option></select>
                 </div>
                 {d.modo_pago === "cuotas" && <label className="block"><span className="etiqueta-campo">Número de cuotas</span><input type="number" min={2} max={60} className="campo w-28" value={d.num_cuotas ?? ""} onChange={(e) => poner({ num_cuotas: Number(e.target.value) || null })} /></label>}
                 <div className="grid gap-3 sm:grid-cols-2">

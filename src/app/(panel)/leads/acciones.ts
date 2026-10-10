@@ -135,8 +135,8 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (!(facturacion > 0)) throw new ErrorUsuario("La facturación tiene que ser mayor que 0.");
     if (!(cash >= 0) || cash > facturacion) throw new ErrorUsuario("El cash collected tiene que estar entre 0 y la facturación.");
     // Arreglo 29: lo que antes solo comprobaba la base (y el usuario veía su mensaje técnico)
-    const tipo = String(formData.get("tipo_pago") ?? "completo") as "completo" | "reserva" | "cuotas";
-    if (!["completo", "reserva", "cuotas"].includes(tipo)) throw new ErrorUsuario("Elige cómo paga (completo, reserva o cuotas).");
+    const tipo = String(formData.get("tipo_pago") ?? "completo") as "completo" | "reserva" | "cuotas" | "mensual";
+    if (!["completo", "reserva", "cuotas", "mensual"].includes(tipo)) throw new ErrorUsuario("Elige cómo paga (completo, reserva, cuotas o cada mes).");
     const cuotas = tipo === "cuotas" ? Math.max(2, Math.round(num("num_cuotas")) || 2) : null;
     if (cuotas !== null && cuotas > 60) throw new ErrorUsuario("Como mucho 60 cuotas.");
     const metodo = String(formData.get("metodo") ?? "stripe");
@@ -198,12 +198,9 @@ export async function registrarVenta(leadId: string, formData: FormData) {
       resultado: tipo,
       nota: `${producto.nombre} · facturación ${facturacion} · cobrado ${cash}`,
     });
-    const nombreProd = producto.nombre.toLowerCase();
-    await moverAColumna(lead, "vendido", ["cerrados", "cerrado"], [
-      ...(nombreProd.includes("low") ? ["low ticket"] : []),
-      ...(nombreProd.includes("vip") ? ["vip"] : []),
-      ...(nombreProd.includes("grupal") ? ["grupal"] : []),
-    ]);
+    // Si el pipeline tiene una columna con el nombre del producto (p. ej. «Membresía», «Grupal» o «VIP» en
+    // Orgánico), va ahí; si no, a «Cerrados». (Bloque A: antes buscaba «low», «vip» o «grupal» en el nombre)
+    await moverAColumna(lead, "vendido", ["cerrados", "cerrado"], [producto.nombre.toLowerCase()]);
     refrescar();
   });
 }

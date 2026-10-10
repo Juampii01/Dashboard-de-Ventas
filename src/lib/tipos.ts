@@ -11,6 +11,7 @@ export type Perfil = {
   whatsapp: string | null;
   admin_activo: boolean;
   onboarding_completo: boolean;
+  es_prueba?: boolean; // 1.0: perfil de prueba (no cuenta en cifras, reparto, rotación ni liquidaciones)
   activo: boolean;
 };
 
@@ -61,6 +62,7 @@ export type Lead = {
   quiz_score: number | null;
   datos: Record<string, unknown>;
   estrellas_caller: number | null;
+  oferta?: "vip_empresas" | "vip" | "empresas" | "grupal" | "membresia" | null; // bloque A: según el formulario de la Biblioteca
 };
 
 export type EstadoCita =
@@ -104,7 +106,7 @@ export type Producto = {
   categoria?: string | null;
   color?: string;
   backend_offer?: boolean;
-  modo_pago?: "unico" | "cuotas";
+  modo_pago?: "unico" | "cuotas" | "mensual"; // bloque A: «mensual» = membresía sin fin
   num_cuotas?: number | null;
   precios_divisa?: Record<string, number> | null;
   comisiones?: Partial<Record<"ceo" | "director" | "closer" | "caller" | "caller_agenda", number>> | null;

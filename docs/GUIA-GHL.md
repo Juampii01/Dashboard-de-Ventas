@@ -43,6 +43,14 @@ Por qué la clave va en la cabecera y no en la URL: la propia documentación de 
 - **Raw Body:** el JSON «1 · Lead nuevo» de la app.
 - Cambia `"pipeline"` por el pipeline donde debe entrar (tiene que llamarse igual que en la app: `Webinar 1`, `Biblioteca Recursos`, `Orgánico` o `DFY AI Services`).
 - En `customData` pon **una línea por pregunta del formulario**: a la izquierda el texto de la pregunta (tal cual quieres verlo en la ficha) y a la derecha la variable de ese campo (icono de etiqueta → campo personalizado). Son las respuestas que verán callers y closers.
+- **Formulario de la biblioteca** (para que la pestaña KPIs → Biblioteca y la «Oferta» de cada lead salgan bien): usa **exactamente** estos 6 textos a la izquierda (la app también entiende «Situación», «Inversión»… y los campos `quiz_situacion`…, pero así es seguro):
+  - `¿En qué situación estás hoy?`
+  - `¿Qué experiencia tienes con IA?`
+  - `¿Qué quieres lograr en los próximos 90 días?`
+  - `¿Cuánto tiempo por semana le puedes dedicar?`
+  - `Si encuentras el programa correcto, ¿estás en condiciones de invertir en tu formación?`
+  - `¿Cuándo quieres empezar?`
+  - Y en `tags` que vaya la etiqueta **«biblioteca recursos»** (o que el pipeline sea «Biblioteca Recursos»).
 - Si el reparto está en «rotativo», el lead se asigna solo a un caller.
 
 ### Workflow 2 · Cita agendada
@@ -60,7 +68,7 @@ La app es el CRM principal, así que **normalmente no hace falta**. Úsalo solo 
 
 - **Disparador:** «Pipeline Stage Changed». ⚠ comprobar.
 - **Raw Body:** el JSON «3 · Cambio de etapa».
-- `pipeline` y `etapa`: elige con el selector el nombre del pipeline y de la etapa. Tienen que llamarse **igual** que en la app; si no existe esa columna, el evento sale con error en «Últimos eventos» y no se mueve nada.
+- `pipeline` y `etapa`: elige con el selector el nombre del pipeline y de la etapa. Tienen que llamarse **igual** que en la app; si no existe esa columna, el evento sale con error en «Últimos eventos» y no se mueve nada. Solo vale para los pipelines de origen (Webinar 1, Biblioteca…): «Callers» y «Closers» se mueven solos por el resultado de la llamada y el estado de la cita.
 
 ### Probar cada workflow
 
@@ -135,7 +143,7 @@ En la misma pantalla, para cada closer: el **id de su calendario** de GHL o su *
 ### Llamadas grabadas
 
 1. En **Integraciones → Llamadas de GHL: quién es quién**, pon el **id de usuario de GHL** de cada caller (y de cada director que llame). Los closers lo tienen arriba si usan usuario.
-2. En **Ventas → Llamadas de GHL**, pulsa **«Traer llamadas de GHL»**: trae todas las llamadas **contestadas de más de 1 minuto** (decisión de Cristian), las transcribe (con la transcripción de GHL si la hay; si no, con Deepgram) y Claude las analiza.
+2. En **Ventas → Llamadas de GHL** (desde el 11 oct la ven el CEO, los directores y los 2 perfiles de prueba, closer-test y caller-test; a callers y closers se les abre en Administración → Permisos cuando esté listo), pulsa **«Traer llamadas de GHL»**: trae todas las llamadas **contestadas de más de 1 minuto** (decisión de Cristian), las transcribe (con la transcripción de GHL si la hay; si no, con Deepgram) y Claude las analiza.
 3. **Limitación:** la API de GHL **no deja lanzar llamadas** desde la app; se sigue llamando desde GHL.
 4. ⚠ comprobar con la primera llamada real que la transcripción de GHL llega bien (la especificación describe cada frase, pero no del todo cómo vienen juntas; la app acepta las dos formas posibles).
 

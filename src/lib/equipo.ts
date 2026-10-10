@@ -30,14 +30,15 @@ export async function asegurarEquipo(proyectoId: string) {
   const [{ count: nAreas }, { data: roles }, { data: miembros }, { data: enEquipo }] = await Promise.all([
     db().from("areas").select("id", { count: "exact", head: true }).eq("proyecto_id", proyectoId),
     db().from("comisiones_rol").select("rol").eq("proyecto_id", proyectoId),
-    db().from("miembros_proyecto").select("perfil_id, perfiles(nombre, email, rol, activo)").eq("proyecto_id", proyectoId),
+    db().from("miembros_proyecto").select("perfil_id, perfiles(nombre, email, rol, activo, es_prueba)").eq("proyecto_id", proyectoId),
     db().from("miembros_equipo").select("perfil_id").eq("proyecto_id", proyectoId),
   ]);
   if (!nAreas) await db().from("areas").insert(AREAS_INICIALES.map((a) => ({ ...a, proyecto_id: proyectoId })));
   const faltan = (["ceo", "director", "closer", "caller"] as const).filter((r) => !(roles ?? []).some((x) => x.rol === r));
   if (faltan.length) await db().from("comisiones_rol").insert(faltan.map((rol) => ({ proyecto_id: proyectoId, rol, pct_venta: 0, pct_agenda: rol === "caller" ? 3 : 0 })));
   const ya = new Set((enEquipo ?? []).map((m) => m.perfil_id));
-  const nuevos = ((miembros ?? []) as unknown as { perfil_id: string; perfiles: { nombre: string; email: string; rol: Rol; activo: boolean } }[]).filter((m) => !ya.has(m.perfil_id));
+  // 1.0: los perfiles de prueba no entran en el organigrama (ni, por tanto, en las liquidaciones)
+  const nuevos = ((miembros ?? []) as unknown as { perfil_id: string; perfiles: { nombre: string; email: string; rol: Rol; activo: boolean; es_prueba: boolean } }[]).filter((m) => !ya.has(m.perfil_id) && !m.perfiles.es_prueba);
   if (nuevos.length) {
     const { data: areas } = await db().from("areas").select("id, nombre").eq("proyecto_id", proyectoId);
     const area = (n: string) => areas?.find((a) => a.nombre === n)?.id ?? areas?.[0]?.id ?? null;
@@ -52,14 +53,14 @@ export async function cargarEquipo(proyectoId: string) {
   const [{ data: areas }, { data: puestos }, { data: miembros }, { data: roles }] = await Promise.all([
     db().from("areas").select("id, nombre, color, orden").eq("proyecto_id", proyectoId).order("orden"),
     db().from("puestos").select("id, area_id, nombre, rol_base").eq("proyecto_id", proyectoId).order("nombre"),
-    db().from("miembros_equipo").select("*, perfiles(rol)").eq("proyecto_id", proyectoId).order("nombre"),
+    db().from("miembros_equipo").select("*, perfiles(rol, es_prueba)").eq("proyecto_id", proyectoId).order("nombre"),
     db().from("comisiones_rol").select("rol, pct_venta, pct_agenda").eq("proyecto_id", proyectoId),
   ]);
   const comisionesRol = Object.fromEntries((roles ?? []).map((r) => [r.rol, { pct_venta: Number(r.pct_venta), pct_agenda: Number(r.pct_agenda) }])) as Record<Rol, ComisionRol>;
   return {
     areas: (areas ?? []) as Area[],
     puestos: (puestos ?? []) as Puesto[],
-    miembros: ((miembros ?? []) as (MiembroEquipo & { perfiles: { rol: Rol } | null })[]).map(({ perfiles, ...m }) => ({ ...m, rol: perfiles?.rol ?? null })) as MiembroEquipo[],
+    miembros: ((miembros ?? []) as (MiembroEquipo & { perfiles: { rol: Rol; es_prueba: boolean } | null })[]).filter((m) => !m.perfiles?.es_prueba).map(({ perfiles, ...m }) => ({ ...m, rol: perfiles?.rol ?? null })) as MiembroEquipo[],
     comisionesRol,
   };
 }

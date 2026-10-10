@@ -41,6 +41,8 @@ import { VentanaEstado, type DestinoConVentana } from "./ventanas-estado";
 import { CLAVES_CLOSER } from "@/lib/llamadas";
 import { TableroClosers, type ColumnaC } from "@/app/(panel)/closer/llamadas/tablero-closers";
 import { ETIQUETA_ESTADO_CALLER } from "@/lib/formato";
+import { OfertaChip } from "@/components/oferta-chip";
+import { RepartirLeads } from "@/components/repartir-leads";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
@@ -61,6 +63,7 @@ export type LeadTarjeta = {
   creado_en: string;
   etiquetas: string[];
   respuestas: Respuesta[];
+  oferta?: string | null; // bloque A
 };
 
 type Persona = { id: string; nombre: string };
@@ -304,9 +307,10 @@ export function TableroCrm({
             <button onClick={() => setModal("lead")} className="btn-secundario">
               <UserPlus className="h-4 w-4" /> Nuevo lead
             </button>
-            <button onClick={() => setModal("importar")} className="btn-primario">
+            <button onClick={() => setModal("importar")} className="btn-secundario">
               <Upload className="h-4 w-4" /> Subir CSV
             </button>
+            <RepartirLeads callers={callers} fijo={{ pipelineId: pipeline?.id ?? null }} />
           </>
         )}
       </div>
@@ -482,6 +486,7 @@ function Tarjeta({ lead, caller, onDrag, arrastrando }: { lead: LeadTarjeta; cal
             {invertir}
           </span>
         )}
+        <OfertaChip oferta={lead.oferta} vacio={false} />
         {lead.estado_caller !== "nuevo" && <span className="chip bg-primario-suave text-primario">{ETIQUETA_ESTADO_CALLER[lead.estado_caller]}</span>}
         <span className="chip ml-auto bg-panel-2 text-texto-3">{caller ?? "Sin caller"}</span>
       </div>
@@ -687,7 +692,7 @@ function VistaLista({
   );
 }
 
-function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipeline[]; pipelineId?: string; onCerrar: () => void }) {
+export function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipeline[]; pipelineId?: string; onCerrar: () => void }) {
   const [estado, accion, enviando] = useActionState(importarCsv, null as null | { ok?: string; error?: string });
   const [vista, setVista] = useState<{ columnas: string[]; ejemplo: Record<string, string>; filas: number } | null>(null);
   const [mapa, setMapa] = useState<Record<string, Campo>>({});

@@ -27,7 +27,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
   // H5: a un closer con «Mis leads», sus leads como closer (lo suyo), en forma de cola
   const comoCloser = perfil.rol === "closer";
   const sp = await searchParams;
-  const gente = await equipo(proyecto.id);
+  const gente = await equipo(proyecto.id, !!perfil.es_prueba);
   const callers = gente.filter((g) => g.rol === "caller");
   const caller = jefe ? callers.find((c) => c.id === sp.caller) ?? callers[0] : perfil;
   const pestana = typeof sp.vista === "string" ? sp.vista : "llamar";

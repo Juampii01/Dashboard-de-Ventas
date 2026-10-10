@@ -17,7 +17,7 @@ export type DatosPrograma = {
   activo: boolean;
   backend_offer: boolean;
   vende_caller: boolean;
-  modo_pago: "unico" | "cuotas";
+  modo_pago: "unico" | "cuotas" | "mensual"; // bloque A: mensual = membresía sin fin
   num_cuotas: number | null;
   precio: string; // vacío = precio personalizado
   precios_divisa: Record<string, string>;
@@ -39,6 +39,7 @@ export async function guardarPrograma(d: DatosPrograma) {
     if (!d.nombre.trim()) throw new ErrorUsuario("Falta el nombre del programa.");
     const precio = num(d.precio, "Precio");
     if (precio === 0) throw new ErrorUsuario("El precio del programa está en cero (déjalo vacío si es personalizado).");
+    if (!["unico", "cuotas", "mensual"].includes(d.modo_pago)) throw new ErrorUsuario("Elige cómo se paga.");
     if (d.modo_pago === "cuotas" && !(d.num_cuotas && d.num_cuotas >= 2 && d.num_cuotas <= 60)) throw new ErrorUsuario("Pon de 2 a 60 cuotas.");
     const divisas: Record<string, number> = {};
     for (const [mon, v] of Object.entries(d.precios_divisa ?? {})) {

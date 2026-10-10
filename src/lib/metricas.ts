@@ -1,5 +1,5 @@
 import "server-only";
-import { db, todas, equipo, conBajas } from "@/lib/datos";
+import { db, todas, equipo, conBajas, idsDePrueba, deVerdad } from "@/lib/datos";
 import { porcentaje, type Rango } from "@/lib/formato";
 import type { Perfil, Proyecto } from "@/lib/tipos";
 
@@ -23,9 +23,10 @@ function cambioPct(actual: number, previo: number) {
 
 // Carga lo necesario del proyecto una vez y calcula todo en memoria.
 // Con el volumen actual (miles de filas) es rápido y sencillo.
-export async function cargarBase(proyecto: Proyecto) {
+// `conPrueba`: un perfil de prueba que mira lo suyo (sin él, lo de los perfiles de prueba no cuenta; 1.0)
+export async function cargarBase(proyecto: Proyecto, conPrueba = false) {
   const pid = proyecto.id;
-  const [leads, citas, ventas, actividades, pagos, gente] = await Promise.all([
+  const [leads, citasT, ventasT, actividadesT, pagosT, gente, prueba] = await Promise.all([
     todas<LeadMin>((a, b) => db().from("leads").select("id, creado_en, caller_id, closer_id").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<CitaMin>((a, b) =>
       db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, creado_en").eq("proyecto_id", pid).order("id").range(a, b)
@@ -37,8 +38,15 @@ export async function cargarBase(proyecto: Proyecto) {
       db().from("actividades").select("lead_id, perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).order("id").range(a, b)
     ),
     todas<PagoMin>((a, b) => db().from("pagos").select("importe, fecha, venta_id, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
-    equipo(pid),
+    equipo(pid, conPrueba),
+    conPrueba ? Promise.resolve(new Set<string>()) : idsDePrueba(),
   ]);
+  const ok = deVerdad(prueba);
+  const actividades = actividadesT.filter((a) => ok(a.perfil_id));
+  const citas = citasT.filter((c) => ok(c.closer_id) && ok(c.agendada_por));
+  const ventas = ventasT.filter((v) => ok(v.vendedor_id));
+  const quedan = new Set(ventas.map((v) => v.id));
+  const pagos = pagosT.filter((p) => quedan.has(p.venta_id));
   // Arreglo 11: quien ya no está sigue contando en los periodos en que trabajó
   const genteHistorica = await conBajas(gente, [...ventas.map((v) => v.vendedor_id), ...citas.flatMap((c) => [c.closer_id, c.agendada_por]), ...actividades.map((a) => a.perfil_id)]);
   return { leads, citas, ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected) })), actividades, pagos: pagos.map((p) => ({ ...p, importe: Number(p.importe) })), gente: genteHistorica };

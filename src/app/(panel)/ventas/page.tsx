@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DollarSign, Wallet, Hourglass, ShoppingCart, Receipt } from "lucide-react";
 import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
-import { db, todas, equipo } from "@/lib/datos";
+import { db, todas, equipo, idsDePrueba, deVerdad } from "@/lib/datos";
 import { dinero, fechaHora, rangoDe, type Periodo, ETIQUETA_ROL } from "@/lib/formato";
 import { cashDelPeriodo } from "@/lib/metricas";
 import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio } from "@/components/ui";
@@ -22,11 +22,12 @@ type VentaFila = {
   nota: string | null;
   devuelto: number | null;
   devuelto_en: string | null;
+  baja_en: string | null;
   productos: { nombre: string } | null;
   leads: { nombre: string; apellido: string } | null;
   pagos: { importe: number }[];
 };
-const TIPO: Record<string, string> = { completo: "Completo", reserva: "Reserva", cuotas: "Cuotas" };
+const TIPO: Record<string, string> = { completo: "Completo", reserva: "Reserva", cuotas: "Cuotas", mensual: "Cada mes" };
 
 export default async function VentasPage({ searchParams }: PageProps<"/ventas">) {
   const { perfil, proyecto } = await exigirPagina("ventas"); // H5 (a un caller, solo las suyas)
@@ -35,7 +36,8 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
   const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
   const vendedorId = jefe ? (typeof sp.vendedor === "string" ? sp.vendedor : "") : perfil.id;
-  const gente = await equipo(proyecto.id);
+  const [gente, prueba] = await Promise.all([equipo(proyecto.id, !!perfil.es_prueba), perfil.es_prueba ? Promise.resolve(new Set<string>()) : idsDePrueba()]);
+  const ok = deVerdad(prueba); // 1.0: las ventas de los perfiles de prueba no cuentan
 
   const ventas = (
     await todas<VentaFila>((a, b) => {
@@ -45,7 +47,7 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
       if (vendedorId) q = q.eq("vendedor_id", vendedorId);
       return q.order("fecha", { ascending: false }).order("id").range(a, b);
     })
-  ).map((v) => {
+  ).filter((v) => ok(v.vendedor_id)).map((v) => {
     const cobrado = Number(v.cash_collected) + v.pagos.reduce((s, p) => s + Number(p.importe), 0);
     return { ...v, facturacion: Number(v.facturacion), cobrado, pendiente: Math.max(0, Number(v.facturacion) - cobrado) };
   });
@@ -54,8 +56,8 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
   // de este vendedor (o de todos): lo cobrado al vender + cuotas cobradas en el periodo (aunque la venta sea de
   // antes) − devoluciones del periodo. La columna «Cobrado» de cada venta sigue siendo todo lo cobrado de ella.
   const [todasLasVentas, pagosPeriodo] = await Promise.all([
-    todas<{ id: string; fecha: string; cash_collected: number; devuelto: number | null; devuelto_en: string | null }>((a, b) => {
-      let q = db().from("ventas").select("id, fecha, cash_collected, devuelto, devuelto_en").eq("proyecto_id", proyecto.id);
+    todas<{ id: string; vendedor_id: string | null; fecha: string; cash_collected: number; devuelto: number | null; devuelto_en: string | null }>((a, b) => {
+      let q = db().from("ventas").select("id, vendedor_id, fecha, cash_collected, devuelto, devuelto_en").eq("proyecto_id", proyecto.id);
       if (vendedorId) q = q.eq("vendedor_id", vendedorId);
       return q.order("id").range(a, b);
     }),
@@ -67,7 +69,7 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
     }),
   ]);
   const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
-  const cobrado = cashDelPeriodo(todasLasVentas, pagosPeriodo, rango);
+  const cobrado = cashDelPeriodo(todasLasVentas.filter((v) => ok(v.vendedor_id)), pagosPeriodo, rango);
   const pendiente = ventas.reduce((s, v) => s + v.pendiente, 0);
   const porProducto = Object.entries(
     ventas.reduce<Record<string, { n: number; f: number }>>((acc, v) => {
@@ -115,7 +117,7 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
                           {v.devuelto && <div className="text-xs text-mal" title={v.devuelto_en ? `Devuelto el ${fechaHora(v.devuelto_en, proyecto)}` : ""}>Devuelto {$(Number(v.devuelto))}</div>}
                         </td>
                         <td className="text-right tabular-nums text-aviso">{v.pendiente ? $(v.pendiente) : "—"}</td>
-                        <td><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={!!v.devuelto} jefe={jefe} /></td>
+                        <td><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={!!v.devuelto} jefe={jefe} membresiaActiva={v.tipo_pago === "mensual" && !v.baja_en} /></td>
                       </tr>
                     ))}
                   </tbody>

@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Undo2 } from "lucide-react";
-import { borrarVenta, registrarCobro, registrarDevolucion } from "./acciones";
+import { borrarVenta, darDeBajaMembresia, registrarCobro, registrarDevolucion } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 
-export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean }) {
+export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe, membresiaActiva = false }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean; membresiaActiva?: boolean }) {
   const { pendiente: cargando, error, ok, ejecutar } = useAccion();
   const toast = useToast();
   const [abierto, setAbierto] = useState(false);
   const [devolucion, setDevolucion] = useState(false);
   return (
     <div className="flex items-center justify-end gap-1">
+      {membresiaActiva && (
+        <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} title="La membresía deja de generar cobros cada mes" onClick={() => confirm("¿Dar de baja esta membresía? Deja de generar cobros cada mes y se quitan los que aún no vencieron.") && ejecutar(() => darDeBajaMembresia(ventaId), "Membresía dada de baja")}>
+          Dar de baja
+        </button>
+      )}
       {pendiente > 0 && (
         <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} onClick={() => setAbierto(true)} title="Registrar cobro de cuota o resto">
           <Plus className="h-3.5 w-3.5" /> Cobro

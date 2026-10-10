@@ -29,8 +29,10 @@ export type RolPermiso = (typeof ROLES_PERMISO)[number];
 export const DEFECTO: Record<"ceo" | RolPermiso, Set<Seccion>> = {
   ceo: new Set(SECCIONES_TODAS.map((s) => s.v)),
   director: new Set<Seccion>(["funnel", "kpis", "crm", "cola", "agendas", "grabadas", "ventas", "ranking", "recursos", "reportes"]),
-  closer: new Set<Seccion>(["mi_funnel", "crm", "agendas", "grabadas", "ventas", "ranking", "recursos", "reportes"]),
-  caller: new Set<Seccion>(["mi_funnel", "crm", "cola", "grabadas", "ranking", "recursos", "reportes"]),
+  // 1.0 (Cristian, 11 oct): «Llamadas de GHL» (grabadas) fuera por defecto para closers y callers hasta que esté
+  // configurado; se abre por persona (los 2 perfiles de prueba) o por rol en Permisos
+  closer: new Set<Seccion>(["mi_funnel", "crm", "agendas", "ventas", "ranking", "recursos", "reportes"]),
+  caller: new Set<Seccion>(["mi_funnel", "crm", "cola", "ranking", "recursos", "reportes"]),
 };
 
 // Nunca (decisión de Cristian): Equipo y Finanzas a callers y closers; «Mi Funnel» no aplica a director y CEO

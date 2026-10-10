@@ -1,7 +1,7 @@
 # Guía · Publicar Eternity
 
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
-> Escrita el 9 oct 2026 y actualizada el mismo día con la v2 (IA, Fathom, llamadas de GHL, Finanzas). Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
+> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 (equipo real, pipelines del equipo, permisos). Lo nuevo de 1.0 (Resend, Biblioteca, reparto…) se añade aquí cuando esté hecho. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
 
 ---
 
@@ -78,7 +78,7 @@ supabase db push
 
 ## Paso 5 · Preparar el proyecto Maestria
 
-Crea el proyecto con sus 4 pipelines, columnas y productos (los de `app/scripts/proyecto-base.json`):
+Crea el proyecto con sus 4 pipelines de origen, sus columnas y sus productos (los de `app/scripts/proyecto-base.json`); la base añade sola los pipelines del equipo «Callers» y «Closers»:
 
 ```bash
 cd "Proyecto dashboard/app"
@@ -88,35 +88,29 @@ node --env-file=.env.produccion scripts/preparar-proyecto.mjs --confirmar
 
 - `.env.produccion` es un archivo que creas tú (copia de `.env.example` con las claves de la nube). Está excluido de GitHub.
 - La primera orden solo **simula**; la segunda lo crea.
-- Antes, pon en `proyecto-base.json` los precios de servicios para empresas y las columnas reales que falten.
+- Las columnas de ahora valen (se cambian luego en el CRM). El producto de empresas va con precio personalizado.
 
 ## Paso 6 · Crear el equipo real
 
-1. Haz un CSV `equipo.csv` con este formato (ejemplo con nombres inventados):
-
-```
-nombre,email,rol,proyecto
-Cristian Ortiz,cristian@tudominio.com,ceo,Maestria
-Nombre Director,director@tudominio.com,director,Maestria
-Nombre Closer,closer@tudominio.com,closer,Maestria
-Nombre Caller,caller@tudominio.com,caller,Maestria
-```
+1. **El CSV del equipo ya está hecho:** `app/scripts/salida/equipo.csv` (10 personas; excluido de GitHub). Columnas: `nombre,email,rol,proyecto` y, opcionales, `telefono` y `admin` (`si` = director con Administración).
 
 2. Simula y crea:
 
 ```bash
-node --env-file=.env.produccion scripts/crear-usuarios.mjs equipo.csv
-node --env-file=.env.produccion scripts/crear-usuarios.mjs equipo.csv --confirmar
+node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/equipo.csv
+node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/equipo.csv --confirmar
 ```
 
-3. Las contraseñas temporales quedan en `app/scripts/salida/` (excluido de GitHub). Pásaselas a cada persona por un canal privado y **borra el archivo después**.
+3. Cada uno recibe una contraseña **«Maestria-» + 8 caracteres al azar**, guardada solo en `app/scripts/salida/usuarios-creados-….csv` (excluido de GitHub). **Cristian se las manda por WhatsApp** y después se borra ese archivo.
 4. La primera vez que cada uno entra, hace el onboarding (nombre, teléfono, WhatsApp).
-5. En la app, Administración → Equipo: activa el acceso de administración a los directores si quieres.
+5. Juan y Junior quedan como directores **con Administración** (columna `admin`).
+6. Los 2 perfiles de prueba (closer-test y caller-test) se crean igual con `scripts/salida/prueba.csv` (columnas `password` y `prueba`): no cuentan en cifras, reparto ni liquidaciones, no salen en Equipo y son los únicos callers y closers que ven «Llamadas de GHL».
 
 ## Paso 7 · Subir los leads reales
 
 1. En GHL, exporta los contactos de nuevo (para que estén al día).
-2. Entra en la app como CEO → CRM → **Subir CSV** → revisa qué es cada columna → elige el pipeline → Importar.
+2. Entra en la app como CEO → CRM → **Subir CSV** (o KPIs → **Biblioteca** → «Actualizar con CSV») → revisa qué es cada columna → elige el pipeline → Importar. Los que ya están se ponen al día (respuestas nuevas y su «Oferta») sin duplicar; al acabar dice cuántos son nuevos, actualizados y cuántos cambian de oferta.
+3. El CSV de la biblioteca del 10 oct (1.005 personas) está en `app/scripts/salida/biblioteca-10oct.csv` (fuera de GitHub: lleva datos personales).
 
 ## Paso 8 · Conectar GHL
 
@@ -132,7 +126,7 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 
 ## Paso 9 · Comprobar que todo va
 
-- [ ] Entras como CEO y ves Maestria con sus 4 pipelines y productos.
+- [ ] Entras como CEO y ves Maestria con sus 4 pipelines, «Callers», «Closers» y sus productos.
 - [ ] Un caller entra, hace el onboarding y ve sus leads.
 - [ ] Un lead de prueba de GHL llega solo (Administración → Integraciones → «Últimos eventos»).
 - [ ] Un reporte de fin de día manda el aviso por email/WhatsApp.
@@ -141,6 +135,8 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 - [ ] (v2) «Traer llamadas de GHL» trae llamadas y salen transcritas y analizadas.
 - [ ] (v2) El coach responde («Coach IA» en la ficha de un lead).
 - [ ] (v2) Finanzas: una venta en cuotas aparece en «Pagos pendientes».
+- [ ] KPIs → Biblioteca: salen las 1.005 personas y la escalera (Membresía 627, Grupal 242, VIP 96, DFY 65).
+- [ ] Una venta de Membresía deja en «Pagos pendientes» el cobro del mes siguiente; «Dar de baja» (en Ventas) lo quita.
 
 ## Paso 10 · (Opcional) Dominio propio
 

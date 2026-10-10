@@ -5,6 +5,7 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { db, equipo } from "@/lib/datos";
 import { dinero, fechaHora, ETIQUETA_ESTADO_CALLER, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio } from "@/components/ui";
+import { OfertaChip } from "@/components/oferta-chip";
 import { AccionesLead } from "@/components/acciones-lead";
 import { SelectoresLead } from "./selectores";
 import { VerEstrellas } from "@/components/estrellas";
@@ -60,7 +61,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     db().from("actividades").select("*").eq("lead_id", id).order("creado_en", { ascending: false }).limit(100),
     db().from("citas").select("*").eq("lead_id", id).order("fecha", { ascending: false }),
     db().from("ventas").select("*, productos(nombre)").eq("lead_id", id).order("fecha", { ascending: false }),
-    equipo(proyecto.id),
+    equipo(proyecto.id, !!perfil.es_prueba),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
     db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
     db().from("etapas").select("*, pipelines!inner(proyecto_id, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").order("orden"),
@@ -82,6 +83,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             {pipeline && <>· {pipeline.nombre}</>}
             {etapa && <Insignia tono="primario">{etapa.nombre}</Insignia>}
             <Insignia>{ETIQUETA_ESTADO_CALLER[lead.estado_caller]}</Insignia>
+            <OfertaChip oferta={lead.oferta} vacio={false} />
             <span className="text-texto-3">· entró el {fechaHora(lead.creado_en, proyecto)} · origen {lead.origen.toUpperCase()}</span>
           </span>
         }

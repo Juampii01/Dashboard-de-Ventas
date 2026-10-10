@@ -19,7 +19,7 @@ export default async function MiFunnelPage({ searchParams }: PageProps<"/mi-funn
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
   const zona = proyecto.zona_horaria;
   const rango = rangoDe(periodo, zona, sp.desde as string, sp.hasta as string);
-  const [base, panel] = await Promise.all([cargarBase(proyecto), panelObjetivos(proyecto, perfil)]);
+  const [base, panel] = await Promise.all([cargarBase(proyecto, !!perfil.es_prueba), panelObjetivos(proyecto, perfil)]);
   const kpis = calcularKpis(base, rango, zona);
   const m = calcularFunnel(base, rango, perfil, zona);
   const $ = (n: number) => dinero(n, proyecto);

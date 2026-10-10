@@ -134,3 +134,18 @@ export async function cambiarFormaPago(ventaId: string, tipo: "reserva" | "cuota
     revalidatePath("/", "layout");
   });
 }
+
+// Membresía mensual (bloque A): darla de baja. Deja de generar cobros y se quitan los que aún no vencieron.
+export async function darDeBajaMembresia(ventaId: string) {
+  return seguro(async () => {
+    await exigirSeccion("ventas", "agendas", "finanzas"); // H5
+    const { venta, perfil, proyecto } = await ventaPermitida(ventaId);
+    if (venta.tipo_pago !== "mensual") throw new ErrorUsuario("Solo las membresías (pago cada mes) se dan de baja.");
+    if (venta.baja_en) throw new ErrorUsuario("Esta membresía ya está dada de baja.");
+    const hoy = hoyEnZona(proyecto.zona_horaria);
+    await escribir(db().from("ventas").update({ baja_en: new Date().toISOString() }).eq("id", ventaId), "ventas");
+    await escribir(db().from("vencimientos").delete().eq("venta_id", ventaId).eq("estado", "pendiente").gt("vence_el", hoy), "vencimientos");
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: venta.lead_id, perfil_id: perfil.id, tipo: "venta", resultado: "baja", nota: "Membresía dada de baja" });
+    revalidatePath("/", "layout");
+  });
+}
