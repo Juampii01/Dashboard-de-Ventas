@@ -88,7 +88,9 @@ export function calcularFunnel(base: Base, rango: Rango, vendedor: Perfil | null
   // periodo, cuántas compraron desde que agendaron (aunque sea después del periodo). Nunca pasa del 100 %.
   // Las ventas no se filtran por vendedor (la del caller cuenta aunque cierre el closer); sí por producto.
   // Se compara por días en la zona del proyecto: una venta con fecha puesta a mano se guarda a las 12:00.
-  const diaZona = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: zona }).format(new Date(iso));
+  // Un solo formateador: crearlo en cada llamada hacía el cálculo ~3 veces más lento (medido, paso 0.3)
+  const fmtDia = new Intl.DateTimeFormat("en-CA", { timeZone: zona });
+  const diaZona = (iso: string) => fmtDia.format(new Date(iso));
   const primeraAgenda = new Map<string, string>();
   for (const c of agendados) {
     const d = diaZona(c.creado_en);
