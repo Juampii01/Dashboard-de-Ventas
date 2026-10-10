@@ -36,7 +36,8 @@ function aDatos(p: Producto | null): DatosPrograma {
   };
 }
 
-export function EditorPrograma({ programa, moneda, comisionesRol }: { programa: Producto | null; moneda: "USD" | "EUR"; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }> }) {
+// `editables`: qué comisiones de rol puede cambiar quien mira (arreglo 2: solo CEO y director, el director no la de su rol)
+export function EditorPrograma({ programa, moneda, comisionesRol, editables }: { programa: Producto | null; moneda: "USD" | "EUR"; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; editables: string[] }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <>
@@ -45,12 +46,12 @@ export function EditorPrograma({ programa, moneda, comisionesRol }: { programa: 
       ) : (
         <button className="btn-primario" onClick={() => setAbierto(true)}><Plus className="h-4 w-4" /> Nuevo programa</button>
       )}
-      {abierto && <Ventana programa={programa} moneda={moneda} comisionesRol={comisionesRol} onCerrar={() => setAbierto(false)} />}
+      {abierto && <Ventana programa={programa} moneda={moneda} comisionesRol={comisionesRol} editables={editables} onCerrar={() => setAbierto(false)} />}
     </>
   );
 }
 
-function Ventana({ programa, moneda, comisionesRol, onCerrar }: { programa: Producto | null; moneda: "USD" | "EUR"; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; onCerrar: () => void }) {
+function Ventana({ programa, moneda, comisionesRol, editables, onCerrar }: { programa: Producto | null; moneda: "USD" | "EUR"; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; editables: string[]; onCerrar: () => void }) {
   const [d, setD] = useState<DatosPrograma>(aDatos(programa));
   const [tab, setTab] = useState<"datos" | "precios" | "comisiones">("datos");
   const { pendiente, error, ejecutar } = useAccion();
@@ -112,13 +113,14 @@ function Ventana({ programa, moneda, comisionesRol, onCerrar }: { programa: Prod
             )}
             {tab === "comisiones" && (
               <>
+                {editables.length < ROLES.length && <p className="rounded-lg bg-panel-2 px-3 py-2 text-xs text-texto-2">{editables.length ? "Algunas no las puedes cambiar: la de tu propio rol la cambia el CEO." : "Solo el CEO o el director pueden cambiar comisiones."}</p>}
                 <p className="text-sm text-texto-2">Si este programa paga distinto, ponlo aquí. Vacío o 0 = la comisión de cada rol (Equipo). Si una persona tiene una comisión propia, manda la suya.</p>
                 <div className="divide-y divide-borde rounded-xl border border-borde">
                   {ROLES.map((r) => (
                     <div key={r.k} className="flex items-center gap-3 px-3 py-2 text-sm">
                       <span className="flex-1">{r.t}</span>
                       <span className="text-xs text-texto-3">del rol: {pct(rolDe(r.k))}</span>
-                      <input className="campo w-20 py-1 text-right" inputMode="decimal" value={d.comisiones[r.k] ?? ""} onChange={(e) => poner({ comisiones: { ...d.comisiones, [r.k]: e.target.value } })} placeholder="—" aria-label={`% ${r.t}`} />%
+                      <input className="campo w-20 py-1 text-right disabled:opacity-60" disabled={!editables.includes(r.k)} inputMode="decimal" value={d.comisiones[r.k] ?? ""} onChange={(e) => poner({ comisiones: { ...d.comisiones, [r.k]: e.target.value } })} placeholder="—" aria-label={`% ${r.t}`} />%
                     </div>
                   ))}
                 </div>

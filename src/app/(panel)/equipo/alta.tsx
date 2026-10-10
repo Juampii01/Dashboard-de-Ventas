@@ -23,18 +23,19 @@ const PASOS = [
   { t: "Revisión", d: "Confirmar y crear", i: CircleCheck },
 ];
 
-export function AltaMiembro({ areas, puestos, productos, comisionesRol, soyCeo, codigoMoneda }: { areas: Area[]; puestos: Puesto[]; productos: Producto[]; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; soyCeo: boolean; codigoMoneda: "USD" | "EUR" }) {
+export function AltaMiembro({ areas, puestos, productos, comisionesRol, rolesQuePuedoDar, puedeComision, codigoMoneda }: { areas: Area[]; puestos: Puesto[]; productos: Producto[]; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; rolesQuePuedoDar: Rol[]; puedeComision: boolean; codigoMoneda: "USD" | "EUR" }) {
   const [abierto, setAbierto] = useState(false);
   const moneda = (n: number) => new Intl.NumberFormat(codigoMoneda === "EUR" ? "es-ES" : "en-US", { style: "currency", currency: codigoMoneda, maximumFractionDigits: 0 }).format(n);
   return (
     <>
       <button className="btn-primario" onClick={() => setAbierto(true)}><Plus className="h-4 w-4" /> Dar de alta un miembro</button>
-      {abierto && <Asistente {...{ areas, puestos, productos, comisionesRol, soyCeo, moneda }} onCerrar={() => setAbierto(false)} />}
+      {abierto && <Asistente {...{ areas, puestos, productos, comisionesRol, rolesQuePuedoDar, puedeComision, moneda }} onCerrar={() => setAbierto(false)} />}
     </>
   );
 }
 
-function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, onCerrar }: { areas: Area[]; puestos: Puesto[]; productos: Producto[]; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; soyCeo: boolean; moneda: (n: number) => string; onCerrar: () => void }) {
+function Asistente({ areas, puestos, productos, comisionesRol, rolesQuePuedoDar, puedeComision, moneda, onCerrar }: { areas: Area[]; puestos: Puesto[]; productos: Producto[]; comisionesRol: Record<string, { pct_venta: number; pct_agenda: number }>; rolesQuePuedoDar: Rol[]; puedeComision: boolean; moneda: (n: number) => string; onCerrar: () => void }) {
+  const soyCeo = rolesQuePuedoDar.includes("ceo");
   const { pendiente, error, ejecutar } = useAccion();
   const [paso, setPaso] = useState(0);
   const [varios, setVarios] = useState(false);
@@ -57,7 +58,9 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
   const p = puestos.find((x) => x.id === puesto);
   const rolBase = (puestoNuevo?.rol_base ?? p?.rol_base ?? "closer") as Rol | "otro";
   const [rol, setRol] = useState<Rol | null>(null);
-  const rolFinal: Rol = rol ?? (rolBase === "otro" ? "closer" : rolBase);
+  const propuesto: Rol = rol ?? (rolBase === "otro" ? "closer" : rolBase);
+  // Solo roles iguales o inferiores al tuyo (arreglo 2); si el del puesto no se puede, el primero que sí
+  const rolFinal: Rol = rolesQuePuedoDar.includes(propuesto) ? propuesto : rolesQuePuedoDar[0];
   const deRol = comisionesRol[rolFinal] ?? { pct_venta: 0, pct_agenda: 0 };
   const nombres = varios ? lista.split("\n").map((x) => x.trim()).filter(Boolean) : [nombre.trim()].filter(Boolean);
   const accesoReal = varios ? "organigrama" : acceso;
@@ -165,8 +168,9 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => setPropia(false)} className={`btn-secundario ${!propia ? "border-oro text-oro" : ""}`}>La de su rol ({ROL_TXT[rolFinal]}: {pct(deRol.pct_venta)}{rolFinal === "caller" ? ` · ${pct(deRol.pct_agenda)} por agenda` : ""})</button>
-                  <button type="button" onClick={() => setPropia(true)} className={`btn-secundario ${propia ? "border-oro text-oro" : ""}`}>Una propia</button>
+                  {puedeComision && <button type="button" onClick={() => setPropia(true)} className={`btn-secundario ${propia ? "border-oro text-oro" : ""}`}>Una propia</button>}
                 </div>
+                {!puedeComision && <p className="text-xs text-texto-3">Una comisión propia solo la pueden poner el CEO o el director.</p>}
                 {propia && (
                   <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -222,7 +226,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, soyCeo, moneda, o
                   <>
                     <p className="text-sm text-texto-2">El rol decide qué ve en la app. Los cambios de rol después se hacen en Administración.</p>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {(["closer", "caller", "director", ...(soyCeo ? ["ceo"] : [])] as Rol[]).map((r) => (
+                      {rolesQuePuedoDar.map((r) => (
                         <button key={r} type="button" onClick={() => setRol(r)} className={`rounded-xl border p-4 text-left ${rolFinal === r ? "border-oro bg-oro-suave" : "border-borde"}`}>
                           <Shield className="mb-2 h-5 w-5 text-oro" /><div className="font-semibold">{ROL_TXT[r]}</div>
                           <div className="text-sm text-texto-3">{r === "closer" ? "Sus agendas, sus ventas y su ranking" : r === "caller" ? "Sus leads, su CRM y el low ticket" : r === "director" ? "Todo el equipo de ventas (sin crear productos)" : "Todo, incluidas las secciones de empresa"}</div>

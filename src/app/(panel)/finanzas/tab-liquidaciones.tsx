@@ -4,7 +4,7 @@ import { db } from "@/lib/datos";
 import { dinero, hoyEnZona, ETIQUETA_ROL, pct } from "@/lib/formato";
 import { Insignia, Seccion } from "@/components/ui";
 import type { LineaL } from "@/lib/finanzas";
-import type { Proyecto } from "@/lib/tipos";
+import type { Perfil, Proyecto } from "@/lib/tipos";
 import type { DatosFinanzas } from "./cargar";
 import { CalcularComisiones, PagarLiquidacion } from "./cliente";
 import { Chips } from "./tab-ventas";
@@ -18,7 +18,7 @@ const moverMes = (mes: string, n: number) => {
 };
 type Liq = { id: string; perfil_id: string; mes: string; base_facturado: number; base_cobrado: number; comision_facturado: number; comision_cobrado: number; detalle: LineaL[]; estado: "pendiente" | "pagada"; pagada_en: string | null; calculada_en: string };
 
-export async function TabLiquidaciones({ d, proyecto, sp }: { d: DatosFinanzas; proyecto: Proyecto; sp: SP }) {
+export async function TabLiquidaciones({ d, proyecto, sp, yo }: { d: DatosFinanzas; proyecto: Proyecto; sp: SP; yo: Perfil }) {
   const $ = (n: number) => dinero(n, proyecto, 2);
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : hoyEnZona(proyecto.zona_horaria).slice(0, 7);
   const estado = typeof sp.estado === "string" ? sp.estado : "";
@@ -65,7 +65,8 @@ export async function TabLiquidaciones({ d, proyecto, sp }: { d: DatosFinanzas; 
                     <span className="text-xs text-texto-3">Sobre cobrado <b className="text-base tabular-nums text-texto">{$(l.comision_cobrado)}</b> <span className="tabular-nums">(de {$(l.base_cobrado)})</span></span>
                     <span className="ml-auto flex items-center gap-2">
                       <Insignia tono={l.estado === "pagada" ? "ok" : "aviso"}>{l.estado === "pagada" ? "Pagada" : "Pendiente"}</Insignia>
-                      <PagarLiquidacion id={l.id} pagada={l.estado === "pagada"} cuentas={cuentas} />
+                      {/* Nadie paga ni desmarca la suya, salvo el CEO (arreglo 2) */}
+                      {yo.rol !== "ceo" && l.perfil_id === yo.id ? <span className="text-xs text-texto-3">La tuya la marca otra persona</span> : <PagarLiquidacion id={l.id} pagada={l.estado === "pagada"} cuentas={cuentas} />}
                     </span>
                   </div>
                   <details className="border-t border-borde">

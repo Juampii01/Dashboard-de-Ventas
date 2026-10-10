@@ -15,7 +15,7 @@ type Producto = { id: string; nombre: string };
 type Miembro = { id: string; nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona; perfil_id: string | null; rol: Rol | null };
 const ROL_TXT: Record<string, string> = { ceo: "CEO", director: "Director de ventas", closer: "Closer", caller: "Caller" };
 
-export function EditarMiembro({ m, areas, puestos, productos, soyCeo }: { m: Miembro; areas: Area[]; puestos: Puesto[]; productos: Producto[]; soyCeo: boolean }) {
+export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, puedeComision }: { m: Miembro; areas: Area[]; puestos: Puesto[]; productos: Producto[]; rolesQuePuedoDar: Rol[]; puedeComision: boolean }) {
   const [abierto, setAbierto] = useState(false);
   const { pendiente, error, ejecutar } = useAccion();
   const [nombre, setNombre] = useState(m.nombre);
@@ -40,6 +40,13 @@ export function EditarMiembro({ m, areas, puestos, productos, soyCeo }: { m: Mie
               <label className="block"><span className="etiqueta-campo">Puesto</span><select className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
             </div>
             <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
+            {!puedeComision ? (
+              <div className="rounded-lg border border-borde p-3">
+                <div className="text-xs font-medium text-texto-2">Comisión</div>
+                <p className="mt-1">{m.comision ? `Propia: ${m.comision.pct_venta ?? 0} % por venta${m.comision.pct_agenda ? ` · ${m.comision.pct_agenda} % por agenda` : ""}${m.comision.por_producto ? " · distinta por producto" : ""}` : "La de su rol"}</p>
+                <p className="mt-1 text-xs text-texto-3">Solo el CEO o el director pueden cambiar comisiones, y nadie la suya (salvo el CEO).</p>
+              </div>
+            ) : (
             <fieldset className="rounded-lg border border-borde p-3">
               <legend className="px-1 text-xs font-medium text-texto-2">Comisión</legend>
               <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={!propia} onChange={() => setPropia(false)} /> La de su rol</label>
@@ -56,13 +63,14 @@ export function EditarMiembro({ m, areas, puestos, productos, soyCeo }: { m: Mie
                 </div>
               )}
             </fieldset>
+            )}
             {error && <p className="text-mal">{error}</p>}
             <button
               className="btn-primario w-full"
               disabled={pendiente}
               onClick={() =>
                 ejecutar(
-                  () => actualizarMiembroEquipo(m.id, { nombre, area_id: area || null, puesto_id: puesto || null, lider, activo, comision: propia ? { pct_venta: leerNumero(venta) || null, pct_agenda: leerNumero(agenda) || null, por_producto: Object.fromEntries(Object.entries(pp).filter(([, v]) => leerNumero(v) > 0).map(([k, v]) => [k, leerNumero(v)])) } : null }),
+                  () => actualizarMiembroEquipo(m.id, { nombre, area_id: area || null, puesto_id: puesto || null, lider, activo, comision: !puedeComision ? m.comision : propia ? { pct_venta: leerNumero(venta) || null, pct_agenda: leerNumero(agenda) || null, por_producto: Object.fromEntries(Object.entries(pp).filter(([, v]) => leerNumero(v) > 0).map(([k, v]) => [k, leerNumero(v)])) } : null }),
                   "Guardado"
                 )
               }
@@ -77,7 +85,7 @@ export function EditarMiembro({ m, areas, puestos, productos, soyCeo }: { m: Mie
                   <form className="space-y-2" action={(fd) => ejecutar(() => darAccesoMiembro(m.id, String(fd.get("email")), String(fd.get("password")), String(fd.get("rol")) as Rol), "Acceso creado")}>
                     <input name="email" type="email" required className="campo" placeholder="Email de acceso" />
                     <input name="password" type="text" minLength={8} required className="campo" placeholder="Contraseña temporal (mín. 8)" autoComplete="off" />
-                    <select name="rol" className="campo" defaultValue="closer">{(["closer", "caller", "director", ...(soyCeo ? ["ceo"] : [])] as Rol[]).map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</select>
+                    <select name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</select>
                     <button className="btn-primario w-full" disabled={pendiente}>Crear acceso</button>
                   </form>
                 )}
@@ -90,8 +98,17 @@ export function EditarMiembro({ m, areas, puestos, productos, soyCeo }: { m: Mie
   );
 }
 
-export function ComisionRolForm({ rol, pctVenta, pctAgenda }: { rol: Rol; pctVenta: number; pctAgenda: number }) {
+export function ComisionRolForm({ rol, pctVenta, pctAgenda, editable }: { rol: Rol; pctVenta: number; pctAgenda: number; editable: boolean }) {
   const { pendiente, error, ejecutar } = useAccion();
+  if (!editable)
+    return (
+      <div className="grid grid-cols-[1fr_72px_72px_auto] items-center gap-2 text-sm" title="No puedes cambiar esta comisión">
+        <div className="font-medium">{ROL_TXT[rol]}</div>
+        <span className="text-right tabular-nums">{pctVenta} %</span>
+        <span className="text-right tabular-nums text-texto-3">{rol === "caller" ? `${pctAgenda} %` : "—"}</span>
+        <span className="w-7" />
+      </div>
+    );
   return (
     <form className="grid grid-cols-[1fr_72px_72px_auto] items-center gap-2" action={(fd) => ejecutar(() => guardarComisionRol(rol, String(fd.get("venta")), String(fd.get("agenda") ?? "")), `Comisión de ${ROL_TXT[rol]} guardada`)}>
       <div className="text-sm font-medium">{ROL_TXT[rol]}</div>

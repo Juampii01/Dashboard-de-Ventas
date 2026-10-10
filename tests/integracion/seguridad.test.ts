@@ -7,6 +7,7 @@ import { crearEscenario, borrarEscenario, como, db, formulario, ok, PASSWORD, ty
 import { POST } from "@/app/api/webhooks/ghl/[proyectoId]/route";
 import { crearRecurso, prepararSubidaPdf } from "@/app/(panel)/recursos/acciones";
 import { subirDelFormulario } from "@/lib/subir-cliente";
+import { limpiarSubidasHuerfanas } from "@/lib/subidas";
 import { anotar, bloqueado, dentroDelLimite, reiniciarLimites } from "@/lib/limite";
 
 const URL_DB = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -149,6 +150,17 @@ describe("Subida directa a Supabase", () => {
     const fd = new FormData();
     fd.set("archivo", new File([new Uint8Array(15 * 1024 * 1024 + 1)], "g.pdf", { type: "application/pdf" }));
     await expect(subirDelFormulario(fd, "archivo", "application/pdf", prepararSubidaPdf)).rejects.toThrow(/15 MB/);
+  });
+  it("los PDF subidos y nunca guardados se borran pasado 1 día; los guardados se quedan", async () => {
+    como(e, e.p.director);
+    const huerfano = await ok(prepararSubidaPdf());
+    expect((await fetch(huerfano.url, { method: "PUT", headers: { "content-type": "application/pdf" }, body: PDF })).ok).toBe(true);
+    const { data: guardado } = await db.from("recursos").select("archivo_path").eq("proyecto_id", e.proyecto.id).eq("titulo", "Dossier").single();
+    const hay = async (ruta: string) => ((await db.storage.from("recursos").list(e.proyecto.id)).data ?? []).some((f) => `${e.proyecto.id}/${f.name}` === ruta);
+    expect(await limpiarSubidasHuerfanas("recursos", e.proyecto.id)).toBe(0); // recién subido: no se toca
+    expect(await limpiarSubidasHuerfanas("recursos", e.proyecto.id, Date.now() + 2 * 86_400_000)).toBe(1);
+    expect(await hay(huerfano.ruta)).toBe(false);
+    expect(await hay(guardado!.archivo_path)).toBe(true);
   });
   afterAll(async () => {
     const { data } = await db.storage.from("recursos").list(e.proyecto.id);

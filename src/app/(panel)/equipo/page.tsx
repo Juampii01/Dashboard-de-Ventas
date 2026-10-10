@@ -21,6 +21,13 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
   const [eq, { data: productos }] = await Promise.all([cargarEquipo(proyecto.id), db().from("productos").select("id, nombre, precio").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden")]);
   const miembros = eq.miembros.filter((m) => m.activo !== verInactivos);
   const sinArea = miembros.filter((m) => !m.area_id || !eq.areas.some((a) => a.id === m.area_id));
+  // Mismas reglas que el servidor (lib/auth.ts, arreglo 2): accesos de tu rol o inferior;
+  // comisiones solo CEO y director, nunca la propia (salvo el CEO)
+  const rango: Record<Rol, number> = { caller: 1, closer: 2, director: 3, ceo: 4 };
+  const rolesQuePuedoDar = (["closer", "caller", "director", "ceo"] as Rol[]).filter((r) => rango[r] <= rango[perfil.rol]);
+  const jefe = perfil.rol === "ceo" || perfil.rol === "director";
+  const puedeComisionDe = (perfilId: string | null) => jefe && (perfil.rol === "ceo" || perfilId !== perfil.id);
+  const puedeComisionRol = (r: Rol) => jefe && (perfil.rol === "ceo" || r !== perfil.rol);
   const puesto = (id: string | null) => eq.puestos.find((p) => p.id === id)?.nombre;
   const resumenComision = (m: (typeof miembros)[number]) => {
     if (!m.comision) return null;
@@ -41,7 +48,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
           {resumenComision(m) && <span className="text-oro">{resumenComision(m)}</span>}
         </div>
       </div>
-      <EditarMiembro m={m} areas={eq.areas} puestos={eq.puestos} productos={(productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre }))} soyCeo={perfil.rol === "ceo"} />
+      <EditarMiembro m={m} areas={eq.areas} puestos={eq.puestos} productos={(productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre }))} rolesQuePuedoDar={rolesQuePuedoDar} puedeComision={puedeComisionDe(m.perfil_id)} />
     </li>
   );
 
@@ -53,7 +60,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
         acciones={
           <>
             <Link href={verInactivos ? "/equipo" : "/equipo?inactivos=1"} className="btn-secundario">{verInactivos ? "Ver activos" : "Ver inactivos"}</Link>
-            <AltaMiembro areas={eq.areas} puestos={eq.puestos} productos={(productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre, precio: p.precio === null ? null : Number(p.precio) }))} comisionesRol={eq.comisionesRol} soyCeo={perfil.rol === "ceo"} codigoMoneda={proyecto.moneda} />
+            <AltaMiembro areas={eq.areas} puestos={eq.puestos} productos={(productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre, precio: p.precio === null ? null : Number(p.precio) }))} comisionesRol={eq.comisionesRol} rolesQuePuedoDar={rolesQuePuedoDar} puedeComision={jefe} codigoMoneda={proyecto.moneda} />
           </>
         }
       />
@@ -80,10 +87,11 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
           </Seccion>
           <div className="space-y-5">
             <Seccion titulo="Comisión de cada rol">
+              {!jefe && <p className="mb-2 rounded-lg bg-panel-2 px-3 py-2 text-xs text-texto-2">Solo el CEO o el director pueden cambiar comisiones.</p>}
               <p className="mb-3 text-xs text-texto-3">Es la que se usa si la persona o el producto no tienen una propia. «% por venta»: de lo que vende él. Caller: además, «% por agenda cerrada» cuando el closer cierra una agenda suya. Se paga sobre lo cobrado, cada mes.</p>
               <div className="space-y-2">
                 <div className="grid grid-cols-[1fr_72px_72px_auto] gap-2 text-[11px] text-texto-3"><span>Rol</span><span className="text-right">% venta</span><span className="text-right">% agenda</span><span className="w-7" /></div>
-                {(["closer", "caller", "director", "ceo"] as Rol[]).map((r) => <ComisionRolForm key={r} rol={r} pctVenta={eq.comisionesRol[r]?.pct_venta ?? 0} pctAgenda={eq.comisionesRol[r]?.pct_agenda ?? 0} />)}
+                {(["closer", "caller", "director", "ceo"] as Rol[]).map((r) => <ComisionRolForm key={r} rol={r} editable={puedeComisionRol(r)} pctVenta={eq.comisionesRol[r]?.pct_venta ?? 0} pctAgenda={eq.comisionesRol[r]?.pct_agenda ?? 0} />)}
               </div>
             </Seccion>
             <Seccion titulo="Áreas">

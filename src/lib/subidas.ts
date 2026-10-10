@@ -12,7 +12,31 @@ const BUCKETS = {
 } as const;
 export type BucketSubida = keyof typeof BUCKETS;
 
+// Archivos subidos que nunca se guardaron (se cerró la pestaña justo antes, o falló la acción):
+// se borran los de más de 1 día que no usa ningún recurso. Los CSV se borran al importarlos,
+// así que en «importaciones» cualquiera de más de 1 día sobra. Se hace al preparar otra subida.
+const UN_DIA = 86_400_000;
+export async function limpiarSubidasHuerfanas(bucket: BucketSubida, proyectoId: string, ahora = Date.now()) {
+  const { data: archivos, error } = await db().storage.from(bucket).list(proyectoId, { limit: 1000 });
+  if (error || !archivos?.length) return 0;
+  const viejos = archivos.filter((a) => a.created_at && ahora - new Date(a.created_at).getTime() > UN_DIA).map((a) => `${proyectoId}/${a.name}`);
+  if (!viejos.length) return 0;
+  let sobran = viejos;
+  if (bucket === "recursos") {
+    const { data: usados } = await db().from("recursos").select("archivo_path").eq("proyecto_id", proyectoId).not("archivo_path", "is", null);
+    const enUso = new Set((usados ?? []).map((u) => u.archivo_path));
+    sobran = viejos.filter((r) => !enUso.has(r));
+  }
+  if (sobran.length) await db().storage.from(bucket).remove(sobran);
+  return sobran.length;
+}
+
 export async function prepararSubida(bucket: BucketSubida, proyectoId: string) {
+  try {
+    await limpiarSubidasHuerfanas(bucket, proyectoId);
+  } catch (e) {
+    console.error("[subidas] no se pudo limpiar:", e); // no impide subir
+  }
   const ruta = `${proyectoId}/${crypto.randomUUID()}.${BUCKETS[bucket]}`;
   const { data, error } = await db().storage.from(bucket).createSignedUploadUrl(ruta);
   if (error || !data) throw new Error(`No se pudo preparar la subida: ${error?.message}`);

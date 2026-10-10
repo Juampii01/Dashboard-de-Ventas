@@ -59,7 +59,7 @@ export default async function FinanzasPage({ searchParams }: PageProps<"/finanza
 
         {tab === "resumen" && <TabResumen d={d} rango={rango} proyecto={proyecto} />}
         {tab === "ventas" && <TabVentas d={d} rango={rango} proyecto={proyecto} sp={sp} jefe={esJefe(perfil)} />}
-        {tab === "liquidaciones" && <TabLiquidaciones d={d} proyecto={proyecto} sp={sp} />}
+        {tab === "liquidaciones" && <TabLiquidaciones d={d} proyecto={proyecto} sp={sp} yo={perfil} />}
         {tab === "ingresos" && <TabIngresos d={d} rango={rango} proyecto={proyecto} />}
         {tab === "egresos" && <TabEgresos d={d} rango={rango} proyecto={proyecto} sp={sp} />}
         {tab === "cuentas" && <TabCuentas d={d} rango={rango} proyecto={proyecto} />}
