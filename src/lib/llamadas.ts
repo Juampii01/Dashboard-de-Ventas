@@ -55,17 +55,6 @@ export function celdasMes(ymd: string) {
   return celdas;
 }
 
-// Métricas de la semana del pre-call
-export function metricasSemana(citas: CitaL[], desde: number, hasta: number) {
-  const s = citas.filter((c) => c.estado !== "reagendada" && new Date(c.fecha).getTime() >= desde && new Date(c.fecha).getTime() < hasta);
-  return {
-    total: s.length,
-    confirmadas: s.filter((c) => c.estado === "confirmada" || ["cerrada", "seguimiento", "perdida", "no_show"].includes(c.estado)).length,
-    noConfirmadas: s.filter((c) => c.estado === "pendiente" || c.estado === "confirmacion_pendiente").length,
-    presentaron: s.filter((c) => ["cerrada", "seguimiento", "perdida"].includes(c.estado)).length,
-  };
-}
-
 // Texto para buscar: nombre, email, teléfono (sin acentos ni mayúsculas)
 export const normal = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 export function coincide(q: string, ...campos: (string | null | undefined)[]) {

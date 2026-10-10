@@ -5,7 +5,7 @@ import { getSesion, esJefe } from "@/lib/auth";
 import { db, todas, equipo } from "@/lib/datos";
 import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { closersVisibles } from "@/lib/agendas-datos";
-import { ABIERTAS, COLUMNAS_PRECALL, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esPrecall, metricasSemana, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
+import { ABIERTAS, COLUMNAS_PRECALL, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esPrecall, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
 import { Cabecera, Contenido, Insignia, Vacio } from "@/components/ui";
 import { FiltroUrl } from "@/components/barra-periodo";
 import { VerEstrellas } from "@/components/estrellas";
@@ -15,7 +15,7 @@ import { FilaVentaAcciones } from "@/app/(panel)/ventas/fila-acciones";
 import { Grabaciones } from "./grabaciones";
 import { RevisionIa } from "./revision-ia";
 import { Cualificacion } from "./cualificacion";
-import { BuscadorUrl, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl, TarjetaPrecall } from "./cliente";
+import { BuscadorUrl, ColumnaPrecall, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl, TarjetaPrecall } from "./cliente";
 import type { Cita, Lead, Producto } from "@/lib/tipos";
 
 type LeadCita = Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "email" | "seguimiento">;
@@ -284,32 +284,10 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
 
   // ---------- 02 · Pre-call ----------
   function VistaPrecall() {
-    const ns = Number(str("sem") || 0) || 0;
-    const hoy = hoyEnZona(zona);
-    const d0 = new Date(`${hoy}T12:00:00Z`);
-    d0.setUTCDate(d0.getUTCDate() - ((d0.getUTCDay() + 6) % 7) + ns * 7);
-    const ini = inicioDia(d0.toISOString().slice(0, 10), zona).getTime();
-    const fin = ini + 7 * 86_400_000;
-    const m = metricasSemana(citasTodas, ini, fin);
     const pre = citas.filter((c) => esPrecall(c, ahora)).sort((a, b) => (str("orden") === "agendada" ? b.creado_en.localeCompare(a.creado_en) : a.fecha.localeCompare(b.fecha)));
     const tabla = str("vista") === "tabla";
     return (
       <div className="space-y-4">
-        <div className="tarjeta p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="titulo-seccion">Métricas de la semana</div>
-            <div className="flex items-center rounded-lg border border-borde">
-              <Link href={baseQs({ sem: String(ns - 1) })} className="p-2" aria-label="Semana anterior"><ChevronLeft className="h-4 w-4" /></Link>
-              <span className="min-w-28 text-center text-sm font-medium">{ns === 0 ? "Esta semana" : ns === -1 ? "Semana pasada" : `Semana del ${soloFecha(new Date(ini).toISOString(), proyecto)}`}</span>
-              <Link href={baseQs({ sem: String(ns + 1) })} className="p-2" aria-label="Semana siguiente"><ChevronRight className="h-4 w-4" /></Link>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[["Total agendadas", m.total, ""], ["Confirmadas", m.confirmadas, "text-ok"], ["No confirmadas", m.noConfirmadas, "text-aviso"], ["Se presentaron", m.presentaron, "text-oro"]].map(([t, n, c]) => (
-              <div key={t as string} className="rounded-lg border border-borde bg-panel-2 p-3"><div className="titulo-seccion">{t}</div><div className={`mt-1 text-2xl font-semibold tabular-nums ${c}`}>{n}</div></div>
-            ))}
-          </div>
-        </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-texto-3">{pre.length} llamadas por hacer</span>
           <FiltroUrl nombre="orden" etiqueta="Orden" todos="Orden: fecha de llamada" opciones={[{ v: "agendada", t: "Orden: agendada el (más reciente)" }]} />
@@ -325,10 +303,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
             {COLUMNAS_PRECALL.map((col) => {
               const en = pre.filter((c) => c.estado === col.estado);
               return (
-                <div key={col.estado} className="flex w-72 shrink-0 flex-col rounded-xl border border-borde bg-panel-2/60">
-                  <div className="flex items-center justify-between border-b border-borde px-3 py-2.5 text-sm font-semibold" style={{ borderTop: `3px solid ${col.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-                    {col.titulo}<span className="rounded-full bg-panel px-1.5 text-[11px] tabular-nums text-texto-2">{en.length}</span>
-                  </div>
+                <ColumnaPrecall key={col.estado} estado={col.estado} titulo={col.titulo} color={col.color} total={en.length}>
                   <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
                     {en.length === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
                     {en.map((c) => (
@@ -344,7 +319,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
                       />
                     ))}
                   </div>
-                </div>
+                </ColumnaPrecall>
               );
             })}
           </div>

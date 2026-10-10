@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { celdasMes, coincide, diaEnZona, enPostcall, esPrecall, metricasSemana, ventasPostcall } from "@/lib/llamadas";
+import { celdasMes, coincide, diaEnZona, enPostcall, esPrecall, ventasPostcall } from "@/lib/llamadas";
 
 const ahora = new Date("2026-10-09T15:00:00Z").getTime();
 const c = (estado: string, fecha: string) => ({ id: estado + fecha, lead_id: "L", estado, fecha });
@@ -28,10 +28,6 @@ describe("pestañas de Llamadas", () => {
   it("el día se cuenta en la hora del proyecto", () => {
     expect(diaEnZona("2026-10-10T02:00:00Z", "America/New_York")).toBe("2026-10-09");
     expect(diaEnZona("2026-10-10T02:00:00Z", "Europe/Madrid")).toBe("2026-10-10");
-  });
-  it("métricas de la semana", () => {
-    const m = metricasSemana([c("confirmada", "2026-10-06T10:00:00Z"), c("pendiente", "2026-10-07T10:00:00Z"), c("cerrada", "2026-10-05T10:00:00Z"), c("reagendada", "2026-10-05T11:00:00Z")], Date.parse("2026-10-05T04:00:00Z"), Date.parse("2026-10-12T04:00:00Z"));
-    expect(m).toEqual({ total: 3, confirmadas: 2, noConfirmadas: 1, presentaron: 1 });
   });
   it("buscar por nombre sin acentos o por teléfono con otro formato", () => {
     expect(coincide("adrian vargas", "Adrián Vargas Jiménez", null)).toBe(true);

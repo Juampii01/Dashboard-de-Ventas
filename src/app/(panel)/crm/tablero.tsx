@@ -405,7 +405,7 @@ function MenuColumna({
       {abierto && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-borde bg-panel p-1 shadow-panel">
+          <div className="vidrio ventana absolute right-0 z-20 mt-1 w-60 rounded-xl border border-borde p-1">
             <button
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2"
               onClick={() => {
@@ -416,7 +416,7 @@ function MenuColumna({
             >
               <Pencil className="h-4 w-4" /> Renombrar
             </button>
-            <div className="flex flex-wrap gap-1.5 px-2 py-2">
+            <div className="flex flex-nowrap gap-1.5 px-2 py-2">
               {COLORES.map((c) => (
                 <button
                   key={c}

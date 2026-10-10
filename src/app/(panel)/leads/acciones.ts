@@ -95,7 +95,10 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
       .maybeSingle();
     if (!closer) throw new ErrorUsuario("Elige un closer del proyecto.");
     const fecha = aIso(fechaLocal, proyecto.zona_horaria);
-    await escribir(db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n }), "citas");
+    // Paso H6: un doble clic creaba dos citas iguales; la base ya no deja repetir lead, closer y hora
+    const { error: errCita } = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
+    if (errCita?.code === "23505") throw new ErrorUsuario("Ese lead ya tiene una cita con ese closer a esa hora.");
+    if (errCita) throw new Error(`No se pudo guardar en «citas»: ${errCita.message}`);
     // Arreglo 9: si agenda un jefe o un closer sin estrellas, no se borran las que puso el caller
     await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;

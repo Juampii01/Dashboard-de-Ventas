@@ -163,7 +163,14 @@ export function TarjetaPrecall({
   const [registrar, setRegistrar] = useState(false);
   const tel = (lead.telefono ?? "").replace(/\D/g, "");
   return (
-    <div className="space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ id: cita.id, estado: cita.estado }));
+      }}
+      className={`cursor-grab space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm active:cursor-grabbing ${pendiente ? "opacity-60" : ""}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <a href={`/leads/${cita.lead_id}`} className="font-medium hover:text-primario">{lead.nombre}</a>
         {closer && <span className="chip bg-panel-2 text-texto-3">{closer}</span>}
@@ -187,6 +194,38 @@ export function TarjetaPrecall({
       </div>
       {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={cita} pasada productos={productos} moneda={moneda} /></div>}
       <Mensajes error={error} ok="" />
+    </div>
+  );
+}
+
+// Columna del tablero de pre-call (Paso H6): soltar una tarjeta = «Mover a» esta columna
+export function ColumnaPrecall({ estado, titulo, color, total, children }: { estado: EstadoCita; titulo: string; color: string; total: number; children: React.ReactNode }) {
+  const { pendiente, ejecutar } = useAccion();
+  const [sobre, setSobre] = useState(false);
+  return (
+    <div
+      onDragOver={(ev) => {
+        ev.preventDefault();
+        setSobre(true);
+      }}
+      onDragLeave={() => setSobre(false)}
+      onDrop={(ev) => {
+        ev.preventDefault();
+        setSobre(false);
+        let datos: { id?: string; estado?: string } = {};
+        try {
+          datos = JSON.parse(ev.dataTransfer.getData("text/plain"));
+        } catch {
+          return; // no es una tarjeta de pre-call
+        }
+        if (datos.id && datos.estado !== estado) ejecutar(() => cambiarEstadoCita(datos.id!, estado, ""), `Movida a «${titulo}»`);
+      }}
+      className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre ? "border-primario bg-primario-suave/40" : "border-borde bg-panel-2/60"} ${pendiente ? "cursor-progress" : ""}`}
+    >
+      <div className="flex items-center justify-between border-b border-borde px-3 py-2.5 text-sm font-semibold" style={{ borderTop: `3px solid ${color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+        {titulo}<span className="rounded-full bg-panel px-1.5 text-[11px] tabular-nums text-texto-2">{total}</span>
+      </div>
+      {children}
     </div>
   );
 }
