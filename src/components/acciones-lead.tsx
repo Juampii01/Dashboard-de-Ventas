@@ -206,18 +206,20 @@ export function FormVenta({
   moneda,
   onEnviar,
   desdeCita = false,
+  tipoInicial,
 }: {
   productos: Producto[];
   vendedores?: Persona[];
   moneda: string;
   onEnviar: (fd: FormData) => void;
   desdeCita?: boolean; // el closer cierra su cita: pide las estrellas del prospecto
+  tipoInicial?: "reserva" | "cuotas"; // al soltar en «Reserva» o «Cuotas» del Post-call (Paso H6)
 }) {
   const [productoId, setProductoId] = useState(productos[0]?.id ?? "");
   const producto = productos.find((p) => p.id === productoId);
   const [facturacion, setFacturacion] = useState(String(producto?.precio ?? ""));
-  const [tipo, setTipo] = useState(producto?.modo_pago === "cuotas" ? "cuotas" : "completo");
-  const [cash, setCash] = useState(String(producto?.precio ?? ""));
+  const [tipo, setTipo] = useState<string>(tipoInicial ?? (producto?.modo_pago === "cuotas" ? "cuotas" : "completo"));
+  const [cash, setCash] = useState(tipoInicial ? "" : String(producto?.precio ?? ""));
   const simbolo = moneda === "EUR" ? "€" : "$";
   return (
     <form action={onEnviar} className="space-y-3">
@@ -230,7 +232,7 @@ export function FormVenta({
             setProductoId(e.target.value);
             const p = productos.find((x) => x.id === e.target.value);
             setFacturacion(String(p?.precio ?? ""));
-            const t = p?.modo_pago === "cuotas" ? "cuotas" : "completo";
+            const t = tipoInicial ?? (p?.modo_pago === "cuotas" ? "cuotas" : "completo");
             setTipo(t);
             setCash(t === "completo" ? String(p?.precio ?? "") : "");
           }}

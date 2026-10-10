@@ -15,6 +15,7 @@ import { FilaVentaAcciones } from "@/app/(panel)/ventas/fila-acciones";
 import { Grabaciones } from "./grabaciones";
 import { RevisionIa } from "./revision-ia";
 import { Cualificacion } from "./cualificacion";
+import { TableroPostcall, type ColumnaPC } from "./tablero-postcall";
 import { BuscadorUrl, ColumnaPrecall, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl, TarjetaPrecall } from "./cliente";
 import type { Cita, Lead, Producto } from "@/lib/tipos";
 
@@ -333,7 +334,63 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
     const sub = (SUB_POSTCALL.some((s) => s.v === str("sub")) ? str("sub") : "pendientes") as SubPostcall;
     const cuenta = (s: SubPostcall) => (s === "reserva" || s === "cuotas" ? ventasPostcall(ventas, s).length : citas.filter((c) => enPostcall(c, s, ahora)).length);
     const info = SUB_POSTCALL.find((s) => s.v === sub)!;
+    const tabla = str("vista") === "tabla";
+    const interruptor = (
+      <div className="flex items-center justify-end">
+        <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
+          <Link href={baseQs({ vista: null })} className={`rounded-md px-2.5 py-1 text-xs ${!tabla ? "bg-primario text-white" : "text-texto-2"}`}>Pipeline</Link>
+          <Link href={baseQs({ vista: "tabla" })} className={`rounded-md px-2.5 py-1 text-xs ${tabla ? "bg-primario text-white" : "text-texto-2"}`}>Tabla</Link>
+        </div>
+      </div>
+    );
+    // Pipeline (Paso H6): una columna por cada estado de Post-call, como Pre-call
+    if (!tabla) {
+      const COLOR: Record<SubPostcall, string> = { pendientes: "var(--aviso)", reagendadas: "var(--oro)", reserva: "var(--primario)", cuotas: "var(--morado)", seguimiento: "var(--oro)", no_show: "var(--mal)", cancelada: "var(--texto-3)", perdida: "var(--mal)" };
+      const columnas: ColumnaPC[] = SUB_POSTCALL.map((s) =>
+        s.v === "reserva" || s.v === "cuotas"
+          ? {
+              v: s.v, t: s.t, d: s.d, color: COLOR[s.v],
+              ventas: ventasPostcall(ventas, s.v).map((v) => ({
+                id: v.id,
+                lead_id: v.lead_id,
+                nombre: nombreDe(v.leads),
+                detalle: `${v.productos?.nombre ?? "Producto"} · vendida el ${soloFecha(v.fecha, proyecto)}${jefe ? ` · ${nombrePersona(v.vendedor_id)}` : ""}${v.num_cuotas ? ` · ${v.num_cuotas} cuotas` : ""}`,
+                facturacionTxt: dinero(Number(v.facturacion), proyecto),
+                faltaTxt: dinero(v.pendiente, proyecto),
+                pendiente: v.pendiente,
+                cobrado: Number(v.facturacion) - v.pendiente,
+                devuelta: !!v.devuelto,
+              })),
+            }
+          : {
+              v: s.v, t: s.t, d: s.d, color: COLOR[s.v],
+              citas: citas
+                .filter((c) => enPostcall(c, s.v, ahora))
+                .sort((a, b) => b.fecha.localeCompare(a.fecha))
+                .map((c) => ({
+                  id: c.id,
+                  lead_id: c.lead_id,
+                  estado: c.estado,
+                  nombre: nombreDe(c.leads),
+                  telefono: c.leads?.telefono ?? null,
+                  fechaTxt: fechaHora(c.fecha, proyecto),
+                  quien: c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombrePersona(c.agendada_por)}`,
+                  nota: c.nota,
+                  closer: jefe ? nombrePersona(c.closer_id) : null,
+                  pasada: new Date(c.fecha).getTime() < ahora,
+                })),
+            }
+      );
+      return (
+        <div className="space-y-3">
+          {interruptor}
+          <TableroPostcall columnas={columnas} productos={prods} moneda={proyecto.moneda} jefe={jefe} />
+        </div>
+      );
+    }
     return (
+      <div className="space-y-3">
+      {interruptor}
       <div className="tarjeta overflow-hidden">
         <div className="flex flex-wrap gap-1 border-b border-borde p-2">
           {SUB_POSTCALL.map((s) => (
@@ -363,6 +420,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
         ) : (
           <ListaCitas filas={citas.filter((c) => enPostcall(c, sub, ahora)).sort((a, b) => b.fecha.localeCompare(a.fecha))} />
         )}
+      </div>
       </div>
     );
   }
