@@ -2,8 +2,8 @@
 
 import { sinVaciar } from "@/components/sin-vaciar";
 import { useActionState, useState } from "react";
-import { ArrowUp, ArrowDown, Copy, Check, KeyRound, RefreshCw } from "lucide-react";
-import { actualizarMiembro, anadirAlProyecto, cambiarPassword, quitarDelProyecto, crearProyecto, crearUsuario, guardarProyecto, moverEnReparto, regenerarSecreto } from "./acciones";
+import { Copy, Check, KeyRound, RefreshCw } from "lucide-react";
+import { actualizarMiembro, anadirAlProyecto, cambiarPassword, quitarDelProyecto, crearProyecto, crearUsuario, guardarProyecto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import type { Rol } from "@/lib/tipos";
 import { useToast } from "@/components/toasts";
@@ -98,25 +98,10 @@ export function FilaMiembro({ persona, soyCeo, soyYo }: { persona: { id: string;
   );
 }
 
-export function FormProyecto({ modo, aviso }: { modo: string; aviso: string }) {
+export function FormProyecto({ aviso }: { aviso: string }) {
   const [estado, accion, enviando] = useActionState(guardarProyecto, null as Res);
   return (
     <form onSubmit={sinVaciar(accion)} className="space-y-4">
-      <fieldset className="space-y-2">
-        <legend className="etiqueta-campo">¿Cómo se reparten los leads nuevos?</legend>
-        <label className="flex gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
-          <input type="radio" name="modo_reparto" value="manual" defaultChecked={modo === "manual"} />
-          <span><b>A mano</b><br /><span className="text-texto-3">El director o el CEO asigna cada lead desde el CRM.</span></span>
-        </label>
-        <label className="flex gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
-          <input type="radio" name="modo_reparto" value="rotativo" defaultChecked={modo === "rotativo"} />
-          <span><b>Rotativo equitativo</b><br /><span className="text-texto-3">Cada lead nuevo va al siguiente caller de la lista, por turnos.</span></span>
-        </label>
-        <label className="flex gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
-          <input type="radio" name="modo_reparto" value="horarios" defaultChecked={modo === "horarios"} />
-          <span><b>Por horarios</b><br /><span className="text-texto-3">Rotativo, pero solo entre los callers que están en su turno en ese momento (pon el horario de cada uno abajo). Si no hay nadie en turno, entre todos.</span></span>
-        </label>
-      </fieldset>
       <div>
         <label className="etiqueta-campo" htmlFor="cliente-webhook-de-avisos-ghl-inbound-">Webhook de avisos (GHL «Inbound Webhook»)</label>
         <input id="cliente-webhook-de-avisos-ghl-inbound-" name="aviso_webhook_url" defaultValue={aviso} placeholder="https://services.leadconnectorhq.com/hooks/…" className="campo" />
@@ -125,24 +110,6 @@ export function FormProyecto({ modo, aviso }: { modo: string; aviso: string }) {
       <Resultado estado={estado} />
       <button className="btn-primario" disabled={enviando}>Guardar</button>
     </form>
-  );
-}
-
-export function OrdenReparto({ callers }: { callers: { id: string; nombre: string }[] }) {
-  const { pendiente, error, ejecutar } = useAccion();
-  if (!callers.length) return <p className="text-sm text-texto-3">No hay callers activos.</p>;
-  return (
-    <ol className="space-y-1.5">
-      {callers.map((c, i) => (
-        <li key={c.id} className="flex items-center gap-2 rounded-lg border border-borde bg-panel-2 px-3 py-2 text-sm">
-          <span className="w-5 text-texto-3">{i + 1}</span>
-          <span className="flex-1">{c.nombre}</span>
-          <button className="rounded p-1 hover:bg-panel disabled:opacity-30" disabled={pendiente || i === 0} onClick={() => ejecutar(() => moverEnReparto(c.id, -1))} aria-label="Subir"><ArrowUp className="h-4 w-4" /></button>
-          <button className="rounded p-1 hover:bg-panel disabled:opacity-30" disabled={pendiente || i === callers.length - 1} onClick={() => ejecutar(() => moverEnReparto(c.id, 1))} aria-label="Bajar"><ArrowDown className="h-4 w-4" /></button>
-        </li>
-      ))}
-      {error && <li className="text-xs text-mal">{error}</li>}
-    </ol>
   );
 }
 

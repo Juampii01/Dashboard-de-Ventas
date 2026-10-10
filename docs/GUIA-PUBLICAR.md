@@ -127,7 +127,8 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 ## Paso 9 · Comprobar que todo va
 
 - [ ] Entras como CEO y ves Maestria con sus 4 pipelines, «Callers», «Closers» y sus productos.
-- [ ] Un caller entra, hace el onboarding y ve sus leads.
+- [ ] Un caller entra, hace el onboarding (con su horario: Mañana, Tarde, Todo el día o el suyo) y ve sus leads; un closer pone su horario para recibir llamadas. Los dos lo cambian en «Mi perfil» (tocando su nombre, abajo a la izquierda).
+- [ ] Administración → Proyecto y reparto: los directores ponen el % de cada caller (suman 100) y encienden el reparto automático; un lead de prueba de GHL entra asignado y en su historial pone «reparto automático (%)».
 - [ ] Un lead de prueba de GHL llega solo (Administración → Integraciones → «Últimos eventos»).
 - [ ] Un reporte de fin de día manda el aviso por email/WhatsApp.
 - [ ] Desde el móvil se ve bien.
@@ -146,7 +147,7 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 
 ## Seguridad: lo que ya está hecho y lo que depende de ti
 
-**Ya hecho en la app:** la base de datos no se puede leer con la clave pública (las 42 tablas con RLS); cada acción comprueba el rol o el permiso de la sección; límite de intentos en el login y en el webhook, contado en la base de datos (exacto aunque Vercel use varias copias del servidor); cabeceras de seguridad, con nonce por petición para los scripts; el token de GHL y las API keys de Fathom se guardan cifrados (`CLAVE_CIFRADO`); los PDF y CSV se suben directos a Supabase (Vercel no deja pasar más de 4,5 MB); los PDF solo se abren con enlace temporal; las claves de GHL, Fathom, Claude y Deepgram nunca llegan al navegador; a Claude no se le mandan emails ni teléfonos de los leads; los CSV que se exportan están protegidos contra fórmulas de Excel; permisos de cada sección por rol y por persona (Administración → Permisos); permisos de cada pipeline del CRM (como GHL); 340+ tests automáticos.
+**Ya hecho en la app:** la base de datos no se puede leer con la clave pública (las 42 tablas con RLS); cada acción comprueba el rol o el permiso de la sección; límite de intentos en el login y en el webhook, contado en la base de datos (exacto aunque Vercel use varias copias del servidor); cabeceras de seguridad, con nonce por petición para los scripts; el token de GHL y las API keys de Fathom se guardan cifrados (`CLAVE_CIFRADO`); los PDF y CSV se suben directos a Supabase (Vercel no deja pasar más de 4,5 MB); los PDF solo se abren con enlace temporal; las claves de GHL, Fathom, Claude y Deepgram nunca llegan al navegador; a Claude no se le mandan emails ni teléfonos de los leads; los CSV que se exportan están protegidos contra fórmulas de Excel; permisos de cada sección por rol y por persona (Administración → Permisos); permisos de cada pipeline del CRM (como GHL); 390+ tests automáticos.
 
 **Depende de ti:**
 - Desactivar «Allow new users to sign up» en Supabase (paso 2).

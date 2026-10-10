@@ -9,7 +9,8 @@ describe("Horarios", () => {
   it("valida días y horas", () => {
     expect(horarioValido({ dias: [], desde: "09:00", hasta: "14:00" })).toBeNull();
     expect(horarioValido({ dias: [1], desde: "9h", hasta: "14:00" })).toBeNull();
-    expect(horarioValido({ dias: [8, 1, 1], desde: "09:00", hasta: "10:00" })).toEqual({ dias: [1], desde: "09:00", hasta: "10:00" });
+    // Bloque 1 de 1.0: el formato de V2-11 se lee y se pasa al nuevo (tramos por día)
+    expect(horarioValido({ dias: [8, 1, 1], desde: "09:00", hasta: "10:00" })).toEqual({ semana: { 1: [{ desde: "09:00", hasta: "10:00" }] }, fechas: {} });
   });
   it("en la hora del proyecto: lunes 10:30 en Madrid sí; sábado no; 14:00 ya no", () => {
     expect(enHorario(h, new Date("2026-10-12T08:30:00Z"), "Europe/Madrid")).toBe(true); // lunes 10:30 Madrid

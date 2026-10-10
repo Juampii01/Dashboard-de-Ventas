@@ -14,21 +14,25 @@ export const telefonoClave = (t: string | null) => {
 const telefonoValido = (t: string | null) => telefonoClave(t).length >= 6;
 export { filaALead, type LeadEntrada } from "@/lib/csv";
 
-// Reparte n leads entre los callers activos (turno rotativo) y avanza el turno.
-// Por horarios (V2-11): solo entran los callers que están en su turno; si no hay nadie, todos.
-export async function turnosRotativos(proyecto: Proyecto, n: number, ahora = new Date()): Promise<(string | null)[]> {
-  let callers = (await equipo(proyecto.id)).filter((p) => p.rol === "caller");
-  if (proyecto.modo_reparto === "horarios" && callers.length) {
-    const { data: hs } = await db().from("miembros_proyecto").select("perfil_id, horario").eq("proyecto_id", proyecto.id).in("perfil_id", callers.map((c) => c.id));
-    const enTurno = callers.filter((c) => enHorario(horarioValido(hs?.find((h) => h.perfil_id === c.id)?.horario), ahora, proyecto.zona_horaria));
-    if (enTurno.length) callers = enTurno;
+// Reparto automático al entrar (bloque 2 de 1.0, Cristian 11 oct 2026): n leads entre los callers con % > 0, según su %.
+// Con «solo a quien esté en su horario», entre los que lo están en ese momento; si no hay nadie, igual entre todos
+// los que tienen %. Nunca a perfiles de prueba ni a quien no esté activo (equipo()). Apagado: no se reparte.
+export async function repartoAutomatico(proyecto: Proyecto, n: number, ahora = new Date()): Promise<(string | null)[]> {
+  if (!proyecto.reparto_auto || n === 0) return Array(n).fill(null);
+  const callers = (await equipo(proyecto.id)).filter((p) => p.rol === "caller");
+  if (!callers.length) return Array(n).fill(null);
+  const { data: filas, error } = await db().from("miembros_proyecto").select("perfil_id, horario, reparto_pct").eq("proyecto_id", proyecto.id).in("perfil_id", callers.map((c) => c.id));
+  if (error) throw new Error(`No se pudo leer el reparto: ${error.message}`);
+  let candidatos = (filas ?? []).filter((f) => Number(f.reparto_pct) > 0);
+  if (proyecto.reparto_solo_horario) {
+    const enTurno = candidatos.filter((f) => enHorario(horarioValido(f.horario), ahora, proyecto.zona_horaria));
+    if (enTurno.length) candidatos = enTurno;
   }
-  if (!callers.length || n === 0) return Array(n).fill(null);
-  // Arreglo 17: leer y avanzar el turno en un solo paso (en la base), para que dos leads a la vez no vayan al mismo caller
-  const { data: inicioDb, error } = await db().rpc("avanzar_rotacion", { p_proyecto: proyecto.id, p_n: n });
-  if (error) throw new Error(`No se pudo avanzar el turno del reparto: ${error.message}`);
-  const inicio = Number(inicioDb) || 0;
-  return Array.from({ length: n }, (_, i) => callers[(inicio + i) % callers.length].id);
+  if (!candidatos.length) return Array(n).fill(null);
+  const { data: elegidos, error: e2 } = await db().rpc("repartir_por_pct", { p_proyecto: proyecto.id, p_n: n, p_candidatos: candidatos.map((c) => c.perfil_id) });
+  if (e2) throw new Error(`No se pudo repartir: ${e2.message}`);
+  const lista = (elegidos ?? []) as string[];
+  return Array.from({ length: n }, (_, i) => lista[i] ?? null);
 }
 
 export async function primeraEtapa(pipelineId: string) {
@@ -125,7 +129,9 @@ export async function guardarLeads(
     else nuevos.push(e);
   }
 
-  const turnos = opciones.repartir && (proyecto.modo_reparto === "rotativo" || proyecto.modo_reparto === "horarios") ? await turnosRotativos(proyecto, nuevos.length) : [];
+  const turnos = opciones.repartir ? await repartoAutomatico(proyecto, nuevos.length) : [];
+  const nombreCaller = new Map<string, string>();
+  if (turnos.some(Boolean)) for (const p of await equipo(proyecto.id)) nombreCaller.set(p.id, p.nombre);
 
   let insertados = 0;
   for (let i = 0; i < nuevos.length; i += 500) {
@@ -146,14 +152,14 @@ export async function guardarLeads(
       ...(e.creado_en ? { creado_en: e.creado_en } : {}),
       ...(e.extra ? { fuente: e.extra.fuente, evento: e.extra.evento, seguimiento: e.extra.seguimiento, quiz_score: e.extra.quiz_score, datos: e.extra.datos } : {}),
     }));
-    let { data, error } = await db().from("leads").insert(lote).select("id");
+    let { data, error } = await db().from("leads").insert(lote).select("id, caller_id");
     // Arreglo 16: si otro envío creó el mismo lead a la vez (email o contacto repetido), se insertan de uno
     // en uno y el que choca pasa a «actualizar» en vez de fallar todo el lote.
     if (error?.code === "23505") {
       data = [];
       error = null;
       for (const [k, fila] of lote.entries()) {
-        const uno = await db().from("leads").insert(fila).select("id").single();
+        const uno = await db().from("leads").insert(fila).select("id, caller_id").single();
         if (!uno.error) data.push(uno.data);
         else if (uno.error.code === "23505") {
           const e = nuevos[i + k];
@@ -177,6 +183,12 @@ export async function guardarLeads(
           nota: opciones.notaActividad ?? (opciones.origen === "csv" ? "Importado desde CSV" : "Entró desde GHL"),
         }))
       );
+    // Bloque 2: cada reparto automático queda en el historial del lead
+    const repartidos = data.filter((d) => d.caller_id);
+    if (repartidos.length) {
+      const { error: errHist } = await db().from("actividades").insert(repartidos.map((d) => ({ proyecto_id: proyecto.id, lead_id: d.id, perfil_id: null, tipo: "asignacion", nota: `Caller: ${nombreCaller.get(d.caller_id as string) ?? "—"} · reparto automático (%)` })));
+      if (errHist) console.error("[actividad] no se pudo guardar el reparto:", errHist.message);
+    }
   }
 
   // Actualiza los que ya existían SIN perder nada (no toca pipeline ni asignación):

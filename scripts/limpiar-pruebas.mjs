@@ -15,7 +15,7 @@
 //     sin «llamar luego» y en la primera columna de su pipeline.
 //  5. Borra columnas que no están en scripts/proyecto-base.json (p. ej. «Llamada 2»);
 //     sus leads pasan a la primera columna.
-//  6. Reinicia el turno del reparto rotativo.
+//  6. Pone a cero la cuenta del reparto automático con % (bloque 2 de 1.0).
 import { createClient } from "@supabase/supabase-js";
 import { BASE } from "./base-comun.mjs";
 
@@ -104,7 +104,7 @@ for (const proyecto of reales) {
 }
 
 // 6. Turno del reparto
-await hacer("Turno del reparto rotativo a cero", reales.length, () => db.from("proyectos").update({ rotacion_indice: 0 }).in("id", reales.map((p) => p.id)));
+await hacer("Cuenta del reparto automático a cero", reales.length, () => db.from("miembros_proyecto").update({ reparto_cuenta: 0 }).in("proyecto_id", reales.map((p) => p.id)));
 
 // Usuarios de prueba
 const { data: perfiles } = await db.from("perfiles").select("id, email, rol");

@@ -1,16 +1,15 @@
-// Funciones que no se habían probado: reparto rotativo, cobros, borrados,
+// Funciones que no se habían probado: avisos del proyecto, cobros, borrados,
 // pipelines y columnas, links, contraseñas, reagendar, proyectos.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { PASSWORD, borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
-import { guardarLeads } from "@/lib/leads";
 import { crearPipeline, renombrarPipeline, borrarPipeline, crearEtapa, borrarEtapa, moverEtapa, importarCsv, prepararSubidaCsv } from "@/app/(panel)/crm/acciones";
 import { subirDelFormulario } from "@/lib/subir-cliente";
 import { registrarLlamada, registrarVenta, agendarCita, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { reagendarCita, cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 import { registrarCobro, borrarVenta } from "@/app/(panel)/ventas/acciones";
 import { guardarLinkPago, crearRecurso, borrarRecurso } from "@/app/(panel)/recursos/acciones";
-import { cambiarPassword, crearProyecto, anadirAlProyecto, quitarDelProyecto, guardarProyecto, moverEnReparto } from "@/app/(panel)/admin/acciones";
+import { cambiarPassword, crearProyecto, anadirAlProyecto, quitarDelProyecto, guardarProyecto } from "@/app/(panel)/admin/acciones";
 import type { Proyecto } from "@/lib/tipos";
 
 let e: Escenario;
@@ -23,61 +22,12 @@ afterAll(async () => {
 
 const leerLead = async (id: string) => (await db.from("leads").select("*").eq("id", id).single()).data!;
 
-describe("Reparto rotativo", () => {
-  it("con el modo «rotativo», los leads nuevos se reparten por turnos entre los 3 callers", async () => {
-    await db.from("proyectos").update({ modo_reparto: "rotativo", rotacion_indice: 0 }).eq("id", e.proyecto.id);
-    const proyecto = { ...e.proyecto, modo_reparto: "rotativo" } as Proyecto;
-    const entradas = Array.from({ length: 7 }, (_, i) => ({
-      ghl_contact_id: `${e.pref}-rot-${i}`,
-      nombre: `Rot${i}`,
-      apellido: "",
-      email: `${e.pref}-rot${i}@x.test`,
-      telefono: null,
-      etiquetas: [],
-      respuestas: [],
-      creado_en: null,
-    }));
-    const r = await guardarLeads(proyecto, entradas, { pipelineId: e.pipeline.id, origen: "csv", perfilId: null, repartir: true });
-    expect(r.insertados).toBe(7);
-    expect(r.repartidos).toBe(7);
-    const { data } = await db.from("leads").select("nombre, caller_id").eq("proyecto_id", e.proyecto.id).like("nombre", "Rot%").order("nombre");
-    const orden = [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id];
-    expect(data!.map((l) => l.caller_id)).toEqual([0, 1, 2, 3, 4, 5, 6].map((i) => orden[i % 3]));
-    // El turno sigue donde se quedó: el siguiente lead va al caller B
-    const r2 = await guardarLeads(proyecto, [{ ...entradas[0], ghl_contact_id: `${e.pref}-rot-x`, email: `${e.pref}-rotx@x.test`, nombre: "RotX" }], {
-      pipelineId: e.pipeline.id,
-      origen: "csv",
-      perfilId: null,
-      repartir: true,
-    });
-    expect(r2.repartidos).toBe(1);
-    const { data: x } = await db.from("leads").select("caller_id").eq("nombre", "RotX").eq("proyecto_id", e.proyecto.id).single();
-    expect(x!.caller_id).toBe(e.p.callerB.id);
-  });
-  it("cambiar el orden del reparto en Administración cambia quién va primero", async () => {
+describe("Avisos del proyecto", () => {
+  // El reparto automático con % (bloque 2 de 1.0) está en reparto-auto.test.ts
+  it("guardar el webhook de avisos desde Administración", async () => {
     como(e, e.p.ceo);
-    await ok(moverEnReparto(e.p.callerC.id, -1)); // C sube por encima de B
-    const { data } = await db
-      .from("miembros_proyecto")
-      .select("perfil_id, orden, perfiles!inner(rol)")
-      .eq("proyecto_id", e.proyecto.id)
-      .eq("perfiles.rol", "caller")
-      .order("orden");
-    expect(data!.map((m) => m.perfil_id)).toEqual([e.p.callerA.id, e.p.callerC.id, e.p.callerB.id]);
-  });
-  it("en modo «manual» no se reparte nada aunque se marque la casilla", async () => {
-    const proyecto = { ...e.proyecto, modo_reparto: "manual" } as Proyecto;
-    const r = await guardarLeads(
-      proyecto,
-      [{ ghl_contact_id: `${e.pref}-man`, nombre: "Manual", apellido: "", email: `${e.pref}-man@x.test`, telefono: null, etiquetas: [], respuestas: [], creado_en: null }],
-      { pipelineId: e.pipeline.id, origen: "csv", perfilId: null, repartir: true }
-    );
-    expect(r.repartidos).toBe(0);
-  });
-  it("guardar el modo desde Administración", async () => {
-    como(e, e.p.ceo);
-    expect((await guardarProyecto(null, formulario({ modo_reparto: "manual", aviso_webhook_url: "" })))?.ok).toBeTruthy();
-    expect((await guardarProyecto(null, formulario({ modo_reparto: "manual", aviso_webhook_url: "http://inseguro.test" })))?.error).toMatch(/https/);
+    expect((await guardarProyecto(null, formulario({ aviso_webhook_url: "" })))?.ok).toBeTruthy();
+    expect((await guardarProyecto(null, formulario({ aviso_webhook_url: "http://inseguro.test" })))?.error).toMatch(/https/);
   });
 });
 

@@ -68,9 +68,11 @@ describe("Perfiles de prueba fuera de todo", () => {
     expect((data ?? []).map((l) => l.perfil_id)).not.toContain(e.p.closerB.id);
   });
   it("el reparto nunca les da leads", async () => {
-    await db.from("proyectos").update({ modo_reparto: "rotativo" }).eq("id", e.proyecto.id);
+    // Bloque 2: reparto automático con %; aunque el de prueba tenga %, nunca le toca
+    await db.from("proyectos").update({ reparto_auto: true }).eq("id", e.proyecto.id);
+    await db.from("miembros_proyecto").update({ reparto_pct: 34 }).eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id]);
     const emails = Array.from({ length: 9 }, (_, i) => `${e.pref}-rep${i}@x.test`);
-    await guardarLeads({ ...e.proyecto, modo_reparto: "rotativo" }, emails.map((email) => ({ ghl_contact_id: null, nombre: "Rep", apellido: "", email, telefono: null, etiquetas: [], respuestas: [], creado_en: null })), { pipelineId: e.pipeline.id, origen: "csv", perfilId: null, repartir: true });
+    await guardarLeads({ ...e.proyecto, reparto_auto: true }, emails.map((email) => ({ ghl_contact_id: null, nombre: "Rep", apellido: "", email, telefono: null, etiquetas: [], respuestas: [], creado_en: null })), { pipelineId: e.pipeline.id, origen: "csv", perfilId: null, repartir: true });
     const { data } = await db.from("leads").select("caller_id").in("email", emails);
     const callers = new Set((data ?? []).map((l) => l.caller_id));
     expect(callers.has(e.p.callerC.id)).toBe(false);

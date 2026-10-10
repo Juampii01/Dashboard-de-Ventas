@@ -3,8 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { procesarLlamadasGhl, sincronizarLlamadasGhl } from "@/lib/ghl-llamadas-sync";
 import { cifrar } from "@/lib/cifrado";
-import { turnosRotativos } from "@/lib/leads";
-import { guardarHorario, guardarUsuarioGhl } from "@/app/(panel)/admin/acciones";
+import { repartoAutomatico } from "@/lib/leads";
+import { guardarUsuarioGhl } from "@/app/(panel)/admin/acciones";
+import { guardarHorario } from "@/app/(panel)/perfil/acciones";
 import { coachIa } from "@/app/(panel)/leads/coach";
 import type { LlamarClaude, PeticionClaude } from "@/lib/ia";
 import type { Proyecto } from "@/lib/tipos";
@@ -107,17 +108,20 @@ describe("Llamadas de GHL", () => {
   });
 });
 
-describe("Reparto por horarios", () => {
-  it("solo a quien está en su turno; si no hay nadie, entre todos", async () => {
+describe("Reparto por horarios (ahora con %, bloque 2 de 1.0)", () => {
+  it("solo a quien está en su horario; si no hay nadie, igual entre todos los que tienen %", async () => {
     como(e, e.p.ceo);
-    await falla(guardarHorario(e.p.callerA.id, { dias: [], desde: "09:00", hasta: "14:00" }), /al menos un día/);
+    await falla(guardarHorario(e.p.callerA.id, { dias: [], desde: "09:00", hasta: "14:00" }), /al menos un tramo/);
     await ok(guardarHorario(e.p.callerA.id, { dias: [1, 2, 3, 4, 5], desde: "09:00", hasta: "14:00" }));
     await ok(guardarHorario(e.p.callerB.id, { dias: [6, 7], desde: "09:00", hasta: "14:00" }));
-    const proyecto = { ...(e.proyecto as Proyecto), modo_reparto: "horarios", zona_horaria: "Europe/Madrid" } as Proyecto;
+    await db.from("miembros_proyecto").update({ reparto_pct: 33.34 }).eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id]);
+    const proyecto = { ...(e.proyecto as Proyecto), reparto_auto: true, reparto_solo_horario: true, zona_horaria: "Europe/Madrid" } as Proyecto;
     const lunes = new Date("2026-10-12T08:30:00Z"); // lunes 10:30 Madrid: solo callerA
-    expect(new Set(await turnosRotativos(proyecto, 4, lunes))).toEqual(new Set([e.p.callerA.id]));
-    const noche = new Date("2026-10-12T22:00:00Z"); // nadie en turno: los 3 callers
-    expect(new Set(await turnosRotativos(proyecto, 6, noche)).size).toBe(3);
+    expect(new Set(await repartoAutomatico(proyecto, 4, lunes))).toEqual(new Set([e.p.callerA.id]));
+    // Nadie en su horario: entre los 3 con %. callerA ya lleva 4, así que el reparto equilibra: 4 / 3 / 3 en total
+    const noche = new Date("2026-10-12T22:00:00Z");
+    const deNoche = await repartoAutomatico(proyecto, 6, noche);
+    expect([e.p.callerA.id, e.p.callerB.id, e.p.callerC.id].map((c) => deNoche.filter((x) => x === c).length)).toEqual([0, 3, 3]);
   });
 });
 

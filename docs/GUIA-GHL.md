@@ -51,7 +51,7 @@ Por qué la clave va en la cabecera y no en la URL: la propia documentación de 
   - `Si encuentras el programa correcto, ¿estás en condiciones de invertir en tu formación?`
   - `¿Cuándo quieres empezar?`
   - Y en `tags` que vaya la etiqueta **«biblioteca recursos»** (o que el pipeline sea «Biblioteca Recursos»).
-- Si el reparto está en «rotativo», el lead se asigna solo a un caller.
+- Si el **reparto automático** está encendido (Administración → Proyecto y reparto, con el % de cada caller), el lead se asigna solo a un caller según su %; con «solo a quien esté en su horario», entre los que están en su horario en ese momento (si no hay nadie, igual entre todos los que tienen %). Apagado: se reparte a mano o con «Repartir leads».
 
 ### Workflow 2 · Cita agendada
 

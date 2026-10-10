@@ -1,14 +1,14 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras «Antes de todo» y el Bloque A). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
+> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras los bloques 1 y 2). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
 
 ---
 
 ## 0. Dónde estamos (léelo primero al retomar)
 
-La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo» y el Bloque A), **sin publicar**. Último commit `fa6c34b` (11 oct); nada sin guardar. **No se publica hasta que esté todo** (Cristian, 11 oct).
+La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 y 2), **sin publicar**. Bloques 1 + 2 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** Bloque 1 de 1.0 (horario y disponibilidad como GHL + «Mi perfil») y después los bloques 2 a 7, enseñándote cada uno (commit cada 2 bloques: el próximo, al terminar 1 + 2). Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo: ya puedes ver la Biblioteca en KPIs (como CEO, en Maestria).
+**Lo siguiente:** que Cristian vea los bloques 1 y 2 (se hicieron seguidos, con su permiso). Después, el Bloque 3 (rotación de closers) y el 4, juntos en el siguiente commit. Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -64,16 +64,27 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - Criterio de Claude: en la membresía, la facturación es la del primer mes; los meses siguientes entran como cobros (cash).
 - ⚠ No probado en pantalla: «Dar de baja» y el modo «Cada mes» en Programas (sí en tests).
 
-#### Bloque 1 · Horario y disponibilidad (como GHL) + «Mi perfil»
-- [ ] **Horario semanal con varios tramos por día** (los huecos son los descansos) y **días o fechas sueltas** (vacaciones, festivos, descansos) que mandan sobre el semanal. Para callers y closers. El horario de un tramo que ya tienen los callers se pasa al nuevo formato sin perderlo.
-- [ ] **Ajustes de los closers** (como un calendario de GHL): duración de la llamada (**por defecto 30 min**, el valor general en Administración), **descanso tras cada llamada**, aviso mínimo para agendar y máximo de llamadas por día. Los pone el administrador por proyecto y cada closer puede tener los suyos.
-- [ ] **Página «Mi perfil»** para todos: nombre, teléfono, WhatsApp y **su horario**. Para callers y closers, el horario es también **un paso del onboarding** (ya existe el onboarding con nombre, email, teléfono y WhatsApp).
-- [ ] «Libre a una hora» = está en su horario + no tiene otra cita (con su duración y su descanso) + respeta aviso mínimo y máximo por día. Se usa en el bloque 3.
+#### Bloque 1 · Horario y disponibilidad (como GHL) + «Mi perfil» ✅ (11 oct)
+- **Decisiones de Cristian (11 oct):** el horario se pone en **la hora del proyecto** y al lado se ve **la hora de quien mira** (la de su ordenador o móvil, no por IP: así no se manda la IP a nadie) · cada caller y closer cambia **el suyo** (en el onboarding y en «Mi perfil»); un administrador, el de cualquiera; la zona del proyecto solo se elige al crearlo · **duración, descanso, aviso mínimo y máximo por día los pone solo el administrador** (por defecto 30 min, 0, 0 y sin máximo) · los días sueltos **como GHL** (libre o con otro horario) · el horario es **obligatorio** en el onboarding de callers y closers (los días de descanso, opcionales) · el caller tiene 3 botones rápidos: **Mañana 9-13, Tarde 14-18, Todo el día 9-18**, de lunes a viernes, y luego lo ajusta como quiera · «Mi perfil» también **cambia la contraseña** (el email, en el bloque 6).
+- [x] **Horario semanal con varios tramos por día** (los huecos son los descansos) y **días o fechas sueltas** (vacaciones, festivos, descansos) que mandan sobre el semanal. Para callers y closers. El horario de un tramo que ya tienen los callers se pasa al nuevo formato sin perderlo.
+- [x] **Ajustes de los closers** (como un calendario de GHL): duración de la llamada (**por defecto 30 min**, el valor general en Administración), **descanso tras cada llamada**, aviso mínimo para agendar y máximo de llamadas por día. Los pone el administrador por proyecto y cada closer puede tener los suyos.
+- [x] **Página «Mi perfil»** para todos: nombre, teléfono, WhatsApp y **su horario**. Para callers y closers, el horario es también **un paso del onboarding** (ya existe el onboarding con nombre, email, teléfono y WhatsApp).
+- [x] «Libre a una hora» = está en su horario + no tiene otra cita (con su duración y su descanso) + respeta aviso mínimo y máximo por día. Se usa en el bloque 3.
+- **Hecho y comprobado (11 oct):** `lib/horarios.ts` (tramos por día, días sueltos, botones rápidos, lee el formato viejo) · `lib/disponibilidad.ts` (`libreA`: horario + otras citas con duración y descanso + aviso + máximo; las canceladas y reagendadas no ocupan) y `lib/agenda-libre.ts` (`closerLibreA`, con las citas de la base; mira las citas del closer en todos sus proyectos) · migración `20261014090000_horarios_calendario.sql` (pasa los horarios viejos; un turno que pasaba de medianoche se parte en dos; en local no había ninguno guardado) · `components/editor-horario.tsx` (el mismo editor en onboarding, «Mi perfil» y Administración) · página `/perfil` (se abre tocando tu nombre, abajo a la izquierda) · Administración → Proyecto y reparto: «Horarios del equipo» (Editar de cada uno, y los ajustes propios de cada closer) y «Llamadas de los closers (para todos)».
+- **Tests:** `horarios.test.ts` (9) y `horario-perfil.test.ts` (6). Rotos a propósito el descanso y los días sueltos: fallan 2 cada vez.
+- **Navegador (11 oct):** Carla hizo el onboarding con «Mañana», un 2.º tramo el lunes y el 25 dic libre (guardado tal cual; al lado sale su hora de Madrid, 15:00-19:00); en «Mi perfil» cambió a «Tarde» y se guardó; el CEO ve los horarios de todos y le puso a Ana un máximo de 4 llamadas al día y lo quitó; sin desbordes en móvil (375 px). Todo devuelto como estaba.
+- ⚠ No probado en pantalla: cambiar la contraseña desde «Mi perfil» (sí en tests) y el editor de horario en un móvil de verdad.
+- Detalle: la hora de quien mira se calcula con la fecha de hoy; en las 1-2 semanas al año en que EE. UU. y Europa cambian la hora en días distintos, la de la semana puede salir 1 h distinta (la de los días sueltos sale bien).
 
-#### Bloque 2 · Reparto automático de leads entre callers
+#### Bloque 2 · Reparto automático de leads entre callers ✅ (11 oct)
 - [x] El botón «Repartir leads» manual pasa al bloque A (se necesita ya para el primer reparto). Recordatorio de cómo es: **sin asignar** (filtrando por pipeline, columna, evento u oferta) o **reasignar** los de una o varias personas; entre los callers que marques; **equitativo** (N por turnos), **aleatorio** (N al azar), **fijo por persona** (N a cada uno) y **con tope** (nadie pasa de X leads sin trabajar: nuevos + no contesta + llamar luego); con vista previa «Carla 20 · Diego 20…».
-- [ ] **Reparto automático al entrar** (GHL, landings, CSV) en Administración → Proyecto y reparto: **apagado por defecto**; encendido = **% por caller** (todos empiezan al 0 %) y la opción «solo a quien esté en su horario» (bloque 1). Sustituye a «a mano / rotativo / por horarios» de hoy.
-- [ ] Cada reparto y reasignación queda en el historial del lead.
+- [x] **Reparto automático al entrar** (GHL, landings, CSV) en Administración → Proyecto y reparto: **apagado por defecto**; encendido = **% por caller** (todos empiezan al 0 %) y la opción «solo a quien esté en su horario» (bloque 1). Sustituye a «a mano / rotativo / por horarios» de hoy.
+- [x] Cada reparto y reasignación queda en el historial del lead.
+- **Decisiones de Cristian (11 oct):** los % **suman 100** (la app avisa si no) · con «solo a quien esté en su horario», si no hay nadie en su horario **se reparte igual** entre todos los que tienen % · sustituye a «a mano / rotativo / por horarios» (apagado = a mano).
+- **Cómo reparte (criterio de Claude):** cada lead va a quien tenga menos leads para su % (con 50/30/20, 10 leads salen 5, 3 y 2); al cambiar los %, la cuenta empieza de cero; la base bloquea mientras decide, así dos leads a la vez no se reparten mal. Los perfiles de prueba y los inactivos nunca entran; un caller al 0 % no recibe nada.
+- **Hecho y comprobado (11 oct):** migración `20261014100000_reparto_porcentaje.sql` (`reparto_auto`, `reparto_solo_horario`, `reparto_pct`, `reparto_cuenta` y la función `repartir_por_pct`; quita `modo_reparto`, `rotacion_indice` y `avanzar_rotacion`; los 2 proyectos locales estaban «a mano», así que quedan apagados) · `repartoAutomatico` en `lib/leads.ts` (GHL, landings y CSV con «Repartir») con su línea en el historial · Administración → «Reparto automático de leads (callers)» con su % por caller, «A partes iguales» y la suma a la vista · `limpiar-pruebas` pone la cuenta a cero.
+- **Tests:** `reparto-auto.test.ts` (7) y puestos al día los del reparto viejo (`funciones`, `arreglos-auditoria`, `v2-11`, `perfiles-prueba`). Rotos a propósito: «solo en horario» (fallan 2) y «apagado» (falla 1). Lo del 0 % está a la vez en el código y en la base: quitarlo solo del código no lo rompe.
+- **Navegador (11 oct, CEO, Maestria):** encender con todo al 0 % da el aviso «suman 0»; «A partes iguales» pone 25 % a cada uno y se guarda (Caller Test fuera). Devuelto a apagado y 0 %.
 
 #### Bloque 3 · Rotación de closers
 - [ ] En Administración: **% por closer** (todos al 0 % = apagada) y **cómo se elige el closer al agendar**: «lo elige quien agenda» (por defecto, como hoy), «lo propone la rotación (se puede cambiar)» o «lo decide la rotación».
@@ -212,8 +223,9 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 | Paso 0 pipelines «Callers» y «Closers» como GHL, con permisos por pipeline | `6a887c6` |
 | Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
 | 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
+| 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | (commit de hoy) |
 
-**Comprobado el 11 oct:** 371 tests pasan · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 24 migraciones (11 oct: `perfiles_prueba` y `biblioteca_oferta`) · 42 tablas, todas con RLS · nada subido a la nube.
+**Comprobado el 11 oct (tras los bloques 1 y 2):** 390 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 26 migraciones (11 oct: `horarios_calendario` y `reparto_porcentaje`) · 42 tablas, todas con RLS · nada subido a la nube.
 
 ---
 
@@ -235,7 +247,8 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - **Permisos de secciones:** manda la persona, luego el rol; Administración, Finanzas y Equipo nunca a callers ni closers; una sección de otro rol = solo lo suyo.
 - **Cash:** Ventas, Finanzas, Funnel y Agendas cuentan lo que entró dentro del periodo.
 - **Equipo real** (10 oct): se crea al publicar con `scripts/salida/equipo.csv`; contraseñas «Maestria-…» que Cristian manda por WhatsApp; Juan y Junior, directores con Administración; «Cris y José», una sola cuenta CEO.
-- **Reparto (1.0):** solo entre callers; botón con 4 formas y reasignar; automático al entrar con % por caller, apagado por defecto; todo al 0 % hasta que lo configuren los directores.
+- **Reparto (1.0):** solo entre callers; botón con 4 formas y reasignar; automático al entrar con % por caller (suman 100), apagado por defecto; todo al 0 % hasta que lo configuren los directores; con «solo en horario» y nadie en horario, se reparte igual entre los que tienen %.
+- **Horario (1.0, bloque 1):** en la hora del proyecto, con la del aparato al lado; cada uno el suyo (onboarding obligatorio y «Mi perfil»), el administrador el de cualquiera; los ajustes de llamadas de los closers, solo el administrador.
 - **Rotación de closers (1.0):** % por closer y modo de elección configurables (como GHL); salta al siguiente si no está libre; disponibilidad como los calendarios de GHL (duración por defecto 30 min, descansos, días libres).
 - **Comisiones (1.0):** tramos mensuales sobre toda la facturación del mes; cuotas posteriores con el % del mes de la venta; interruptor por persona para que mande su % propio o los tramos.
 - **Emails (1.0):** Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos de reportes; sin email de bienvenida.

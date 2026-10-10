@@ -14,7 +14,7 @@ import { guardarComisionRol } from "@/app/(panel)/equipo/acciones";
 import { cargarEquipo } from "@/lib/equipo";
 import { cargarBase, calcularVendedores } from "@/lib/metricas";
 import { hoyEnZona, rangoDe } from "@/lib/formato";
-import { guardarLeads, turnosRotativos } from "@/lib/leads";
+import { guardarLeads, repartoAutomatico } from "@/lib/leads";
 import type { LeadEntrada } from "@/lib/csv";
 import type { Proyecto } from "@/lib/tipos";
 
@@ -128,15 +128,16 @@ describe("Arreglo 16: dos envíos del mismo email a la vez", () => {
   });
 });
 
-describe("Arreglo 17: reparto rotativo con leads a la vez", () => {
-  it("9 leads a la vez entre 3 callers: 3 a cada uno", async () => {
-    await db.from("proyectos").update({ rotacion_indice: 0 }).eq("id", e.proyecto.id);
-    const proyecto = { ...e.proyecto, modo_reparto: "rotativo" } as Proyecto;
-    const turnos = (await Promise.all(Array.from({ length: 9 }, () => turnosRotativos(proyecto, 1)))).flat();
+describe("Arreglo 17 (con el reparto con % del bloque 2): leads a la vez", () => {
+  it("9 leads a la vez entre 3 callers al mismo %: 3 a cada uno", async () => {
+    await db.from("miembros_proyecto").update({ reparto_pct: 33.34, reparto_cuenta: 0 }).eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id]);
+    const proyecto = { ...e.proyecto, reparto_auto: true } as Proyecto;
+    const turnos = (await Promise.all(Array.from({ length: 9 }, () => repartoAutomatico(proyecto, 1)))).flat();
     const cuenta = new Map<string, number>();
     turnos.forEach((t) => cuenta.set(t!, (cuenta.get(t!) ?? 0) + 1));
     expect([...cuenta.values()]).toEqual([3, 3, 3]);
-    expect((await db.from("proyectos").select("rotacion_indice").eq("id", e.proyecto.id).single()).data!.rotacion_indice).toBe(9);
+    const { data } = await db.from("miembros_proyecto").select("reparto_cuenta").eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.callerA.id, e.p.callerB.id, e.p.callerC.id]);
+    expect(data!.map((m) => m.reparto_cuenta)).toEqual([3, 3, 3]);
   });
 });
 

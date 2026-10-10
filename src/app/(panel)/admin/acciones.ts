@@ -3,12 +3,12 @@
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
-import { db, escribir } from "@/lib/datos";
+import { db, equipo, escribir } from "@/lib/datos";
 import { cifrar, descifrar } from "@/lib/cifrado";
 import { reglasValidas } from "@/lib/entrada";
 import { SECCIONES_TODAS, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/lib/permisos";
 import type { RolPermiso } from "@/lib/permisos-constantes";
-import { horarioValido } from "@/lib/horarios";
+import { ajustesValidos, type AjustesCalendario } from "@/lib/disponibilidad";
 import type { Rol } from "@/lib/tipos";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
@@ -75,16 +75,28 @@ export async function cambiarPassword(perfilId: string, password: string) {
   });
 }
 
-export async function moverEnReparto(perfilId: string, direccion: -1 | 1) {
+// ---------- Reparto automático con % (bloque 2 de 1.0, Cristian 11 oct 2026) ----------
+// Encendido: los % de los callers tienen que sumar 100. Apagado: todo al 0 % o que sumen 100 (se guardan para luego).
+// Al cambiar los %, la cuenta de cada caller vuelve a cero (el reparto empieza de nuevo con los % nuevos).
+export async function guardarReparto(r: { auto: boolean; soloHorario: boolean; pcts: Record<string, number> }) {
   return seguro(async () => {
     const { proyecto } = await exigir(puedeAdmin);
-    const { data } = await db().from("miembros_proyecto").select("perfil_id, orden, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfiles.rol", "caller").order("orden");
-    const lista = (data ?? []).map((m) => m.perfil_id);
-    const i = lista.indexOf(perfilId);
-    const j = i + direccion;
-    if (i < 0 || j < 0 || j >= lista.length) return;
-    [lista[i], lista[j]] = [lista[j], lista[i]];
-    await Promise.all(lista.map((id, k) => db().from("miembros_proyecto").update({ orden: k }).eq("proyecto_id", proyecto.id).eq("perfil_id", id)));
+    const callers = (await equipo(proyecto.id)).filter((p) => p.rol === "caller");
+    const pcts = new Map<string, number>();
+    for (const c of callers) {
+      const v = Number(r.pcts[c.id] ?? 0);
+      if (!Number.isFinite(v) || v < 0 || v > 100) throw new ErrorUsuario(`El % de ${c.nombre} tiene que ir de 0 a 100.`);
+      pcts.set(c.id, Math.round(v * 100) / 100);
+    }
+    const suma = Math.round([...pcts.values()].reduce((a, b) => a + b, 0) * 100) / 100;
+    if (r.auto && suma !== 100) throw new ErrorUsuario(`Los % suman ${suma}; para encender el reparto tienen que sumar 100.`);
+    if (!r.auto && suma !== 0 && suma !== 100) throw new ErrorUsuario(`Los % suman ${suma}; tienen que sumar 100 (o estar todos a 0).`);
+    const { data: antes } = await db().from("miembros_proyecto").select("perfil_id, reparto_pct").eq("proyecto_id", proyecto.id).in("perfil_id", callers.map((c) => c.id));
+    const cambian = (antes ?? []).some((a) => Number(a.reparto_pct) !== pcts.get(a.perfil_id));
+    for (const [id, v] of pcts) {
+      await escribir(db().from("miembros_proyecto").update({ reparto_pct: v, ...(cambian ? { reparto_cuenta: 0 } : {}) }).eq("proyecto_id", proyecto.id).eq("perfil_id", id), "miembros_proyecto");
+    }
+    await escribir(db().from("proyectos").update({ reparto_auto: r.auto, reparto_solo_horario: r.soloHorario }).eq("id", proyecto.id), "proyectos");
     refrescar();
   });
 }
@@ -94,9 +106,7 @@ export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
   // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
   return seguro(async () => {
     const { proyecto } = await exigir(puedeAdmin);
-    const modo = texto(fd, "modo_reparto");
     const aviso = texto(fd, "aviso_webhook_url");
-    if (!["manual", "rotativo", "horarios"].includes(modo)) return { error: "Modo de reparto no válido." };
     if (aviso) {
       try {
         if (new URL(aviso).protocol !== "https:") return { error: "El webhook de avisos tiene que empezar por https://" };
@@ -104,7 +114,7 @@ export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
         return { error: "El webhook de avisos no es un enlace válido." };
       }
     }
-    await escribir(db().from("proyectos").update({ modo_reparto: modo, aviso_webhook_url: aviso || null }).eq("id", proyecto.id), "proyectos");
+    await escribir(db().from("proyectos").update({ aviso_webhook_url: aviso || null }).eq("id", proyecto.id), "proyectos");
     refrescar();
     return { ok: "Guardado." };
   });
@@ -327,15 +337,30 @@ export async function guardarPermisoPersona(perfilId: string, seccion: string, p
   });
 }
 
-// ---------- Horario de cada caller (reparto por horarios, V2-11) ----------
-export async function guardarHorario(perfilId: string, horario: { dias: number[]; desde: string; hasta: string } | null) {
+// ---------- Ajustes de las llamadas de los closers (bloque 1 de 1.0) ----------
+// perfilId null = los del proyecto (valen para todos); con perfilId = los de ese closer (null = vuelve a los del proyecto).
+// Solo los pone un administrador (Cristian, 11 oct 2026).
+export async function guardarCalendario(perfilId: string | null, ajustes: { duracion: number; descanso: number; aviso: number; max_dia: number | null } | null) {
   return seguro(async () => {
     const { proyecto } = await exigir(puedeAdmin);
-    const h = horario ? horarioValido(horario) : null;
-    if (horario && !h) throw new ErrorUsuario("Elige al menos un día y una hora de inicio y de fin distintas (HH:MM).");
-    const { data, error } = await db().from("miembros_proyecto").update({ horario: h }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).select("perfil_id");
-    if (error) throw new ErrorUsuario(error.message);
-    if (!data?.length) throw new ErrorUsuario("Esa persona no está en este proyecto.");
+    let valor: AjustesCalendario | null = null;
+    if (ajustes) {
+      valor = ajustesValidos(ajustes, { duracion: -1, descanso: -1, aviso: -1, max_dia: -1 });
+      if (valor.duracion < 0) throw new ErrorUsuario("La duración va de 5 a 480 minutos.");
+      if (valor.descanso < 0) throw new ErrorUsuario("El descanso va de 0 a 240 minutos.");
+      if (valor.aviso < 0) throw new ErrorUsuario("El aviso mínimo va de 0 a 30 días.");
+      if (valor.max_dia !== null && valor.max_dia < 0) throw new ErrorUsuario("El máximo de llamadas por día va de 1 a 100 (o vacío, sin máximo).");
+    }
+    if (!perfilId) {
+      if (!valor) throw new ErrorUsuario("Faltan los ajustes.");
+      await escribir(db().from("proyectos").update({ calendario: valor }).eq("id", proyecto.id), "proyectos");
+    } else {
+      const { data: quien } = await db().from("perfiles").select("rol").eq("id", perfilId).maybeSingle();
+      if (quien?.rol !== "closer") throw new ErrorUsuario("Estos ajustes son para closers.");
+      const { data, error } = await db().from("miembros_proyecto").update({ calendario: valor }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).select("perfil_id");
+      if (error) throw new ErrorUsuario(error.message);
+      if (!data?.length) throw new ErrorUsuario("Esa persona no está en este proyecto.");
+    }
     refrescar();
   });
 }

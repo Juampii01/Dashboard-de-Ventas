@@ -767,7 +767,7 @@ export function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: 
         </div>
         <label className="flex items-center gap-2 text-sm text-texto-2">
           <input type="checkbox" name="repartir" className="accent-[var(--primario)]" />
-          Repartir los nuevos entre los callers (solo si el reparto está en «rotativo»)
+          Repartir los nuevos entre los callers con sus % (solo si el reparto automático está encendido en Administración)
         </label>
         {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
         {!error && estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}

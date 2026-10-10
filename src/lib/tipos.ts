@@ -20,7 +20,9 @@ export type Proyecto = {
   nombre: string;
   moneda: "USD" | "EUR";
   zona_horaria: "America/New_York" | "Europe/Madrid";
-  modo_reparto: "manual" | "rotativo" | "horarios";
+  reparto_auto: boolean; // 1.0 bloque 2: reparto automático al entrar, con % por caller
+  reparto_solo_horario: boolean;
+  calendario?: unknown; // 1.0 bloque 1: ajustes de las llamadas de los closers (lib/disponibilidad)
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   color: string;

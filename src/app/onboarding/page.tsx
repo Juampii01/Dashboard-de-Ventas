@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getSesion } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ETIQUETA_ROL } from "@/lib/formato";
+import { horarioValido } from "@/lib/horarios";
+import { EditorHorario } from "@/components/editor-horario";
 
 const QUE_VERAS: Record<string, string[]> = {
   caller: ["Tus leads asignados con las respuestas de su formulario", "Botones para marcar el resultado de cada llamada", "Tus números y el ranking del equipo", "Links de pago, guiones y recursos", "Tu reporte de fin de día"],
@@ -12,13 +14,27 @@ const QUE_VERAS: Record<string, string[]> = {
   ceo: ["Todo el panel de todos los proyectos", "Crear proyectos y productos", "Administración completa"],
 };
 
+// Callers y closers ponen su horario al entrar (obligatorio; bloque 1 de 1.0, Cristian 11 oct 2026)
+const conHorario = (rol: string) => rol === "caller" || rol === "closer";
+
 async function completar(formData: FormData) {
   "use server";
-  const { perfil } = await getSesion();
+  const { perfil, proyecto } = await getSesion();
   const nombre = String(formData.get("nombre") ?? "").trim();
   const telefono = String(formData.get("telefono") ?? "").trim();
   const whatsapp = String(formData.get("whatsapp") ?? "").trim();
-  if (!nombre) throw new Error("El nombre es obligatorio.");
+  if (!nombre) redirect("/onboarding?error=nombre");
+  if (conHorario(perfil.rol)) {
+    let h = null;
+    try {
+      h = horarioValido(JSON.parse(String(formData.get("horario") ?? "")));
+    } catch {
+      h = null;
+    }
+    if (!h) redirect("/onboarding?error=horario");
+    const { error } = await createAdminClient().from("miembros_proyecto").update({ horario: h }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfil.id);
+    if (error) throw new Error(`No se pudo guardar el horario: ${error.message}`);
+  }
   await createAdminClient()
     .from("perfiles")
     .update({ nombre, telefono: telefono || null, whatsapp: whatsapp || null, onboarding_completo: true })
@@ -27,12 +43,19 @@ async function completar(formData: FormData) {
   redirect("/"); // H5: «/» elige la primera sección permitida
 }
 
-export default async function OnboardingPage() {
+const ERRORES: Record<string, string> = {
+  nombre: "El nombre es obligatorio.",
+  horario: "Pon tu horario: al menos un tramo en algún día, con la hora de inicio antes que la de fin.",
+};
+
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { perfil, proyecto } = await getSesion();
   if (perfil.onboarding_completo) redirect("/");
+  const { error } = await searchParams;
+  const { data: miembro } = conHorario(perfil.rol) ? await createAdminClient().from("miembros_proyecto").select("horario").eq("proyecto_id", proyecto.id).eq("perfil_id", perfil.id).maybeSingle() : { data: null };
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="grid w-full max-w-3xl gap-6 md:grid-cols-2">
+      <form action={completar} className="grid w-full max-w-3xl gap-6 md:grid-cols-2">
         <div className="tarjeta p-6">
           <Image src="/marca/eternity.png" alt="Eternity" width={48} height={48} className="mb-4 rounded-xl" />
           <h1 className="text-2xl font-semibold">Bienvenido a Eternity</h1>
@@ -45,7 +68,7 @@ export default async function OnboardingPage() {
             ))}
           </ul>
         </div>
-        <form action={completar} className="tarjeta space-y-4 p-6">
+        <div className="tarjeta space-y-4 p-6">
           <h2 className="text-lg font-semibold">Conecta tus datos</h2>
           <p className="text-sm text-texto-2">Los usamos para avisarte por email y WhatsApp (por ejemplo, de los reportes).</p>
           <div>
@@ -64,9 +87,25 @@ export default async function OnboardingPage() {
             <label className="etiqueta-campo" htmlFor="onboarding-whatsapp">WhatsApp</label>
             <input id="onboarding-whatsapp" name="whatsapp" defaultValue={perfil.whatsapp ?? ""} placeholder="+34 600 000 000" className="campo" />
           </div>
-          <button className="btn-primario w-full">Empezar</button>
-        </form>
-      </div>
+          {!conHorario(perfil.rol) && <button className="btn-primario w-full">Empezar</button>}
+          {error && ERRORES[error] && !conHorario(perfil.rol) && <p className="text-sm text-mal">{ERRORES[error]}</p>}
+        </div>
+        {conHorario(perfil.rol) && (
+          <div className="tarjeta space-y-4 p-6 md:col-span-2">
+            <div>
+              <h2 className="text-lg font-semibold">{perfil.rol === "closer" ? "Tu horario para recibir llamadas" : "Tu horario de trabajo"}</h2>
+              <p className="text-sm text-texto-2">
+                {perfil.rol === "closer"
+                  ? "Las horas en que se te pueden agendar llamadas, tus descansos y tus días libres. Puedes cambiarlo cuando quieras en «Mi perfil»."
+                  : "Cuándo vas a trabajar: por la mañana, por la tarde, todo el día o las horas que quieras. Puedes cambiarlo cuando quieras en «Mi perfil»."}
+              </p>
+            </div>
+            <EditorHorario inicial={horarioValido(miembro?.horario)} zona={proyecto.zona_horaria} campo="horario" plantillas />
+            {error && ERRORES[error] && <p className="text-sm text-mal">{ERRORES[error]}</p>}
+            <button className="btn-primario w-full">Empezar</button>
+          </div>
+        )}
+      </form>
     </main>
   );
 }
