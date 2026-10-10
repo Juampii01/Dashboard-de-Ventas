@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db } from "@/lib/datos";
 import { getSesion, esJefe } from "@/lib/auth";
@@ -9,6 +10,7 @@ import { configPara, pedirJson, peticion, type LlamarClaude } from "@/lib/ia";
 // y Claude responde al momento cómo manejarlo. Sin audio. A Claude no se le mandan email ni teléfono.
 export async function coachIa(leadId: string | null, loQueDice: string, llamar?: LlamarClaude) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     const texto = loQueDice.trim();
     if (texto.length < 3) throw new ErrorUsuario("Escribe lo que ha dicho el lead.");

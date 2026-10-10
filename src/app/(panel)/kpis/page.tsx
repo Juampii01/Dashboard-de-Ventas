@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CalendarRange, Target } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { exigirPagina, soloLoSuyo } from "@/lib/permisos";
 import { cargarBase } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
@@ -15,10 +14,11 @@ import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamie
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
-  const { perfil, proyecto } = await getSesion();
-  if (!esJefe(perfil)) redirect("/");
+  const { perfil, proyecto } = await exigirPagina("kpis"); // H5 (a un caller o closer, solo lo suyo: parte 2)
   const sp = await searchParams;
-  const vista = sp.vista === "objetivos" ? "objetivos" : "personas";
+  // H5: a un caller o closer con «KPIs», solo su fila y sin la pestaña Objetivos (no puede poner objetivos)
+  const propio = soloLoSuyo(perfil, "kpis");
+  const vista = sp.vista === "objetivos" && !propio ? "objetivos" : "personas";
   const base = await cargarBase(proyecto);
   const $ = (n: number) => dinero(n, proyecto);
 
@@ -38,15 +38,16 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   if (vista === "personas") {
     const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
     const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
-    const kpis = calcularKpis(base, rango, proyecto.zona_horaria);
+    const todos = calcularKpis(base, rango, proyecto.zona_horaria);
+    const kpis = propio ? { ...todos, callers: todos.callers.filter((c) => c.perfil.id === perfil.id), closers: todos.closers.filter((c) => c.perfil.id === perfil.id) } : todos;
     return (
       <>
         <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · ${rango.etiqueta}`} />
         <Contenido>
-          {pestanas}
+          {!propio && pestanas}
           <Filtros />
           <Seccion titulo="Por persona">
-            <TablasKpis kpis={kpis} dinero={$} />
+            <TablasKpis kpis={kpis} dinero={$} sinTotales={propio} />
           </Seccion>
           <Seccion titulo="¿Cómo se calcula cada número?">
             <ExplicacionKpis />

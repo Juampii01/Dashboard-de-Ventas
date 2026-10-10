@@ -11,8 +11,8 @@ import { PLANTILLAS_GHL, CABECERA_SECRETO } from "@/lib/plantillas-ghl";
 import { NuevaEntrada, EditorEntrada } from "./entradas";
 import { ConexionGhl, CalendarioCloser, UsuarioGhl } from "./ghl";
 import { reglasValidas } from "@/lib/entrada";
-import { SECCIONES } from "@/lib/permisos";
-import { TablaPermisos } from "./permisos";
+import { SECCIONES_TODAS, DEFECTO, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/lib/permisos";
+import { TablaPermisos, FichaPermisos, type DatosPermisos } from "./permisos";
 import { EditorHorario } from "./horarios";
 import { horarioValido } from "@/lib/horarios";
 
@@ -22,7 +22,7 @@ const PESTANAS = [
   { v: "productos", t: "Productos" },
   { v: "entradas", t: "Entradas (landings)" },
   { v: "integraciones", t: "Integraciones GHL" },
-  { v: "permisos", t: "Permisos", soloCeo: true },
+  { v: "permisos", t: "Permisos" }, // H5: también el director con Administración
 ];
 
 type EventoEntrada = { id: string; entrada_id: string; lead_id: string | null; procesado: boolean; error: string | null; recibido_en: string; payload: Record<string, unknown> };
@@ -44,11 +44,24 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (!puedeAdmin(perfil)) redirect("/");
   const sp = await searchParams;
   const tab = typeof sp.tab === "string" ? sp.tab : "equipo";
-  // Permisos por sección: solo el CEO (V2-8)
-  let permitidos: string[] = [];
-  if (tab === "permisos" && perfil.rol === "ceo") {
-    const { data } = await db().from("permisos_seccion").select("rol, seccion").eq("proyecto_id", proyecto.id).eq("permitido", true);
-    permitidos = (data ?? []).map((x) => `${x.rol}:${x.seccion}`);
+  // Permisos por rol y por persona (V2-8 y Paso H5): CEO y director con Administración
+  let permisos: DatosPermisos | null = null;
+  if (tab === "permisos" || tab === "equipo") {
+    const [{ data: deRol }, { data: dePersona }, mias] = await Promise.all([
+      db().from("permisos_seccion").select("rol, seccion, permitido").eq("proyecto_id", proyecto.id),
+      db().from("permisos_persona").select("perfil_id, seccion, permitido").eq("proyecto_id", proyecto.id),
+      seccionesPermitidas(perfil, proyecto.id),
+    ]);
+    const lista = (m: Record<string, Set<string>>) => Object.fromEntries(ROLES_PERMISO.map((r) => [r, [...m[r]]])) as DatosPermisos["defecto"];
+    permisos = {
+      secciones: SECCIONES_TODAS.map((x) => ({ v: x.v, t: x.t, d: x.d, grupo: x.grupo })),
+      defecto: lista(DEFECTO),
+      nunca: lista(NUNCA),
+      deRol: Object.fromEntries((deRol ?? []).map((x) => [`${x.rol}:${x.seccion}`, x.permitido])),
+      dePersona: Object.fromEntries((dePersona ?? []).map((x) => [`${x.perfil_id}:${x.seccion}`, x.permitido])),
+      puedoDar: [...mias],
+      soyCeo: perfil.rol === "ceo",
+    };
   }
 
   const [{ data: miembros }, { data: productos }, { data: eventos }] = await Promise.all([
@@ -108,7 +121,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       <Cabecera titulo="Administración" subtitulo={`${proyecto.nombre} · ${perfil.rol === "ceo" ? "acceso total" : "acceso de director"}`} />
       <Contenido>
         <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
-          {PESTANAS.filter((p) => !("soloCeo" in p) || perfil.rol === "ceo").map((p) => (
+          {PESTANAS.map((p) => (
             <Link key={p.v} href={`/admin?tab=${p.v}`} className={`rounded-lg px-3 py-1.5 text-sm ${tab === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>{p.t}</Link>
           ))}
         </div>
@@ -126,7 +139,13 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                         <td><Insignia tono={g.rol === "ceo" ? "oro" : g.rol === "director" ? "morado" : "primario"}>{ETIQUETA_ROL[g.rol]}</Insignia>{g.rol === "director" && g.admin_activo && <Insignia tono="ok">Admin</Insignia>}</td>
                         <td className="text-xs text-texto-2">{g.whatsapp ?? g.telefono ?? "—"}{!g.onboarding_completo && <div className="text-aviso">Onboarding pendiente</div>}</td>
                         <td>{g.activo ? <Insignia tono="ok">Activo</Insignia> : <Insignia tono="mal">Desactivado</Insignia>}</td>
-                        <td><FilaMiembro persona={{ id: g.id, rol: g.rol, activo: g.activo, admin_activo: g.admin_activo }} soyCeo={perfil.rol === "ceo"} soyYo={g.id === perfil.id} /></td>
+                        <td>
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            {/* H5: permisos de cada persona (el CEO lo tiene todo; tus propios permisos te los cambia el CEO) */}
+                            {permisos && g.rol !== "ceo" && g.id !== perfil.id && <FichaPermisos persona={{ id: g.id, nombre: g.nombre, rol: g.rol }} datos={permisos} />}
+                            <FilaMiembro persona={{ id: g.id, rol: g.rol, activo: g.activo, admin_activo: g.admin_activo }} soyCeo={perfil.rol === "ceo"} soyYo={g.id === perfil.id} />
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -174,11 +193,11 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           </div>
         )}
 
-        {tab === "permisos" && perfil.rol === "ceo" && (
-          <Seccion titulo="Quién ve las secciones de «Empresa»">
-            <p className="mb-4 text-sm text-texto-2">Por defecto solo las ves tú. Abre una sección a un rol y la ven <b>todas</b> las personas de ese rol en este proyecto (todos los directores iguales). Lo demás (Agendas, CRM, Ventas…) sigue igual que siempre, según el rol.</p>
-            <TablaPermisos secciones={SECCIONES.map((x) => ({ v: x.v, t: x.t, d: x.d }))} permitidos={permitidos} />
-            <p className="mt-3 text-xs text-texto-3">Ojo: quien tenga Finanzas ve todo el dinero del negocio, y quien tenga Equipo puede dar de alta personas y cambiar comisiones.</p>
+        {tab === "permisos" && permisos && (
+          <Seccion titulo="Quién ve cada sección">
+            <p className="mb-4 text-sm text-texto-2">Abre o cierra una sección a un rol y vale para <b>todas</b> las personas de ese rol en este proyecto. Para una sola persona, usa «Permisos» en su fila de la pestaña Equipo (manda sobre lo de su rol). A un caller o closer, una sección de otro rol se le enseña solo con sus datos.{perfil.rol !== "ceo" && " Los permisos de los directores y los tuyos los cambia el CEO, y solo puedes dar lo que tú tienes."}</p>
+            <TablaPermisos datos={permisos} />
+            <p className="mt-3 text-xs text-texto-3">Ojo: quien tenga Finanzas ve todo el dinero del negocio, y quien tenga Equipo puede dar de alta personas y cambiar comisiones. Equipo y Finanzas nunca se dan a callers ni closers.</p>
           </Seccion>
         )}
 

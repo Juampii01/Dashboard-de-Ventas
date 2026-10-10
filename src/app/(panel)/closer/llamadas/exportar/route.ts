@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSesion, esJefe } from "@/lib/auth";
+import { puedeSeccion } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { closersVisibles } from "@/lib/agendas-datos";
 import { coincide } from "@/lib/llamadas";
@@ -9,6 +10,8 @@ import { csvExcel, nombreArchivo } from "@/lib/csv-excel";
 // Exportar las llamadas (las que puede ver esta persona) a CSV. Se abre con Excel.
 export async function GET(request: NextRequest) {
   const { perfil, proyecto } = await getSesion();
+  // H5: sin la sección «Agendas» (por su rol o su ficha), nada
+  if (!(await puedeSeccion(perfil, proyecto.id, "agendas"))) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   if (!esJefe(perfil) && perfil.rol !== "closer") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   const sp = request.nextUrl.searchParams;
   const gente = await equipo(proyecto.id);

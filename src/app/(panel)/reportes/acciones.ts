@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { hoyEnZona } from "@/lib/formato";
 export async function enviarReporte(_prev: unknown, formData: FormData) {
   // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
   return seguro(async () => {
+    await exigirSeccion("reportes"); // H5
     const { perfil, proyecto } = await getSesion();
     const rol = rolDeReporte(perfil.rol);
     if (!rol) return { error: "Los reportes de fin de día son para callers y closers." };

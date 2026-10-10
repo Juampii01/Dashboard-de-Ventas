@@ -1,32 +1,72 @@
 import "server-only";
+import { cache } from "react";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/datos";
 import { ErrorUsuario } from "@/lib/resultado";
 import { getSesion } from "@/lib/sesion";
+import { SECCIONES_TODAS, SECCIONES, DEFECTO, NUNCA, ROLES_PERMISO, type Seccion } from "@/lib/permisos-constantes";
 import type { Perfil } from "@/lib/tipos";
 
-// Secciones del CEO (v2). Por defecto solo las ve el CEO; en Administración → Permisos
-// se pueden abrir a un rol entero (todos los directores iguales, decisión de Cristian).
-export const SECCIONES = [
-  { v: "equipo", t: "Equipo", d: "Organigrama, altas y comisiones" },
-  { v: "programas", t: "Programas", d: "Productos, precios y comisiones por producto" },
-  { v: "finanzas", t: "Finanzas", d: "Facturación, cobros, gastos, liquidaciones" },
-  { v: "clientes", t: "Clientes", d: "Quién ha comprado y su seguimiento" },
-] as const;
-export type Seccion = (typeof SECCIONES)[number]["v"];
+// Permisos de todas las secciones (Paso H5, decisiones de Cristian del 10 oct 2026):
+// - cada rol trae sus secciones de siempre (DEFECTO); el CEO lo tiene todo siempre
+// - en Administración → Permisos se abren o cierran por rol, y en la ficha de cada persona, solo para ella
+// - manda la persona; sin fila de la persona, vale la del rol; sin fila del rol, lo de siempre
+// - Equipo y Finanzas nunca a callers ni closers (Administración va aparte: CEO y director con Administración)
+export { SECCIONES_TODAS, SECCIONES, DEFECTO, NUNCA, ROLES_PERMISO, type Seccion };
 
-export async function seccionesPermitidas(perfil: Perfil, proyectoId: string): Promise<Set<Seccion>> {
-  if (perfil.rol === "ceo") return new Set(SECCIONES.map((s) => s.v));
-  const { data } = await db().from("permisos_seccion").select("seccion").eq("proyecto_id", proyectoId).eq("rol", perfil.rol).eq("permitido", true);
-  return new Set((data ?? []).map((x) => x.seccion as Seccion).filter((s) => SECCIONES.some((x) => x.v === s)));
+type Fila = { seccion: string; permitido: boolean };
+
+export function calcularPermisos(rol: Perfil["rol"], deRol: Fila[], dePersona: Fila[]): Set<Seccion> {
+  if (rol === "ceo") return new Set(SECCIONES_TODAS.map((s) => s.v));
+  const r = new Map(deRol.map((f) => [f.seccion, f.permitido]));
+  const p = new Map(dePersona.map((f) => [f.seccion, f.permitido]));
+  return new Set(SECCIONES_TODAS.map((s) => s.v).filter((s) => !NUNCA[rol].has(s) && (p.get(s) ?? r.get(s) ?? DEFECTO[rol].has(s))));
 }
+
+// Una vez por petición (el menú y la página la piden a la vez)
+export const seccionesPermitidas = cache(async (perfil: Perfil, proyectoId: string): Promise<Set<Seccion>> => {
+  if (perfil.rol === "ceo") return calcularPermisos("ceo", [], []);
+  const [{ data: deRol }, { data: dePersona }] = await Promise.all([
+    db().from("permisos_seccion").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("rol", perfil.rol),
+    db().from("permisos_persona").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("perfil_id", perfil.id),
+  ]);
+  return calcularPermisos(perfil.rol, deRol ?? [], dePersona ?? []);
+});
 
 export async function puedeSeccion(perfil: Perfil, proyectoId: string, seccion: Seccion) {
   return (await seccionesPermitidas(perfil, proyectoId)).has(seccion);
 }
 
-// Para acciones y páginas: corta si no tiene la sección
-export async function exigirSeccion(seccion: Seccion) {
+// Para acciones y páginas: corta si no tiene la sección (o ninguna de las que se pasan)
+export async function exigirSeccion(...secciones: Seccion[]) {
   const sesion = await getSesion();
-  if (!(await puedeSeccion(sesion.perfil, sesion.proyecto.id, seccion))) throw new ErrorUsuario("No tienes acceso a esta sección.");
+  const tiene = await seccionesPermitidas(sesion.perfil, sesion.proyecto.id);
+  if (!secciones.some((s) => tiene.has(s))) throw new ErrorUsuario("No tienes acceso a esta sección.");
   return sesion;
+}
+
+// «Lo suyo» (caso confirmado por Cristian): una sección que no es de su rol se le enseña solo con sus datos
+export function soloLoSuyo(perfil: Perfil, seccion: Seccion) {
+  return (perfil.rol === "caller" || perfil.rol === "closer") && !DEFECTO[perfil.rol].has(seccion);
+}
+
+// Página de inicio: la de su rol si la tiene; si no, la primera sección que tenga permitida
+const RUTA: Record<Seccion, string> = {
+  funnel: "/funnel", mi_funnel: "/mi-funnel", kpis: "/kpis", crm: "/crm", cola: "/caller", agendas: "/closer", grabadas: "/caller/grabadas",
+  ventas: "/ventas", ranking: "/ranking", recursos: "/recursos", reportes: "/reportes", equipo: "/equipo", programas: "/programas", finanzas: "/finanzas", clientes: "/clientes",
+};
+const INICIO: Record<Perfil["rol"], Seccion> = { ceo: "funnel", director: "funnel", closer: "agendas", caller: "cola" };
+export async function rutaInicio(perfil: Perfil, proyectoId: string) {
+  const tiene = await seccionesPermitidas(perfil, proyectoId);
+  if (tiene.has(INICIO[perfil.rol])) return RUTA[INICIO[perfil.rol]];
+  const primera = SECCIONES_TODAS.find((s) => tiene.has(s.v));
+  return primera ? RUTA[primera.v] : "/sin-acceso";
+}
+
+// Para páginas: sin ninguna de esas secciones, a su inicio (que nunca es una página sin permiso)
+export async function exigirPagina(...secciones: Seccion[]) {
+  const sesion = await getSesion();
+  const tiene = await seccionesPermitidas(sesion.perfil, sesion.proyecto.id);
+  if (!secciones.some((s) => tiene.has(s))) redirect("/");
+  return { ...sesion, tiene };
 }

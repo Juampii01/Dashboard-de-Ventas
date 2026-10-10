@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { DollarSign, Wallet, Hourglass, ShoppingCart, Receipt } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { dinero, fechaHora, rangoDe, type Periodo, ETIQUETA_ROL } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio } from "@/components/ui";
@@ -28,8 +28,7 @@ type VentaFila = {
 const TIPO: Record<string, string> = { completo: "Completo", reserva: "Reserva", cuotas: "Cuotas" };
 
 export default async function VentasPage({ searchParams }: PageProps<"/ventas">) {
-  const { perfil, proyecto } = await getSesion();
-  if (perfil.rol === "caller") redirect("/caller");
+  const { perfil, proyecto } = await exigirPagina("ventas"); // H5 (a un caller, solo las suyas)
   const jefe = esJefe(perfil);
   const sp = await searchParams;
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;

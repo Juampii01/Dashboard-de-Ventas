@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Users, LayoutGrid, List } from "lucide-react";
 import { getSesion } from "@/lib/auth";
 import { db, todas } from "@/lib/datos";
-import { puedeSeccion } from "@/lib/permisos";
+import { puedeSeccion, soloLoSuyo } from "@/lib/permisos";
 import { cargarEquipo } from "@/lib/equipo";
 import { dinero } from "@/lib/formato";
 import { coincide } from "@/lib/llamadas";
@@ -17,6 +17,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
   if (!(await puedeSeccion(perfil, proyecto.id, "programas"))) redirect("/");
   // Comisiones que puede cambiar quien mira: mismas reglas que el servidor (lib/auth.ts, arreglo 2)
   const jefe = perfil.rol === "ceo" || perfil.rol === "director";
+  const mirar = soloLoSuyo(perfil, "programas"); // H5: a un caller o closer, solo mirar
   const editables = jefe ? ["closer", "caller", "director", "ceo", "caller_agenda"].filter((k) => perfil.rol === "ceo" || k !== perfil.rol) : [];
   const sp = await searchParams;
   const estado = typeof sp.estado === "string" ? sp.estado : "";
@@ -45,7 +46,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
 
   return (
     <>
-      <Cabecera titulo="Programas" subtitulo={`${proyecto.nombre} · lo que vendéis, su precio y su comisión`} acciones={<EditorPrograma programa={null} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} />} />
+      <Cabecera titulo="Programas" subtitulo={`${proyecto.nombre} · lo que vendéis, su precio y su comisión`} acciones={mirar ? undefined : <EditorPrograma programa={null} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} />} />
       <Contenido>
         <div className="tarjeta grid grid-cols-1 divide-y divide-borde sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <div className="p-5"><div className="text-4xl font-semibold tabular-nums">{todos.length}</div><div className="titulo-seccion mt-1">Programas</div></div>
@@ -77,8 +78,8 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                       <td>{pago(p)}</td>
                       <td className="text-right tabular-nums">{p.precio !== null ? dinero(Number(p.precio), proyecto) : "Personalizado"}</td>
                       <td className="text-right tabular-nums">{clientes(p.id)}</td>
-                      <td><InterruptorActivo id={p.id} activo={p.activo} /></td>
-                      <td className="w-44"><EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} /></td>
+                      <td>{mirar ? (p.activo ? "Sí" : "No") : <InterruptorActivo id={p.id} activo={p.activo} />}</td>
+                      <td className="w-44">{!mirar && <EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} />}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -94,7 +95,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                   <article key={p.id} className={`tarjeta space-y-4 p-5 ${p.activo ? "" : "opacity-60"}`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 font-semibold"><span className="h-2.5 w-2.5 rounded-full" style={{ background: p.color }} />{p.nombre}</div>
-                      <InterruptorActivo id={p.id} activo={p.activo} />
+                      {!mirar && <InterruptorActivo id={p.id} activo={p.activo} />}
                     </div>
                     <div className="text-4xl font-semibold tabular-nums">{p.precio !== null ? dinero(Number(p.precio), proyecto) : <span className="text-2xl text-texto-2">Precio personalizado</span>}</div>
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -103,7 +104,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                       {p.vende_caller && <Insignia tono="primario">Lo vende el caller</Insignia>}
                       <span className="inline-flex items-center gap-1 text-texto-3"><Users className="h-4 w-4" />{clientes(p.id)} {clientes(p.id) === 1 ? "cliente" : "clientes"}</span>
                     </div>
-                    <div className="border-t border-borde pt-4"><EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} /></div>
+                    {!mirar && <div className="border-t border-borde pt-4"><EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} /></div>}
                   </article>
                 ))}
               </div>

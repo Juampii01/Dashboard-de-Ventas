@@ -23,10 +23,11 @@ export type Proyecto = {
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   color: string;
+  precall_columnas?: unknown; // H7: nombre, color y orden de las columnas de Pre-call
 };
 
 export type Pipeline = { id: string; proyecto_id: string; nombre: string; orden: number };
-export type Etapa = { id: string; pipeline_id: string; nombre: string; orden: number; color: string };
+export type Etapa = { id: string; pipeline_id: string; nombre: string; orden: number; color: string; estado_caller?: EstadoCaller | null }; // H7: columna unida a un estado
 
 export type Respuesta = { pregunta: string; respuesta: string };
 

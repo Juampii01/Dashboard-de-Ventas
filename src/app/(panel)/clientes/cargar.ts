@@ -54,3 +54,12 @@ export async function cargarClientes(proyecto: Proyecto) {
 }
 export type DatosClientes = Awaited<ReturnType<typeof cargarClientes>>;
 export type ClienteVista = DatosClientes["filas"][number];
+
+// H5 (caso 5 confirmado por Cristian): a un caller o closer con «Clientes», solo los que vendió o agendó él
+export async function clientesSuyos(proyectoId: string, perfilId: string) {
+  const [vendidos, agendados] = await Promise.all([
+    todas<{ lead_id: string }>((a, b) => db().from("ventas").select("lead_id").eq("proyecto_id", proyectoId).eq("vendedor_id", perfilId).order("id").range(a, b)),
+    todas<{ lead_id: string }>((a, b) => db().from("citas").select("lead_id").eq("proyecto_id", proyectoId).eq("agendada_por", perfilId).order("id").range(a, b)),
+  ]);
+  return new Set([...vendidos, ...agendados].map((x) => x.lead_id));
+}

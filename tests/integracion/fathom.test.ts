@@ -52,8 +52,8 @@ describe("Fathom", () => {
     expect(data!.map((c) => c.perfil_id)).toEqual([e.p.closerA.id]); // aunque pidiera la de B, se guarda como suya
     expect(data![0].api_key).toMatch(/^v1:/); // arreglo 3: cifrada en la base
     expect(data![0].api_key).not.toContain(KEY);
-    como(e, e.p.callerA);
-    await falla(guardarCuentaFathom(null, { nombre: "X", apiKey: KEY, formato: "", perfilId: e.p.closerA.id }), /No tienes permiso/);
+    como(e, e.p.callerA); // H5: el caller no tiene «Agendas»
+    await falla(guardarCuentaFathom(null, { nombre: "X", apiKey: KEY, formato: "", perfilId: e.p.closerA.id }), /No tienes (permiso|acceso)/);
   });
 
   it("trae todas las páginas con la cabecera y los parámetros oficiales y concilia por email, por título o deja pendiente", async () => {

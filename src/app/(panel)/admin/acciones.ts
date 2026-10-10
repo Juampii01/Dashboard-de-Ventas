@@ -6,7 +6,8 @@ import { exigir, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { db, escribir } from "@/lib/datos";
 import { cifrar, descifrar } from "@/lib/cifrado";
 import { reglasValidas } from "@/lib/entrada";
-import { SECCIONES } from "@/lib/permisos";
+import { SECCIONES_TODAS, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/lib/permisos";
+import type { RolPermiso } from "@/lib/permisos-constantes";
 import { horarioValido } from "@/lib/horarios";
 import type { Rol } from "@/lib/tipos";
 
@@ -279,16 +280,49 @@ export async function probarConexionGhl() {
   });
 }
 
-// ---------- Permisos por sección (V2-8) ----------
-// Solo el CEO abre o cierra una sección a un rol entero (todos los directores iguales, decisión de Cristian)
-export async function guardarPermisoSeccion(rol: "director" | "closer" | "caller", seccion: string, permitido: boolean) {
+// ---------- Permisos por sección (V2-8 y Paso H5) ----------
+// Paso H5 (decisiones de Cristian, 10 oct 2026): todas las secciones, por rol y por persona (manda la persona).
+// Los cambian el CEO y el director con Administración; el director nunca se da más a sí mismo
+// (ni su rol ni su ficha) ni da lo que él no tiene. Equipo y Finanzas, nunca a callers ni closers.
+async function quienCambiaPermisos() {
+  const sesion = await exigir(puedeAdmin);
+  const mias = await seccionesPermitidas(sesion.perfil, sesion.proyecto.id);
+  const comprobar = (rol: RolPermiso, seccion: string, permitido: boolean | null) => {
+    const s = SECCIONES_TODAS.find((x) => x.v === seccion);
+    if (!s) throw new ErrorUsuario("Sección no válida.");
+    if (permitido && NUNCA[rol].has(s.v)) throw new ErrorUsuario(`«${s.t}» no se puede dar a ${rol === "director" ? "directores" : `${rol}s`}.`);
+    if (permitido && sesion.perfil.rol !== "ceo" && !mias.has(s.v)) throw new ErrorUsuario(`No puedes dar «${s.t}»: tú no la tienes.`);
+    return s.v;
+  };
+  return { ...sesion, comprobar };
+}
+
+export async function guardarPermisoSeccion(rol: RolPermiso, seccion: string, permitido: boolean) {
   return seguro(async () => {
-    const { perfil, proyecto } = await exigir(puedeAdmin);
-    if (perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO cambia los permisos.");
-    if (!["director", "closer", "caller"].includes(rol)) throw new ErrorUsuario("Rol no válido.");
-    if (!SECCIONES.some((s) => s.v === seccion)) throw new ErrorUsuario("Sección no válida.");
-    const { error } = await db().from("permisos_seccion").upsert({ proyecto_id: proyecto.id, rol, seccion, permitido: !!permitido });
+    const { perfil, proyecto, comprobar } = await quienCambiaPermisos();
+    if (!ROLES_PERMISO.includes(rol)) throw new ErrorUsuario("Rol no válido.");
+    if (perfil.rol !== "ceo" && rol === "director") throw new ErrorUsuario("Los permisos de los directores solo los cambia el CEO.");
+    const s = comprobar(rol, seccion, permitido);
+    const { error } = await db().from("permisos_seccion").upsert({ proyecto_id: proyecto.id, rol, seccion: s, permitido: !!permitido });
     if (error) throw new ErrorUsuario(error.message);
+    refrescar();
+  });
+}
+
+// En la ficha de una persona: true / false, o null = «como su rol» (se borra su fila)
+export async function guardarPermisoPersona(perfilId: string, seccion: string, permitido: boolean | null) {
+  return seguro(async () => {
+    const { perfil, proyecto, comprobar } = await quienCambiaPermisos();
+    if (perfilId === perfil.id) throw new ErrorUsuario("Tus propios permisos te los cambia el CEO.");
+    const { data: m } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).maybeSingle();
+    const rol = (m as unknown as { perfiles: { rol: string } } | null)?.perfiles.rol;
+    if (!m || !ROLES_PERMISO.includes(rol as RolPermiso)) throw new ErrorUsuario("Esa persona no es caller, closer ni director de este proyecto (el CEO lo tiene todo siempre).");
+    const s = comprobar(rol as RolPermiso, seccion, permitido);
+    const r =
+      permitido === null
+        ? await db().from("permisos_persona").delete().eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).eq("seccion", s)
+        : await db().from("permisos_persona").upsert({ proyecto_id: proyecto.id, perfil_id: perfilId, seccion: s, permitido });
+    if (r.error) throw new ErrorUsuario(r.error.message);
     refrescar();
   });
 }

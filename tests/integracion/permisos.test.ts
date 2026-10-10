@@ -23,9 +23,9 @@ afterAll(async () => {
 });
 
 describe("Caller", () => {
-  it("no puede mover leads en el CRM ni asignarlos", async () => {
+  it("no puede mover leads de otro en el CRM ni asignarlos (H7: los suyos sí los mueve)", async () => {
     como(e, e.p.callerA);
-    await falla(moverLead(e.leads.LeadA, e.etapas.Cerrados), /permiso/);
+    await falla(moverLead(e.leads.LeadB, e.etapas.Cerrados), /no está asignado a ti/);
     await falla(asignarLeads([e.leads.LeadLibre], e.p.callerA.id), /permiso/);
     await falla(cambiarEtapaLead(e.leads.LeadA, e.etapas.Cerrados));
     await falla(asignarDesdeFicha(e.leads.LeadA, "caller_id", e.p.callerA.id));
@@ -90,9 +90,16 @@ describe("Closer", () => {
     await falla(registrarCobro(ventaDeB, "100", "stripe"), /no es tuya/);
     await falla(borrarVenta(ventaDeB));
   });
-  it("tampoco puede borrar su propia venta (solo director o CEO)", async () => {
+  it("Paso H6 (Cristian, 10 oct 2026): el closer sí puede borrar su propia venta; el caller no, ni su low ticket", async () => {
+    const nueva = async (vendedor: string) =>
+      (await db.from("ventas").insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadB, vendedor_id: vendedor, facturacion: 47, cash_collected: 47, tipo_pago: "completo" }).select("id").single()).data!.id;
+    const deCaller = await nueva(e.p.callerB.id);
+    como(e, e.p.callerB);
+    await falla(borrarVenta(deCaller), /director, el CEO o el closer|No tienes acceso/); // H5: el caller ni siquiera tiene «Ventas»
+    const propia = await nueva(e.p.closerB.id);
     como(e, e.p.closerB);
-    await falla(borrarVenta(ventaDeB), /director o el CEO/);
+    await ok(borrarVenta(propia));
+    expect((await db.from("ventas").select("id").eq("id", propia)).data).toHaveLength(0);
   });
   it("no puede agendar sobre un lead que no es suyo", async () => {
     como(e, e.p.closerA);

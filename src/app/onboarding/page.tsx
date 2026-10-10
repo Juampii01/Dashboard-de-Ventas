@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getSesion, RUTA_INICIO } from "@/lib/auth";
+import { getSesion } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ETIQUETA_ROL } from "@/lib/formato";
 
@@ -24,12 +24,12 @@ async function completar(formData: FormData) {
     .update({ nombre, telefono: telefono || null, whatsapp: whatsapp || null, onboarding_completo: true })
     .eq("id", perfil.id);
   revalidatePath("/", "layout");
-  redirect(RUTA_INICIO[perfil.rol]);
+  redirect("/"); // H5: «/» elige la primera sección permitida
 }
 
 export default async function OnboardingPage() {
   const { perfil, proyecto } = await getSesion();
-  if (perfil.onboarding_completo) redirect(RUTA_INICIO[perfil.rol]);
+  if (perfil.onboarding_completo) redirect("/");
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="grid w-full max-w-3xl gap-6 md:grid-cols-2">

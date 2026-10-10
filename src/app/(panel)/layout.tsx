@@ -4,7 +4,7 @@ import { BarraLateral, type ItemMenu } from "@/components/barra-lateral";
 import { ProveedorToasts } from "@/components/toasts";
 import { db } from "@/lib/datos";
 import { proyectoParaMenu } from "@/lib/formato";
-import { seccionesPermitidas, SECCIONES } from "@/lib/permisos";
+import { seccionesPermitidas, SECCIONES, type Seccion } from "@/lib/permisos";
 
 export default async function PanelLayout({ children }: LayoutProps<"/">) {
   const { perfil, proyectos, proyecto } = await getSesion();
@@ -27,34 +27,38 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
     vencidos = count ?? 0;
   }
   const secciones = await seccionesPermitidas(perfil, proyecto.id);
+  const tiene = (x: Seccion) => secciones.has(x);
   const empresa: ItemMenu[] = SECCIONES.filter((s) => secciones.has(s.v)).map((s) => ({ href: `/${s.v}`, texto: s.t, icono: s.v }));
   const menu: { grupo: string; items: ItemMenu[] }[] = [
     {
       grupo: "Ventas",
+      // Paso H5: cada entrada sale solo si la persona tiene esa sección (por su rol o por su ficha)
       items: [
-        ...(jefe ? [{ href: "/funnel", texto: "Funnel", icono: "funnel" as const }] : []),
-        ...(jefe ? [{ href: "/kpis", texto: "KPIs", icono: "kpis" as const }] : []),
-        ...(jefe ? [{ href: "/crm", texto: "CRM", icono: "crm" as const }] : []),
-        ...(perfil.rol === "caller" || jefe ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),
-        ...(perfil.rol === "caller" || jefe ? [{ href: "/caller/crm", texto: jefe ? "CRM de callers" : "Mi CRM", icono: "crm" as const }] : []),
-        ...(perfil.rol === "closer" || jefe ? [{ href: "/closer", texto: jefe ? "Agendas" : "Mis agendas", icono: "closer" as const }] : []),
-        { href: "/caller/grabadas", texto: jefe ? "Llamadas de GHL" : "Mis llamadas grabadas", icono: "grabadas" as const },
-        ...(perfil.rol !== "caller" ? [{ href: "/ventas", texto: "Ventas", icono: "ventas" as const }] : []),
-        { href: "/ranking", texto: "Ranking del equipo", icono: "ranking" as const },
+        ...(jefe && tiene("funnel") ? [{ href: "/funnel", texto: "Funnel", icono: "funnel" as const }] : []),
+        // H8: «Mi Funnel» (a un caller o closer con «Funnel», es lo mismo: sus números)
+        ...(!jefe && (tiene("mi_funnel") || tiene("funnel")) ? [{ href: "/mi-funnel", texto: "Mi Funnel", icono: "funnel" as const }] : []),
+        ...(tiene("kpis") ? [{ href: "/kpis", texto: jefe ? "KPIs" : "Mis KPIs", icono: "kpis" as const }] : []),
+        // H7: un solo CRM («Mi CRM» para caller y closer, con sus leads)
+        ...(tiene("crm") ? [{ href: "/crm", texto: jefe ? "CRM" : "Mi CRM", icono: "crm" as const }] : []),
+        ...(tiene("cola") ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),
+        ...(tiene("agendas") ? [{ href: "/closer", texto: jefe ? "Agendas" : "Mis agendas", icono: "closer" as const }] : []),
+        ...(tiene("grabadas") ? [{ href: "/caller/grabadas", texto: jefe ? "Llamadas de GHL" : "Mis llamadas grabadas", icono: "grabadas" as const }] : []),
+        ...(tiene("ventas") ? [{ href: "/ventas", texto: jefe ? "Ventas" : "Mis ventas", icono: "ventas" as const }] : []),
+        ...(tiene("ranking") ? [{ href: "/ranking", texto: "Ranking del equipo", icono: "ranking" as const }] : []),
       ],
     },
     {
       grupo: "Día a día",
       items: [
-        { href: "/recursos", texto: "Links y recursos", icono: "recursos" as const },
-        { href: "/reportes", texto: "Reportes", icono: "reportes" as const },
+        ...(tiene("recursos") ? [{ href: "/recursos", texto: "Links y recursos", icono: "recursos" as const }] : []),
+        ...(tiene("reportes") ? [{ href: "/reportes", texto: "Reportes", icono: "reportes" as const }] : []),
       ],
     },
     ...(empresa.length ? [{ grupo: "Empresa", items: empresa }] : []),
     ...(puedeAdmin(perfil)
       ? [{ grupo: "Gestión", items: [{ href: "/admin", texto: "Administración", icono: "admin" as const }] }]
       : []),
-  ];
+  ].filter((g) => g.items.length > 0);
 
   return (
     <ProveedorToasts>

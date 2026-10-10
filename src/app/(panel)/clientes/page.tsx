@@ -3,14 +3,14 @@ import { redirect } from "next/navigation";
 import { Users, TrendingUp, CalendarClock, DollarSign, Star, ClipboardList, ArrowLeft } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, equipo } from "@/lib/datos";
-import { puedeSeccion } from "@/lib/permisos";
+import { puedeSeccion, soloLoSuyo } from "@/lib/permisos";
 import { coincide } from "@/lib/llamadas";
 import { dinero, fecha, hoyEnZona, pct } from "@/lib/formato";
 import { grupoSeguimiento, progresoOnboarding, ESTADOS_CLIENTE } from "@/lib/clientes";
 import { Cabecera, Contenido, Insignia, Anillo } from "@/components/ui";
 import { BuscadorUrl } from "@/app/(panel)/closer/llamadas/cliente";
 import type { Producto } from "@/lib/tipos";
-import { cargarClientes, type ClienteVista, type DatosClientes } from "./cargar";
+import { cargarClientes, clientesSuyos, type ClienteVista, type DatosClientes } from "./cargar";
 import { EditorPasos, GestionarCliente, NuevoCliente } from "./cliente";
 
 const VISTAS = [
@@ -39,6 +39,9 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
   };
   const estado = s("estado") || "activo";
   const q = s("q");
+  // H5: a un caller o closer con «Clientes», solo los suyos (los que vendió o agendó)
+  const suyos = soloLoSuyo(perfil, "clientes") ? await clientesSuyos(proyecto.id, perfil.id) : null;
+  if (suyos) d.filas = d.filas.filter((f) => suyos.has(f.lead_id));
   const lista = d.filas.filter((f) => (estado === "todos" || f.ficha.estado === estado) && coincide(q, f.lead.nombre, f.lead.email, f.lead.telefono)).sort((a, b) => b.desde.localeCompare(a.desde));
   const titulo = VISTAS.find((x) => x.v === ver)?.t;
 
@@ -53,7 +56,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
               const I = x.icono;
               return <Link key={x.v} href={url({ ver: ver === x.v ? null : x.v })} className={ver === x.v ? "btn-primario" : "btn-secundario"}><I className="h-4 w-4" /> {x.t}</Link>;
             })}
-            <NuevoCliente productos={(prods.data ?? []) as Producto[]} vendedores={gente.filter((g) => g.rol !== "ceo").map((g) => ({ id: g.id, nombre: g.nombre }))} moneda={proyecto.moneda} />
+            {!suyos && <NuevoCliente productos={(prods.data ?? []) as Producto[]} vendedores={gente.filter((g) => g.rol !== "ceo").map((g) => ({ id: g.id, nombre: g.nombre }))} moneda={proyecto.moneda} />}
           </div>
         }
       />
@@ -71,7 +74,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
         ) : ver === "casos" ? (
           <Casos d={d} />
         ) : ver === "onboardings" ? (
-          <Onboardings d={d} />
+          <Onboardings d={d} editarPasos={!suyos} />
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -218,11 +221,11 @@ function Casos({ d }: { d: DatosClientes }) {
   );
 }
 
-function Onboardings({ d }: { d: DatosClientes }) {
+function Onboardings({ d, editarPasos }: { d: DatosClientes; editarPasos: boolean }) {
   const fs = d.filas.filter((f) => f.ficha.estado !== "abandonado").sort((a, b) => progresoOnboarding(a.ficha.onboarding, d.pasos) - progresoOnboarding(b.ficha.onboarding, d.pasos));
   return (
     <div className="tarjeta overflow-x-auto">
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3"><span className="text-sm text-texto-2">Primero los que van más atrasados.</span><EditorPasos pasos={d.pasos} /></div>
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3"><span className="text-sm text-texto-2">Primero los que van más atrasados.</span>{editarPasos && <EditorPasos pasos={d.pasos} />}</div>
       <table className="tabla">
         <thead><tr><th>Cliente</th>{d.pasos.map((p) => <th key={p.id} className="text-center">{p.nombre}</th>)}<th className="text-right">Hecho</th><th></th></tr></thead>
         <tbody>

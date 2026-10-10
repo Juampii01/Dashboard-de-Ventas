@@ -1,5 +1,5 @@
 import { Trophy, Medal, Phone, TrendingUp } from "lucide-react";
-import { getSesion } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { cargarBase, calcularVendedores } from "@/lib/metricas";
 import { dinero, rangoDe, type Periodo, pct } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Avatar, Vacio } from "@/components/ui";
@@ -8,7 +8,7 @@ import { Filtros } from "@/components/filtros";
 const MEDALLA = ["text-oro", "text-texto-2", "text-aviso"];
 
 export default async function RankingPage({ searchParams }: PageProps<"/ranking">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("ranking"); // H5
   const sp = await searchParams;
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "semana") as Periodo;
   const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);

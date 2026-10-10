@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Inbox, Download, ChevronLeft, ChevronRight, List, CalendarDays, Columns3 } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { closersVisibles } from "@/lib/agendas-datos";
-import { ABIERTAS, COLUMNAS_PRECALL, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esPrecall, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
+import { ABIERTAS, columnasPrecall, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esColumnaVentas, esPrecall, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
 import { Cabecera, Contenido, Insignia, Vacio } from "@/components/ui";
 import { FiltroUrl } from "@/components/barra-periodo";
 import { VerEstrellas } from "@/components/estrellas";
@@ -51,12 +51,14 @@ const sumarMes = (ym: string, n: number) => {
 const nombreDe = (l: { nombre: string; apellido: string } | null) => (l ? `${l.nombre} ${l.apellido}`.trim() || "Sin nombre" : "Lead");
 
 export default async function LlamadasPage({ searchParams }: PageProps<"/closer/llamadas">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("agendas"); // H5
   const jefe = esJefe(perfil);
-  if (!jefe && perfil.rol !== "closer") redirect("/");
+  // H5 (caso 1 confirmado por Cristian): un caller con «Agendas» ve solo las citas que agendó él, solo para mirar
+  const mirar = perfil.rol === "caller";
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
-  const tab = (TABS.some((t) => t.v === str("tab")) ? str("tab") : "agendas") as (typeof TABS)[number]["v"];
+  const tabsVisibles = TABS.filter((t) => (!("soloJefe" in t) || jefe) && (!mirar || ["agendas", "precall", "postcall"].includes(t.v)));
+  const tab = (tabsVisibles.some((t) => t.v === str("tab")) ? str("tab") : "agendas") as (typeof TABS)[number]["v"];
   const q = str("q");
   const zona = proyecto.zona_horaria;
   const ahora = ahoraMs();
@@ -65,7 +67,10 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const vis = closersVisibles(perfil, gente, str("closer") || null);
   const nombrePersona = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
   const [citasTodas, ventasTodas, productos] = await Promise.all([
-    todas<CitaFila>((a, b) => db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("fecha").order("id").range(a, b)),
+    todas<CitaFila>((a, b) => {
+      const q = db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]);
+      return (mirar ? q.eq("agendada_por", perfil.id) : q).order("fecha").order("id").range(a, b);
+    }),
     todas<VentaFila>((a, b) => db().from("ventas").select("*, pagos(importe), leads(nombre, apellido), productos(nombre)").eq("proyecto_id", proyecto.id).in("vendedor_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("id").range(a, b)),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
   ]);
@@ -81,7 +86,9 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const utm = str("utm");
   const citas = citasTodas.filter((c) => coincide(q, nombreDe(c.leads), c.leads?.email, c.leads?.telefono) && (!utm || (c.leads?.seguimiento?.utm_source || "Sin UTM") === utm));
   const utms = [...new Set(citasTodas.map((c) => c.leads?.seguimiento?.utm_source || "Sin UTM"))].sort();
-  const ventas = ventasTodas.map((v) => ({ ...v, pendiente: Math.max(0, Number(v.facturacion) - Number(v.cash_collected) - v.pagos.reduce((s, p) => s + Number(p.importe), 0)) }));
+  // H5: al caller, solo las ventas de los leads que agendó
+  const leadsMios = new Set(citasTodas.map((c) => c.lead_id));
+  const ventas = ventasTodas.filter((v) => !mirar || leadsMios.has(v.lead_id)).map((v) => ({ ...v, pendiente: Math.max(0, Number(v.facturacion) - Number(v.cash_collected) - v.pagos.reduce((s, p) => s + Number(p.importe), 0)) }));
 
   // Contadores de arriba (este mes)
   const mesIni = inicioDia(`${hoyEnZona(zona).slice(0, 8)}01`, zona).getTime();
@@ -100,20 +107,20 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
     <>
       <Cabecera
         titulo="Agendas"
-        subtitulo={`${proyecto.nombre} · ${jefe ? (str("closer") ? nombrePersona(str("closer")) : "todos los closers") : perfil.nombre}`}
+        subtitulo={`${proyecto.nombre} · ${jefe ? (str("closer") ? nombrePersona(str("closer")) : "todos los closers") : mirar ? `citas que agendó ${perfil.nombre} (solo mirar)` : perfil.nombre}`}
         acciones={
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span><b className="text-aviso">{contadores.pendientes}</b> pendientes</span>
             <span><b className="text-ok">{contadores.cerradas}</b> cerradas</span>
             <span><b className="text-mal">{contadores.perdidas}</b> perdidas <span className="text-xs text-texto-3">(este mes)</span></span>
-            <SincronizarGhl conectado={ghlConectado} ultima={pg?.ghl_sincronizado_en ? fechaHora(pg.ghl_sincronizado_en, proyecto) : null} />
+            {!mirar && <SincronizarGhl conectado={ghlConectado} ultima={pg?.ghl_sincronizado_en ? fechaHora(pg.ghl_sincronizado_en, proyecto) : null} />}
           </div>
         }
       />
       <Contenido>
         <PestanasAgendas activa="/closer/llamadas" />
         <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
-          {TABS.filter((t) => !("soloJefe" in t) || jefe).map((t, i) => (
+          {tabsVisibles.map((t, i) => (
             <Link key={t.v} href={baseQs({ tab: t.v, sub: null, vista: null, conc: null, cual: null })} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${tab === t.v ? "bg-primario-suave font-medium text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
               <span className="font-mono text-[10px] text-oro">0{i + 1}</span> {t.t}
               {t.v === "precall" && <span className="rounded-full bg-panel-2 px-1.5 text-[11px] tabular-nums">{citasTodas.filter((c) => esPrecall(c, ahora)).length}</span>}
@@ -125,11 +132,11 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
           <BuscadorUrl placeholder="Buscar por nombre, email o teléfono…" />
           {jefe && <FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
           <FiltroUrl nombre="utm" etiqueta="UTM" todos="Todas las UTM" opciones={utms.map((u) => ({ v: u, t: u }))} />
-          <div className="ml-auto flex flex-wrap gap-2">
+          {!mirar && <div className="ml-auto flex flex-wrap gap-2">
             <CrearLlamada closers={(jefe ? vis.todos : vis.closers).map((c) => ({ id: c.id, nombre: c.nombre }))} soyCloser={jefe ? null : perfil.id} />
             {jefe && <ImportarCitas />}
             <a href={`/closer/llamadas/exportar?${new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][])}`} className="btn-secundario"><Download className="h-4 w-4" /> Exportar</a>
-          </div>
+          </div>}
         </div>
 
         {jefe && (pendientesUnir.length > 0 || invalidas.length > 0) && str("revisar") !== "1" && str("revisar") !== "invalidas" && (
@@ -301,15 +308,17 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
           <div className="tarjeta overflow-hidden"><ListaCitas filas={pre} /></div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {COLUMNAS_PRECALL.map((col) => {
+            {columnasPrecall(proyecto.precall_columnas).map((col) => {
               const en = pre.filter((c) => c.estado === col.estado);
               return (
-                <ColumnaPrecall key={col.estado} estado={col.estado} titulo={col.titulo} color={col.color} total={en.length}>
+                <ColumnaPrecall key={col.estado} estado={col.estado} titulo={col.titulo} color={col.color} total={en.length} soloMirar={mirar}>
                   <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
                     {en.length === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
                     {en.map((c) => (
                       <TarjetaPrecall
                         key={c.id}
+                        soloMirar={mirar}
+                        columnas={columnasPrecall(proyecto.precall_columnas)}
                         cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }}
                         lead={{ nombre: nombreDe(c.leads), telefono: c.leads?.telefono ?? null }}
                         fechaTxt={fechaHora(c.fecha, proyecto)}
@@ -332,7 +341,9 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   // ---------- 03 · Post-call ----------
   function VistaPostcall() {
     const sub = (SUB_POSTCALL.some((s) => s.v === str("sub")) ? str("sub") : "pendientes") as SubPostcall;
-    const cuenta = (s: SubPostcall) => (s === "reserva" || s === "cuotas" ? ventasPostcall(ventas, s).length : citas.filter((c) => enPostcall(c, s, ahora)).length);
+    const inicioMes = inicioDia(`${hoyEnZona(zona).slice(0, 8)}01`, zona).getTime(); // «Cerradas»: las de este mes
+    const deColumna = (s: "reserva" | "cuotas" | "cerradas") => ventasPostcall(ventas, s, inicioMes);
+    const cuenta = (s: SubPostcall) => (esColumnaVentas(s) ? deColumna(s).length : citas.filter((c) => enPostcall(c, s, ahora)).length);
     const info = SUB_POSTCALL.find((s) => s.v === sub)!;
     const tabla = str("vista") === "tabla";
     const interruptor = (
@@ -345,12 +356,12 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
     );
     // Pipeline (Paso H6): una columna por cada estado de Post-call, como Pre-call
     if (!tabla) {
-      const COLOR: Record<SubPostcall, string> = { pendientes: "var(--aviso)", reagendadas: "var(--oro)", reserva: "var(--primario)", cuotas: "var(--morado)", seguimiento: "var(--oro)", no_show: "var(--mal)", cancelada: "var(--texto-3)", perdida: "var(--mal)" };
+      const COLOR: Record<SubPostcall, string> = { pendientes: "var(--aviso)", reagendadas: "var(--oro)", reserva: "var(--primario)", cuotas: "var(--morado)", cerradas: "var(--ok)", seguimiento: "var(--oro)", no_show: "var(--mal)", cancelada: "var(--texto-3)", perdida: "var(--mal)" };
       const columnas: ColumnaPC[] = SUB_POSTCALL.map((s) =>
-        s.v === "reserva" || s.v === "cuotas"
+        esColumnaVentas(s.v)
           ? {
               v: s.v, t: s.t, d: s.d, color: COLOR[s.v],
-              ventas: ventasPostcall(ventas, s.v).map((v) => ({
+              ventas: deColumna(s.v).map((v) => ({
                 id: v.id,
                 lead_id: v.lead_id,
                 nombre: nombreDe(v.leads),
@@ -384,7 +395,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
       return (
         <div className="space-y-3">
           {interruptor}
-          <TableroPostcall columnas={columnas} productos={prods} moneda={proyecto.moneda} jefe={jefe} />
+          <TableroPostcall columnas={columnas} productos={prods} moneda={proyecto.moneda} jefe={jefe} soloMirar={mirar} />
         </div>
       );
     }
@@ -400,19 +411,19 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
           ))}
         </div>
         <p className="border-b border-borde px-4 py-2 text-xs text-texto-3">{info.d}</p>
-        {sub === "reserva" || sub === "cuotas" ? (
-          ventasPostcall(ventas, sub).length === 0 ? (
-            <Vacio icono={Inbox} texto={`No hay ventas con ${sub === "reserva" ? "reserva" : "cuotas"} por cobrar.`} />
+        {esColumnaVentas(sub) ? (
+          deColumna(sub).length === 0 ? (
+            <Vacio icono={Inbox} texto={sub === "cerradas" ? "No hay ventas pagadas del todo este mes." : `No hay ventas con ${sub === "reserva" ? "reserva" : "cuotas"} por cobrar.`} />
           ) : (
             <ul className="divide-y divide-borde">
-              {ventasPostcall(ventas, sub).map((v) => (
+              {deColumna(sub).map((v) => (
                 <li key={v.id} className="relative flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
                   <div className="min-w-48 flex-1">
                     <a href={`/leads/${v.lead_id}`} className="font-medium hover:text-primario">{nombreDe(v.leads)}</a>
                     <div className="text-xs text-texto-3">{v.productos?.nombre ?? "Producto"} · vendida el {soloFecha(v.fecha, proyecto)}{jefe ? ` · ${nombrePersona(v.vendedor_id)}` : ""}{v.num_cuotas ? ` · ${v.num_cuotas} cuotas` : ""}</div>
                   </div>
                   <div className="text-right"><div className="tabular-nums">{dinero(Number(v.facturacion), proyecto)}</div><div className="text-xs text-aviso">Falta {dinero(v.pendiente, proyecto)}</div></div>
-                  <FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={Number(v.facturacion) - v.pendiente} devuelta={!!v.devuelto} jefe={jefe} />
+                  {!mirar && <FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={Number(v.facturacion) - v.pendiente} devuelta={!!v.devuelto} jefe={jefe} />}
                 </li>
               ))}
             </ul>
@@ -447,7 +458,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
               {jefe && <Insignia>{nombrePersona(c.closer_id)}</Insignia>}
               <Insignia tono={tonoEstado(c.estado)}>{ETIQUETA_ESTADO_CITA[c.estado]}</Insignia>
             </div>
-            <AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={new Date(c.fecha).getTime() < ahora} productos={prods} moneda={proyecto.moneda} />
+            {!mirar && <AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={new Date(c.fecha).getTime() < ahora} productos={prods} moneda={proyecto.moneda} />}
           </li>
         ))}
       </ul>

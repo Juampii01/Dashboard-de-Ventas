@@ -161,18 +161,20 @@ describe("Caller: llamar luego y volver a nuevo", () => {
 
 describe("Pipelines y columnas", () => {
   it("crear, renombrar, ordenar y borrar columnas; al borrar, los leads pasan a la primera", async () => {
-    como(e, e.p.director);
+    como(e, e.p.director); // H7: el director sin Administración ya no toca columnas
+    await falla(crearPipeline(`Pipe ${e.id}`), /permiso/);
+    como(e, e.p.directorAdmin);
     const id = await ok(crearPipeline(`Pipe ${e.id}`));
     await ok(renombrarPipeline(id, `Pipe ${e.id} renombrado`));
     expect((await db.from("pipelines").select("nombre").eq("id", id).single()).data!.nombre).toBe(`Pipe ${e.id} renombrado`);
     await ok(crearEtapa(id, "Extra", "#000000"));
     const etapas = async () => (await db.from("etapas").select("id, nombre, orden").eq("pipeline_id", id).order("orden")).data!;
     let lista = await etapas();
-    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "Agendados", "Cerrados", "Extra"]);
+    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "No contesta", "Llamar luego", "Agendados", "Cerrados", "Descartados", "Extra"]);
     const extra = lista.find((x) => x.nombre === "Extra")!;
     await ok(moverEtapa(extra.id, -1));
     lista = await etapas();
-    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "Agendados", "Extra", "Cerrados"]);
+    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "No contesta", "Llamar luego", "Agendados", "Cerrados", "Extra", "Descartados"]);
     await db.from("leads").update({ pipeline_id: id, etapa_id: extra.id }).eq("id", e.leads.LeadLibre);
     await ok(borrarEtapa(extra.id));
     expect((await leerLead(e.leads.LeadLibre)).etapa_id).toBe(lista[0].id);

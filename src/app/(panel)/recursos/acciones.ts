@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeRecursos } from "@/lib/auth";
@@ -21,6 +22,7 @@ function urlValida(u: string) {
 // Enlace firmado para que el navegador suba el PDF directo a Supabase (sin pasar por Vercel)
 export async function prepararSubidaPdf() {
   return seguro(async () => {
+    await exigirSeccion("recursos"); // H5
     const { proyecto } = await exigir(puedeRecursos);
     return prepararSubida("recursos", proyecto.id);
   });
@@ -29,6 +31,7 @@ export async function prepararSubidaPdf() {
 export async function crearRecurso(_prev: unknown, formData: FormData) {
   // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
   return seguro(async () => {
+    await exigirSeccion("recursos"); // H5
     const { perfil, proyecto } = await exigir(puedeRecursos);
     const titulo = String(formData.get("titulo") ?? "").trim();
     const tipo = String(formData.get("tipo")) as (typeof TIPOS)[number];
@@ -72,6 +75,7 @@ export async function crearRecurso(_prev: unknown, formData: FormData) {
 
 export async function borrarRecurso(id: string) {
   return seguro(async () => {
+    await exigirSeccion("recursos"); // H5
     const { proyecto } = await exigir(puedeRecursos);
     const { data } = await db().from("recursos").select("archivo_path").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!data) throw new ErrorUsuario("Recurso no encontrado.");
@@ -83,6 +87,7 @@ export async function borrarRecurso(id: string) {
 
 export async function guardarLinkPago(productoId: string, url: string) {
   return seguro(async () => {
+    await exigirSeccion("recursos"); // H5
     const { proyecto } = await exigir(puedeRecursos);
     const limpio = url.trim();
     if (limpio && !urlValida(limpio)) throw new ErrorUsuario("Pon un enlace válido (https://…).");

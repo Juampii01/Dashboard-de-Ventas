@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db, equipo } from "@/lib/datos";
 import { rangoDe, fecha as fmtFecha, ETIQUETA_ROL } from "@/lib/formato";
 import { PREGUNTAS, rolDeReporte, tasasCloser } from "@/lib/reportes";
@@ -9,7 +10,7 @@ import { NuevoReporte } from "./formulario";
 import type { Reporte } from "@/lib/tipos";
 
 export default async function ReportesPage({ searchParams }: PageProps<"/reportes">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("reportes"); // H5
   const jefe = esJefe(perfil);
   const sp = await searchParams;
   const persona = jefe ? (typeof sp.persona === "string" ? sp.persona : "") : perfil.id;

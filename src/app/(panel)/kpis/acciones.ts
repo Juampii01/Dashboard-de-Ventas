@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db, escribir } from "@/lib/datos";
@@ -14,6 +15,7 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Objetivos y lanzamientos: los ponen el CEO o el director (decisión de Cristian, 10 oct 2026)
 export async function guardarObjetivo(o: { para: string; periodo: string; lanzamientoId: string | null; cifra: string; valor: string; dias: number[] }) {
   return seguro(async () => {
+    await exigirSeccion("kpis"); // H5
     const { perfil, proyecto } = await exigir(esJefe);
     const periodo = o.periodo as PeriodoObjetivo;
     if (!PERIODOS.some((p) => p.v === periodo)) throw new ErrorUsuario("Elige el periodo.");
@@ -72,6 +74,7 @@ export async function guardarObjetivo(o: { para: string; periodo: string; lanzam
 // Quitar = una fila nueva sin valor: el histórico guarda el que había
 export async function quitarObjetivo(id: string) {
   return seguro(async () => {
+    await exigirSeccion("kpis"); // H5
     const { perfil, proyecto } = await exigir(esJefe);
     const { data: o } = await db().from("objetivos").select("rol, perfil_id, periodo, lanzamiento_id, cifra").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!o) throw new ErrorUsuario("Ese objetivo no es de este proyecto.");
@@ -82,6 +85,7 @@ export async function quitarObjetivo(id: string) {
 
 export async function crearLanzamiento(l: { nombre: string; inicio: string; fin: string; evento: string }) {
   return seguro(async () => {
+    await exigirSeccion("kpis"); // H5
     const { proyecto } = await exigir(esJefe);
     const nombre = l.nombre.trim();
     if (!nombre || nombre.length > 120) throw new ErrorUsuario("Pon el nombre del lanzamiento (máximo 120 caracteres).");
@@ -94,6 +98,7 @@ export async function crearLanzamiento(l: { nombre: string; inicio: string; fin:
 
 export async function borrarLanzamiento(id: string) {
   return seguro(async () => {
+    await exigirSeccion("kpis"); // H5
     const { proyecto } = await exigir(esJefe);
     const { data } = await db().from("lanzamientos").select("id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!data) throw new ErrorUsuario("Ese lanzamiento no es de este proyecto.");

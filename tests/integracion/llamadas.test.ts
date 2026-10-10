@@ -29,7 +29,7 @@ describe("Crear llamada", () => {
     como(e, e.p.closerA);
     expect(((await ok(buscarLeadsParaLlamada("Lead"))) as { id: string }[]).map((l) => l.id)).toEqual([e.leads.LeadLibre]); // el único con closer A
     como(e, e.p.callerA);
-    await falla(buscarLeadsParaLlamada("Lead"), /Sin permiso/);
+    await falla(buscarLeadsParaLlamada("Lead"), /Sin permiso|No tienes acceso/);  // H5: sin la sección, «No tienes acceso»
   });
   it("«confirmación pendiente» es un estado válido", async () => {
     como(e, e.p.closerA);

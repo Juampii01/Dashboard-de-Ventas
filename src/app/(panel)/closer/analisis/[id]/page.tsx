@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db } from "@/lib/datos";
 import { fechaHora, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { AGENTES } from "@/lib/ia-agentes";
@@ -11,18 +12,23 @@ import { Autocompletado, Reanalizar, TextoIa } from "../cliente";
 const RES = { cerrado: ["Cerrado", "ok"], no_cerrado: ["No cerrado", "mal"], seguimiento: ["Seguimiento", "aviso"] } as const;
 
 export default async function AnalisisDetalle({ params }: PageProps<"/closer/analisis/[id]">) {
-  const { perfil, proyecto } = await getSesion();
-  if (!esJefe(perfil) && perfil.rol !== "closer") redirect("/");
+  const { perfil, proyecto } = await exigirPagina("agendas"); // H5
+  // H5 (caso 1): un caller con «Agendas» solo ve los de las citas que agendó él, sin botones
+  const mirar = perfil.rol === "caller";
   const { id } = await params;
   const { data: a } = await db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio, share_url, url), leads(id, nombre, apellido)").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
-  if (!a || (!esJefe(perfil) && a.closer_id !== perfil.id)) notFound();
+  if (!a) notFound();
+  if (mirar) {
+    const { data: cita } = a.cita_id ? await db().from("citas").select("agendada_por").eq("id", a.cita_id).maybeSingle() : { data: null };
+    if (cita?.agendada_por !== perfil.id) notFound();
+  } else if (!esJefe(perfil) && a.closer_id !== perfil.id) notFound();
   const g = a.grabaciones as { titulo: string | null; inicio: string | null; share_url: string | null; url: string | null } | null;
   const l = a.leads as { id: string; nombre: string; apellido: string } | null;
   const secciones = (a.secciones ?? {}) as Record<string, string>;
   const auto = a.autocompletado as { estado: string; estrellas: number; nota: string } | null;
   return (
     <>
-      <Cabecera titulo={l ? `${l.nombre} ${l.apellido ?? ""}`.trim() : g?.titulo ?? "Llamada"} subtitulo={`${g?.titulo ?? ""}${g?.inicio ? ` · ${fechaHora(g.inicio, proyecto)}` : ""}`} acciones={<Reanalizar id={a.id} />} />
+      <Cabecera titulo={l ? `${l.nombre} ${l.apellido ?? ""}`.trim() : g?.titulo ?? "Llamada"} subtitulo={`${g?.titulo ?? ""}${g?.inicio ? ` · ${fechaHora(g.inicio, proyecto)}` : ""}`} acciones={mirar ? undefined : <Reanalizar id={a.id} />} />
       <Contenido>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Link href="/closer/analisis?sub=llamadas" className="inline-flex items-center gap-1 text-primario hover:underline"><ArrowLeft className="h-4 w-4" /> Volver</Link>
@@ -47,7 +53,7 @@ export default async function AnalisisDetalle({ params }: PageProps<"/closer/ana
             {auto && (
               <Seccion titulo="Autocompletado del cierre (propuesta de la IA)">
                 <p className="mb-3 text-sm">Estado: <b>{ETIQUETA_ESTADO_CITA[auto.estado] ?? auto.estado}</b> · {auto.estrellas}★ · {auto.nota}</p>
-                <Autocompletado id={a.id} estado={a.autocompletado_estado} />
+                {!mirar && <Autocompletado id={a.id} estado={a.autocompletado_estado} />}
               </Seccion>
             )}
             <div className="grid gap-4 lg:grid-cols-2">

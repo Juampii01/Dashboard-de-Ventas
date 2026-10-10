@@ -29,6 +29,13 @@ describe("pestañas de Llamadas", () => {
     expect(diaEnZona("2026-10-10T02:00:00Z", "America/New_York")).toBe("2026-10-09");
     expect(diaEnZona("2026-10-10T02:00:00Z", "Europe/Madrid")).toBe("2026-10-10");
   });
+  it("Cerradas (Paso H6): solo las ventas pagadas del todo y vendidas desde el día 1 del mes", () => {
+    const v = (id: string, pendiente: number, fecha: string, tipo_pago = "completo") => ({ id, lead_id: "L", tipo_pago, pendiente, fecha });
+    const inicio = Date.parse("2026-10-01T04:00:00Z");
+    const lista = [v("pagada", 0, "2026-10-05T15:00:00Z"), v("reserva", 1497, "2026-10-05T15:00:00Z", "reserva"), v("septiembre", 0, "2026-09-20T15:00:00Z"), v("reserva-pagada", 0, "2026-10-06T15:00:00Z", "reserva")];
+    expect(ventasPostcall(lista, "cerradas", inicio).map((x) => x.id)).toEqual(["pagada", "reserva-pagada"]);
+    expect(ventasPostcall(lista, "reserva").map((x) => x.id)).toEqual(["reserva"]); // la pagada ya no está en Reserva
+  });
   it("buscar por nombre sin acentos o por teléfono con otro formato", () => {
     expect(coincide("adrian vargas", "Adrián Vargas Jiménez", null)).toBe(true);
     expect(coincide("595 961", "Otro", "+595961103570")).toBe(true);

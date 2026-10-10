@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ScanSearch, Sparkles } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db, equipo, todas } from "@/lib/datos";
 import { closersVisibles } from "@/lib/agendas-datos";
 import { coincide } from "@/lib/llamadas";
@@ -19,9 +19,11 @@ type Fila = { id: string; closer_id: string | null; lead_id: string | null; esta
 const RES = { cerrado: ["Cerrado", "ok"], no_cerrado: ["No cerrado", "mal"], seguimiento: ["Seguimiento", "aviso"] } as const;
 
 export default async function AnalisisPage({ searchParams }: PageProps<"/closer/analisis">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("agendas"); // H5
   const jefe = esJefe(perfil);
-  if (!jefe && perfil.rol !== "closer") redirect("/");
+  // H5 (caso 1): un caller con «Agendas» ve solo los análisis de las citas que agendó él, solo mirar
+  const mirar = perfil.rol === "caller";
+  const citasMias = mirar ? (await todas<{ id: string }>((a, b) => db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("agendada_por", perfil.id).order("id").range(a, b))).map((c) => c.id) : null;
   const sp = await searchParams;
   const s = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const sub = ["llamadas", "manual"].includes(s("sub")) ? s("sub") : "resumen";
@@ -31,7 +33,10 @@ export default async function AnalisisPage({ searchParams }: PageProps<"/closer/
   const vis = closersVisibles(perfil, gente, s("closer") || null);
   const ids = vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"];
   const [filas, configs, productos] = await Promise.all([
-    todas<Fila>((a, b) => db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("creado_en", { ascending: false }).order("id").range(a, b)),
+    todas<Fila>((a, b) => {
+      const q = db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids);
+      return (citasMias ? q.in("cita_id", citasMias.length ? citasMias : ["00000000-0000-0000-0000-000000000000"]) : q).order("creado_en", { ascending: false }).order("id").range(a, b);
+    }),
     jefe ? db().from("config_ia").select("producto_id, contexto, agentes").eq("proyecto_id", proyecto.id) : Promise.resolve({ data: [] }),
     jefe ? db().from("productos").select("id, nombre").eq("proyecto_id", proyecto.id).order("orden") : Promise.resolve({ data: [] }),
   ]);

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { FileDown, Star, Undo2, Hourglass, Target, Ticket } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { panelObjetivos } from "@/lib/objetivos";
 import { PanelObjetivos } from "@/components/barras-objetivos";
 import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
@@ -13,9 +13,10 @@ import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
 import { PestanasAgendas } from "./pestanas";
 
 export default async function AgendasMetricasPage({ searchParams }: PageProps<"/closer">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("agendas"); // H5
   const jefe = esJefe(perfil);
-  if (!jefe && perfil.rol !== "closer") redirect("/");
+  // H5 (caso 1): un caller con «Agendas» ve solo las citas que agendó él (y las ventas de esos leads), solo mirar
+  const mirar = perfil.rol === "caller";
   const sp = await searchParams;
   const p = leerPeriodo(sp);
   const rango = rangoNav(p.periodo, p.n, proyecto.zona_horaria, p.desde, p.hasta);
@@ -23,6 +24,13 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
   const comparativa = jefe && str("vista") === "comparativa";
 
   const datos = await cargarAgendas(proyecto);
+  if (mirar) {
+    datos.citas = datos.citas.filter((c) => c.agendada_por === perfil.id);
+    const leads = new Set(datos.citas.map((c) => c.lead_id));
+    datos.ventas = datos.ventas.filter((v) => leads.has(v.lead_id));
+    const ventas = new Set(datos.ventas.map((v) => v.id));
+    datos.pagos = datos.pagos.filter((x) => ventas.has(x.venta_id));
+  }
   const vis = closersVisibles(perfil, datos.gente, str("closer"));
   const filtros = { productoId: str("producto"), evento: str("evento") };
   const m = metricasAgendas(datos, rango, { closerIds: vis.ids, ...filtros });
@@ -42,11 +50,13 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
     <>
       <Cabecera
         titulo="Agendas"
-        subtitulo={`${proyecto.nombre} · ${jefe ? (vis.ids.length === 1 && str("closer") ? vis.closers[0]?.nombre : "todos los closers") : perfil.nombre} · ${rango.etiqueta}`}
+        subtitulo={`${proyecto.nombre} · ${jefe ? (vis.ids.length === 1 && str("closer") ? vis.closers[0]?.nombre : "todos los closers") : mirar ? `citas que agendó ${perfil.nombre}` : perfil.nombre} · ${rango.etiqueta}`}
         acciones={
-          <a href={`/closer/reporte?${qs}`} className="btn-secundario" title="Descarga un PDF con las métricas de este periodo">
-            <FileDown className="h-4 w-4" /> Generar reporte
-          </a>
+          mirar ? undefined : (
+            <a href={`/closer/reporte?${qs}`} className="btn-secundario" title="Descarga un PDF con las métricas de este periodo">
+              <FileDown className="h-4 w-4" /> Generar reporte
+            </a>
+          )
         }
       />
       <Contenido>

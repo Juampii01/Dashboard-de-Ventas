@@ -32,14 +32,19 @@ import {
   moverEtapa,
   moverLead,
   renombrarPipeline,
+  unirEstado,
+  guardarColumnasPrecall,
 } from "./acciones";
+import { registrarLlamada, volverANuevo } from "@/app/(panel)/leads/acciones";
+import { VentanaEstado, type DestinoConVentana } from "./ventanas-estado";
+import type { ColumnaPrecall } from "@/lib/llamadas";
 import { ETIQUETA_ESTADO_CALLER } from "@/lib/formato";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
-import type { Etapa, Pipeline, Respuesta } from "@/lib/tipos";
+import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta } from "@/lib/tipos";
 
 export type LeadTarjeta = {
   id: string;
@@ -68,6 +73,12 @@ export function TableroCrm({
   conteos,
   callers,
   closers,
+  admin,
+  jefe,
+  productos,
+  moneda,
+  estrellasOpcionales,
+  precall,
 }: {
   pipelines: Pipeline[];
   pipeline: Pipeline | null;
@@ -76,6 +87,12 @@ export function TableroCrm({
   conteos: Record<string, number>;
   callers: Persona[];
   closers: Persona[];
+  admin: boolean; // Paso H7: columnas, pipelines y Pre-call (CEO y director con Administración)
+  jefe: boolean; // importar, crear y asignar leads (director y CEO)
+  productos: Producto[];
+  moneda: string;
+  estrellasOpcionales: boolean;
+  precall: ColumnaPrecall[];
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -86,7 +103,8 @@ export function TableroCrm({
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [verMas, setVerMas] = useState<Record<string, number>>({});
-  const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline">(null);
+  const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline" | "precall">(null);
+  const [ventana, setVentana] = useState<{ lead: LeadTarjeta; destino: DestinoConVentana; etapaId: string } | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
 
@@ -128,10 +146,26 @@ export function TableroCrm({
     if (!id) return;
     const lead = leads.find((l) => l.id === id);
     if (!lead || lead.etapa_id === etapaId) return;
+    // Paso H7: una columna unida a un estado = su botón (y su ventana si pide datos)
+    const unido = etapas.find((e) => e.id === etapaId)?.estado_caller as EstadoCaller | null | undefined;
+    if (unido && unido !== lead.estado_caller) {
+      if (unido === "llamar_luego" || unido === "agendado" || unido === "no_interesa" || unido === "vendido") {
+        setVentana({ lead, destino: unido, etapaId });
+        return;
+      }
+      const nombre = `${lead.nombre} ${lead.apellido}`.trim();
+      mover(id, etapaId, () => (unido === "nuevo" ? volverANuevo(id) : registrarLlamada(id, "no_contesta", "")), `${nombre} → ${unido === "nuevo" ? "Nuevo" : "No contesta"}`);
+      return;
+    }
+    mover(id, etapaId, () => moverLead(id, etapaId));
+  }
+
+  // Mueve en pantalla al momento y deshace si el servidor falla
+  function mover(id: string, etapaId: string, accion: () => Promise<unknown>, mensaje?: string) {
     setMoviendo((m) => ({ ...m, [id]: etapaId }));
     ejecutar(async () => {
       try {
-        await exigirOk(moverLead(id, etapaId));
+        await exigirOk(accion());
       } catch (e) {
         setMoviendo((m) => {
           const c = { ...m };
@@ -140,7 +174,7 @@ export function TableroCrm({
         });
         throw e;
       }
-    });
+    }, mensaje);
   }
 
   const sinColumna = leads.filter((l) => !l.etapa_id || !etapas.some((e) => e.id === l.etapa_id));
@@ -162,11 +196,18 @@ export function TableroCrm({
               <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${p.id === pipeline?.id ? "bg-white/20" : "bg-panel-2"}`}>{conteos[p.id] ?? 0}</span>
             </Link>
           ))}
-          <button onClick={() => setModal("pipeline")} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-primario hover:bg-primario-suave">
-            <Plus className="h-4 w-4" /> Pipeline
-          </button>
+          {admin && (
+            <button onClick={() => setModal("pipeline")} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-primario hover:bg-primario-suave">
+              <Plus className="h-4 w-4" /> Pipeline
+            </button>
+          )}
         </div>
-        {pipeline && (
+        {admin && (
+          <button className="btn-secundario" onClick={() => setModal("precall")} title="Nombre, color y orden de las columnas de Pre-call">
+            Columnas de Pre-call
+          </button>
+        )}
+        {admin && pipeline && (
           <div className="flex gap-1">
             <button
               className="btn-secundario px-2.5"
@@ -201,31 +242,35 @@ export function TableroCrm({
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
-        <label className="flex items-center gap-2 px-2 text-sm text-texto-2">
+        {jefe && <label className="flex items-center gap-2 px-2 text-sm text-texto-2">
           <input type="checkbox" checked={soloSinCaller} onChange={(e) => setSoloSinCaller(e.target.checked)} className="accent-[var(--primario)]" />
           Sin caller asignado
-        </label>
-        <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
+        </label>}
+        {jefe && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
           <button onClick={() => setVista("tablero")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${vista === "tablero" ? "bg-panel text-texto shadow-sm" : "text-texto-3"}`}>
             <LayoutGrid className="h-4 w-4" /> Tablero
           </button>
           <button onClick={() => setVista("lista")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${vista === "lista" ? "bg-panel text-texto shadow-sm" : "text-texto-3"}`}>
             <List className="h-4 w-4" /> Lista
           </button>
-        </div>
-        <button onClick={() => setModal("lead")} className="btn-secundario">
-          <UserPlus className="h-4 w-4" /> Nuevo lead
-        </button>
-        <button onClick={() => setModal("importar")} className="btn-primario">
-          <Upload className="h-4 w-4" /> Subir CSV
-        </button>
+        </div>}
+        {jefe && (
+          <>
+            <button onClick={() => setModal("lead")} className="btn-secundario">
+              <UserPlus className="h-4 w-4" /> Nuevo lead
+            </button>
+            <button onClick={() => setModal("importar")} className="btn-primario">
+              <Upload className="h-4 w-4" /> Subir CSV
+            </button>
+          </>
+        )}
       </div>
 
       {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
 
       {!pipeline ? (
-        <div className="tarjeta p-10 text-center text-sm text-texto-3">No hay pipelines. Crea el primero con «+ Pipeline».</div>
-      ) : vista === "tablero" ? (
+        <div className="tarjeta p-10 text-center text-sm text-texto-3">{admin ? "No hay pipelines. Crea el primero con «+ Pipeline»." : "Todavía no hay pipelines."}</div>
+      ) : vista === "tablero" || !jefe ? (
         <div className={`flex gap-3 overflow-x-auto pb-3 ${pendiente ? "cursor-progress" : ""}`}>
           {etapas.map((e, i) => {
             const enColumna = leads.filter((l) => l.etapa_id === e.id);
@@ -249,9 +294,12 @@ export function TableroCrm({
                 <div className="flex items-center justify-between gap-2 border-b border-borde px-3 py-2.5" style={{ borderTop: `3px solid ${e.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{e.nombre}</div>
-                    <div className="text-[11px] text-texto-3">{enColumna.length} leads</div>
+                    <div className="text-[11px] text-texto-3">
+                      {enColumna.length} leads
+                      {e.estado_caller && <span title="Columna unida a un estado: los botones del caller mueven aquí y soltar aquí cambia el estado"> · ↔ {ETIQUETA_ESTADO_CALLER[e.estado_caller]}</span>}
+                    </div>
                   </div>
-                  <MenuColumna
+                  {admin && <MenuColumna
                     etapa={e}
                     primera={i === 0}
                     ultima={i === etapas.length - 1}
@@ -260,7 +308,8 @@ export function TableroCrm({
                     onBorrar={() => {
                       if (confirm(`¿Borrar la columna «${e.nombre}»? Sus leads pasan a la primera columna.`)) ejecutar(() => exigirOk(borrarEtapa(e.id)));
                     }}
-                  />
+                    onUnir={(estado) => ejecutar(() => exigirOk(unirEstado(e.id, estado)), estado ? `«${e.nombre}» unida a «${ETIQUETA_ESTADO_CALLER[estado]}»` : `«${e.nombre}» ya no está unida`)}
+                  />}
                 </div>
                 <div className="flex max-h-[calc(100vh-330px)] min-h-32 flex-col gap-2 overflow-y-auto p-2">
                   {enColumna.slice(0, limite).map((l) => (
@@ -275,7 +324,7 @@ export function TableroCrm({
               </div>
             );
           })}
-          <button
+          {admin && <button
             onClick={() => {
               const n = prompt("Nombre de la nueva columna");
               if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
@@ -283,7 +332,7 @@ export function TableroCrm({
             className="flex h-14 w-60 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-borde-fuerte text-sm text-texto-2 hover:border-primario hover:text-primario"
           >
             <Plus className="h-4 w-4" /> Añadir columna
-          </button>
+          </button>}
           {sinColumna.length > 0 && (
             <div className="w-72 shrink-0 rounded-xl border border-dashed border-aviso/50 p-3 text-xs text-aviso">
               {sinColumna.length} leads sin columna. Arrástralos o muévelos desde su ficha.
@@ -308,6 +357,19 @@ export function TableroCrm({
         />
       )}
 
+      {ventana && (
+        <VentanaEstado
+          lead={{ id: ventana.lead.id, nombre: `${ventana.lead.nombre} ${ventana.lead.apellido}`.trim() }}
+          destino={ventana.destino}
+          closers={closers}
+          productos={productos}
+          moneda={moneda}
+          estrellasOpcionales={estrellasOpcionales}
+          onCerrar={() => setVentana(null)}
+          onGuardar={(accion, mensaje) => mover(ventana.lead.id, ventana.etapaId, accion, mensaje)}
+        />
+      )}
+      {modal === "precall" && <ModalPrecall inicial={precall} onCerrar={() => setModal(null)} onGuardar={(lista) => ejecutar(async () => { await exigirOk(guardarColumnasPrecall(lista)); setModal(null); }, "Columnas de Pre-call guardadas")} />}
       {modal === "importar" && <ModalImportar pipelines={pipelines} pipelineId={pipeline?.id} onCerrar={() => setModal(null)} />}
       {modal === "lead" && (
         <Modal titulo="Nuevo lead" onCerrar={() => setModal(null)}>
@@ -341,7 +403,7 @@ export function TableroCrm({
             className="space-y-3"
           >
             <label className="block"><span className="etiqueta-campo">Nombre</span><input name="nombre" required className="campo" placeholder="Ej: Webinar 2" /></label>
-            <p className="text-xs text-texto-3">Se crea con 3 columnas (Nuevos, Agendados, Cerrados). Luego puedes añadir, renombrar o borrar columnas.</p>
+            <p className="text-xs text-texto-3">Se crea con 6 columnas (Nuevos, No contesta, Llamar luego, Agendados, Cerrados y Descartados), ya unidas a los estados del caller. Luego puedes añadir, renombrar, unir o borrar columnas.</p>
             <button className="btn-primario w-full" disabled={pendiente}>Crear pipeline</button>
           </form>
         </Modal>
@@ -388,6 +450,7 @@ function MenuColumna({
   onEditar,
   onMover,
   onBorrar,
+  onUnir,
 }: {
   etapa: Etapa;
   primera: boolean;
@@ -395,6 +458,7 @@ function MenuColumna({
   onEditar: (nombre: string, color: string) => void;
   onMover: (d: -1 | 1) => void;
   onBorrar: () => void;
+  onUnir: (estado: EstadoCaller | null) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   return (
@@ -430,6 +494,20 @@ function MenuColumna({
                 />
               ))}
             </div>
+            <label className="block px-2 pb-2">
+              <span className="text-[11px] text-texto-3">Unir a un estado del lead</span>
+              <select
+                className="campo mt-1 py-1 text-xs"
+                value={etapa.estado_caller ?? ""}
+                onChange={(e) => {
+                  onUnir((e.target.value || null) as EstadoCaller | null);
+                  setAbierto(false);
+                }}
+              >
+                <option value="">Sin unir (columna libre)</option>
+                {(Object.keys(ETIQUETA_ESTADO_CALLER) as EstadoCaller[]).map((k) => <option key={k} value={k}>{ETIQUETA_ESTADO_CALLER[k]}</option>)}
+              </select>
+            </label>
             {!primera && (
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2" onClick={() => { onMover(-1); setAbierto(false); }}>
                 <ArrowLeft className="h-4 w-4" /> Mover a la izquierda
@@ -640,6 +718,40 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
         {!error && estado?.ok && <p className="rounded-lg bg-ok-suave px-3 py-2 text-sm text-ok">{estado.ok}</p>}
         <button className="btn-primario w-full" disabled={enviando || subiendo || !!sinContacto}>{subiendo ? "Subiendo…" : enviando ? "Importando…" : "Importar"}</button>
       </form>
+    </Modal>
+  );
+}
+
+// Pre-call (Paso H7): nombre, color y orden de sus 4 columnas (siguen siendo los 4 estados de la cita)
+function ModalPrecall({ inicial, onCerrar, onGuardar }: { inicial: ColumnaPrecall[]; onCerrar: () => void; onGuardar: (lista: ColumnaPrecall[]) => void }) {
+  const [lista, setLista] = useState(inicial);
+  const cambiar = (i: number, c: Partial<ColumnaPrecall>) => setLista((l) => l.map((x, k) => (k === i ? { ...x, ...c } : x)));
+  const subir = (i: number, d: -1 | 1) =>
+    setLista((l) => {
+      const j = i + d;
+      if (j < 0 || j >= l.length) return l;
+      const c = [...l];
+      [c[i], c[j]] = [c[j], c[i]];
+      return c;
+    });
+  return (
+    <Modal titulo="Columnas de Pre-call" onCerrar={onCerrar}>
+      <div className="space-y-3">
+        <p className="text-xs text-texto-3">Cambia el nombre, el color y el orden. Las 4 columnas siguen siendo los 4 estados de la cita (no se añaden ni se borran).</p>
+        {lista.map((c, i) => (
+          <div key={c.estado} className="flex items-center gap-2">
+            <div className="flex flex-col">
+              <button type="button" className="text-texto-3 hover:text-texto disabled:opacity-30" disabled={i === 0} onClick={() => subir(i, -1)} aria-label="Subir"><ArrowLeft className="h-3.5 w-3.5 rotate-90" /></button>
+              <button type="button" className="text-texto-3 hover:text-texto disabled:opacity-30" disabled={i === lista.length - 1} onClick={() => subir(i, 1)} aria-label="Bajar"><ArrowRight className="h-3.5 w-3.5 rotate-90" /></button>
+            </div>
+            <input aria-label={`Nombre de la columna ${i + 1}`} className="campo flex-1" maxLength={40} value={c.titulo} onChange={(e) => cambiar(i, { titulo: e.target.value })} />
+            <select aria-label={`Color de la columna ${i + 1}`} className="campo w-auto" value={c.color} onChange={(e) => cambiar(i, { color: e.target.value })} style={{ color: c.color }}>
+              {[...new Set([c.color, ...COLORES])].map((x) => <option key={x} value={x} style={{ color: x }}>●  {x}</option>)}
+            </select>
+          </div>
+        ))}
+        <button className="btn-primario w-full" onClick={() => onGuardar(lista)}>Guardar</button>
+      </div>
     </Modal>
   );
 }

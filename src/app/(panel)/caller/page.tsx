@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Phone, CalendarCheck, MessageCircle, ShoppingCart, PhoneOff, Users, Inbox, Trophy } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { panelObjetivos } from "@/lib/objetivos";
 import { PanelObjetivos } from "@/components/barras-objetivos";
 import { db, todas, equipo } from "@/lib/datos";
@@ -22,9 +22,10 @@ const PESTANAS = [
 ];
 
 export default async function CallerPage({ searchParams }: PageProps<"/caller">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("cola"); // H5
   const jefe = esJefe(perfil);
-  if (!jefe && perfil.rol !== "caller") redirect("/");
+  // H5: a un closer con «Mis leads», sus leads como closer (lo suyo), en forma de cola
+  const comoCloser = perfil.rol === "closer";
   const sp = await searchParams;
   const gente = await equipo(proyecto.id);
   const callers = gente.filter((g) => g.rol === "caller");
@@ -42,7 +43,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
 
   const hoy = rangoDe("hoy", proyecto.zona_horaria);
   const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring] = await Promise.all([
-    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).order("id").range(a, b)),
+    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq(comoCloser ? "closer_id" : "caller_id", caller.id).order("id").range(a, b)),
     db().from("actividades").select("tipo, resultado").eq("perfil_id", caller.id).eq("proyecto_id", proyecto.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("citas").select("id", { count: "exact", head: true }).eq("agendada_por", caller.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("ventas").select("id", { count: "exact", head: true }).eq("vendedor_id", caller.id).gte("fecha", hoy.desde!.toISOString()),

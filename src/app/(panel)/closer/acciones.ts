@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
@@ -11,8 +12,9 @@ import { telefonoClave } from "@/lib/leads";
 
 // Arreglo 31: «cerrada» no se puede poner a mano: una cita se cierra registrando su venta
 const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida"];
-// Arreglo 32: estas citas ya terminaron; para volver a hablar con el lead se crea una cita nueva
-const NO_REAGENDABLES: EstadoCita[] = ["cerrada", "cancelada", "perdida", "no_califica", "reagendada"];
+// El arreglo 32 se quitó (Cristian, 10 oct 2026, Paso H6): cualquier cita se reagenda desde el tablero de
+// Post-call. Solo la cerrada no, porque tiene su venta (para eso se arrastra la venta, que la borra).
+const NO_REAGENDABLES: EstadoCita[] = ["cerrada"];
 // Después de la llamada el closer dice qué tal prospecto era (1 a 5); «No califica» = 1.
 const PIDEN_ESTRELLAS: EstadoCita[] = ["seguimiento", "perdida"];
 
@@ -26,6 +28,7 @@ async function citaPermitida(citaId: string) {
 
 export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota: string, estrellas?: number) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     nota = notaValida(nota);
     if (!PERMITIDOS.includes(estado)) throw new ErrorUsuario("Estado no válido.");
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
@@ -60,6 +63,7 @@ export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota
 
 export async function reagendarCita(citaId: string, fechaLocal: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
     if (NO_REAGENDABLES.includes(cita.estado)) throw new ErrorUsuario(`Esta cita ya está «${ETIQUETA_ESTADO_CITA[cita.estado]}»: no se puede reagendar. Crea una llamada nueva desde el lead.`);
     if (!fechaLocal) throw new ErrorUsuario("Elige la nueva fecha.");
@@ -82,6 +86,7 @@ export async function reagendarCita(citaId: string, fechaLocal: string) {
 // Buscar un lead para «Crear llamada»: los jefes buscan en todo el proyecto; el closer, en los suyos.
 export async function buscarLeadsParaLlamada(q: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil) && perfil.rol !== "closer") throw new ErrorUsuario("Sin permiso.");
     const t = q.trim().replace(/[%,()]/g, " ").slice(0, 60);
@@ -102,6 +107,7 @@ export async function buscarLeadsParaLlamada(q: string) {
 // closer_email y nota (opcional). Solo director y CEO.
 export async function importarCitas(texto: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO importan citas.");
     const { default: Papa } = await import("papaparse");
@@ -145,6 +151,7 @@ export async function importarCitas(texto: string) {
 // ---------- Calendario de GHL (V2-3) ----------
 export async function sincronizarGhl(soloSiHaceMas?: number) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil) && perfil.rol !== "closer") throw new ErrorUsuario("Sin permiso.");
     const { data: p } = await db().from("proyectos").select("ghl_token, ghl_location_id, ghl_sincronizado_en").eq("id", proyecto.id).single();
@@ -165,6 +172,7 @@ export async function sincronizarGhl(soloSiHaceMas?: number) {
 // Citas de GHL sin unir: unirlas a un lead (se crea la cita) o descartarlas
 export async function unirCitaSinLead(id: string, leadId: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO revisan las citas sin unir.");
     const { data: s } = await db().from("citas_sin_lead").select("*").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
@@ -182,6 +190,7 @@ export async function unirCitaSinLead(id: string, leadId: string) {
 
 export async function descartarCitaSinLead(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO revisan las citas sin unir.");
     await escribir(db().from("citas_sin_lead").update({ estado: "descartada" }).eq("id", id).eq("proyecto_id", proyecto.id), "citas_sin_lead");

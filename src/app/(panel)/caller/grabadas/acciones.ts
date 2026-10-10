@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
@@ -10,6 +11,7 @@ import { procesarLlamadasGhl, sincronizarLlamadasGhl } from "@/lib/ghl-llamadas-
 // Trae de GHL las llamadas nuevas; la transcripción y el análisis van después de responder
 export async function sincronizarLlamadasAhora() {
   return seguro(async () => {
+    await exigirSeccion("grabadas"); // H5
     const { proyecto } = await getSesion();
     let r: { nuevas: number };
     try {
@@ -25,6 +27,7 @@ export async function sincronizarLlamadasAhora() {
 
 export async function reintentarLlamada(id: string) {
   return seguro(async () => {
+    await exigirSeccion("grabadas"); // H5
     const { perfil, proyecto } = await getSesion();
     const { data: l } = await db().from("llamadas_ghl").select("perfil_id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!l || (!esJefe(perfil) && l.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa llamada no es tuya.");

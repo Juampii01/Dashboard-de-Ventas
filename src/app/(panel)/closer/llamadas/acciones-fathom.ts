@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db, escribir } from "@/lib/datos";
@@ -26,6 +27,7 @@ async function sesionAgendas() {
 // Cuenta de Fathom de un closer: nombre, API key (solo se escribe) y formato de título
 export async function guardarCuentaFathom(id: string | null, c: { nombre: string; apiKey: string; formato: string; perfilId: string }) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await sesionAgendas();
     const dueno = esJefe(perfil) ? c.perfilId : perfil.id; // un closer solo añade la suya
     const { data: m } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfil_id", dueno).maybeSingle();
@@ -49,6 +51,7 @@ export async function guardarCuentaFathom(id: string | null, c: { nombre: string
 
 export async function borrarCuentaFathom(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await sesionAgendas();
     const { data: ya } = await db().from("cuentas_fathom").select("perfil_id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!ya || (!esJefe(perfil) && ya.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa cuenta no es tuya.");
@@ -60,6 +63,7 @@ export async function borrarCuentaFathom(id: string) {
 // Prueba la clave antes de guardarla (pide una página de reuniones de los últimos 7 días)
 export async function probarFathom(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await sesionAgendas();
     const { data: c } = await db().from("cuentas_fathom").select("perfil_id, api_key").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!c || (!esJefe(perfil) && c.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa cuenta no es tuya.");
@@ -74,6 +78,7 @@ export async function probarFathom(id: string) {
 
 export async function sincronizarFathomAhora() {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await sesionAgendas();
     const res = await sincronizarFathom(proyecto.id, esJefe(perfil) ? {} : { perfilIds: [perfil.id] });
     analizarDespues(proyecto.id);
@@ -92,6 +97,7 @@ async function grabacionPermitida(id: string) {
 
 export async function conciliarGrabacionManual(id: string, citaId: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto, g } = await grabacionPermitida(id);
     const { data: cita } = await db().from("citas").select("id, closer_id").eq("id", citaId).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!cita) throw new ErrorUsuario("Esa cita no existe.");
@@ -107,6 +113,7 @@ export async function conciliarGrabacionManual(id: string, citaId: string) {
 
 export async function desunirGrabacion(id: string, descartar = false) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     await grabacionPermitida(id);
     await escribir(db().from("grabaciones").update({ cita_id: null, conciliacion: descartar ? "descartada" : "pendiente", motivo: descartar ? "Descartada (no es una llamada de venta)" : "Desunida a mano" }).eq("id", id), "grabaciones");
     refrescar();

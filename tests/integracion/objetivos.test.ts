@@ -18,9 +18,9 @@ const filas = async () => (await db.from("objetivos").select("*").eq("proyecto_i
 describe("Objetivos", () => {
   it("solo el CEO o el director; ni el caller ni el closer", async () => {
     como(e, e.p.callerA);
-    await falla(guardarObjetivo(nuevo), /No tienes permiso/);
+    await falla(guardarObjetivo(nuevo), /No tienes (permiso|acceso)/);  // H5: sin la sección, «No tienes acceso»
     como(e, e.p.closerA);
-    await falla(crearLanzamiento({ nombre: "X", inicio: "2026-10-01", fin: "2026-10-02", evento: "" }), /No tienes permiso/);
+    await falla(crearLanzamiento({ nombre: "X", inicio: "2026-10-01", fin: "2026-10-02", evento: "" }), /No tienes (permiso|acceso)/);
     como(e, e.p.director);
     await ok(guardarObjetivo(nuevo));
     expect(await filas()).toHaveLength(1);

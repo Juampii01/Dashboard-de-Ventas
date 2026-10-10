@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSesion, esJefe } from "@/lib/auth";
+import { puedeSeccion } from "@/lib/permisos";
 import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
 import { metricasAgendas, type MetricasAgendas } from "@/lib/metricas-agendas";
 import { leerPeriodo, rangoNav } from "@/lib/periodos";
@@ -10,6 +11,8 @@ import { generarPdf } from "@/lib/reporte-pdf";
 export async function GET(request: NextRequest) {
   const { perfil, proyecto } = await getSesion();
   const jefe = esJefe(perfil);
+  // H5: sin la sección «Agendas» (por su rol o su ficha), nada
+  if (!(await puedeSeccion(perfil, proyecto.id, "agendas"))) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   if (!jefe && perfil.rol !== "closer") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   const sp = Object.fromEntries(request.nextUrl.searchParams);
   const p = leerPeriodo(sp);

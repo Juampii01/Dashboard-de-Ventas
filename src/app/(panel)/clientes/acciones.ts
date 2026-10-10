@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { db, registrarActividad, todas, escribir } from "@/lib/datos";
-import { exigirSeccion } from "@/lib/permisos";
+import { exigirSeccion, soloLoSuyo } from "@/lib/permisos";
+import { clientesSuyos } from "./cargar";
 import { esJefe } from "@/lib/auth";
 import { telefonoClave } from "@/lib/leads";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
@@ -15,6 +16,8 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Solo se toca la ficha de alguien que ha comprado (decisión de Cristian: Clientes = quien compró)
 async function clientePermitido(leadId: string) {
   const sesion = await exigirSeccion("clientes");
+  // H5: a un caller o closer, solo sus clientes (los que vendió o agendó)
+  if (soloLoSuyo(sesion.perfil, "clientes") && !(await clientesSuyos(sesion.proyecto.id, sesion.perfil.id)).has(leadId)) throw new ErrorUsuario("Este cliente no es tuyo.");
   const { data: venta } = await db().from("ventas").select("id").eq("proyecto_id", sesion.proyecto.id).eq("lead_id", leadId).limit(1).maybeSingle();
   if (!venta) throw new ErrorUsuario("Esta persona no ha comprado: no es un cliente.");
   return sesion;
@@ -78,7 +81,8 @@ export async function guardarCasoExito(leadId: string, c: { caso: boolean; resul
 // ---------- Pasos del onboarding ----------
 export async function guardarPasoOnboarding(id: string | null, nombre: string) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("clientes");
+    const { perfil, proyecto } = await exigirSeccion("clientes");
+    if (soloLoSuyo(perfil, "clientes")) throw new ErrorUsuario("Los pasos del onboarding los cambian el CEO o el director."); // H5
     if (!nombre.trim()) throw new ErrorUsuario("Pon un nombre al paso.");
     if (id) {
       const { error } = await db().from("pasos_onboarding").update({ nombre: nombre.trim() }).eq("id", id).eq("proyecto_id", proyecto.id);
@@ -94,7 +98,8 @@ export async function guardarPasoOnboarding(id: string | null, nombre: string) {
 
 export async function borrarPasoOnboarding(id: string) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("clientes");
+    const { perfil, proyecto } = await exigirSeccion("clientes");
+    if (soloLoSuyo(perfil, "clientes")) throw new ErrorUsuario("Los pasos del onboarding los cambian el CEO o el director."); // H5
     await escribir(db().from("pasos_onboarding").delete().eq("id", id).eq("proyecto_id", proyecto.id), "pasos_onboarding");
     refrescar();
   });
@@ -104,6 +109,7 @@ export async function borrarPasoOnboarding(id: string) {
 export async function nuevoCliente(formData: FormData) {
   return seguro(async () => {
     const { perfil, proyecto } = await exigirSeccion("clientes");
+    if (soloLoSuyo(perfil, "clientes")) throw new ErrorUsuario("Un cliente nuevo lo crean el CEO o el director (tus ventas, desde tus leads)."); // H5
     const nombre = String(formData.get("nombre") ?? "").trim();
     const apellido = String(formData.get("apellido") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();

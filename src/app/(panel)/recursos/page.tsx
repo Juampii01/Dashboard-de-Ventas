@@ -1,5 +1,6 @@
 import { FileText, Link2, ScrollText, Video, FolderOpen, CreditCard } from "lucide-react";
-import { getSesion, puedeRecursos } from "@/lib/auth";
+import { puedeRecursos } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db } from "@/lib/datos";
 import { recursosVisibles } from "@/lib/recursos";
 import { dinero, fecha } from "@/lib/formato";
@@ -11,7 +12,7 @@ const ICONO = { pdf: FileText, enlace: Link2, guion: ScrollText, video: Video };
 const TIPO = { pdf: "PDF", enlace: "Enlace", guion: "Guion", video: "Vídeo" };
 
 export default async function RecursosPage({ searchParams }: PageProps<"/recursos">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("recursos"); // H5
   const editor = puedeRecursos(perfil);
   const sp = await searchParams;
   const tipo = typeof sp.tipo === "string" ? sp.tipo : "";

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db, escribir } from "@/lib/datos";
-import { exigirSeccion } from "@/lib/permisos";
+import { exigirSeccion, soloLoSuyo } from "@/lib/permisos";
 import { leerNumero } from "@/lib/numero";
 import { exigirCambiarComisionRol } from "@/lib/auth";
 import type { Rol } from "@/lib/tipos";
@@ -35,6 +35,7 @@ const num = (v: string, campo: string, max = 1e9) => {
 export async function guardarPrograma(d: DatosPrograma) {
   return seguro(async () => {
     const { perfil, proyecto } = await exigirSeccion("programas");
+    if (soloLoSuyo(perfil, "programas")) throw new ErrorUsuario("Programas es solo para mirar."); // H5
     if (!d.nombre.trim()) throw new ErrorUsuario("Falta el nombre del programa.");
     const precio = num(d.precio, "Precio");
     if (precio === 0) throw new ErrorUsuario("El precio del programa está en cero (déjalo vacío si es personalizado).");
@@ -86,7 +87,8 @@ export async function guardarPrograma(d: DatosPrograma) {
 
 export async function activarPrograma(id: string, activo: boolean) {
   return seguro(async () => {
-    const { proyecto } = await exigirSeccion("programas");
+    const { perfil, proyecto } = await exigirSeccion("programas");
+    if (soloLoSuyo(perfil, "programas")) throw new ErrorUsuario("Programas es solo para mirar."); // H5
     await escribir(db().from("productos").update({ activo }).eq("id", id).eq("proyecto_id", proyecto.id), "productos");
     revalidatePath("/", "layout");
   });

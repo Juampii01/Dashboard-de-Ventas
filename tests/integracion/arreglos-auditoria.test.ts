@@ -225,7 +225,7 @@ describe("Arreglo 30: errores inesperados sin texto técnico", () => {
 });
 
 describe("Arreglos 31 y 32: estados de las citas", () => {
-  it("31: «cerrada» no se puede poner a mano; 32: no se reagenda una cita cerrada, cancelada, perdida o que no califica", async () => {
+  it("31: «cerrada» no se puede poner a mano; 32 (quitado por Cristian el 10 oct 2026): se reagenda cualquier cita menos la cerrada", async () => {
     const l = await nuevoLead("Arreglo31", { caller_id: e.p.callerA.id });
     como(e, e.p.callerA);
     await ok(agendarCita(l, e.p.closerA.id, "2026-10-24T10:00", "", 3));
@@ -233,14 +233,16 @@ describe("Arreglos 31 y 32: estados de las citas", () => {
     como(e, e.p.closerA);
     await falla(cambiarEstadoCita(c.id, "cerrada" as never, ""), /Estado no válido/);
     await ok(reagendarCita(c.id, "2026-10-25T10:00")); // abierta: sí
-    const nueva = await citaDe(l);
-    await falla(reagendarCita(c.id, "2026-10-26T10:00"), /«Reagendada»: no se puede reagendar|no se puede reagendar/); // la vieja ya está reagendada
+    await ok(reagendarCita(c.id, "2026-10-26T10:00")); // la vieja, ya reagendada: ahora también
+    let dia = 27;
     for (const [estado, estrellas] of [["cancelada", undefined], ["perdida", 2], ["no_califica", undefined]] as const) {
-      await ok(cambiarEstadoCita(nueva.id, estado, "", estrellas));
-      await falla(reagendarCita(nueva.id, "2026-10-27T10:00"), /no se puede reagendar/);
+      const viva = await citaDe(l);
+      await ok(cambiarEstadoCita(viva.id, estado, "", estrellas));
+      await ok(reagendarCita(viva.id, `2026-10-${dia++}T10:00`));
     }
-    await db.from("citas").update({ estado: "cerrada" }).eq("id", nueva.id);
-    await falla(reagendarCita(nueva.id, "2026-10-27T10:00"), /«Cerrada»: no se puede reagendar|no se puede reagendar/);
+    const ultima = await citaDe(l);
+    await db.from("citas").update({ estado: "cerrada" }).eq("id", ultima.id);
+    await falla(reagendarCita(ultima.id, "2026-10-31T10:00"), /«Cerrada»: no se puede reagendar/);
   });
 });
 

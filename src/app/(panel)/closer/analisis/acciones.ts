@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
@@ -27,6 +28,7 @@ async function analisisPermitido(id: string) {
 // ---------- Configurar IA (4 pasos: alcance, contexto, agentes, revisión) ----------
 export async function guardarConfigIa(productoId: string | null, contexto: string, agentes: ConfigAgentes) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto } = await jefe();
     if (productoId) {
       const { data: p } = await db().from("productos").select("id").eq("id", productoId).eq("proyecto_id", proyecto.id).maybeSingle();
@@ -52,6 +54,7 @@ export async function guardarConfigIa(productoId: string | null, contexto: strin
 
 export async function borrarConfigIa(productoId: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto } = await jefe();
     await escribir(db().from("config_ia").delete().eq("proyecto_id", proyecto.id).eq("producto_id", productoId), "config_ia");
     refrescar();
@@ -61,6 +64,7 @@ export async function borrarConfigIa(productoId: string) {
 // ---------- Analizar ----------
 export async function reanalizar(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto, a } = await analisisPermitido(id);
     if (!hayClaveIa()) throw new ErrorUsuario("Falta la clave de Claude en el servidor (ANTHROPIC_API_KEY).");
     await encolarAnalisis(proyecto.id, a.grabacion_id);
@@ -71,6 +75,7 @@ export async function reanalizar(id: string) {
 
 export async function analizarPendientesAhora() {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto } = await jefe();
     if (!hayClaveIa()) throw new ErrorUsuario("Falta la clave de Claude en el servidor (ANTHROPIC_API_KEY).");
     // Grabaciones conciliadas que aún no tienen análisis
@@ -90,6 +95,7 @@ export async function analizarPendientesAhora() {
 // La IA propone; el closer (o un jefe) confirma. «Cerrada» necesita registrar la venta: se manda a la ficha.
 export async function aceptarAutocompletado(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { a } = await analisisPermitido(id);
     const auto = a.autocompletado as { estado: EstadoCita; estrellas: number; nota: string } | null;
     if (!auto || a.autocompletado_estado !== "pendiente") throw new ErrorUsuario("No hay nada que confirmar.");
@@ -110,6 +116,7 @@ export async function aceptarAutocompletado(id: string) {
 
 export async function rechazarAutocompletado(id: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     await analisisPermitido(id);
     await escribir(db().from("analisis_llamadas").update({ autocompletado_estado: "rechazado" }).eq("id", id), "analisis_llamadas");
     refrescar();
@@ -119,6 +126,7 @@ export async function rechazarAutocompletado(id: string) {
 // ---------- Análisis › Manual: evaluación a mano ----------
 export async function evaluarManual(id: string, nota: number, texto: string) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { perfil, proyecto } = await jefe();
     if (!Number.isInteger(nota) || nota < 1 || nota > 10) throw new ErrorUsuario("Elige una nota de 1 a 10.");
     const { data } = await db().from("analisis_llamadas").update({ evaluacion_manual: nota, evaluacion_nota: texto.trim().slice(0, 4000) || null, evaluado_por: perfil.id, evaluado_en: new Date().toISOString() }).eq("id", id).eq("proyecto_id", proyecto.id).select("id");
@@ -131,6 +139,7 @@ export async function evaluarManual(id: string, nota: number, texto: string) {
 // A Claude solo le llega la tabla del estudio (respuestas y números), nunca nombres, emails ni teléfonos.
 export async function calcularScoringIa(llamar?: LlamarClaude) {
   return seguro(async () => {
+    await exigirSeccion("agendas"); // H5
     const { proyecto } = await jefe();
     const fs = await datosEstudio(proyecto.id);
     if (fs.filter((f) => f.llamadas > 0).length < 2) throw new ErrorUsuario("Aún hay muy pocas llamadas con respuestas del formulario para sacar conclusiones.");

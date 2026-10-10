@@ -96,7 +96,7 @@ function CeldasCloser({ c, dinero }: { c: FilaCloser; dinero: (n: number) => str
 
 const FILA_TOTAL = "bg-panel-2 font-semibold";
 
-export function TablasKpis({ kpis, dinero }: { kpis: Kpis; dinero: (n: number) => string }) {
+export function TablasKpis({ kpis, dinero, sinTotales }: { kpis: Kpis; dinero: (n: number) => string; sinTotales?: boolean }) {
   return (
     <div className="grid gap-4">
       <div className="overflow-x-auto rounded-lg border border-borde">
@@ -115,10 +115,10 @@ export function TablasKpis({ kpis, dinero }: { kpis: Kpis; dinero: (n: number) =
                   <CeldasCaller c={c} dinero={dinero} />
                 </tr>
               ))}
-              <tr className={FILA_TOTAL}>
+              {!sinTotales && <tr className={FILA_TOTAL}>
                 <td>Total callers</td>
                 <CeldasCaller c={kpis.totalCallers} dinero={dinero} />
-              </tr>
+              </tr>}
             </tbody>
           </table>
         )}
@@ -139,10 +139,10 @@ export function TablasKpis({ kpis, dinero }: { kpis: Kpis; dinero: (n: number) =
                   <CeldasCloser c={c} dinero={dinero} />
                 </tr>
               ))}
-              <tr className={FILA_TOTAL}>
+              {!sinTotales && <tr className={FILA_TOTAL}>
                 <td>Total closers</td>
                 <CeldasCloser c={kpis.totalClosers} dinero={dinero} />
-              </tr>
+              </tr>}
             </tbody>
           </table>
         )}

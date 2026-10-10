@@ -213,13 +213,13 @@ export function FormVenta({
   moneda: string;
   onEnviar: (fd: FormData) => void;
   desdeCita?: boolean; // el closer cierra su cita: pide las estrellas del prospecto
-  tipoInicial?: "reserva" | "cuotas"; // al soltar en «Reserva» o «Cuotas» del Post-call (Paso H6)
+  tipoInicial?: "completo" | "reserva" | "cuotas"; // al soltar en «Cerradas», «Reserva» o «Cuotas» del Post-call (Paso H6)
 }) {
   const [productoId, setProductoId] = useState(productos[0]?.id ?? "");
   const producto = productos.find((p) => p.id === productoId);
   const [facturacion, setFacturacion] = useState(String(producto?.precio ?? ""));
   const [tipo, setTipo] = useState<string>(tipoInicial ?? (producto?.modo_pago === "cuotas" ? "cuotas" : "completo"));
-  const [cash, setCash] = useState(tipoInicial ? "" : String(producto?.precio ?? ""));
+  const [cash, setCash] = useState(tipoInicial && tipoInicial !== "completo" ? "" : String(producto?.precio ?? ""));
   const simbolo = moneda === "EUR" ? "€" : "$";
   return (
     <form action={onEnviar} className="space-y-3">

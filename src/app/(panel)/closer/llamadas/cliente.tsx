@@ -11,7 +11,7 @@ import { agendarCita } from "@/app/(panel)/leads/acciones";
 import { buscarLeadsParaLlamada, cambiarEstadoCita, descartarCitaSinLead, importarCitas, sincronizarGhl, unirCitaSinLead } from "../acciones";
 import { useToast } from "@/components/toasts";
 import { AccionesCita } from "../acciones-cita";
-import { COLUMNAS_PRECALL } from "@/lib/llamadas";
+import type { ColumnaPrecall } from "@/lib/llamadas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 
 type LeadBuscado = { id: string; nombre: string; apellido: string; telefono: string | null; email: string | null };
@@ -143,6 +143,8 @@ export function BuscadorUrl({ placeholder }: { placeholder: string }) {
 
 // Tarjeta del pre-call: Registrar · Mover a · Chat
 export function TarjetaPrecall({
+  soloMirar = false,
+  columnas,
   cita,
   lead,
   fechaTxt,
@@ -151,6 +153,8 @@ export function TarjetaPrecall({
   productos,
   moneda,
 }: {
+  soloMirar?: boolean; // H5: un caller con «Agendas», solo mirar
+  columnas: ColumnaPrecall[];
   cita: { id: string; estado: EstadoCita; lead_id: string };
   lead: { nombre: string; telefono: string | null };
   fechaTxt: string;
@@ -164,12 +168,12 @@ export function TarjetaPrecall({
   const tel = (lead.telefono ?? "").replace(/\D/g, "");
   return (
     <div
-      draggable
+      draggable={!soloMirar}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", JSON.stringify({ id: cita.id, estado: cita.estado }));
       }}
-      className={`cursor-grab space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm active:cursor-grabbing ${pendiente ? "opacity-60" : ""}`}
+      className={`${soloMirar ? "" : "cursor-grab"} space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm active:cursor-grabbing ${pendiente ? "opacity-60" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <a href={`/leads/${cita.lead_id}`} className="font-medium hover:text-primario">{lead.nombre}</a>
@@ -178,7 +182,7 @@ export function TarjetaPrecall({
       {lead.telefono && <a href={`tel:${lead.telefono}`} className="flex items-center gap-1.5 text-primario"><Phone className="h-3.5 w-3.5" />{lead.telefono}</a>}
       <div className="text-xs text-texto-2">📅 {fechaTxt}</div>
       <div className="text-[11px] text-texto-3">Agendada el {agendadaTxt}</div>
-      <div className="flex flex-wrap gap-1.5">
+      {!soloMirar && <div className="flex flex-wrap gap-1.5">
         <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
         <select
           aria-label="Mover a"
@@ -188,10 +192,10 @@ export function TarjetaPrecall({
           onChange={(e) => e.target.value && ejecutar(() => cambiarEstadoCita(cita.id, e.target.value as EstadoCita, ""), "Movida")}
         >
           <option value="">Mover a…</option>
-          {COLUMNAS_PRECALL.filter((c) => c.estado !== cita.estado).map((c) => <option key={c.estado} value={c.estado}>{c.titulo}</option>)}
+          {columnas.filter((c) => c.estado !== cita.estado).map((c) => <option key={c.estado} value={c.estado}>{c.titulo}</option>)}
         </select>
         {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
-      </div>
+      </div>}
       {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={cita} pasada productos={productos} moneda={moneda} /></div>}
       <Mensajes error={error} ok="" />
     </div>
@@ -199,7 +203,7 @@ export function TarjetaPrecall({
 }
 
 // Columna del tablero de pre-call (Paso H6): soltar una tarjeta = «Mover a» esta columna
-export function ColumnaPrecall({ estado, titulo, color, total, children }: { estado: EstadoCita; titulo: string; color: string; total: number; children: React.ReactNode }) {
+export function ColumnaPrecall({ estado, titulo, color, total, soloMirar = false, children }: { estado: EstadoCita; titulo: string; color: string; total: number; soloMirar?: boolean; children: React.ReactNode }) {
   const { pendiente, ejecutar } = useAccion();
   const [sobre, setSobre] = useState(false);
   return (
@@ -212,6 +216,7 @@ export function ColumnaPrecall({ estado, titulo, color, total, children }: { est
       onDrop={(ev) => {
         ev.preventDefault();
         setSobre(false);
+        if (soloMirar) return; // H5: solo mirar
         let datos: { id?: string; estado?: string } = {};
         try {
           datos = JSON.parse(ev.dataTransfer.getData("text/plain"));

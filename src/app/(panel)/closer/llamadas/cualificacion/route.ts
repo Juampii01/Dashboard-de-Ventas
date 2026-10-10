@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSesion, esJefe } from "@/lib/auth";
+import { puedeSeccion } from "@/lib/permisos";
 import { datosEstudio } from "@/lib/cualificacion-datos";
 import { csvExcel, nombreArchivo } from "@/lib/csv-excel";
 
 // Cualificación › Estudio a CSV (se abre con Excel). Solo director y CEO.
 export async function GET(request: NextRequest) {
   const { perfil, proyecto } = await getSesion();
+  // H5: sin la sección «Agendas» (por su rol o su ficha), nada
+  if (!(await puedeSeccion(perfil, proyecto.id, "agendas"))) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   if (!esJefe(perfil)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   const preg = request.nextUrl.searchParams.getAll("preg");
   const filas = await datosEstudio(proyecto.id, preg.length ? preg : undefined);

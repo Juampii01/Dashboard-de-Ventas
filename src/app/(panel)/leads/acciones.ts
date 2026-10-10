@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
@@ -7,7 +8,7 @@ import { db, registrarActividad, escribir } from "@/lib/datos";
 import { localAIso } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import { planDePagos } from "@/lib/finanzas";
-import type { Lead, Perfil, Proyecto } from "@/lib/tipos";
+import type { EstadoCaller, Lead, Perfil, Proyecto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { ABIERTAS } from "@/lib/llamadas";
 
@@ -23,10 +24,16 @@ async function leadPermitido(leadId: string): Promise<{ lead: Lead; perfil: Perf
   return { lead, perfil, proyecto };
 }
 
-async function moverAColumna(lead: Lead, nombres: string[]) {
+// Mueve la tarjeta del lead en el CRM según su nuevo estado (Paso H7): 1) `primero` (p. ej. la columna del
+// producto en Orgánico), 2) la columna unida a ese estado, 3) como antes, por nombre (`nombres`).
+async function moverAColumna(lead: Lead, estado: EstadoCaller, nombres: string[], primero: string[] = []) {
   if (!lead.pipeline_id) return;
-  const { data } = await db().from("etapas").select("id, nombre").eq("pipeline_id", lead.pipeline_id);
-  const destino = (data ?? []).find((e) => nombres.includes(e.nombre.toLowerCase()));
+  const { data } = await db().from("etapas").select("id, nombre, estado_caller").eq("pipeline_id", lead.pipeline_id);
+  const etapas = data ?? [];
+  const destino =
+    etapas.find((e) => primero.includes(e.nombre.toLowerCase())) ??
+    etapas.find((e) => e.estado_caller === estado) ??
+    etapas.find((e) => nombres.includes(e.nombre.toLowerCase()));
   if (destino && destino.id !== lead.etapa_id) await db().from("leads").update({ etapa_id: destino.id }).eq("id", lead.id);
 }
 
@@ -41,6 +48,7 @@ export async function registrarLlamada(
   estrellas?: number
 ) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     nota = notaValida(nota);
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     const estado = resultado === "contestado" ? lead.estado_caller : resultado;
@@ -54,13 +62,14 @@ export async function registrarLlamada(
       })
       .eq("id", leadId);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "llamada", resultado, nota: [n ? `${n}★` : "", nota].filter(Boolean).join(" · ") || null });
-    if (resultado === "no_interesa") await moverAColumna(lead, ["descartados", "descartado"]);
+    if (resultado !== "contestado") await moverAColumna(lead, resultado, resultado === "no_interesa" ? ["descartados", "descartado"] : []);
     refrescar();
   });
 }
 
 export async function registrarWhatsapp(leadId: string, nota: string) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     nota = notaValida(nota);
     const { perfil, proyecto } = await leadPermitido(leadId);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "whatsapp", nota: nota || "Mensaje de WhatsApp enviado" });
@@ -70,6 +79,7 @@ export async function registrarWhatsapp(leadId: string, nota: string) {
 
 export async function anadirNota(leadId: string, nota: string) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     nota = notaValida(nota);
     if (!nota.trim()) return;
     const { perfil, proyecto } = await leadPermitido(leadId);
@@ -81,6 +91,7 @@ export async function anadirNota(leadId: string, nota: string) {
 // ---------- Agendar cita con un closer ----------
 export async function agendarCita(leadId: string, closerId: string, fechaLocal: string, nota: string, estrellas?: number) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     nota = notaValida(nota);
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
@@ -103,7 +114,7 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
     await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser}${n ? ` · ${n}★` : ""}${nota ? ` · ${nota}` : ""}` });
-    await moverAColumna(lead, ["agendados", "agendado"]);
+    await moverAColumna(lead, "agendado", ["agendados", "agendado"]);
     refrescar();
   });
 }
@@ -111,6 +122,7 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
 // ---------- Registrar venta ----------
 export async function registrarVenta(leadId: string, formData: FormData) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     const productoId = String(formData.get("producto") ?? "");
     const { data: producto } = await db().from("productos").select("*").eq("id", productoId).eq("proyecto_id", proyecto.id).maybeSingle();
@@ -136,15 +148,20 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     const fecha = fechaTxt ? aIso(`${fechaTxt}T12:00`, proyecto.zona_horaria) : new Date().toISOString();
     // Desde la cita (closer), las estrellas de cómo era el prospecto son obligatorias
     const estrellasCloser = formData.get("desde_cita") ? estrellasEntre(formData.get("estrellas"), 1, 5) : null;
-    // La cita abierta de este lead (pasará a «cerrada»)
-    const { data: cita } = await db()
-      .from("citas")
-      .select("id, closer_id")
-      .eq("lead_id", leadId)
-      .in("estado", [...ABIERTAS, "seguimiento"]) // arreglo 8: también «confirmación pendiente»
-      .order("fecha", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // La cita que pasará a «cerrada»: la que se arrastró en Post-call (Paso H6, puede estar terminada) o,
+    // si no viene, la abierta de este lead
+    const citaElegida = String(formData.get("cita_id") ?? "");
+    const { data: cita } = citaElegida
+      ? await db().from("citas").select("id, closer_id").eq("id", citaElegida).eq("lead_id", leadId).eq("proyecto_id", proyecto.id).neq("estado", "cerrada").maybeSingle()
+      : await db()
+          .from("citas")
+          .select("id, closer_id")
+          .eq("lead_id", leadId)
+          .in("estado", [...ABIERTAS, "seguimiento"]) // arreglo 8: también «confirmación pendiente»
+          .order("fecha", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+    if (citaElegida && !cita) throw new ErrorUsuario("Esa cita no es de este lead o ya está cerrada.");
     // Vendedor: al cerrar una cita, la venta es del closer de esa cita aunque la cierre
     // el director o el CEO; si no, quien la registra (o a quien elija un jefe).
     let vendedor = perfil.id;
@@ -185,12 +202,10 @@ export async function registrarVenta(leadId: string, formData: FormData) {
       nota: `${producto.nombre} · facturación ${facturacion} · cobrado ${cash}`,
     });
     const nombreProd = producto.nombre.toLowerCase();
-    await moverAColumna(lead, [
+    await moverAColumna(lead, "vendido", ["cerrados", "cerrado"], [
       ...(nombreProd.includes("low") ? ["low ticket"] : []),
       ...(nombreProd.includes("vip") ? ["vip"] : []),
       ...(nombreProd.includes("grupal") ? ["grupal"] : []),
-      "cerrados",
-      "cerrado",
     ]);
     refrescar();
   });
@@ -199,6 +214,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
 // ---------- Jefes: mover / asignar desde la ficha ----------
 export async function cambiarEtapaLead(leadId: string, etapaId: string) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO mueven leads en el CRM.");
     const { data: etapa } = await db().from("etapas").select("id, nombre, pipeline_id, pipelines!inner(proyecto_id)").eq("id", etapaId).eq("pipelines.proyecto_id", proyecto.id).maybeSingle();
@@ -211,6 +227,7 @@ export async function cambiarEtapaLead(leadId: string, etapaId: string) {
 
 export async function asignarDesdeFicha(leadId: string, campo: "caller_id" | "closer_id", personaId: string) {
   return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     const { perfil, proyecto } = await leadPermitido(leadId);
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO asignan leads.");
     if (personaId) {
@@ -227,8 +244,10 @@ export async function asignarDesdeFicha(leadId: string, campo: "caller_id" | "cl
 // Tablero del caller: devolver un lead a «Nuevo» (por ejemplo, si se marcó por error).
 export async function volverANuevo(leadId: string) {
   return seguro(async () => {
-    const { perfil, proyecto } = await leadPermitido(leadId);
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
+    const { lead, perfil, proyecto } = await leadPermitido(leadId);
     await escribir(db().from("leads").update({ estado_caller: "nuevo", llamar_en: null }).eq("id", leadId), "leads");
+    await moverAColumna(lead, "nuevo", ["nuevos", "nuevo"]);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "nota", nota: "Devuelto a «Nuevo» en el tablero del caller" });
     refrescar();
   });

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PhoneCall } from "lucide-react";
-import { getSesion, esJefe } from "@/lib/auth";
+import { esJefe } from "@/lib/auth";
+import { exigirPagina } from "@/lib/permisos";
 import { db, equipo, todas } from "@/lib/datos";
 import { fechaHora } from "@/lib/formato";
 import { leerPeriodo, rangoNav, enRango } from "@/lib/periodos";
@@ -15,7 +16,7 @@ const ESTADO = { pendiente: ["En cola", "neutro"], procesando: ["Procesando…",
 
 // Llamadas de GHL grabadas, transcritas y analizadas (V2-11). Jefes: todas; el resto, las suyas.
 export default async function LlamadasGrabadas({ searchParams }: PageProps<"/caller/grabadas">) {
-  const { perfil, proyecto } = await getSesion();
+  const { perfil, proyecto } = await exigirPagina("grabadas"); // H5
   const jefe = esJefe(perfil);
   const sp = await searchParams;
   const p = leerPeriodo(sp, "semana");
