@@ -13,6 +13,7 @@ import { cargarFinanzas } from "@/lib/finanzas-datos";
 import { resumenFinanzas } from "@/lib/finanzas";
 import { guardarLeads } from "@/lib/leads";
 import { rangoDe } from "@/lib/formato";
+import { calcularKpis } from "@/lib/kpis";
 
 const N = Number(process.env.LEADS ?? 10_000);
 const ZONA = "America/New_York";
@@ -64,6 +65,7 @@ describe.skipIf(!process.env.MEDIR)(`Rendimiento con ${N} leads`, () => {
     const anio = rangoDe("rango", ZONA, "2025-10-11", "2026-10-10"); // último año
     await medir("Funnel: calcular (año)", () => calcularFunnel(base, anio, null, ZONA));
     await medir("Ranking: calcular (año)", () => calcularVendedores(base, anio));
+    await medir("KPIs: calcular (año)", () => calcularKpis(base, anio, ZONA));
   }, 300_000);
 
   it("Agendas (métricas)", async () => {

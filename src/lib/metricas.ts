@@ -6,12 +6,12 @@ import type { Perfil, Proyecto } from "@/lib/tipos";
 type LeadMin = { id: string; creado_en: string; caller_id: string | null; closer_id: string | null };
 type CitaMin = { id: string; lead_id: string; closer_id: string | null; agendada_por: string | null; fecha: string; estado: string; creado_en: string };
 type VentaMin = { id: string; lead_id: string; vendedor_id: string | null; facturacion: number; cash_collected: number; fecha: string; producto_id: string | null; devuelto?: number | null; devuelto_en?: string | null };
-type ActMin = { perfil_id: string | null; tipo: string; resultado: string | null; creado_en: string };
+type ActMin = { lead_id: string; perfil_id: string | null; tipo: string; resultado: string | null; creado_en: string };
 type PagoMin = { importe: number; fecha: string; venta_id: string };
 
-const ASISTIDAS = ["cerrada", "seguimiento", "perdida"];
+export const ASISTIDAS = ["cerrada", "seguimiento", "perdida"];
 
-function enRango(iso: string, r: { desde: Date | null; hasta: Date | null }) {
+export function enRango(iso: string, r: { desde: Date | null; hasta: Date | null }) {
   const t = new Date(iso).getTime();
   return (!r.desde || t >= r.desde.getTime()) && (!r.hasta || t < r.hasta.getTime());
 }
@@ -34,7 +34,7 @@ export async function cargarBase(proyecto: Proyecto) {
       db().from("ventas").select("id, lead_id, vendedor_id, facturacion, cash_collected, fecha, producto_id, devuelto, devuelto_en").eq("proyecto_id", pid).order("id").range(a, b)
     ),
     todas<ActMin>((a, b) =>
-      db().from("actividades").select("perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).order("id").range(a, b)
+      db().from("actividades").select("lead_id, perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).order("id").range(a, b)
     ),
     todas<PagoMin>((a, b) => db().from("pagos").select("importe, fecha, venta_id, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
     equipo(pid),
@@ -48,7 +48,7 @@ export type Base = Awaited<ReturnType<typeof cargarBase>>;
 
 // Cash neto de un grupo de ventas en el periodo, igual que Finanzas y Agendas (arreglos 5 y 7):
 // lo cobrado al vender (ventas del periodo) + cuotas cobradas en el periodo − devoluciones del periodo.
-function cashNeto(base: Base, ventasGrupo: Base["ventas"], r: { desde: Date | null; hasta: Date | null }) {
+export function cashNeto(base: Base, ventasGrupo: Base["ventas"], r: { desde: Date | null; hasta: Date | null }) {
   const ids = new Set(ventasGrupo.map((v) => v.id));
   const alVender = ventasGrupo.filter((v) => enRango(v.fecha, r)).reduce((s, v) => s + v.cash_collected, 0);
   const cuotas = base.pagos.filter((pg) => ids.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0);

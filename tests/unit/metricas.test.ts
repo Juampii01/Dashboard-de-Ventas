@@ -32,9 +32,9 @@ function base(): Base {
       { id: "v2", lead_id: "l2", vendedor_id: "carla", facturacion: 47, cash_collected: 47, fecha: "2026-10-08T15:00:00Z", producto_id: "low" },
     ],
     actividades: [
-      { perfil_id: "carla", tipo: "llamada", resultado: "no_contesta", creado_en: "2026-10-03T16:00:00Z" },
-      { perfil_id: "carla", tipo: "llamada", resultado: "contestado", creado_en: "2026-10-03T17:00:00Z" },
-      { perfil_id: "carla", tipo: "whatsapp", resultado: null, creado_en: "2026-10-03T18:00:00Z" },
+      { lead_id: "l1", perfil_id: "carla", tipo: "llamada", resultado: "no_contesta", creado_en: "2026-10-03T16:00:00Z" },
+      { lead_id: "l1", perfil_id: "carla", tipo: "llamada", resultado: "contestado", creado_en: "2026-10-03T17:00:00Z" },
+      { lead_id: "l2", perfil_id: "carla", tipo: "whatsapp", resultado: null, creado_en: "2026-10-03T18:00:00Z" },
     ],
     // Cuota cobrada en octubre de la venta v1
     pagos: [{ importe: 300, fecha: "2026-10-20T15:00:00Z", venta_id: "v1" }],

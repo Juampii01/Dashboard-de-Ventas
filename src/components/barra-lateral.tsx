@@ -25,6 +25,7 @@ import {
   Package,
   Landmark,
   UserCheck,
+  Gauge,
 } from "lucide-react";
 import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
@@ -33,6 +34,7 @@ import type { Perfil } from "@/lib/tipos";
 
 const ICONOS = {
   funnel: BarChart3,
+  kpis: Gauge,
   crm: KanbanSquare,
   grabadas: AudioLines,
   caller: PhoneCall,

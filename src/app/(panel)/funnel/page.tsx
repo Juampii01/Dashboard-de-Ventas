@@ -19,6 +19,8 @@ import { db } from "@/lib/datos";
 import { dinero, rangoDe, type Periodo, ETIQUETA_ROL, pct } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Anillo, Seccion, GraficoDiario, Avatar, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
+import { TablasKpis } from "@/components/tablas-kpis";
+import { calcularKpis } from "@/lib/kpis";
 
 export default async function FunnelPage({ searchParams }: PageProps<"/funnel">) {
   const { perfil, proyecto } = await getSesion();
@@ -157,6 +159,10 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
               )}
             </div>
           </div>
+        </Seccion>
+
+        <Seccion titulo="KPIs por persona" acciones={<Link href={`/kpis?${new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string" && ["periodo", "desde", "hasta"].includes(e[0]))).toString()}`} className="text-sm text-primario hover:underline">Ver KPIs →</Link>}>
+          <TablasKpis kpis={calcularKpis(base, rango, proyecto.zona_horaria)} dinero={$} />
         </Seccion>
 
         <div className="flex items-center gap-2 text-xs text-texto-3">

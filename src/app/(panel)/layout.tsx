@@ -33,6 +33,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       grupo: "Ventas",
       items: [
         ...(jefe ? [{ href: "/funnel", texto: "Funnel", icono: "funnel" as const }] : []),
+        ...(jefe ? [{ href: "/kpis", texto: "KPIs", icono: "kpis" as const }] : []),
         ...(jefe ? [{ href: "/crm", texto: "CRM", icono: "crm" as const }] : []),
         ...(perfil.rol === "caller" || jefe ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),
         ...(perfil.rol === "caller" || jefe ? [{ href: "/caller/crm", texto: jefe ? "CRM de callers" : "Mi CRM", icono: "crm" as const }] : []),
