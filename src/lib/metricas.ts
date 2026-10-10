@@ -5,7 +5,7 @@ import type { Perfil, Proyecto } from "@/lib/tipos";
 
 type LeadMin = { id: string; creado_en: string; caller_id: string | null; closer_id: string | null };
 type CitaMin = { id: string; lead_id: string; closer_id: string | null; agendada_por: string | null; fecha: string; estado: string; creado_en: string };
-type VentaMin = { id: string; lead_id: string; vendedor_id: string | null; facturacion: number; cash_collected: number; fecha: string; producto_id: string | null };
+type VentaMin = { id: string; lead_id: string; vendedor_id: string | null; facturacion: number; cash_collected: number; fecha: string; producto_id: string | null; devuelto?: number | null; devuelto_en?: string | null };
 type ActMin = { perfil_id: string | null; tipo: string; resultado: string | null; creado_en: string };
 type PagoMin = { importe: number; fecha: string; venta_id: string };
 
@@ -31,7 +31,7 @@ export async function cargarBase(proyecto: Proyecto) {
       db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, creado_en").eq("proyecto_id", pid).range(a, b)
     ),
     todas<VentaMin>((a, b) =>
-      db().from("ventas").select("id, lead_id, vendedor_id, facturacion, cash_collected, fecha, producto_id").eq("proyecto_id", pid).range(a, b)
+      db().from("ventas").select("id, lead_id, vendedor_id, facturacion, cash_collected, fecha, producto_id, devuelto, devuelto_en").eq("proyecto_id", pid).range(a, b)
     ),
     todas<ActMin>((a, b) =>
       db().from("actividades").select("perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).range(a, b)
@@ -71,9 +71,12 @@ export function calcularFunnel(base: Base, rango: Rango, vendedor: Perfil | null
 
   const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
   const idsVentas = new Set(ventasF.map((v) => v.id));
+  // Cash neto, igual que Finanzas y Agendas (arreglo 5): lo cobrado en el periodo − las devoluciones del periodo
+  const devuelto = ventasF.filter((v) => v.devuelto && v.devuelto_en && enRango(v.devuelto_en, r)).reduce((s, v) => s + Number(v.devuelto), 0);
   const cash =
     ventas.reduce((s, v) => s + v.cash_collected, 0) +
-    base.pagos.filter((pg) => idsVentas.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0);
+    base.pagos.filter((pg) => idsVentas.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0) -
+    devuelto;
 
   // Días desde que entra el lead hasta que compra
   const leadPorId = new Map(base.leads.map((l) => [l.id, l]));

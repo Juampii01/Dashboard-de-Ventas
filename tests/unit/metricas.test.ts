@@ -60,6 +60,16 @@ describe("calcularFunnel", () => {
     expect(m.cash).toBe(800);
     expect(m.totalLeads).toBe(4);
   });
+  it("arreglo 5: el cash resta las devoluciones del periodo (como Finanzas); la facturación no cambia", () => {
+    const b = base();
+    b.ventas[0] = { ...b.ventas[0], devuelto: 200, devuelto_en: "2026-10-25T15:00:00Z" };
+    b.ventas[1] = { ...b.ventas[1], devuelto: 47, devuelto_en: "2026-11-02T15:00:00Z" }; // devuelta en noviembre: no resta en octubre
+    const m = calcularFunnel(b, octubre, null, NY);
+    expect(m.cash).toBe(500 + 47 + 300 - 200);
+    expect(m.facturacion).toBe(2044);
+    expect(calcularFunnel(b, octubre, null, NY, "low").cash).toBe(47); // con filtro de producto, solo las suyas
+    expect(calcularFunnel(b, rangoDe("rango", NY, "2026-11-01", "2026-11-30"), null, NY).cash).toBe(-47); // el mes de la devolución
+  });
   it("el filtro por vendedor", () => {
     const m = calcularFunnel(base(), octubre, caller, NY);
     expect(m.totalLeads).toBe(2);

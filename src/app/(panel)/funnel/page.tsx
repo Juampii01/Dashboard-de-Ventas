@@ -160,7 +160,7 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
         </Seccion>
 
         <div className="flex items-center gap-2 text-xs text-texto-3">
-          <Wallet className="h-3.5 w-3.5" /> Facturación = valor total de los contratos cerrados. Cash collected = dinero ya cobrado (pagos iniciales + cuotas cobradas en el periodo).
+          <Wallet className="h-3.5 w-3.5" /> Facturación = valor total de los contratos cerrados. Cash collected = dinero ya cobrado (pagos iniciales + cuotas cobradas en el periodo − devoluciones del periodo).
         </div>
       </Contenido>
     </>
