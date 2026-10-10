@@ -14,6 +14,7 @@ import { resumenFinanzas } from "@/lib/finanzas";
 import { guardarLeads } from "@/lib/leads";
 import { rangoDe } from "@/lib/formato";
 import { calcularKpis } from "@/lib/kpis";
+import { cargarObjetivos, calcularAvances, misAvances } from "@/lib/objetivos";
 
 const N = Number(process.env.LEADS ?? 10_000);
 const ZONA = "America/New_York";
@@ -66,6 +67,13 @@ describe.skipIf(!process.env.MEDIR)(`Rendimiento con ${N} leads`, () => {
     await medir("Funnel: calcular (año)", () => calcularFunnel(base, anio, null, ZONA));
     await medir("Ranking: calcular (año)", () => calcularVendedores(base, anio));
     await medir("KPIs: calcular (año)", () => calcularKpis(base, anio, ZONA));
+    // Objetivos (H3): uno de cada cifra para callers, closers y directores, por semana y por mes
+    const cifras = ["llamadas", "contactados", "agendas", "citas_atendidas", "asistencias", "ventas", "facturacion", "cash"];
+    await db.from("objetivos").insert(["caller", "closer", "director"].flatMap((rol) => ["semana", "mes"].flatMap((periodo) => cifras.map((cifra) => ({ proyecto_id: e.proyecto.id, rol, periodo, cifra, valor: 100 })))));
+    const datos = await medir("Objetivos: cargar", () => cargarObjetivos(e.proyecto.id));
+    await medir("Objetivos: avance de todos", () => calcularAvances(base, datos, base.gente, ZONA));
+    await medir("Mis objetivos de un caller (cargar + calcular)", () => misAvances(e.proyecto, e.p.callerA));
+    await medir("Mis objetivos de un closer (cargar + calcular)", () => misAvances(e.proyecto, e.p.closerA));
   }, 300_000);
 
   it("Agendas (métricas)", async () => {

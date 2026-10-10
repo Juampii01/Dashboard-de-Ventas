@@ -12,7 +12,7 @@ import { anotar, bloqueado, dentroDelLimite, reiniciarLimites } from "@/lib/limi
 
 const URL_DB = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PUBLICA = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const TABLAS = ["leads", "ventas", "pagos", "perfiles", "proyectos", "reportes", "webhook_eventos", "citas", "recursos", "productos", "actividades", "miembros_proyecto", "pipelines", "etapas"];
+const TABLAS = ["leads", "ventas", "pagos", "perfiles", "proyectos", "reportes", "webhook_eventos", "citas", "recursos", "productos", "actividades", "miembros_proyecto", "pipelines", "etapas", "objetivos", "lanzamientos"];
 
 let e: Escenario;
 beforeAll(async () => {

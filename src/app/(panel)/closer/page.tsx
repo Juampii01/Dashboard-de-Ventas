@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FileDown, Star, Undo2, Hourglass, Target, Ticket } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
+import { misAvances } from "@/lib/objetivos";
+import { MisObjetivos } from "@/components/barras-objetivos";
 import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
 import { metricasAgendas, type MetricasAgendas } from "@/lib/metricas-agendas";
 import { leerPeriodo, rangoNav } from "@/lib/periodos";
@@ -27,6 +29,7 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
   // Quien está de baja (arreglo 11) solo sale en los periodos en que tuvo citas o cobró algo
   const porCloser = comparativa ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })).filter(({ c, m }) => !("baja" in c && c.baja) || m.agendadas || m.cash) : [];
   const $ = (n: number) => dinero(n, proyecto);
+  const avances = jefe ? [] : await misAvances(proyecto, perfil); // cada closer ve solo los suyos (H3)
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]);
   const conVista = (v: string | null) => {
     const q = new URLSearchParams(qs);
@@ -48,6 +51,7 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
       />
       <Contenido>
         <PestanasAgendas activa="/closer" />
+        <MisObjetivos avances={avances} dinero={$} />
         <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
           {jefe && (
             <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">

@@ -25,7 +25,7 @@ function agrupar<T>(filas: T[], clave: (f: T) => string | null) {
   return m;
 }
 
-type Indices = {
+export type Indices = {
   base: Base;
   rango: Rango;
   dia: (iso: string) => string;
@@ -35,7 +35,7 @@ type Indices = {
   pagosPorVenta: Map<string, Base["pagos"]>;
 };
 
-function kpiCaller(ix: Indices, ids: Set<string>) {
+export function kpiCaller(ix: Indices, ids: Set<string>) {
   const { base, rango, dia, ahora } = ix;
   const acts = base.actividades.filter((a) => a.perfil_id !== null && ids.has(a.perfil_id) && enRango(a.creado_en, rango));
   const llamadas = acts.filter((a) => a.tipo === "llamada").length;
@@ -96,10 +96,12 @@ function kpiCaller(ix: Indices, ids: Set<string>) {
   };
 }
 
-function kpiCloser(ix: Indices, ids: Set<string>) {
+export function kpiCloser(ix: Indices, ids: Set<string>) {
   const { base, rango } = ix;
   const citas = base.citas.filter((c) => c.closer_id && ids.has(c.closer_id) && enRango(c.fecha, rango) && c.estado !== "reagendada" && c.estado !== "cancelada");
   const asistidas = citas.filter((c) => ASISTIDAS.includes(c.estado)).length;
+  // Citas atendidas (H3): las ya registradas por el closer, viniera o no el lead
+  const atendidas = citas.filter((c) => ATENDIDAS.includes(c.estado)).length;
   const cerradas = citas.filter((c) => c.estado === "cerrada").length;
   const suyas = base.ventas.filter((v) => v.vendedor_id && ids.has(v.vendedor_id));
   const delPeriodo = suyas.filter((v) => enRango(v.fecha, rango));
@@ -112,6 +114,7 @@ function kpiCloser(ix: Indices, ids: Set<string>) {
   return {
     citas: citas.length,
     asistidas,
+    atendidas,
     cerradas,
     ventas: delPeriodo.length,
     facturacion,
@@ -124,9 +127,11 @@ function kpiCloser(ix: Indices, ids: Set<string>) {
   };
 }
 
-export function calcularKpis(base: Base, rango: Rango, zona: string) {
+const ATENDIDAS = [...ASISTIDAS, "no_show", "no_califica"];
+
+export function indices(base: Base, rango: Rango, zona: string): Indices {
   const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: zona });
-  const ix: Indices = {
+  return {
     base,
     rango,
     dia: (iso) => fmt.format(new Date(iso)),
@@ -135,6 +140,10 @@ export function calcularKpis(base: Base, rango: Rango, zona: string) {
     ventasPorLead: agrupar(base.ventas, (v) => v.lead_id),
     pagosPorVenta: agrupar(base.pagos, (p) => p.venta_id),
   };
+}
+
+export function calcularKpis(base: Base, rango: Rango, zona: string) {
+  const ix = indices(base, rango, zona);
   const deBaja = (g: Perfil) => "baja" in g && !!g.baja;
 
   const gCallers = base.gente.filter((g) => g.rol === "caller");

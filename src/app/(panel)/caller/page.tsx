@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Phone, CalendarCheck, MessageCircle, ShoppingCart, PhoneOff, Users, Inbox, Trophy } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
+import { misAvances } from "@/lib/objetivos";
+import { MisObjetivos } from "@/components/barras-objetivos";
 import { db, todas, equipo } from "@/lib/datos";
-import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs, pct } from "@/lib/formato";
+import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs, pct, dinero } from "@/lib/formato";
 import { nivel } from "@/lib/prioridad";
 import type { Pesos } from "@/lib/cualificacion";
 import { colaCaller } from "@/lib/cola";
@@ -47,6 +49,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
     db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
   ]);
+  const avances = await misAvances(proyecto, caller); // objetivos del caller que se está viendo (H3)
   const pesos = (scoring.data?.pesos ?? null) as Pesos | null; // priorización con IA (V2-11)
   const acts = actsHoy.data ?? [];
   const llamadas = acts.filter((a) => a.tipo === "llamada").length;
@@ -88,6 +91,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
       />
       <Contenido>
         <Refresco segundos={60} />
+        <MisObjetivos avances={avances} dinero={(n) => dinero(n, proyecto)} />
         {vencidos.length > 0 && (
           <Link href={`/caller?${new URLSearchParams({ ...(jefe ? { caller: caller.id } : {}), vista: "llamar", lead: vencidos[0].id })}`} className="flex items-center gap-3 rounded-xl border border-aviso/40 bg-aviso-suave px-4 py-3 text-sm text-aviso hover:brightness-105">
             <span className="text-lg">⏰</span>
