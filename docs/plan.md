@@ -1,14 +1,14 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche (a petición de Cristian). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
+> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras «Antes de todo» y el Bloque A). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
 
 ---
 
 ## 0. Dónde estamos (léelo primero al retomar)
 
-La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H y el Paso 0), **sin publicar**. Último commit `2e3a407`. **Sin guardar todavía (11 oct):** este plan, las 2 guías, `scripts/crear-usuarios.mjs` (teléfono, Administración y contraseñas «Maestria-») y la migración `20261013110000_perfiles_prueba.sql` (ya aplicada en la base local). **No se publica hasta que esté todo** (Cristian, 11 oct).
+La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo» y el Bloque A), **sin publicar**. Último commit `fa6c34b` (11 oct); nada sin guardar. **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** construir 1.0 en orden: «Antes de todo», Bloque A (Biblioteca + reparto manual) y bloques 1 a 7, enseñándote cada uno y después la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente:** Bloque 1 de 1.0 (horario y disponibilidad como GHL + «Mi perfil») y después los bloques 2 a 7, enseñándote cada uno (commit cada 2 bloques: el próximo, al terminar 1 + 2). Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo: ya puedes ver la Biblioteca en KPIs (como CEO, en Maestria).
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -211,8 +211,9 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 | H5 permisos por rol y persona · H7 un solo CRM · H8 «Mi Funnel» | `adb7080` |
 | Paso 0 pipelines «Callers» y «Closers» como GHL, con permisos por pipeline | `6a887c6` |
 | Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
+| 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
 
-**Comprobado el 10 oct (noche):** 343 tests pasan · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 24 migraciones (11 oct: `perfiles_prueba` y `biblioteca_oferta`) · 42 tablas, todas con RLS · nada subido a la nube.
+**Comprobado el 11 oct:** 371 tests pasan · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 24 migraciones (11 oct: `perfiles_prueba` y `biblioteca_oferta`) · 42 tablas, todas con RLS · nada subido a la nube.
 
 ---
 
