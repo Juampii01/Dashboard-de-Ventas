@@ -4,9 +4,10 @@ import { descifrar } from "@/lib/cifrado";
 import { guardarLeads, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoDesdeGhl, eventosGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
 import type { Proyecto } from "@/lib/tipos";
+import { ABIERTAS } from "@/lib/llamadas";
 
 type ProyectoGhl = Proyecto & { ghl_token: string | null; ghl_location_id: string | null };
-export type ResultadoSync = { nuevas: number; actualizadas: number; sinUnir: number; invalidas: number; closers: number; errores: string[] };
+export type ResultadoSync = { nuevas: number; actualizadas: number; canceladas: number; sinUnir: number; invalidas: number; closers: number; errores: string[] };
 
 const DIA = 86_400_000;
 
@@ -26,7 +27,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
     .eq("proyecto_id", proyecto.id)
     .eq("perfiles.rol", "closer");
   const closers = ((miembros ?? []) as unknown as { perfil_id: string; ghl_calendar_id: string | null; ghl_user_id: string | null; perfiles: { nombre: string } }[]).filter((m) => m.ghl_calendar_id || m.ghl_user_id);
-  const r: ResultadoSync = { nuevas: 0, actualizadas: 0, sinUnir: 0, invalidas: 0, closers: closers.length, errores: [] };
+  const r: ResultadoSync = { nuevas: 0, actualizadas: 0, canceladas: 0, sinUnir: 0, invalidas: 0, closers: closers.length, errores: [] };
   if (!closers.length) throw new Error("Ningún closer tiene puesto su calendario de GHL (Administración → Integraciones).");
 
   const contactos = new Map<string, ContactoGhl | null>();
@@ -111,8 +112,28 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: leadId, tipo: "cita", resultado: "agendada", nota: `Cita del calendario de GHL con ${c.perfiles.nombre}` });
       r.nuevas++;
     }
+
+    // Arreglo 21: una cita de GHL de este closer, dentro del rango consultado, que ya no viene es que se
+    // borró en GHL → «cancelada». Solo las que siguen abiertas (lo que registró el closer no se toca) y solo
+    // si la consulta a GHL fue bien. Según la especificación oficial, GET /calendars/events no pagina.
+    const vienen = new Set(eventos.map((ev) => ev.id).filter(Boolean));
+    const { data: abiertas } = await db()
+      .from("citas")
+      .select("id, lead_id, ghl_cita_id")
+      .eq("proyecto_id", proyecto.id)
+      .eq("closer_id", c.perfil_id)
+      .not("ghl_cita_id", "is", null)
+      .in("estado", [...ABIERTAS])
+      .gte("fecha", desde.toISOString())
+      .lt("fecha", hasta.toISOString());
+    const borradas = (abiertas ?? []).filter((x) => !vienen.has(x.ghl_cita_id));
+    if (borradas.length) {
+      await db().from("citas").update({ estado: "cancelada" }).in("id", borradas.map((x) => x.id));
+      await db().from("actividades").insert(borradas.map((x) => ({ proyecto_id: proyecto.id, lead_id: x.lead_id, tipo: "cita", resultado: "cancelada", nota: "La cita ya no está en el calendario de GHL: marcada como cancelada" })));
+      r.canceladas += borradas.length;
+    }
   }
-  const resumen = `${r.nuevas} nuevas · ${r.actualizadas} actualizadas · ${r.sinUnir} sin unir · ${r.invalidas} inválidas${r.errores.length ? ` · ${r.errores.length} con error` : ""}`;
+  const resumen = `${r.nuevas} nuevas · ${r.actualizadas} actualizadas${r.canceladas ? ` · ${r.canceladas} canceladas (borradas en GHL)` : ""} · ${r.sinUnir} sin unir · ${r.invalidas} inválidas${r.errores.length ? ` · ${r.errores.length} con error` : ""}`;
   await db().from("proyectos").update({ ghl_sincronizado_en: ahora.toISOString(), ghl_ultimo_resultado: resumen }).eq("id", proyecto.id);
   return r;
 }

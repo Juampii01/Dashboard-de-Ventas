@@ -28,7 +28,7 @@ export default async function LlamadasGrabadas({ searchParams }: PageProps<"/cal
       if (!jefe) q = q.eq("perfil_id", perfil.id);
       else if (quien === "sin") q = q.is("perfil_id", null);
       else if (quien) q = q.eq("perfil_id", quien);
-      return q.range(a, b);
+      return q.order("id").range(a, b);
     }),
     db().from("proyectos").select("ghl_token, ghl_location_id, ghl_llamadas_sincronizado_en").eq("id", proyecto.id).single(),
   ]);

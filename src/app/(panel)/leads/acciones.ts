@@ -1,14 +1,15 @@
 "use server";
 
-import { ErrorUsuario, seguro } from "@/lib/resultado";
+import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
-import { db, registrarActividad } from "@/lib/datos";
+import { db, registrarActividad, escribir } from "@/lib/datos";
 import { localAIso } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import { planDePagos } from "@/lib/finanzas";
 import type { Lead, Perfil, Proyecto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
+import { ABIERTAS } from "@/lib/llamadas";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -40,6 +41,7 @@ export async function registrarLlamada(
   estrellas?: number
 ) {
   return seguro(async () => {
+    nota = notaValida(nota);
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     const estado = resultado === "contestado" ? lead.estado_caller : resultado;
     const n = resultado === "no_contesta" ? 1 : resultado === "contestado" && estrellas === undefined ? null : estrellasEntre(estrellas, 2, 5);
@@ -59,6 +61,7 @@ export async function registrarLlamada(
 
 export async function registrarWhatsapp(leadId: string, nota: string) {
   return seguro(async () => {
+    nota = notaValida(nota);
     const { perfil, proyecto } = await leadPermitido(leadId);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "whatsapp", nota: nota || "Mensaje de WhatsApp enviado" });
     refrescar();
@@ -67,6 +70,7 @@ export async function registrarWhatsapp(leadId: string, nota: string) {
 
 export async function anadirNota(leadId: string, nota: string) {
   return seguro(async () => {
+    nota = notaValida(nota);
     if (!nota.trim()) return;
     const { perfil, proyecto } = await leadPermitido(leadId);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "nota", nota: nota.trim() });
@@ -77,6 +81,7 @@ export async function anadirNota(leadId: string, nota: string) {
 // ---------- Agendar cita con un closer ----------
 export async function agendarCita(leadId: string, closerId: string, fechaLocal: string, nota: string, estrellas?: number) {
   return seguro(async () => {
+    nota = notaValida(nota);
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
     // El caller dice cómo fue su llamada (2 a 5); si agenda un jefe o un closer, es opcional
@@ -90,8 +95,9 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
       .maybeSingle();
     if (!closer) throw new ErrorUsuario("Elige un closer del proyecto.");
     const fecha = aIso(fechaLocal, proyecto.zona_horaria);
-    await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
-    await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, estrellas_caller: n }).eq("id", leadId);
+    await escribir(db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n }), "citas");
+    // Arreglo 9: si agenda un jefe o un closer sin estrellas, no se borran las que puso el caller
+    await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser}${n ? ` · ${n}★` : ""}${nota ? ` · ${nota}` : ""}` });
     await moverAColumna(lead, ["agendados", "agendado"]);
@@ -116,9 +122,13 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     const cash = num("cash");
     if (!(facturacion > 0)) throw new ErrorUsuario("La facturación tiene que ser mayor que 0.");
     if (!(cash >= 0) || cash > facturacion) throw new ErrorUsuario("El cash collected tiene que estar entre 0 y la facturación.");
+    // Arreglo 29: lo que antes solo comprobaba la base (y el usuario veía su mensaje técnico)
     const tipo = String(formData.get("tipo_pago") ?? "completo") as "completo" | "reserva" | "cuotas";
+    if (!["completo", "reserva", "cuotas"].includes(tipo)) throw new ErrorUsuario("Elige cómo paga (completo, reserva o cuotas).");
     const cuotas = tipo === "cuotas" ? Math.max(2, Math.round(num("num_cuotas")) || 2) : null;
+    if (cuotas !== null && cuotas > 60) throw new ErrorUsuario("Como mucho 60 cuotas.");
     const metodo = String(formData.get("metodo") ?? "stripe");
+    if (!["stripe", "transferencia", "otro"].includes(metodo)) throw new ErrorUsuario("Elige el método de pago.");
     const fechaTxt = String(formData.get("fecha") ?? "");
     const fecha = fechaTxt ? aIso(`${fechaTxt}T12:00`, proyecto.zona_horaria) : new Date().toISOString();
     // Desde la cita (closer), las estrellas de cómo era el prospecto son obligatorias
@@ -128,7 +138,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
       .from("citas")
       .select("id, closer_id")
       .eq("lead_id", leadId)
-      .in("estado", ["pendiente", "confirmada", "seguimiento"])
+      .in("estado", [...ABIERTAS, "seguimiento"]) // arreglo 8: también «confirmación pendiente»
       .order("fecha", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -137,7 +147,11 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     let vendedor = perfil.id;
     const vendedorForm = String(formData.get("vendedor") ?? "");
     if (formData.get("desde_cita") && cita?.closer_id) vendedor = cita.closer_id;
-    else if (esJefe(perfil) && vendedorForm) vendedor = vendedorForm;
+    else if (esJefe(perfil) && vendedorForm) {
+      const { data: delProyecto } = await db().from("miembros_proyecto").select("perfil_id").eq("proyecto_id", proyecto.id).eq("perfil_id", vendedorForm).maybeSingle();
+      if (!delProyecto) throw new ErrorUsuario("El vendedor elegido no es de este proyecto.");
+      vendedor = vendedorForm;
+    }
   
     const { data: nueva, error } = await db().from("ventas").insert({
       proyecto_id: proyecto.id,
@@ -149,7 +163,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
       tipo_pago: tipo,
       num_cuotas: cuotas,
       metodo,
-      nota: String(formData.get("nota") ?? "") || null,
+      nota: notaValida(String(formData.get("nota") ?? "")) || null,
       fecha,
     }).select("id").single();
     if (error) throw new ErrorUsuario(error.message);
@@ -157,7 +171,7 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     const plazos = planDePagos({ facturacion, cobradoHoy: cash, tipo, numCuotas: cuotas, fecha });
     if (plazos.length) await db().from("vencimientos").insert(plazos.map((x) => ({ ...x, proyecto_id: proyecto.id, venta_id: nueva.id, lead_id: leadId })));
   
-    await db().from("leads").update({ estado_caller: "vendido" }).eq("id", leadId);
+    await escribir(db().from("leads").update({ estado_caller: "vendido" }).eq("id", leadId), "leads");
     if (cita) await db().from("citas").update({ estado: "cerrada", ...(estrellasCloser ? { estrellas_closer: estrellasCloser } : {}) }).eq("id", cita.id);
     await registrarActividad({
       proyecto_id: proyecto.id,
@@ -186,7 +200,7 @@ export async function cambiarEtapaLead(leadId: string, etapaId: string) {
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO mueven leads en el CRM.");
     const { data: etapa } = await db().from("etapas").select("id, nombre, pipeline_id, pipelines!inner(proyecto_id)").eq("id", etapaId).eq("pipelines.proyecto_id", proyecto.id).maybeSingle();
     if (!etapa) throw new ErrorUsuario("Columna no encontrada.");
-    await db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id);
+    await escribir(db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id), "leads");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: lead.id, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${etapa.nombre}»` });
     refrescar();
   });
@@ -200,7 +214,7 @@ export async function asignarDesdeFicha(leadId: string, campo: "caller_id" | "cl
       const { data } = await db().from("miembros_proyecto").select("perfil_id").eq("proyecto_id", proyecto.id).eq("perfil_id", personaId).maybeSingle();
       if (!data) throw new ErrorUsuario("Esa persona no está en el proyecto.");
     }
-    await db().from("leads").update({ [campo]: personaId || null }).eq("id", leadId);
+    await escribir(db().from("leads").update({ [campo]: personaId || null }).eq("id", leadId), "leads");
     const { data: p } = personaId ? await db().from("perfiles").select("nombre").eq("id", personaId).single() : { data: null };
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "asignacion", nota: `${campo === "caller_id" ? "Caller" : "Closer"}: ${p?.nombre ?? "sin asignar"}` });
     refrescar();
@@ -211,7 +225,7 @@ export async function asignarDesdeFicha(leadId: string, campo: "caller_id" | "cl
 export async function volverANuevo(leadId: string) {
   return seguro(async () => {
     const { perfil, proyecto } = await leadPermitido(leadId);
-    await db().from("leads").update({ estado_caller: "nuevo", llamar_en: null }).eq("id", leadId);
+    await escribir(db().from("leads").update({ estado_caller: "nuevo", llamar_en: null }).eq("id", leadId), "leads");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "nota", nota: "Devuelto a «Nuevo» en el tablero del caller" });
     refrescar();
   });

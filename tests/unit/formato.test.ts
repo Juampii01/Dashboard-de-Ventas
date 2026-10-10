@@ -97,3 +97,12 @@ describe("proyectoParaMenu", () => {
     expect(JSON.stringify(p)).not.toContain("SECRETO");
   });
 });
+
+describe("Arreglo 28: fecha mal escrita", () => {
+  it("localAIso lanza un ErrorUsuario y el usuario ve «Fecha no válida» (no «Algo ha fallado»)", async () => {
+    const { localAIso } = await import("@/lib/formato");
+    const { ErrorUsuario, seguro } = await import("@/lib/resultado");
+    expect(() => localAIso("mañana", "Europe/Madrid")).toThrow(ErrorUsuario);
+    expect(await seguro(async () => localAIso("31/12/2026", "Europe/Madrid"))).toEqual({ error: "Fecha no válida." });
+  });
+});

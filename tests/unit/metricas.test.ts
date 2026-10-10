@@ -70,6 +70,26 @@ describe("calcularFunnel", () => {
     expect(calcularFunnel(b, octubre, null, NY, "low").cash).toBe(47); // con filtro de producto, solo las suyas
     expect(calcularFunnel(b, rangoDe("rango", NY, "2026-11-01", "2026-11-30"), null, NY).cash).toBe(-47); // el mes de la devolución
   });
+  it("arreglo 6: Agendado → Venta = de las personas que agendaron en el periodo, cuántas compraron desde ese día", () => {
+    const b = base();
+    // l3: agenda el 10 oct a las 15:00 y compra ese día con fecha puesta a mano (12:00) → cuenta
+    b.citas.push({ id: "c3", lead_id: "l3", closer_id: "ana", agendada_por: "carla", fecha: "2026-10-12T14:00:00Z", estado: "pendiente", creado_en: "2026-10-10T19:00:00Z" });
+    b.ventas.push({ id: "v3", lead_id: "l3", vendedor_id: "ana", facturacion: 1997, cash_collected: 0, fecha: "2026-10-10T16:00:00Z", producto_id: "grupal" });
+    // l4: agenda en octubre y compra en noviembre → cuenta para octubre
+    b.citas.push({ id: "c4", lead_id: "l4", closer_id: "ana", agendada_por: "carla", fecha: "2026-10-30T14:00:00Z", estado: "seguimiento", creado_en: "2026-10-28T16:00:00Z" });
+    b.ventas.push({ id: "v4", lead_id: "l4", vendedor_id: "ana", facturacion: 4997, cash_collected: 0, fecha: "2026-11-03T16:00:00Z", producto_id: "vip" });
+    // «fuera»: compra sin ninguna cita («Nuevo cliente») → no cuenta
+    b.ventas.push({ id: "v5", lead_id: "fuera", vendedor_id: "ana", facturacion: 1000, cash_collected: 1000, fecha: "2026-10-15T16:00:00Z", producto_id: "grupal" });
+    // l2 compró el low ticket ANTES de agendar → esa compra no cuenta
+    b.ventas[1] = { ...b.ventas[1], fecha: "2026-10-03T15:00:00Z" };
+    const m = calcularFunnel(b, octubre, null, NY);
+    expect(m.tasas.agendadoVenta).toBe(75); // l1, l3 y l4 de 4 personas (l1, l2, l3, l4)
+    expect(calcularFunnel(b, octubre, null, NY, "vip").tasas.agendadoVenta).toBe(25); // solo l4 compró el VIP
+    // Vista del caller: cuentan sus agendas aunque la venta la cierre el closer
+    expect(calcularFunnel(b, octubre, caller, NY).tasas.agendadoVenta).toBe(75);
+    // Antes salía 100 % o más: nunca pasa del 100 %
+    expect(calcularFunnel(base(), octubre, null, NY).tasas.agendadoVenta).toBeLessThanOrEqual(100);
+  });
   it("el filtro por vendedor", () => {
     const m = calcularFunnel(base(), octubre, caller, NY);
     expect(m.totalLeads).toBe(2);
@@ -99,5 +119,16 @@ describe("calcularVendedores", () => {
     expect(ana.asistidas).toBe(1);
     expect(ana.noShow).toBe(1);
     expect(ana.tasaCierre).toBe(100);
+  });
+  it("arreglo 7: el cash del closer en el Ranking cuenta cuotas y resta devoluciones, igual que el Funnel", () => {
+    const b = base();
+    b.ventas[0] = { ...b.ventas[0], devuelto: 100, devuelto_en: "2026-10-28T15:00:00Z" };
+    const ana = calcularVendedores(b, octubre).closers.find((c) => c.perfil.id === "ana")!;
+    expect(ana.cash).toBe(500 + 300 - 100); // al vender + cuota de octubre − devolución
+    expect(ana.cash).toBe(calcularFunnel(b, octubre, null, NY, "grupal").cash); // misma cifra que el Funnel de su venta
+    // Una cuota de octubre de una venta de septiembre también cuenta en octubre
+    b.ventas.push({ id: "vs", lead_id: "l3", vendedor_id: "ana", facturacion: 1000, cash_collected: 200, fecha: "2026-09-10T15:00:00Z", producto_id: "grupal" });
+    b.pagos.push({ importe: 250, fecha: "2026-10-12T15:00:00Z", venta_id: "vs" });
+    expect(calcularVendedores(b, octubre).closers.find((c) => c.perfil.id === "ana")!.cash).toBe(500 + 300 - 100 + 250);
   });
 });

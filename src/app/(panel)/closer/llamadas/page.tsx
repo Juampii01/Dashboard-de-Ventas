@@ -64,8 +64,8 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const vis = closersVisibles(perfil, gente, str("closer") || null);
   const nombrePersona = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
   const [citasTodas, ventasTodas, productos] = await Promise.all([
-    todas<CitaFila>((a, b) => db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("fecha").range(a, b)),
-    todas<VentaFila>((a, b) => db().from("ventas").select("*, pagos(importe), leads(nombre, apellido), productos(nombre)").eq("proyecto_id", proyecto.id).in("vendedor_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).range(a, b)),
+    todas<CitaFila>((a, b) => db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("fecha").order("id").range(a, b)),
+    todas<VentaFila>((a, b) => db().from("ventas").select("*, pagos(importe), leads(nombre, apellido), productos(nombre)").eq("proyecto_id", proyecto.id).in("vendedor_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("id").range(a, b)),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
   ]);
   // GHL: si está conectado y qué citas no se han podido unir a un lead

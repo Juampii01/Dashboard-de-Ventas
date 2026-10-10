@@ -1,5 +1,6 @@
 "use server";
 
+import { seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion } from "@/lib/auth";
 import { db } from "@/lib/datos";
@@ -8,7 +9,8 @@ import { enviarAviso } from "@/lib/avisos";
 import { hoyEnZona } from "@/lib/formato";
 
 export async function enviarReporte(_prev: unknown, formData: FormData) {
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { perfil, proyecto } = await getSesion();
     const rol = rolDeReporte(perfil.rol);
     if (!rol) return { error: "Los reportes de fin de día son para callers y closers." };
@@ -25,8 +27,15 @@ export async function enviarReporte(_prev: unknown, formData: FormData) {
         respuestas[p.clave] = n;
       } else respuestas[p.clave] = v.slice(0, 4000);
     }
-    const { error } = await db().from("reportes").insert({ proyecto_id: proyecto.id, perfil_id: perfil.id, rol, fecha, respuestas });
+    // Arreglo 27 (decisión de Cristian): un reporte por persona y día; si ya lo mandó, el nuevo lo sustituye
+    // y el aviso a GHL no se repite.
+    const { data: ya } = await db().from("reportes").select("id").eq("proyecto_id", proyecto.id).eq("perfil_id", perfil.id).eq("fecha", fecha).maybeSingle();
+    const { error } = await db().from("reportes").upsert({ proyecto_id: proyecto.id, perfil_id: perfil.id, rol, fecha, respuestas }, { onConflict: "proyecto_id,perfil_id,fecha" });
     if (error) return { error: error.message };
+    if (ya) {
+      revalidatePath("/reportes");
+      return { ok: "Reporte actualizado: ya habías mandado el de este día, así que se ha sustituido (el aviso no se repite)." };
+    }
 
     // Texto listo para pegar en el email o WhatsApp del workflow de GHL
     const texto = [
@@ -48,7 +57,5 @@ export async function enviarReporte(_prev: unknown, formData: FormData) {
         ? "Reporte enviado. Tu director ya tiene el aviso."
         : `Reporte guardado. (Aviso no enviado: ${aviso.motivo}.)`,
     };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
+  });
 }

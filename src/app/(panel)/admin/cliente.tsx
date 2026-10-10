@@ -6,6 +6,8 @@ import { ArrowUp, ArrowDown, Copy, Check, KeyRound, RefreshCw } from "lucide-rea
 import { actualizarMiembro, anadirAlProyecto, cambiarPassword, quitarDelProyecto, crearProyecto, crearUsuario, guardarProyecto, moverEnReparto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import type { Rol } from "@/lib/tipos";
+import { useToast } from "@/components/toasts";
+import { exigirOk } from "@/lib/resultado-cliente";
 
 type Res = { ok?: string; error?: string } | null;
 function Resultado({ estado }: { estado: Res }) {
@@ -36,9 +38,12 @@ export function FormUsuario({ soyCeo }: { soyCeo: boolean }) {
 
 export function FilaMiembro({ persona, soyCeo, soyYo }: { persona: { id: string; rol: Rol; activo: boolean; admin_activo: boolean }; soyCeo: boolean; soyYo: boolean }) {
   const { pendiente, error, ejecutar } = useAccion();
+  const toast = useToast();
   if (soyYo) return <span className="text-xs text-texto-3">Tú</span>;
+  // Arreglo 24: el rol y activar/desactivar solo los cambia el CEO (afectan a todos los proyectos)
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
+      {!soyCeo ? <span className="text-xs text-texto-3" title="Solo el CEO cambia el rol o desactiva">{({ caller: "Caller", closer: "Closer", director: "Director", ceo: "CEO" } as Record<Rol, string>)[persona.rol]}{persona.activo ? "" : " · inactivo"}</span> : (
       <select
         value={persona.rol}
         disabled={pendiente || (!soyCeo && persona.rol === "ceo")}
@@ -51,20 +56,29 @@ export function FilaMiembro({ persona, soyCeo, soyYo }: { persona: { id: string;
         <option value="director">Director</option>
         {(soyCeo || persona.rol === "ceo") && <option value="ceo">CEO</option>}
       </select>
+      )}
       {soyCeo && persona.rol === "director" && (
         <label className="flex items-center gap-1 text-xs text-texto-2" title="Acceso al panel de administración">
           <input type="checkbox" checked={persona.admin_activo} disabled={pendiente} onChange={(e) => ejecutar(() => actualizarMiembro(persona.id, { admin_activo: e.target.checked }))} />
           Admin
         </label>
       )}
-      <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => actualizarMiembro(persona.id, { activo: !persona.activo }))}>
-        {persona.activo ? "Desactivar" : "Activar"}
-      </button>
+      {soyCeo && (
+        <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => actualizarMiembro(persona.id, { activo: !persona.activo }))}>
+          {persona.activo ? "Desactivar" : "Activar"}
+        </button>
+      )}
       <button
         className="btn-secundario px-2 py-1 text-xs hover:text-mal"
         disabled={pendiente}
         title="Quitar de este proyecto (no borra su usuario)"
-        onClick={() => confirm("¿Quitar a esta persona de este proyecto? Su usuario y sus datos se mantienen.") && ejecutar(() => quitarDelProyecto(persona.id))}
+        onClick={() =>
+          confirm("¿Quitar a esta persona de este proyecto? Su usuario y sus datos se mantienen; sus leads de este proyecto quedarán sin asignar.") &&
+          ejecutar(async () => {
+            const r = (await exigirOk(quitarDelProyecto(persona.id))) as { sinAsignar: number };
+            toast(r.sinAsignar ? `Quitado del proyecto. ${r.sinAsignar} leads suyos han quedado sin asignar: repártelos desde el CRM.` : "Quitado del proyecto.");
+          })
+        }
       >
         Quitar
       </button>

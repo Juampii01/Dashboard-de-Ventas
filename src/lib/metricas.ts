@@ -1,5 +1,5 @@
 import "server-only";
-import { db, todas, equipo } from "@/lib/datos";
+import { db, todas, equipo, conBajas } from "@/lib/datos";
 import { porcentaje, type Rango } from "@/lib/formato";
 import type { Perfil, Proyecto } from "@/lib/tipos";
 
@@ -26,23 +26,35 @@ function cambioPct(actual: number, previo: number) {
 export async function cargarBase(proyecto: Proyecto) {
   const pid = proyecto.id;
   const [leads, citas, ventas, actividades, pagos, gente] = await Promise.all([
-    todas<LeadMin>((a, b) => db().from("leads").select("id, creado_en, caller_id, closer_id").eq("proyecto_id", pid).range(a, b)),
+    todas<LeadMin>((a, b) => db().from("leads").select("id, creado_en, caller_id, closer_id").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<CitaMin>((a, b) =>
-      db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, creado_en").eq("proyecto_id", pid).range(a, b)
+      db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, creado_en").eq("proyecto_id", pid).order("id").range(a, b)
     ),
     todas<VentaMin>((a, b) =>
-      db().from("ventas").select("id, lead_id, vendedor_id, facturacion, cash_collected, fecha, producto_id, devuelto, devuelto_en").eq("proyecto_id", pid).range(a, b)
+      db().from("ventas").select("id, lead_id, vendedor_id, facturacion, cash_collected, fecha, producto_id, devuelto, devuelto_en").eq("proyecto_id", pid).order("id").range(a, b)
     ),
     todas<ActMin>((a, b) =>
-      db().from("actividades").select("perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).range(a, b)
+      db().from("actividades").select("perfil_id, tipo, resultado, creado_en").eq("proyecto_id", pid).in("tipo", ["llamada", "whatsapp"]).order("id").range(a, b)
     ),
-    todas<PagoMin>((a, b) => db().from("pagos").select("importe, fecha, venta_id, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).range(a, b)),
+    todas<PagoMin>((a, b) => db().from("pagos").select("importe, fecha, venta_id, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
     equipo(pid),
   ]);
-  return { leads, citas, ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected) })), actividades, pagos: pagos.map((p) => ({ ...p, importe: Number(p.importe) })), gente };
+  // Arreglo 11: quien ya no está sigue contando en los periodos en que trabajó
+  const genteHistorica = await conBajas(gente, [...ventas.map((v) => v.vendedor_id), ...citas.flatMap((c) => [c.closer_id, c.agendada_por]), ...actividades.map((a) => a.perfil_id)]);
+  return { leads, citas, ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected) })), actividades, pagos: pagos.map((p) => ({ ...p, importe: Number(p.importe) })), gente: genteHistorica };
 }
 
 export type Base = Awaited<ReturnType<typeof cargarBase>>;
+
+// Cash neto de un grupo de ventas en el periodo, igual que Finanzas y Agendas (arreglos 5 y 7):
+// lo cobrado al vender (ventas del periodo) + cuotas cobradas en el periodo − devoluciones del periodo.
+function cashNeto(base: Base, ventasGrupo: Base["ventas"], r: { desde: Date | null; hasta: Date | null }) {
+  const ids = new Set(ventasGrupo.map((v) => v.id));
+  const alVender = ventasGrupo.filter((v) => enRango(v.fecha, r)).reduce((s, v) => s + v.cash_collected, 0);
+  const cuotas = base.pagos.filter((pg) => ids.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0);
+  const devuelto = ventasGrupo.filter((v) => v.devuelto && v.devuelto_en && enRango(v.devuelto_en, r)).reduce((s, v) => s + Number(v.devuelto), 0);
+  return alVender + cuotas - devuelto;
+}
 
 export function calcularFunnel(base: Base, rango: Rango, vendedor: Perfil | null, zona: string, productoId: string | null = null) {
   const de = (id: string | null) => !vendedor || id === vendedor.id;
@@ -70,13 +82,23 @@ export function calcularFunnel(base: Base, rango: Rango, vendedor: Perfil | null
   const pasadas = citasPeriodo.filter((c) => new Date(c.fecha).getTime() < Date.now() && c.estado !== "cancelada" && c.estado !== "reagendada").length;
 
   const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
-  const idsVentas = new Set(ventasF.map((v) => v.id));
-  // Cash neto, igual que Finanzas y Agendas (arreglo 5): lo cobrado en el periodo − las devoluciones del periodo
-  const devuelto = ventasF.filter((v) => v.devuelto && v.devuelto_en && enRango(v.devuelto_en, r)).reduce((s, v) => s + Number(v.devuelto), 0);
-  const cash =
-    ventas.reduce((s, v) => s + v.cash_collected, 0) +
-    base.pagos.filter((pg) => idsVentas.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0) -
-    devuelto;
+  const cash = cashNeto(base, ventasF, r);
+
+  // Agendado → Venta (arreglo 6, decisión de Cristian 10 oct 2026): de las personas que agendaron en el
+  // periodo, cuántas compraron desde que agendaron (aunque sea después del periodo). Nunca pasa del 100 %.
+  // Las ventas no se filtran por vendedor (la del caller cuenta aunque cierre el closer); sí por producto.
+  // Se compara por días en la zona del proyecto: una venta con fecha puesta a mano se guarda a las 12:00.
+  const diaZona = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: zona }).format(new Date(iso));
+  const primeraAgenda = new Map<string, string>();
+  for (const c of agendados) {
+    const d = diaZona(c.creado_en);
+    if (!primeraAgenda.has(c.lead_id) || d < primeraAgenda.get(c.lead_id)!) primeraAgenda.set(c.lead_id, d);
+  }
+  const compraron = new Set(
+    base.ventas
+      .filter((v) => (!productoId || v.producto_id === productoId) && primeraAgenda.has(v.lead_id) && diaZona(v.fecha) >= primeraAgenda.get(v.lead_id)!)
+      .map((v) => v.lead_id)
+  );
 
   // Días desde que entra el lead hasta que compra
   const leadPorId = new Map(base.leads.map((l) => [l.id, l]));
@@ -105,7 +127,7 @@ export function calcularFunnel(base: Base, rango: Rango, vendedor: Perfil | null
     perdidos,
     tasas: {
       leadAgendado: porcentaje(agendados.length, leads.length),
-      agendadoVenta: porcentaje(ventas.length, agendados.length),
+      agendadoVenta: porcentaje(compraron.size, primeraAgenda.size),
       noShow: porcentaje(noShow, pasadas),
       // De los leads que llegan al closer (citas hechas + no califica), cuántos se pierden
       perdida: porcentaje(perdidos, citasHechas + citasPeriodo.filter((c) => c.estado === "no_califica").length),
@@ -177,9 +199,14 @@ export function calcularVendedores(base: Base, rango: Rango) {
         noShow,
         ventas: ventas.length,
         facturacion: ventas.reduce((s, v) => s + v.facturacion, 0),
-        cash: ventas.reduce((s, v) => s + v.cash_collected, 0),
+        cash: cashNeto(base, base.ventas.filter((v) => v.vendedor_id === g.id), rango),
         tasaCierre: porcentaje(ventas.length, asistidas),
       };
     });
-  return { callers, closers };
+  // Quien está de baja solo sale en los periodos en que hizo algo
+  const deBaja = (g: Perfil) => "baja" in g && g.baja;
+  return {
+    callers: callers.filter((c) => !deBaja(c.perfil) || c.llamadas || c.agendas || c.ventas),
+    closers: closers.filter((c) => !deBaja(c.perfil) || c.citas || c.ventas || c.cash),
+  };
 }

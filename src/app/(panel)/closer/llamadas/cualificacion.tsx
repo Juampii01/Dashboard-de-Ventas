@@ -14,7 +14,7 @@ type SP = Record<string, string | string[] | undefined>;
 // 06 · Cualificación: Estudio (cash × llamada por respuesta) y Scoring IA. Solo director y CEO.
 export async function Cualificacion({ proyecto, sp, baseQs }: { proyecto: Proyecto; sp: SP; baseQs: (c: Record<string, string | null>) => string }) {
   const ver = sp.cual === "scoring" ? "scoring" : "estudio";
-  const leads = await todas<LeadQ & { nombre: string; apellido: string; estado_caller: string; creado_en: string }>((a, b) => db().from("leads").select("id, nombre, apellido, respuestas, estado_caller, creado_en").eq("proyecto_id", proyecto.id).range(a, b));
+  const leads = await todas<LeadQ & { nombre: string; apellido: string; estado_caller: string; creado_en: string }>((a, b) => db().from("leads").select("id, nombre, apellido, respuestas, estado_caller, creado_en").eq("proyecto_id", proyecto.id).order("id").range(a, b));
   const preguntas = preguntasDe(leads);
   const elegidas = (Array.isArray(sp.preg) ? sp.preg : typeof sp.preg === "string" ? [sp.preg] : []).filter((p) => preguntas.includes(p));
   const $ = (n: number) => dinero(n, proyecto);

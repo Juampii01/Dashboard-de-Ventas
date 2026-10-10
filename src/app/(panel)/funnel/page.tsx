@@ -41,7 +41,7 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
 
   const tasas = [
     { t: "Lead → Agendado", d: "De cada 100 leads que entran, cuántos llegan a agendar.", v: m.tasas.leadAgendado, c: "var(--oro)" },
-    { t: "Agendado → Venta", d: "De cada 100 leads que agendan, cuántos compran.", v: m.tasas.agendadoVenta, c: "var(--ok)" },
+    { t: "Agendado → Venta", d: "De cada 100 personas que agendan en el periodo, cuántas compran (desde ese día, aunque sea más tarde).", v: m.tasas.agendadoVenta, c: "var(--ok)" },
     { t: "Tasa de no show", d: "De cada 100 citas que ya pasaron, cuántas no se presentan.", v: m.tasas.noShow, c: "var(--primario)" },
     { t: "Tasa de pérdida", d: "De cada 100 leads que llegan al closer, cuántos se pierden.", v: m.tasas.perdida, c: "var(--morado)" },
   ];

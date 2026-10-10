@@ -83,7 +83,7 @@ describe("Closer", () => {
   });
   it("no puede cambiar la cita de otro closer", async () => {
     como(e, e.p.closerA);
-    await falla(cambiarEstadoCita(citaDeB, "cerrada", ""), /no es tuya/);
+    await falla(cambiarEstadoCita(citaDeB, "no_show", ""), /no es tuya/);
   });
   it("no puede cobrar ni borrar la venta de otro", async () => {
     como(e, e.p.closerA);

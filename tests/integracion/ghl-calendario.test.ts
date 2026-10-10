@@ -127,3 +127,27 @@ describe("Sincronizar calendarios de GHL", () => {
     expect(quedan!.map((x) => x.estado)).toEqual(["resuelta", "descartada"]);
   });
 });
+
+describe("Arreglo 21: citas borradas en GHL", () => {
+  it("si GHL falla no se cancela nada; si una cita del rango ya no viene, pasa a «cancelada»; fuera del rango no se toca", async () => {
+    expect((await cita(`${e.pref}-e1`))!.estado).toBe("confirmada");
+    // Fuera del rango consultado (de hace 30 días a dentro de 60): no se toca
+    await db.from("citas").insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadA, closer_id: e.p.closerA.id, fecha: "2027-06-01T15:00:00Z", estado: "pendiente", origen: "ghl", ghl_cita_id: `${e.pref}-lejos` });
+    rechazar = true;
+    expect((await sync()).canceladas).toBe(0);
+    rechazar = false;
+    expect((await cita(`${e.pref}-e1`))!.estado).toBe("confirmada");
+    // e1 ya no viene (se borró en GHL); e2 sigue
+    eventos = [{ id: `${e.pref}-e2`, contactId: `${e.pref}-cNuevo`, startTime: "2026-10-13T10:00:00-04:00", appointmentStatus: "new" }];
+    const antes = (await cita(`${e.pref}-e3`))?.estado; // la que se unió a mano en el test anterior (sigue abierta)
+    const r = await sync();
+    expect(antes).toBe("pendiente");
+    expect(r.canceladas).toBe(2); // e1 y e3: ninguna viene ya de GHL
+    expect((await cita(`${e.pref}-e1`))!.estado).toBe("cancelada");
+    expect((await cita(`${e.pref}-e3`))!.estado).toBe("cancelada");
+    expect((await cita(`${e.pref}-e2`))!.estado).toBe("cerrada"); // lo del closer no se toca
+    expect((await cita(`${e.pref}-lejos`))!.estado).toBe("pendiente");
+    const { data: p } = await db.from("proyectos").select("ghl_ultimo_resultado").eq("id", e.proyecto.id).single();
+    expect(p!.ghl_ultimo_resultado).toMatch(/2 canceladas \(borradas en GHL\)/);
+  });
+});

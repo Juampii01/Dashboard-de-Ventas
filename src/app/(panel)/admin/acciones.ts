@@ -3,7 +3,7 @@
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { cifrar, descifrar } from "@/lib/cifrado";
 import { reglasValidas } from "@/lib/entrada";
 import { SECCIONES } from "@/lib/permisos";
@@ -17,7 +17,8 @@ const texto = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
 // ---------- Equipo ----------
 export async function crearUsuario(_prev: Res, fd: FormData): Promise<Res> {
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { perfil, proyecto } = await exigir(puedeAdmin);
     const email = texto(fd, "email").toLowerCase();
     const nombre = texto(fd, "nombre");
@@ -36,12 +37,10 @@ export async function crearUsuario(_prev: Res, fd: FormData): Promise<Res> {
       return { error: e2.message };
     }
     const { count } = await db().from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-    await db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 });
+    await escribir(db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 }), "miembros_proyecto");
     refrescar();
     return { ok: `Usuario creado. Pásale su email y la contraseña temporal; la primera vez verá el onboarding.` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
+  });
 }
 
 export async function actualizarMiembro(perfilId: string, cambios: { rol?: Rol; activo?: boolean; admin_activo?: boolean }) {
@@ -53,8 +52,11 @@ export async function actualizarMiembro(perfilId: string, cambios: { rol?: Rol; 
     if (perfilId === perfil.id) throw new ErrorUsuario("No puedes cambiar tu propio rol o acceso.");
     if (perfil.rol !== "ceo" && (objetivo?.rol === "ceo" || cambios.rol === "ceo")) throw new ErrorUsuario("Solo el CEO puede tocar a otro CEO.");
     if (cambios.admin_activo !== undefined && perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO da acceso de administración a los directores.");
+    // Arreglo 24 (decisión de Cristian): el perfil es uno para toda la app, así que cambiar el rol o
+    // desactivar a alguien afecta a todos sus proyectos → solo el CEO. El director puede quitarlo de su proyecto.
+    if ((cambios.rol !== undefined || cambios.activo !== undefined) && perfil.rol !== "ceo") throw new ErrorUsuario("Solo el CEO cambia el rol o desactiva a alguien (afecta a todos sus proyectos). Puedes quitarlo de este proyecto.");
     if (cambios.rol && !ROLES.includes(cambios.rol)) throw new ErrorUsuario("Rol no válido.");
-    await db().from("perfiles").update(cambios).eq("id", perfilId);
+    await escribir(db().from("perfiles").update(cambios).eq("id", perfilId), "perfiles");
     refrescar();
   });
 }
@@ -88,7 +90,8 @@ export async function moverEnReparto(perfilId: string, direccion: -1 | 1) {
 
 // ---------- Proyecto ----------
 export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { proyecto } = await exigir(puedeAdmin);
     const modo = texto(fd, "modo_reparto");
     const aviso = texto(fd, "aviso_webhook_url");
@@ -100,16 +103,15 @@ export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
         return { error: "El webhook de avisos no es un enlace válido." };
       }
     }
-    await db().from("proyectos").update({ modo_reparto: modo, aviso_webhook_url: aviso || null }).eq("id", proyecto.id);
+    await escribir(db().from("proyectos").update({ modo_reparto: modo, aviso_webhook_url: aviso || null }).eq("id", proyecto.id), "proyectos");
     refrescar();
     return { ok: "Guardado." };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
+  });
 }
 
 export async function crearProyecto(_prev: Res, fd: FormData): Promise<Res> {
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { perfil } = await exigir(puedeCrearProyectos);
     const nombre = texto(fd, "nombre");
     const region = texto(fd, "region");
@@ -118,24 +120,22 @@ export async function crearProyecto(_prev: Res, fd: FormData): Promise<Res> {
     const color = /^#[0-9a-f]{6}$/i.test(texto(fd, "color")) ? texto(fd, "color") : "#2f55d4";
     const { data, error } = await db().from("proyectos").insert({ nombre, color, ...config }).select().single();
     if (error) return { error: error.code === "23505" ? "Ya existe un proyecto con ese nombre." : error.message };
-    await db().from("miembros_proyecto").insert({ proyecto_id: data.id, perfil_id: perfil.id });
+    await escribir(db().from("miembros_proyecto").insert({ proyecto_id: data.id, perfil_id: perfil.id }), "miembros_proyecto");
     const { data: pipe } = await db().from("pipelines").insert({ proyecto_id: data.id, nombre: "Principal", orden: 0 }).select().single();
     if (pipe)
-      await db().from("etapas").insert(
+      await escribir(db().from("etapas").insert(
         ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"].map((n, i) => ({ pipeline_id: pipe.id, nombre: n, orden: i, color: ["#64748b", "#2f55d4", "#d97706", "#16a34a", "#dc2626"][i] }))
-      );
+      ), "etapas");
     refrescar();
     return { ok: `Proyecto «${nombre}» creado (${config.moneda}, ${config.zona_horaria}). Cámbiate a él desde el selector de proyecto.` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
+  });
 }
 
 export async function regenerarSecreto() {
   return seguro(async () => {
     const { proyecto } = await exigir(puedeAdmin);
     const nuevo = Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) => b.toString(16).padStart(2, "0")).join("");
-    await db().from("proyectos").update({ webhook_secreto: nuevo }).eq("id", proyecto.id);
+    await escribir(db().from("proyectos").update({ webhook_secreto: nuevo }).eq("id", proyecto.id), "proyectos");
     refrescar();
   });
 }
@@ -162,8 +162,14 @@ export async function quitarDelProyecto(perfilId: string) {
     const { data: objetivo } = await db().from("perfiles").select("rol").eq("id", perfilId).maybeSingle();
     if (!objetivo) throw new ErrorUsuario("Esa persona no existe.");
     if (perfil.rol !== "ceo" && objetivo.rol === "ceo") throw new ErrorUsuario("Solo el CEO puede tocar a otro CEO.");
-    await db().from("miembros_proyecto").delete().eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId);
+    await escribir(db().from("miembros_proyecto").delete().eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId), "miembros_proyecto");
+    // Arreglo 23 (decisión de Cristian): sus leads de este proyecto quedan sin asignar, para repartirlos
+    const [{ data: comoCaller }, { data: comoCloser }] = await Promise.all([
+      escribir(db().from("leads").update({ caller_id: null }).eq("proyecto_id", proyecto.id).eq("caller_id", perfilId).select("id"), "leads"),
+      escribir(db().from("leads").update({ closer_id: null }).eq("proyecto_id", proyecto.id).eq("closer_id", perfilId).select("id"), "leads"),
+    ]);
     refrescar();
+    return { sinAsignar: new Set([...(comoCaller ?? []), ...(comoCloser ?? [])].map((l) => l.id)).size };
   });
 }
 
@@ -207,7 +213,7 @@ export async function guardarEntrada(id: string, cambios: { nombre: string; pipe
     const destino = await destinoValido(proyecto.id, cambios.pipeline_id, cambios.etapa_id);
     const reglas = reglasValidas(cambios.reglas);
     for (const r of reglas) if (r.pipeline_id || r.etapa_id) await destinoValido(proyecto.id, r.pipeline_id ?? null, r.etapa_id ?? null);
-    await db().from("entradas").update({ nombre: cambios.nombre.trim(), ...destino, reglas, activa: cambios.activa }).eq("id", id);
+    await escribir(db().from("entradas").update({ nombre: cambios.nombre.trim(), ...destino, reglas, activa: cambios.activa }).eq("id", id), "entradas");
     refrescar();
   });
 }
@@ -217,7 +223,7 @@ export async function nuevaDireccionEntrada(id: string) {
     const { proyecto } = await exigir(puedeAdmin);
     await entradaDelProyecto(id, proyecto.id);
     const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("");
-    await db().from("entradas").update({ token }).eq("id", id);
+    await escribir(db().from("entradas").update({ token }).eq("id", id), "entradas");
     refrescar();
   });
 }
@@ -227,7 +233,7 @@ export async function borrarEntrada(id: string) {
     const { proyecto } = await exigir(puedeAdmin);
     await entradaDelProyecto(id, proyecto.id);
     // Los envíos ya recibidos y sus leads se quedan; solo se borra la dirección
-    await db().from("entradas").delete().eq("id", id);
+    await escribir(db().from("entradas").delete().eq("id", id), "entradas");
     refrescar();
   });
 }
@@ -241,7 +247,7 @@ export async function guardarConexionGhl(token: string, locationId: string) {
     const loc = locationId.trim();
     if (!loc) throw new ErrorUsuario("Pon el id de la subcuenta (Location ID) de GHL.");
     if (t && t.length < 20) throw new ErrorUsuario("Ese token parece incompleto.");
-    await db().from("proyectos").update({ ghl_location_id: loc, ...(t ? { ghl_token: cifrar(t) } : {}) }).eq("id", proyecto.id);
+    await escribir(db().from("proyectos").update({ ghl_location_id: loc, ...(t ? { ghl_token: cifrar(t) } : {}) }).eq("id", proyecto.id), "proyectos");
     refrescar();
   });
 }
@@ -251,7 +257,7 @@ export async function guardarCalendarioCloser(perfilId: string, calendarId: stri
     const { proyecto } = await exigir(puedeAdmin);
     const { data } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).eq("perfiles.rol", "closer").maybeSingle();
     if (!data) throw new ErrorUsuario("Esa persona no es closer de este proyecto.");
-    await db().from("miembros_proyecto").update({ ghl_calendar_id: calendarId.trim() || null, ghl_user_id: userId.trim() || null }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId);
+    await escribir(db().from("miembros_proyecto").update({ ghl_calendar_id: calendarId.trim() || null, ghl_user_id: userId.trim() || null }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId), "miembros_proyecto");
     refrescar();
   });
 }

@@ -43,7 +43,7 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
       if (rango.desde) q = q.gte("fecha", rango.desde.toISOString());
       if (rango.hasta) q = q.lt("fecha", rango.hasta.toISOString());
       if (vendedorId) q = q.eq("vendedor_id", vendedorId);
-      return q.order("fecha", { ascending: false }).range(a, b);
+      return q.order("fecha", { ascending: false }).order("id").range(a, b);
     })
   ).map((v) => {
     const cobrado = Number(v.cash_collected) + v.pagos.reduce((s, p) => s + Number(p.importe), 0);

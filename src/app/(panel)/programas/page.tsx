@@ -24,7 +24,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
   const q = typeof sp.q === "string" ? sp.q : "";
   const [{ data }, ventas, eq] = await Promise.all([
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
-    todas<{ producto_id: string | null; lead_id: string }>((a, b) => db().from("ventas").select("producto_id, lead_id").eq("proyecto_id", proyecto.id).range(a, b)),
+    todas<{ producto_id: string | null; lead_id: string }>((a, b) => db().from("ventas").select("producto_id, lead_id").eq("proyecto_id", proyecto.id).order("id").range(a, b)),
     cargarEquipo(proyecto.id),
   ]);
   const todos = (data ?? []) as Producto[];

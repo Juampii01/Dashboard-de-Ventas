@@ -4,7 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { exigir, esJefe } from "@/lib/auth";
-import { db, registrarActividad } from "@/lib/datos";
+import { db, registrarActividad, escribir } from "@/lib/datos";
 import { guardarLeads, primeraEtapa } from "@/lib/leads";
 import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
@@ -22,7 +22,8 @@ export async function prepararSubidaCsv() {
 
 export async function importarCsv(_prev: unknown, formData: FormData) {
   const ruta = String(formData.get("archivo_ruta") ?? "");
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { perfil, proyecto } = await exigir(esJefe);
     if (!ruta) return { error: "Elige un archivo CSV." };
     const texto = await (await leerSubida("importaciones", ruta, proyecto.id)).text();
@@ -50,9 +51,7 @@ export async function importarCsv(_prev: unknown, formData: FormData) {
     });
     refrescar();
     return { ok: `Importados ${r.insertados} leads nuevos · ${r.actualizados} actualizados · ${r.repartidos} repartidos a callers${r.invalidos ? ` · ${r.invalidos} filas sin email ni teléfono` : ""}.` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error al importar." };
-  }
+  });
 }
 
 // ---------- Pipelines y columnas ----------
@@ -64,11 +63,11 @@ export async function crearPipeline(nombre: string) {
     const { count } = await db().from("pipelines").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
     const { data, error } = await db().from("pipelines").insert({ proyecto_id: proyecto.id, nombre: n, orden: count ?? 0 }).select().single();
     if (error) throw new ErrorUsuario(error.message);
-    await db().from("etapas").insert([
+    await escribir(db().from("etapas").insert([
       { pipeline_id: data.id, nombre: "Nuevos", orden: 0, color: "#64748b" },
       { pipeline_id: data.id, nombre: "Agendados", orden: 1, color: "#2f55d4" },
       { pipeline_id: data.id, nombre: "Cerrados", orden: 2, color: "#16a34a" },
-    ]);
+    ]), "etapas");
     refrescar();
     return data.id as string;
   });
@@ -83,7 +82,7 @@ export async function renombrarPipeline(pipelineId: string, nombre: string) {
   return seguro(async () => {
     const { proyecto } = await exigir(esJefe);
     await pipelineDelProyecto(pipelineId, proyecto.id);
-    await db().from("pipelines").update({ nombre: nombre.trim() }).eq("id", pipelineId);
+    await escribir(db().from("pipelines").update({ nombre: nombre.trim() }).eq("id", pipelineId), "pipelines");
     refrescar();
   });
 }
@@ -92,8 +91,8 @@ export async function borrarPipeline(pipelineId: string) {
   return seguro(async () => {
     const { proyecto } = await exigir(esJefe);
     await pipelineDelProyecto(pipelineId, proyecto.id);
-    await db().from("leads").update({ pipeline_id: null, etapa_id: null }).eq("pipeline_id", pipelineId);
-    await db().from("pipelines").delete().eq("id", pipelineId);
+    await escribir(db().from("leads").update({ pipeline_id: null, etapa_id: null }).eq("pipeline_id", pipelineId), "leads");
+    await escribir(db().from("pipelines").delete().eq("id", pipelineId), "pipelines");
     refrescar();
   });
 }
@@ -109,7 +108,7 @@ export async function crearEtapa(pipelineId: string, nombre: string, color: stri
     const { proyecto } = await exigir(esJefe);
     await pipelineDelProyecto(pipelineId, proyecto.id);
     const { count } = await db().from("etapas").select("id", { count: "exact", head: true }).eq("pipeline_id", pipelineId);
-    await db().from("etapas").insert({ pipeline_id: pipelineId, nombre: nombre.trim() || "Nueva columna", orden: count ?? 0, color });
+    await escribir(db().from("etapas").insert({ pipeline_id: pipelineId, nombre: nombre.trim() || "Nueva columna", orden: count ?? 0, color }), "etapas");
     refrescar();
   });
 }
@@ -118,7 +117,7 @@ export async function editarEtapa(etapaId: string, nombre: string, color: string
   return seguro(async () => {
     const { proyecto } = await exigir(esJefe);
     await etapaDelProyecto(etapaId, proyecto.id);
-    await db().from("etapas").update({ nombre: nombre.trim(), color }).eq("id", etapaId);
+    await escribir(db().from("etapas").update({ nombre: nombre.trim(), color }).eq("id", etapaId), "etapas");
     refrescar();
   });
 }
@@ -146,8 +145,8 @@ export async function borrarEtapa(etapaId: string) {
     const otra = destino === etapaId
       ? (await db().from("etapas").select("id").eq("pipeline_id", e.pipeline_id).neq("id", etapaId).order("orden").limit(1).maybeSingle()).data?.id ?? null
       : destino;
-    await db().from("leads").update({ etapa_id: otra }).eq("etapa_id", etapaId);
-    await db().from("etapas").delete().eq("id", etapaId);
+    await escribir(db().from("leads").update({ etapa_id: otra }).eq("etapa_id", etapaId), "leads");
+    await escribir(db().from("etapas").delete().eq("id", etapaId), "etapas");
     refrescar();
   });
 }
@@ -161,7 +160,7 @@ export async function moverLead(leadId: string, etapaId: string) {
     if (!lead) throw new ErrorUsuario("Lead no encontrado.");
     if (lead.etapa_id === etapaId) return;
     const { data: etapa } = await db().from("etapas").select("nombre").eq("id", etapaId).single();
-    await db().from("leads").update({ etapa_id: etapaId, pipeline_id: e.pipeline_id }).eq("id", leadId);
+    await escribir(db().from("leads").update({ etapa_id: etapaId, pipeline_id: e.pipeline_id }).eq("id", leadId), "leads");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${etapa?.nombre}»` });
     refrescar();
   });
@@ -171,10 +170,16 @@ export async function asignarLeads(leadIds: string[], callerId: string | null | 
   return seguro(async () => {
     const { perfil, proyecto } = await exigir(esJefe);
     if (!leadIds.length) return;
+    // Arreglo 29: solo se asigna a callers/closers de este proyecto
+    for (const [id, rol] of [[callerId, "caller"], [closerId, "closer"]] as const) {
+      if (!id) continue;
+      const { data } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(rol)").eq("proyecto_id", proyecto.id).eq("perfil_id", id).eq("perfiles.rol", rol).maybeSingle();
+      if (!data) throw new ErrorUsuario(`Esa persona no es ${rol} de este proyecto.`);
+    }
     const cambios: Record<string, string | null> = {};
     if (callerId !== undefined) cambios.caller_id = callerId || null;
     if (closerId !== undefined) cambios.closer_id = closerId || null;
-    await db().from("leads").update(cambios).in("id", leadIds).eq("proyecto_id", proyecto.id);
+    await escribir(db().from("leads").update(cambios).in("id", leadIds).eq("proyecto_id", proyecto.id), "leads");
     const { data: personas } = await db().from("perfiles").select("id, nombre").in("id", [callerId, closerId].filter(Boolean) as string[]);
     const nombre = (id?: string | null) => personas?.find((p) => p.id === id)?.nombre ?? "nadie";
     await db().from("actividades").insert(
@@ -198,6 +203,7 @@ export async function crearLeadManual(formData: FormData) {
     const telefono = String(formData.get("telefono") ?? "").trim() || null;
     const pipelineId = String(formData.get("pipeline") ?? "") || null;
     if (!nombre || (!email && !telefono)) throw new ErrorUsuario("Pon nombre y email o teléfono.");
+    if (pipelineId) await pipelineDelProyecto(pipelineId, proyecto.id); // arreglo 29
     const [n, ...resto] = nombre.split(" ");
     const etapaId = pipelineId ? await primeraEtapa(pipelineId) : null;
     const { data, error } = await db()

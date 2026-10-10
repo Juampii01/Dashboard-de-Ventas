@@ -29,7 +29,7 @@ export default async function CrmCallerPage({ searchParams }: PageProps<"/caller
   }
 
   const [leads, { data: productos }, { data: scoring }] = await Promise.all([
-    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).order("creado_en", { ascending: false }).range(a, b)),
+    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).order("creado_en", { ascending: false }).order("id").range(a, b)),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).eq("vende_caller", true).order("orden"),
     db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
   ]);

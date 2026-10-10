@@ -1,14 +1,18 @@
 "use server";
 
-import { ErrorUsuario, seguro } from "@/lib/resultado";
+import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
-import { db, registrarActividad, todas } from "@/lib/datos";
+import { db, registrarActividad, todas, escribir } from "@/lib/datos";
 import { localAIso, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import type { Cita, EstadoCita } from "@/lib/tipos";
+import { telefonoClave } from "@/lib/leads";
 
-const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida", "cerrada"];
+// Arreglo 31: «cerrada» no se puede poner a mano: una cita se cierra registrando su venta
+const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida"];
+// Arreglo 32: estas citas ya terminaron; para volver a hablar con el lead se crea una cita nueva
+const NO_REAGENDABLES: EstadoCita[] = ["cerrada", "cancelada", "perdida", "no_califica", "reagendada"];
 // Después de la llamada el closer dice qué tal prospecto era (1 a 5); «No califica» = 1.
 const PIDEN_ESTRELLAS: EstadoCita[] = ["seguimiento", "perdida"];
 
@@ -22,10 +26,11 @@ async function citaPermitida(citaId: string) {
 
 export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota: string, estrellas?: number) {
   return seguro(async () => {
+    nota = notaValida(nota);
     if (!PERMITIDOS.includes(estado)) throw new ErrorUsuario("Estado no válido.");
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
     const n = estado === "no_califica" ? 1 : PIDEN_ESTRELLAS.includes(estado) ? estrellasEntre(estrellas, 1, 5) : null;
-    await db().from("citas").update({ estado, nota: nota || cita.nota, ...(n ? { estrellas_closer: n } : {}) }).eq("id", citaId);
+    await escribir(db().from("citas").update({ estado, nota: nota || cita.nota, ...(n ? { estrellas_closer: n } : {}) }).eq("id", citaId), "citas");
     await registrarActividad({
       proyecto_id: proyecto.id,
       lead_id: cita.lead_id,
@@ -56,17 +61,18 @@ export async function cambiarEstadoCita(citaId: string, estado: EstadoCita, nota
 export async function reagendarCita(citaId: string, fechaLocal: string) {
   return seguro(async () => {
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
+    if (NO_REAGENDABLES.includes(cita.estado)) throw new ErrorUsuario(`Esta cita ya está «${ETIQUETA_ESTADO_CITA[cita.estado]}»: no se puede reagendar. Crea una llamada nueva desde el lead.`);
     if (!fechaLocal) throw new ErrorUsuario("Elige la nueva fecha.");
     const fecha = localAIso(fechaLocal, proyecto.zona_horaria);
-    await db().from("citas").update({ estado: "reagendada" }).eq("id", citaId);
-    await db().from("citas").insert({
+    await escribir(db().from("citas").update({ estado: "reagendada" }).eq("id", citaId), "citas");
+    await escribir(db().from("citas").insert({
       proyecto_id: proyecto.id,
       lead_id: cita.lead_id,
       closer_id: cita.closer_id,
       agendada_por: cita.agendada_por ?? perfil.id, // la agenda sigue siendo mérito de quien la consiguió
       fecha,
       nota: cita.nota,
-    });
+    }), "citas");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: cita.lead_id, perfil_id: perfil.id, tipo: "cita", resultado: "reagendada", nota: "Cita reagendada" });
     revalidatePath("/", "layout");
   });
@@ -105,15 +111,19 @@ export async function importarCitas(texto: string) {
     const { data: closers } = await db().from("miembros_proyecto").select("perfiles!inner(id, email, rol)").eq("proyecto_id", proyecto.id).eq("perfiles.rol", "closer");
     const porEmail = new Map(((closers ?? []) as unknown as { perfiles: { id: string; email: string } }[]).map((c) => [c.perfiles.email.toLowerCase(), c.perfiles.id]));
     // Los leads del proyecto se cargan una vez (por email y por teléfono, solo dígitos)
-    const leads = await todas<{ id: string; email: string | null; telefono: string | null }>((x, y) => db().from("leads").select("id, email, telefono").eq("proyecto_id", proyecto.id).range(x, y));
+    const leads = await todas<{ id: string; email: string | null; telefono: string | null }>((x, y) => db().from("leads").select("id, email, telefono").eq("proyecto_id", proyecto.id).order("id").range(x, y));
     const porMail = new Map(leads.filter((l) => l.email).map((l) => [l.email!.toLowerCase(), l.id]));
-    const porTel = new Map(leads.filter((l) => (l.telefono ?? "").replace(/\D/g, "").length >= 6).map((l) => [l.telefono!.replace(/\D/g, ""), l.id]));
+    // Arreglo 25: teléfono por sus últimas 9 cifras (como el resto de la app) y sin duplicar citas ya existentes
+    const porTel = new Map(leads.filter((l) => telefonoClave(l.telefono).length >= 6).map((l) => [telefonoClave(l.telefono), l.id]));
+    const citasYa = await todas<{ lead_id: string; closer_id: string | null; fecha: string }>((x, y) => db().from("citas").select("lead_id, closer_id, fecha").eq("proyecto_id", proyecto.id).neq("estado", "reagendada").order("id").range(x, y));
+    const claveCita = (leadId: string, closerId: string | null, fecha: string) => `${leadId}|${closerId}|${new Date(fecha).getTime()}`;
+    const yaHay = new Set(citasYa.map((c) => claveCita(c.lead_id, c.closer_id, c.fecha)));
     let creadas = 0;
     const fallos: string[] = [];
     for (const [i, fila] of res.data.entries()) {
       const n = i + 2; // fila del archivo (la 1 es la cabecera)
       const email = (fila.email ?? "").trim().toLowerCase();
-      const tel = (fila.telefono ?? fila["teléfono"] ?? "").replace(/\D/g, "");
+      const tel = telefonoClave(fila.telefono ?? fila["teléfono"] ?? "");
       const closerId = porEmail.get((fila.closer_email ?? "").trim().toLowerCase());
       const f = (fila.fecha ?? "").trim().replace(" ", "T");
       if (!closerId) { fallos.push(`Fila ${n}: closer no encontrado`); continue; }
@@ -121,8 +131,10 @@ export async function importarCitas(texto: string) {
       try { fecha = localAIso(f, proyecto.zona_horaria); } catch { fallos.push(`Fila ${n}: fecha no válida («${fila.fecha ?? ""}»)`); continue; }
       const leadId = (email && porMail.get(email)) || (tel.length >= 6 ? porTel.get(tel) : undefined);
       if (!leadId) { fallos.push(`Fila ${n}: no hay ningún lead con ese ${email ? "email" : "teléfono"}`); continue; }
-      await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: (fila.nota ?? "").trim() || null });
-      await db().from("leads").update({ estado_caller: "agendado", closer_id: closerId }).eq("id", leadId);
+      if (yaHay.has(claveCita(leadId, closerId, fecha))) { fallos.push(`Fila ${n}: esa cita ya existe (mismo lead, closer y hora); no se duplica`); continue; }
+      yaHay.add(claveCita(leadId, closerId, fecha));
+      await escribir(db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: (fila.nota ?? "").trim() || null }), "citas");
+      await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId }).eq("id", leadId), "leads");
       creadas++;
     }
     revalidatePath("/", "layout");
@@ -162,7 +174,7 @@ export async function unirCitaSinLead(id: string, leadId: string) {
     const { data: ya } = await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", s.ghl_cita_id).maybeSingle();
     if (!ya) await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: s.closer_id, fecha: s.fecha, origen: "ghl", ghl_cita_id: s.ghl_cita_id, nota: s.titulo });
     if (s.ghl_contact_id) await db().from("leads").update({ ghl_contact_id: s.ghl_contact_id }).eq("id", leadId).is("ghl_contact_id", null);
-    await db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("id", id);
+    await escribir(db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("id", id), "citas_sin_lead");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: "Cita de GHL unida a mano" });
     revalidatePath("/", "layout");
   });
@@ -172,7 +184,7 @@ export async function descartarCitaSinLead(id: string) {
   return seguro(async () => {
     const { perfil, proyecto } = await getSesion();
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO revisan las citas sin unir.");
-    await db().from("citas_sin_lead").update({ estado: "descartada" }).eq("id", id).eq("proyecto_id", proyecto.id);
+    await escribir(db().from("citas_sin_lead").update({ estado: "descartada" }).eq("id", id).eq("proyecto_id", proyecto.id), "citas_sin_lead");
     revalidatePath("/", "layout");
   });
 }

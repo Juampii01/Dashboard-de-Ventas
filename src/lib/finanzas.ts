@@ -33,7 +33,7 @@ export function pendienteDe(v: VentaF, pagos: PagoF[]) {
   return Math.max(0, n(v.facturacion) - n(v.cash_collected) - pagos.filter((p) => p.venta_id === v.id).reduce((s, p) => s + n(p.importe), 0));
 }
 
-export function resumenFinanzas(d: { ventas: VentaF[]; pagos: PagoF[]; movimientos: MovF[]; categorias: CatF[]; backend: Set<string> }, r: R, zona = "America/New_York") {
+export function resumenFinanzas(d: { ventas: VentaF[]; pagos: PagoF[]; movimientos: MovF[]; categorias: CatF[]; backend: Set<string>; vencimientos?: VencF[] }, r: R, zona = "America/New_York") {
   const cobros = cobrosDe(d.ventas, d.pagos, d.backend).filter((c) => enRango(c.fecha, r));
   const devuelto = d.ventas.filter((v) => v.devuelto && enRango(v.devuelto_en, r)).reduce((s, v) => s + n(v.devuelto), 0);
   const cuenta = new Map(d.categorias.map((c) => [c.id, c]));
@@ -62,7 +62,8 @@ export function resumenFinanzas(d: { ventas: VentaF[]; pagos: PagoF[]; movimient
     egresosProfit,
     profit: redondear(cash + ingresosExtra - egresosProfit),
     roas: egresosProfit > 0 ? Math.round((cash / egresosProfit) * 100) / 100 : null,
-    porCobrar: d.ventas.reduce((s, v) => s + pendienteDe(v, d.pagos), 0),
+    // Solo si llegan los plazos (el Resumen los pasa); es una foto de hoy, no depende del periodo
+    porCobrar: d.vencimientos ? totalPorCobrar(d.vencimientos, d.pagos, diaEnZona(new Date().toISOString(), zona)) : null,
     porDia,
   };
 }
@@ -130,6 +131,14 @@ export function detalleVencimientos(vencs: VencF[], pagos: PagoF[], hoy: string)
       fuera.set(v.id, { estado, falta: estado === "pagado" ? 0 : n(v.importe) });
     }
   return fuera;
+}
+
+// Arreglo 12: «Cuentas por cobrar» del Resumen = «Total por cobrar» de Pagos pendientes: lo que falta de los
+// plazos por vencer y vencidos (sin los marcados «no paga» ni los ya cobrados). El mismo cálculo en las dos pantallas.
+export function totalPorCobrar(vencs: VencF[], pagos: PagoF[], hoy: string) {
+  let total = 0;
+  for (const d of detalleVencimientos(vencs, pagos, hoy).values()) if (d.estado === "por_vencer" || d.estado === "vencido") total += d.falta;
+  return redondear(total);
 }
 
 // Plazos al vender: reserva = el resto en un plazo (a 30 días); cuotas = una cada mes

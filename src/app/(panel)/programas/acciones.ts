@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
 import { leerNumero } from "@/lib/numero";
 import { exigirCambiarComisionRol } from "@/lib/auth";
@@ -51,7 +51,7 @@ export async function guardarPrograma(d: DatosPrograma) {
       if (n) comisiones[k] = n;
     }
     const link = d.link_pago.trim();
-    if (link && !/^https?:\/\//i.test(link)) throw new ErrorUsuario("El link de pago tiene que empezar por https://");
+    if (link && !/^https:\/\//i.test(link)) throw new ErrorUsuario("El link de pago tiene que empezar por https://"); // arreglo 35: solo https
     const fila = {
       nombre: d.nombre.trim(),
       descripcion: d.descripcion.trim() || null,
@@ -75,10 +75,10 @@ export async function guardarPrograma(d: DatosPrograma) {
       if ((previas[k] ?? 0) !== (comisiones[k] ?? 0)) exigirCambiarComisionRol(perfil, (k === "caller_agenda" ? "caller" : k) as Rol);
     }
     if (d.id) {
-      await db().from("productos").update(fila).eq("id", d.id);
+      await escribir(db().from("productos").update(fila).eq("id", d.id), "productos");
     } else {
       const { count } = await db().from("productos").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-      await db().from("productos").insert({ ...fila, proyecto_id: proyecto.id, orden: count ?? 0 });
+      await escribir(db().from("productos").insert({ ...fila, proyecto_id: proyecto.id, orden: count ?? 0 }), "productos");
     }
     revalidatePath("/", "layout");
   });
@@ -87,7 +87,7 @@ export async function guardarPrograma(d: DatosPrograma) {
 export async function activarPrograma(id: string, activo: boolean) {
   return seguro(async () => {
     const { proyecto } = await exigirSeccion("programas");
-    await db().from("productos").update({ activo }).eq("id", id).eq("proyecto_id", proyecto.id);
+    await escribir(db().from("productos").update({ activo }).eq("id", id).eq("proyecto_id", proyecto.id), "productos");
     revalidatePath("/", "layout");
   });
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
@@ -95,7 +95,7 @@ export async function crearMiembro(a: AltaMiembro) {
         throw new ErrorUsuario(e2.message);
       }
       const { count } = await db().from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-      await db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 });
+      await escribir(db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 }), "miembros_proyecto");
       perfilId = data.user.id;
     }
     const { error } = await db().from("miembros_equipo").insert(nombres.map((nombre) => ({ proyecto_id: proyecto.id, perfil_id: perfilId, nombre, email, area_id: a.area_id, puesto_id: puestoId, comision, lider: a.lider })));
@@ -115,7 +115,7 @@ export async function actualizarMiembroEquipo(id: string, c: { nombre: string; a
     if (!c.nombre.trim()) throw new ErrorUsuario("Pon el nombre.");
     const comision = await comisionValida(proyecto.id, c.comision);
     if (!mismaComision(comision, m.comision as ComisionPersona)) exigirCambiarComisionPersona(perfil, m.perfil_id);
-    await db().from("miembros_equipo").update({ nombre: c.nombre.trim(), area_id: c.area_id, puesto_id: c.puesto_id, lider: c.lider, activo: c.activo, comision }).eq("id", id);
+    await escribir(db().from("miembros_equipo").update({ nombre: c.nombre.trim(), area_id: c.area_id, puesto_id: c.puesto_id, lider: c.lider, activo: c.activo, comision }).eq("id", id), "miembros_equipo");
     refrescar();
   });
 }
@@ -140,8 +140,8 @@ export async function darAccesoMiembro(id: string, emailTxt: string, password: s
       throw new ErrorUsuario(e2.message);
     }
     const { count } = await db().from("miembros_proyecto").select("perfil_id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-    await db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 });
-    await db().from("miembros_equipo").update({ perfil_id: data.user.id, email }).eq("id", id);
+    await escribir(db().from("miembros_proyecto").insert({ proyecto_id: proyecto.id, perfil_id: data.user.id, orden: count ?? 0 }), "miembros_proyecto");
+    await escribir(db().from("miembros_equipo").update({ perfil_id: data.user.id, email }).eq("id", id), "miembros_equipo");
     refrescar();
   });
 }
@@ -154,10 +154,10 @@ export async function guardarArea(id: string | null, nombre: string, color: stri
     const c = /^#[0-9a-f]{6}$/i.test(color) ? color : "#64748b";
     if (id) {
       await deEsteProyecto("areas", id, proyecto.id);
-      await db().from("areas").update({ nombre: nombre.trim(), color: c }).eq("id", id);
+      await escribir(db().from("areas").update({ nombre: nombre.trim(), color: c }).eq("id", id), "areas");
     } else {
       const { count } = await db().from("areas").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
-      await db().from("areas").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), color: c, orden: count ?? 0 });
+      await escribir(db().from("areas").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), color: c, orden: count ?? 0 }), "areas");
     }
     refrescar();
   });
@@ -169,7 +169,7 @@ export async function borrarArea(id: string) {
     await deEsteProyecto("areas", id, proyecto.id);
     const { count } = await db().from("miembros_equipo").select("id", { count: "exact", head: true }).eq("area_id", id).eq("activo", true);
     if (count) throw new ErrorUsuario("Esta área tiene personas: muévelas a otra antes de borrarla.");
-    await db().from("areas").delete().eq("id", id);
+    await escribir(db().from("areas").delete().eq("id", id), "areas");
     refrescar();
   });
 }
@@ -181,7 +181,7 @@ export async function guardarComisionRol(rol: Rol, pctVenta: string, pctAgenda: 
     exigirCambiarComisionRol(perfil, rol);
     const venta = pct(pctVenta, "Comisión por venta") ?? 0;
     const agenda = rol === "caller" ? pct(pctAgenda, "Comisión por agenda") ?? 0 : 0;
-    await db().from("comisiones_rol").upsert({ proyecto_id: proyecto.id, rol, pct_venta: venta, pct_agenda: agenda });
+    await escribir(db().from("comisiones_rol").upsert({ proyecto_id: proyecto.id, rol, pct_venta: venta, pct_agenda: agenda }), "comisiones_rol");
     refrescar();
   });
 }

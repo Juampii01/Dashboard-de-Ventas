@@ -54,9 +54,25 @@ describe("Reporte de fin de día", () => {
     const aviso = recibidos.at(-1)!;
     expect(aviso).toMatchObject({ tipo: "reporte_fin_de_dia", persona: e.p.closerA.nombre, rol: "closer", tasa_agendamiento: "75\u00a0%", tasa_cierre: "33\u00a0%" });
     const destinatarios = aviso.destinatarios as { email: string; whatsapp: string | null }[];
-    // Solo CEO y directores
-    expect(destinatarios.map((d) => d.email).sort()).toEqual([e.p.ceo.email, e.p.director.email, e.p.directorAdmin.email].sort());
+    // Solo CEO y directores del proyecto + (arreglo 34) todos los CEO activos aunque no sean miembros
+    const { data: ceos } = await db.from("perfiles").select("email").eq("rol", "ceo").eq("activo", true);
+    const esperados = [...new Set([e.p.ceo.email, e.p.director.email, e.p.directorAdmin.email, ...(ceos ?? []).map((c) => c.email)])].sort();
+    expect(destinatarios.map((d) => d.email).sort()).toEqual(esperados);
+    const ceoDeFuera = (ceos ?? []).find((c) => c.email !== e.p.ceo.email);
+    if (ceoDeFuera) expect(destinatarios.some((d) => d.email === ceoDeFuera.email)).toBe(true); // no es miembro y le llega
     expect(destinatarios.find((d) => d.email === e.p.director.email)?.whatsapp).toBe("+34600000000");
+  });
+  it("arreglo 27: el mismo día otra vez sustituye al anterior y no repite el aviso", async () => {
+    como(e, e.p.closerA);
+    const avisosAntes = recibidos.length;
+    const fd = closerFd();
+    fd.set("ventas", "3");
+    const r = await enviarReporte(null, fd);
+    expect(r?.ok).toMatch(/Reporte actualizado/);
+    const { data } = await db.from("reportes").select("respuestas").eq("perfil_id", e.p.closerA.id).eq("fecha", "2026-10-08");
+    expect(data).toHaveLength(1);
+    expect(data![0].respuestas).toMatchObject({ ventas: 3 });
+    expect(recibidos.length).toBe(avisosAntes);
   });
   it("faltan respuestas o la fecha es futura: no se guarda", async () => {
     como(e, e.p.closerA);

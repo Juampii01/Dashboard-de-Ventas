@@ -1,4 +1,5 @@
 import type { Proyecto } from "@/lib/tipos";
+import { ErrorUsuario } from "@/lib/error-usuario";
 
 const LOCALE = { USD: "en-US", EUR: "es-ES" } as const;
 
@@ -169,18 +170,11 @@ export function ahoraMs() {
 // Calcula el desfase para esa hora exacta (vale también en los días de cambio de hora).
 export function localAIso(local: string, zona: string) {
   const m = local.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
-  if (!m) throw new Error("Fecha no válida.");
+  if (!m) throw new ErrorUsuario("Fecha no válida."); // arreglo 28: el usuario ve el motivo
   const [, y, mo, d, hh = "00", mm = "00"] = m;
   const comoUtc = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), Number(mm));
-  let t = comoUtc - offsetMinPublico(zona, new Date(comoUtc)) * 60_000;
-  t = comoUtc - offsetMinPublico(zona, new Date(t)) * 60_000;
+  // Arreglo 35: una sola función de desfase (antes había dos iguales)
+  let t = comoUtc - offsetMin(zona, new Date(comoUtc)) * 60_000;
+  t = comoUtc - offsetMin(zona, new Date(t)) * 60_000;
   return new Date(t).toISOString();
-}
-
-function offsetMinPublico(zona: string, d: Date) {
-  const partes = new Intl.DateTimeFormat("en-US", { timeZone: zona, timeZoneName: "longOffset" }).formatToParts(d);
-  const tz = partes.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
-  const x = tz.match(/GMT([+-])(\d{2}):?(\d{2})?/);
-  if (!x) return 0;
-  return (x[1] === "-" ? -1 : 1) * (Number(x[2]) * 60 + Number(x[3] ?? 0));
 }

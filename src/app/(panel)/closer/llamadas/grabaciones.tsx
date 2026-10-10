@@ -21,8 +21,8 @@ export async function Grabaciones({ proyecto, sp, closerIds, closers, jefe, yo, 
   const p = leerPeriodo(sp);
   const rango = rangoNav(p.periodo, p.n, proyecto.zona_horaria, p.desde, p.hasta);
   const [grabs, citas, { data: cuentas }] = await Promise.all([
-    todas<Grab>((a, b) => db().from("grabaciones").select("id, closer_id, titulo, url, share_url, inicio, cita_id, conciliacion, motivo, resumen").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("inicio", { ascending: false }).range(a, b)),
-    todas<CitaG>((a, b) => db().from("citas").select("*, leads(id, nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).range(a, b)),
+    todas<Grab>((a, b) => db().from("grabaciones").select("id, closer_id, titulo, url, share_url, inicio, cita_id, conciliacion, motivo, resumen").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("inicio", { ascending: false }).order("id").range(a, b)),
+    todas<CitaG>((a, b) => db().from("citas").select("*, leads(id, nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("id").range(a, b)),
     db().from("cuentas_fathom").select("id, nombre, perfil_id, formato_titulo, sincronizado_en, ultimo_resultado").eq("proyecto_id", proyecto.id).in("perfil_id", jefe ? closers.map((c) => c.id).concat(ids) : [yo]),
   ]);
   const filtro = s("conc");

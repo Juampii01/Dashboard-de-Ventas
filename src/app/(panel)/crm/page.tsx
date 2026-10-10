@@ -24,7 +24,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
             .eq("proyecto_id", proyecto.id)
             .eq("pipeline_id", pipeline.id)
             .order("creado_en", { ascending: false })
-            .range(a, b)
+            .order("id").range(a, b)
         )
       : Promise.resolve([] as LeadTarjeta[]),
     equipo(proyecto.id),

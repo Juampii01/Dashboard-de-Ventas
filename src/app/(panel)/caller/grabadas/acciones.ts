@@ -3,7 +3,7 @@
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { getSesion, esJefe } from "@/lib/auth";
 import { procesarLlamadasGhl, sincronizarLlamadasGhl } from "@/lib/ghl-llamadas-sync";
 
@@ -28,7 +28,7 @@ export async function reintentarLlamada(id: string) {
     const { perfil, proyecto } = await getSesion();
     const { data: l } = await db().from("llamadas_ghl").select("perfil_id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!l || (!esJefe(perfil) && l.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa llamada no es tuya.");
-    await db().from("llamadas_ghl").update({ estado: "pendiente", error: null }).eq("id", id);
+    await escribir(db().from("llamadas_ghl").update({ estado: "pendiente", error: null }).eq("id", id), "llamadas_ghl");
     after(() => procesarLlamadasGhl(proyecto.id, { max: 3 }).then(() => undefined));
     revalidatePath("/", "layout");
   });

@@ -1,11 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { politicaCsp } from "@/lib/csp";
 
 // Refresca la sesión de Supabase en cada petición y manda al login
 // a quien no ha iniciado sesión. Los permisos reales se comprueban
 // en el servidor (src/lib/auth.ts), no aquí.
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Arreglo 36: un nonce nuevo en cada petición; Next lo lee de la cabecera CSP de la petición
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = politicaCsp(nonce);
+  const cabeceras = () => {
+    const h = new Headers(request.headers);
+    h.set("x-nonce", nonce);
+    h.set("Content-Security-Policy", csp);
+    return h;
+  };
+  let response = NextResponse.next({ request: { headers: cabeceras() } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +27,7 @@ export async function proxy(request: NextRequest) {
         },
         setAll(lista) {
           lista.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: cabeceras() } });
           lista.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
@@ -36,6 +46,7 @@ export async function proxy(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
+  response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 

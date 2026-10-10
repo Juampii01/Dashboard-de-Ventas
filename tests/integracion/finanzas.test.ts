@@ -109,6 +109,17 @@ describe("Finanzas", () => {
     await ok(marcarVencimiento(v!.id, "pagado"));
     expect((await movs()).find((x) => x.descripcion === "Cobro de Empresa X")).toMatchObject({ tipo: "ingreso" });
   });
+  it("arreglo 33: un deudor marcado «cobrado» por error se deshace y su ingreso se borra (no cuenta dos veces)", async () => {
+    como(e, e.p.ceo);
+    const { data: v } = await db.from("vencimientos").select("id, movimiento_id").eq("proyecto_id", e.proyecto.id).eq("nombre", "Empresa X").single();
+    expect(v!.movimiento_id).toBeTruthy();
+    await ok(marcarVencimiento(v!.id, "pendiente"));
+    expect((await db.from("vencimientos").select("estado, pagado_en, movimiento_id").eq("id", v!.id).single()).data).toEqual({ estado: "pendiente", pagado_en: null, movimiento_id: null });
+    expect((await movs()).filter((x) => x.descripcion === "Cobro de Empresa X")).toHaveLength(0);
+    // Volver a cobrarlo crea un ingreso, uno solo
+    await ok(marcarVencimiento(v!.id, "pagado"));
+    expect((await movs()).filter((x) => x.descripcion === "Cobro de Empresa X")).toHaveLength(1);
+  });
 
   it("liquidaciones: closer % sobre lo cobrado del mes y caller % de la agenda que cerró; pagar crea el gasto y desmarcar lo quita", async () => {
     como(e, e.p.ceo);

@@ -17,10 +17,10 @@ async function asegurarPasos(proyectoId: string) {
 export async function cargarClientes(proyecto: Proyecto) {
   await asegurarPasos(proyecto.id);
   const [ventas, pagos, vencimientos, fichas, pasos, productos] = await Promise.all([
-    todas<VentaF>((a, b) => db().from("ventas").select("id, lead_id, producto_id, vendedor_id, facturacion, cash_collected, fecha, metodo, tipo_pago, devuelto, devuelto_en").eq("proyecto_id", proyecto.id).range(a, b)),
-    todas<PagoF>((a, b) => db().from("pagos").select("id, venta_id, importe, fecha, metodo, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyecto.id).range(a, b)),
-    todas<VencF>((a, b) => db().from("vencimientos").select("id, venta_id, importe, vence_el, estado").eq("proyecto_id", proyecto.id).range(a, b)),
-    todas<FichaCliente>((a, b) => db().from("clientes").select("*").eq("proyecto_id", proyecto.id).range(a, b)),
+    todas<VentaF>((a, b) => db().from("ventas").select("id, lead_id, producto_id, vendedor_id, facturacion, cash_collected, fecha, metodo, tipo_pago, devuelto, devuelto_en").eq("proyecto_id", proyecto.id).order("id").range(a, b)),
+    todas<PagoF>((a, b) => db().from("pagos").select("id, venta_id, importe, fecha, metodo, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyecto.id).order("id").range(a, b)),
+    todas<VencF>((a, b) => db().from("vencimientos").select("id, venta_id, importe, vence_el, estado").eq("proyecto_id", proyecto.id).order("id").range(a, b)),
+    todas<FichaCliente>((a, b) => db().from("clientes").select("*").eq("proyecto_id", proyecto.id).order("lead_id").range(a, b)),
     db().from("pasos_onboarding").select("id, nombre, orden").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("productos").select("id, nombre, color").eq("proyecto_id", proyecto.id),
   ]);
@@ -42,7 +42,7 @@ export async function cargarClientes(proyecto: Proyecto) {
   }
   const notas = new Map<string, { nota: string; creado_en: string }[]>();
   if (ids.length) {
-    const ultimas = await todas<{ lead_id: string; nota: string; creado_en: string }>((a, b) => db().from("seguimientos_cliente").select("lead_id, nota, creado_en").eq("proyecto_id", proyecto.id).order("creado_en", { ascending: false }).range(a, b));
+    const ultimas = await todas<{ lead_id: string; nota: string; creado_en: string }>((a, b) => db().from("seguimientos_cliente").select("lead_id, nota, creado_en").eq("proyecto_id", proyecto.id).order("creado_en", { ascending: false }).order("id").range(a, b));
     for (const x of ultimas) notas.set(x.lead_id, [...(notas.get(x.lead_id) ?? []), x]);
   }
   return {

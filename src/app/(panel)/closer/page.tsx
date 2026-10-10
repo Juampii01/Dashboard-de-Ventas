@@ -24,7 +24,8 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
   const vis = closersVisibles(perfil, datos.gente, str("closer"));
   const filtros = { productoId: str("producto"), evento: str("evento") };
   const m = metricasAgendas(datos, rango, { closerIds: vis.ids, ...filtros });
-  const porCloser = comparativa ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })) : [];
+  // Quien está de baja (arreglo 11) solo sale en los periodos en que tuvo citas o cobró algo
+  const porCloser = comparativa ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })).filter(({ c, m }) => !("baja" in c && c.baja) || m.agendadas || m.cash) : [];
   const $ = (n: number) => dinero(n, proyecto);
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]);
   const conVista = (v: string | null) => {

@@ -12,8 +12,8 @@ type A = { id: string; lead_id: string | null; autocompletado: { estado: string;
 export async function RevisionIa({ proyecto, closerIds, jefe, sinLead, baseQs }: { proyecto: Proyecto; closerIds: string[]; jefe: boolean; sinLead: number; baseQs: (c: Record<string, string | null>) => string }) {
   const ids = closerIds.length ? closerIds : ["00000000-0000-0000-0000-000000000000"];
   const [autos, dudosas] = await Promise.all([
-    todas<A>((a, b) => db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).eq("autocompletado_estado", "pendiente").order("creado_en").range(a, b)),
-    todas<{ id: string; titulo: string | null; inicio: string | null; motivo: string | null }>((a, b) => db().from("grabaciones").select("id, titulo, inicio, motivo").eq("proyecto_id", proyecto.id).in("closer_id", ids).eq("conciliacion", "pendiente").order("inicio", { ascending: false }).range(a, b)),
+    todas<A>((a, b) => db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).eq("autocompletado_estado", "pendiente").order("creado_en").order("id").range(a, b)),
+    todas<{ id: string; titulo: string | null; inicio: string | null; motivo: string | null }>((a, b) => db().from("grabaciones").select("id, titulo, inicio, motivo").eq("proyecto_id", proyecto.id).in("closer_id", ids).eq("conciliacion", "pendiente").order("inicio", { ascending: false }).order("id").range(a, b)),
   ]);
   const nombre = (x: A) => (x.leads ? `${x.leads.nombre} ${x.leads.apellido ?? ""}`.trim() : x.grabaciones?.titulo ?? "Llamada");
   return (

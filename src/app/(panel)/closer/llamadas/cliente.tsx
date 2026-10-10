@@ -200,9 +200,9 @@ export function SincronizarGhl({ conectado, ultima }: { conectado: boolean; ulti
   const lanzar = (auto: boolean) =>
     iniciar(async () => {
       try {
-        const r = (await exigirOk(sincronizarGhl(auto ? 10 * 60_000 : undefined))) as { saltada?: boolean; nuevas?: number; actualizadas?: number; sinUnir?: number; errores?: string[] };
+        const r = (await exigirOk(sincronizarGhl(auto ? 10 * 60_000 : undefined))) as { saltada?: boolean; nuevas?: number; actualizadas?: number; canceladas?: number; sinUnir?: number; errores?: string[] };
         if (r.saltada) return;
-        if (!auto || r.nuevas || r.actualizadas) toast(`GHL: ${r.nuevas ?? 0} nuevas · ${r.actualizadas ?? 0} actualizadas${r.sinUnir ? ` · ${r.sinUnir} sin unir` : ""}`);
+        if (!auto || r.nuevas || r.actualizadas || r.canceladas) toast(`GHL: ${r.nuevas ?? 0} nuevas · ${r.actualizadas ?? 0} actualizadas${r.canceladas ? ` · ${r.canceladas} canceladas (borradas en GHL)` : ""}${r.sinUnir ? ` · ${r.sinUnir} sin unir` : ""}`);
         if (r.errores?.length) toast(r.errores[0], "error");
         router.refresh();
       } catch (e) {

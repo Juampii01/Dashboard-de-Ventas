@@ -61,6 +61,18 @@ describe("Importar llamadas (CSV)", () => {
     expect(new Date(a.fecha).toISOString()).toBe("2026-10-21T21:00:00.000Z"); // 17:00 en Nueva York
     expect((await citasDe(e.leads.LeadB)).some((c) => c.closer_id === e.p.closerA.id)).toBe(true); // por teléfono
   });
+  it("arreglo 25: importar el mismo CSV otra vez no duplica; el teléfono sin prefijo encuentra al lead", async () => {
+    como(e, e.p.ceo);
+    const antes = (await citasDe(e.leads.LeadA)).length + (await citasDe(e.leads.LeadB)).length;
+    const csv = ["email,telefono,fecha,closer_email,nota", `${e.pref}-la@x.test,,2026-10-21 17:00,${e.p.closerB.email},Desde CSV`, `,600112233,2026-10-22 09:30,${e.p.closerA.email},`].join("\n");
+    const r = (await ok(importarCitas(csv))) as { creadas: number; fallos: string[] };
+    expect(r.creadas).toBe(0);
+    expect(r.fallos).toEqual(["Fila 2: esa cita ya existe (mismo lead, closer y hora); no se duplica", "Fila 3: esa cita ya existe (mismo lead, closer y hora); no se duplica"]);
+    expect((await citasDe(e.leads.LeadA)).length + (await citasDe(e.leads.LeadB)).length).toBe(antes);
+    // Otra hora con el teléfono sin prefijo: se crea
+    const r2 = (await ok(importarCitas(["email,telefono,fecha,closer_email", `,600112233,2026-10-23 09:30,${e.p.closerA.email}`].join("\n")))) as { creadas: number };
+    expect(r2.creadas).toBe(1);
+  });
 });
 
 describe("Webhook de GHL: la misma cita dos veces", () => {

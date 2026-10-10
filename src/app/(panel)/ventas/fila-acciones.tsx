@@ -5,9 +5,12 @@ import { Plus, Trash2, Undo2 } from "lucide-react";
 import { borrarVenta, registrarCobro, registrarDevolucion } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
+import { useToast } from "@/components/toasts";
+import { exigirOk } from "@/lib/resultado-cliente";
 
 export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean }) {
   const { pendiente: cargando, error, ok, ejecutar } = useAccion();
+  const toast = useToast();
   const [abierto, setAbierto] = useState(false);
   const [devolucion, setDevolucion] = useState(false);
   return (
@@ -27,7 +30,13 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe 
           className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal"
           disabled={cargando}
           title="Borrar venta"
-          onClick={() => confirm("¿Borrar esta venta? No se puede deshacer.") && ejecutar(() => borrarVenta(ventaId))}
+          onClick={() =>
+            confirm("¿Borrar esta venta? No se puede deshacer. Su cita volverá a «En seguimiento».") &&
+            ejecutar(async () => {
+              const r = (await exigirOk(borrarVenta(ventaId))) as { aviso: string | null };
+              toast(r.aviso ?? "Venta borrada", r.aviso ? "error" : undefined);
+            })
+          }
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -55,7 +64,7 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe 
           <form
             className="space-y-3"
             action={(fd) => {
-              ejecutar(() => registrarCobro(ventaId, String(fd.get("importe")), String(fd.get("metodo"))), "Cobro registrado");
+              ejecutar(() => registrarCobro(ventaId, String(fd.get("importe")), String(fd.get("metodo")), String(fd.get("fecha") ?? "")), "Cobro registrado");
               setAbierto(false);
             }}
           >
@@ -65,6 +74,7 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe 
               <label className="etiqueta-campo" htmlFor="fila-acciones-metodo">Método</label>
               <select id="fila-acciones-metodo" name="metodo" className="campo"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></select>
             </div>
+            <label className="block"><span className="etiqueta-campo">Fecha del cobro (vacía = hoy)</span><input name="fecha" type="date" className="campo" /></label>
             <button className="btn-primario w-full">Guardar cobro</button>
           </form>
         </Modal>

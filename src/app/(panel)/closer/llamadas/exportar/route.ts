@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const gente = await equipo(proyecto.id);
   const vis = closersVisibles(perfil, gente, sp.get("closer"));
   const citas = await todas<{ fecha: string; estado: string; closer_id: string | null; nota: string | null; estrellas_caller: number | null; estrellas_closer: number | null; leads: { nombre: string; apellido: string; email: string | null; telefono: string | null } | null }>((a, b) =>
-    db().from("citas").select("*, leads(nombre, apellido, email, telefono)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("fecha").range(a, b)
+    db().from("citas").select("*, leads(nombre, apellido, email, telefono)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("fecha").order("id").range(a, b)
   );
   const q = sp.get("q") ?? "";
   const fmt = new Intl.DateTimeFormat("es-ES", { timeZone: proyecto.zona_horaria, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });

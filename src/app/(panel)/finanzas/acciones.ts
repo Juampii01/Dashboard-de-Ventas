@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db, todas, equipo } from "@/lib/datos";
+import { db, todas, equipo, conBajas, escribir } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
 import { exigirNoEsPropia } from "@/lib/auth";
 import { inicioDia, localAIso } from "@/lib/formato";
@@ -34,7 +34,7 @@ export async function crearMovimiento(m: { tipo: "ingreso" | "egreso"; importe: 
     if (m.tipo !== "ingreso" && m.tipo !== "egreso") throw new ErrorUsuario("Tipo no válido.");
     await delProyecto("categorias_finanzas", m.categoria_id, proyecto.id);
     await delProyecto("cuentas", m.cuenta_id, proyecto.id);
-    await db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: m.tipo, importe: importe(m.importe), fecha: fechaIso(m.fecha, proyecto.zona_horaria), categoria_id: m.categoria_id, cuenta_id: m.cuenta_id, descripcion: m.descripcion.trim() || null, creado_por: perfil.id });
+    await escribir(db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: m.tipo, importe: importe(m.importe), fecha: fechaIso(m.fecha, proyecto.zona_horaria), categoria_id: m.categoria_id, cuenta_id: m.cuenta_id, descripcion: m.descripcion.trim() || null, creado_por: perfil.id }), "movimientos");
     refrescar();
   });
 }
@@ -45,7 +45,7 @@ export async function borrarMovimiento(id: string) {
     await delProyecto("movimientos", id, proyecto.id);
     const { data: liq } = await db().from("liquidaciones").select("id").eq("movimiento_id", id).maybeSingle();
     if (liq) throw new ErrorUsuario("Este gasto es el pago de una liquidación: desmárcala como pagada en Liquidaciones.");
-    await db().from("movimientos").delete().eq("id", id);
+    await escribir(db().from("movimientos").delete().eq("id", id), "movimientos");
     refrescar();
   });
 }
@@ -56,7 +56,7 @@ export async function transferir(origen: string, destino: string, importeTxt: st
     if (!origen || !destino || origen === destino) throw new ErrorUsuario("Elige dos cuentas distintas.");
     await delProyecto("cuentas", origen, proyecto.id);
     await delProyecto("cuentas", destino, proyecto.id);
-    await db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "transferencia", cuenta_id: origen, cuenta_destino_id: destino, importe: importe(importeTxt), fecha: fechaIso(fecha, proyecto.zona_horaria), descripcion: descripcion.trim() || null, creado_por: perfil.id });
+    await escribir(db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "transferencia", cuenta_id: origen, cuenta_destino_id: destino, importe: importe(importeTxt), fecha: fechaIso(fecha, proyecto.zona_horaria), descripcion: descripcion.trim() || null, creado_por: perfil.id }), "movimientos");
     refrescar();
   });
 }
@@ -72,7 +72,7 @@ export async function guardarCuenta(id: string | null, nombre: string, metodos: 
     for (const o of otras ?? []) if (o.id !== id) for (const m of ms) if ((o.metodos ?? []).includes(m)) throw new ErrorUsuario(`El método «${m}» ya va a la cuenta «${o.nombre}».`);
     if (id) {
       await delProyecto("cuentas", id, proyecto.id);
-      await db().from("cuentas").update({ nombre: nombre.trim(), metodos: ms }).eq("id", id);
+      await escribir(db().from("cuentas").update({ nombre: nombre.trim(), metodos: ms }).eq("id", id), "cuentas");
     } else await db().from("cuentas").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), metodos: ms });
     refrescar();
   });
@@ -85,7 +85,7 @@ export async function guardarCategoria(id: string | null, tipo: "ingreso" | "egr
     if (tipo !== "ingreso" && tipo !== "egreso") throw new ErrorUsuario("Tipo no válido.");
     if (id) {
       await delProyecto("categorias_finanzas", id, proyecto.id);
-      await db().from("categorias_finanzas").update({ nombre: nombre.trim(), en_profit: enProfit }).eq("id", id);
+      await escribir(db().from("categorias_finanzas").update({ nombre: nombre.trim(), en_profit: enProfit }).eq("id", id), "categorias_finanzas");
     } else {
       const { error } = await db().from("categorias_finanzas").insert({ proyecto_id: proyecto.id, tipo, nombre: nombre.trim(), en_profit: enProfit });
       if (error) throw new ErrorUsuario(error.code === "23505" ? "Ya existe esa categoría." : error.message);
@@ -103,7 +103,7 @@ export async function crearProgramado(p: { descripcion: string; importe: string;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(p.proxima)) throw new ErrorUsuario("Elige la fecha del próximo pago.");
     await delProyecto("categorias_finanzas", p.categoria_id, proyecto.id);
     await delProyecto("cuentas", p.cuenta_id, proyecto.id);
-    await db().from("egresos_programados").insert({ proyecto_id: proyecto.id, descripcion: p.descripcion.trim(), importe: importe(p.importe), categoria_id: p.categoria_id, cuenta_id: p.cuenta_id, cada: p.cada, proxima: p.proxima });
+    await escribir(db().from("egresos_programados").insert({ proyecto_id: proyecto.id, descripcion: p.descripcion.trim(), importe: importe(p.importe), categoria_id: p.categoria_id, cuenta_id: p.cuenta_id, cada: p.cada, proxima: p.proxima }), "egresos_programados");
     refrescar();
   });
 }
@@ -114,12 +114,12 @@ export async function registrarProgramado(id: string) {
     const { perfil, proyecto } = await exigirSeccion("finanzas");
     await delProyecto("egresos_programados", id, proyecto.id);
     const { data: p } = await db().from("egresos_programados").select("*").eq("id", id).single();
-    await db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "egreso", importe: p.importe, fecha: localAIso(`${p.proxima}T12:00`, proyecto.zona_horaria), categoria_id: p.categoria_id, cuenta_id: p.cuenta_id, descripcion: p.descripcion, origen: "programado", creado_por: perfil.id });
+    await escribir(db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "egreso", importe: p.importe, fecha: localAIso(`${p.proxima}T12:00`, proyecto.zona_horaria), categoria_id: p.categoria_id, cuenta_id: p.cuenta_id, descripcion: p.descripcion, origen: "programado", creado_por: perfil.id }), "movimientos");
     const d = new Date(`${p.proxima}T12:00:00Z`);
     if (p.cada === "semana") d.setUTCDate(d.getUTCDate() + 7);
     else if (p.cada === "anio") d.setUTCFullYear(d.getUTCFullYear() + 1);
     else d.setUTCMonth(d.getUTCMonth() + 1);
-    await db().from("egresos_programados").update({ proxima: d.toISOString().slice(0, 10) }).eq("id", id);
+    await escribir(db().from("egresos_programados").update({ proxima: d.toISOString().slice(0, 10) }).eq("id", id), "egresos_programados");
     refrescar();
   });
 }
@@ -128,7 +128,7 @@ export async function borrarProgramado(id: string) {
   return seguro(async () => {
     const { proyecto } = await exigirSeccion("finanzas");
     await delProyecto("egresos_programados", id, proyecto.id);
-    await db().from("egresos_programados").delete().eq("id", id);
+    await escribir(db().from("egresos_programados").delete().eq("id", id), "egresos_programados");
     refrescar();
   });
 }
@@ -139,7 +139,7 @@ export async function nuevoDeudor(nombre: string, importeTxt: string, venceEl: s
     const { proyecto } = await exigirSeccion("finanzas");
     if (!nombre.trim()) throw new ErrorUsuario("¿Quién debe el dinero?");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(venceEl)) throw new ErrorUsuario("Elige cuándo vence.");
-    await db().from("vencimientos").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), importe: importe(importeTxt), vence_el: venceEl });
+    await escribir(db().from("vencimientos").insert({ proyecto_id: proyecto.id, nombre: nombre.trim(), importe: importe(importeTxt), vence_el: venceEl }), "vencimientos");
     refrescar();
   });
 }
@@ -151,11 +151,19 @@ export async function marcarVencimiento(id: string, estado: "pendiente" | "pagad
     const { data: v } = await db().from("vencimientos").select("*").eq("id", id).single();
     if (estado === "pagado" && v.venta_id) throw new ErrorUsuario("Los plazos de una venta se pagan registrando el cobro de la venta («Cobro»).");
     if (!["pendiente", "pagado", "no_paga"].includes(estado)) throw new ErrorUsuario("Estado no válido.");
-    await db().from("vencimientos").update({ estado, pagado_en: estado === "pagado" ? new Date().toISOString() : null }).eq("id", id);
-    // Un deudor puesto a mano que paga: entra como ingreso
+    // Arreglo 33: deshacer un «cobrado» por error → vuelve a pendiente y se borra el ingreso que creó
+    if (v.estado === "pagado" && estado !== "pagado") {
+      if (v.movimiento_id) await escribir(db().from("movimientos").delete().eq("id", v.movimiento_id), "movimientos");
+      await escribir(db().from("vencimientos").update({ estado, pagado_en: null, movimiento_id: null }).eq("id", id), "vencimientos");
+      refrescar();
+      return;
+    }
+    await escribir(db().from("vencimientos").update({ estado, pagado_en: estado === "pagado" ? new Date().toISOString() : null }).eq("id", id), "vencimientos");
+    // Un deudor puesto a mano que paga: entra como ingreso (y se guarda cuál, para poder deshacerlo)
     if (estado === "pagado" && v.estado !== "pagado") {
       const { data: cat } = await db().from("categorias_finanzas").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "ingreso").order("nombre").limit(1).maybeSingle();
-      await db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "ingreso", importe: v.importe, categoria_id: cat?.id ?? null, descripcion: `Cobro de ${v.nombre ?? "deudor"}`, creado_por: perfil.id });
+      const { data: mov } = await escribir(db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "ingreso", importe: v.importe, categoria_id: cat?.id ?? null, descripcion: `Cobro de ${v.nombre ?? "deudor"}`, creado_por: perfil.id }).select("id").single(), "movimientos");
+      await escribir(db().from("vencimientos").update({ movimiento_id: mov?.id ?? null }).eq("id", id), "vencimientos");
     }
     refrescar();
   });
@@ -166,7 +174,7 @@ export async function cambiarVencimiento(id: string, venceEl: string) {
     const { proyecto } = await exigirSeccion("finanzas");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(venceEl)) throw new ErrorUsuario("Fecha no válida.");
     await delProyecto("vencimientos", id, proyecto.id);
-    await db().from("vencimientos").update({ vence_el: venceEl }).eq("id", id);
+    await escribir(db().from("vencimientos").update({ vence_el: venceEl }).eq("id", id), "vencimientos");
     refrescar();
   });
 }
@@ -205,7 +213,7 @@ export async function conciliarMovimiento(id: string, categoriaId: string | null
     const { proyecto } = await exigirSeccion("finanzas");
     await delProyecto("movimientos", id, proyecto.id);
     await delProyecto("categorias_finanzas", categoriaId, proyecto.id);
-    await db().from("movimientos").update({ conciliado: true, categoria_id: categoriaId }).eq("id", id);
+    await escribir(db().from("movimientos").update({ conciliado: true, categoria_id: categoriaId }).eq("id", id), "movimientos");
     refrescar();
   });
 }
@@ -223,14 +231,16 @@ export async function calcularLiquidaciones(mes: string) {
       cargarFinanzas(proyecto.id),
       cargarEquipo(proyecto.id),
       equipo(proyecto.id),
-      todas<CitaL>((a, b) => db().from("citas").select("lead_id, closer_id, agendada_por, estado, fecha").eq("proyecto_id", proyecto.id).eq("estado", "cerrada").range(a, b)),
+      todas<CitaL>((a, b) => db().from("citas").select("lead_id, closer_id, agendada_por, estado, fecha").eq("proyecto_id", proyecto.id).eq("estado", "cerrada").order("id").range(a, b)),
     ]);
-    const personas: PersonaL[] = gente.map((g) => ({ perfil_id: g.id, nombre: g.nombre, rol: g.rol, comision: eq.miembros.find((m) => m.perfil_id === g.id)?.comision ?? null }));
+    // Arreglo 10: también quien ya no está pero vendió o agendó (cobra lo que ganó ese mes)
+    const todos = await conBajas(gente, [...f.ventas.map((v) => v.vendedor_id), ...citas.flatMap((c) => [c.closer_id, c.agendada_por])]);
+    const personas: PersonaL[] = todos.map((g) => ({ perfil_id: g.id, nombre: g.nombre, rol: g.rol, comision: eq.miembros.find((m) => m.perfil_id === g.id)?.comision ?? null }));
     const productos = new Map(f.productos.map((p) => [p.id, (p.comisiones ?? null) as ComisionProducto]));
     const res = liquidacionesMes({ ventas: f.ventas, pagos: f.pagos, citas, personas, comisionesRol: eq.comisionesRol, productos, mes: rango });
     const { data: yaPagadas } = await db().from("liquidaciones").select("perfil_id").eq("proyecto_id", proyecto.id).eq("mes", mes).eq("estado", "pagada");
     const pagadas = new Set((yaPagadas ?? []).map((x) => x.perfil_id));
-    await db().from("liquidaciones").delete().eq("proyecto_id", proyecto.id).eq("mes", mes).eq("estado", "pendiente");
+    await escribir(db().from("liquidaciones").delete().eq("proyecto_id", proyecto.id).eq("mes", mes).eq("estado", "pendiente"), "liquidaciones");
     const filas = res.filter((r) => !pagadas.has(r.perfil_id)).map((r) => ({ proyecto_id: proyecto.id, mes, ...r, estado: "pendiente", calculada_en: new Date().toISOString() }));
     if (filas.length) await db().from("liquidaciones").insert(filas);
     refrescar();
@@ -252,7 +262,7 @@ export async function pagarLiquidacion(id: string, cuentaId: string | null) {
       const { data: m } = await db().from("movimientos").insert({ proyecto_id: proyecto.id, tipo: "egreso", importe: l.comision_cobrado, categoria_id: cat?.id ?? null, cuenta_id: cuentaId, descripcion: `Comisiones ${l.mes} · ${(l.perfiles as { nombre: string } | null)?.nombre ?? ""}`, origen: "liquidacion", creado_por: perfil.id }).select("id").single();
       movimiento = m?.id ?? null;
     }
-    await db().from("liquidaciones").update({ estado: "pagada", pagada_en: new Date().toISOString(), movimiento_id: movimiento }).eq("id", id);
+    await escribir(db().from("liquidaciones").update({ estado: "pagada", pagada_en: new Date().toISOString(), movimiento_id: movimiento }).eq("id", id), "liquidaciones");
     refrescar();
   });
 }
@@ -263,7 +273,7 @@ export async function desmarcarLiquidacion(id: string) {
     await delProyecto("liquidaciones", id, proyecto.id);
     const { data: l } = await db().from("liquidaciones").select("movimiento_id, perfil_id").eq("id", id).single();
     exigirNoEsPropia(perfil, l?.perfil_id ?? null, "desmarcar");
-    await db().from("liquidaciones").update({ estado: "pendiente", pagada_en: null, movimiento_id: null }).eq("id", id);
+    await escribir(db().from("liquidaciones").update({ estado: "pendiente", pagada_en: null, movimiento_id: null }).eq("id", id), "liquidaciones");
     if (l?.movimiento_id) await db().from("movimientos").delete().eq("id", l.movimiento_id);
     refrescar();
   });
@@ -275,7 +285,7 @@ export async function guardarTipoCambio(porUsdTxt: string) {
     const { proyecto } = await exigirSeccion("finanzas");
     const v = leerNumero(porUsdTxt);
     if (!(v > 0) || v > 1000) throw new ErrorUsuario("Pon cuántos euros son 1 dólar (por ejemplo 0,92).");
-    await db().from("tipos_cambio").upsert({ proyecto_id: proyecto.id, moneda: "EUR", por_usd: v, actualizado_en: new Date().toISOString() });
+    await escribir(db().from("tipos_cambio").upsert({ proyecto_id: proyecto.id, moneda: "EUR", por_usd: v, actualizado_en: new Date().toISOString() }), "tipos_cambio");
     refrescar();
   });
 }

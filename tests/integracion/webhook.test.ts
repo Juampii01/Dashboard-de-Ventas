@@ -78,6 +78,38 @@ describe("Webhook de GHL", () => {
   });
 });
 
+describe("Arreglos 18, 19 y 20 del webhook de GHL", () => {
+  const citaDe = async (leadId: string) => (await db.from("citas").select("id, closer_id, fecha").eq("lead_id", leadId)).data ?? [];
+  it("18: encuentra el lead por teléfono (últimas 9 cifras); sin email, teléfono ni contacto da un error claro", async () => {
+    const { data: l } = await db.from("leads").insert({ proyecto_id: e.proyecto.id, nombre: "PorTel", telefono: "+34 622 333 444" }).select("id").single();
+    expect((await enviar({ tipo: "cita_agendada", phone: "622333444", fecha: "2026-11-02T15:00:00Z" })).status).toBe(200);
+    expect(await citaDe(l!.id)).toHaveLength(1);
+    expect((await db.from("leads").select("id").eq("proyecto_id", e.proyecto.id).like("telefono", "%622%333%444%")).data).toHaveLength(1); // no creó otro
+    const r = await enviar({ tipo: "cita_agendada", fecha: "2026-11-02T15:00:00Z", first_name: "Nadie" });
+    expect(r.status).toBe(422);
+    expect((await r.json()).error).toMatch(/no viene email, teléfono ni contacto/);
+  });
+  it("19: la misma cita sin id de GHL enviada dos veces no se duplica", async () => {
+    const email = `${e.pref}-sin-id@x.test`;
+    for (let i = 0; i < 2; i++) expect((await enviar({ tipo: "cita_agendada", email, fecha: "2026-11-03T15:00:00Z" })).status).toBe(200);
+    const { data: l } = await db.from("leads").select("id").eq("proyecto_id", e.proyecto.id).eq("email", email).single();
+    expect(await citaDe(l!.id)).toHaveLength(1);
+    expect((await enviar({ tipo: "cita_agendada", email, fecha: "2026-11-04T15:00:00Z" })).status).toBe(200); // otra hora: otra cita
+    expect(await citaDe(l!.id)).toHaveLength(2);
+  });
+  it("20: un closer que no es de este proyecto no se asigna", async () => {
+    await db.from("miembros_proyecto").delete().eq("proyecto_id", e.proyecto.id).eq("perfil_id", e.p.closerB.id);
+    try {
+      const email = `${e.pref}-otro-closer@x.test`;
+      expect((await enviar({ tipo: "cita_agendada", email, fecha: "2026-11-05T15:00:00Z", closer_email: e.p.closerB.email })).status).toBe(200);
+      const { data: l } = await db.from("leads").select("id").eq("proyecto_id", e.proyecto.id).eq("email", email).single();
+      expect((await citaDe(l!.id))[0].closer_id).toBeNull();
+    } finally {
+      await db.from("miembros_proyecto").insert({ proyecto_id: e.proyecto.id, perfil_id: e.p.closerB.id, orden: 9 });
+    }
+  });
+});
+
 describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
   const conCabecera = (cuerpo: unknown, clave = secreto) =>
     POST(

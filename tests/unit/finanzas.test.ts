@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estadoVencimientos, liquidacionesMes, planDePagos, resumenFinanzas, saldosCuentas, type MovF, type PagoF, type VentaF } from "@/lib/finanzas";
+import { detalleVencimientos, estadoVencimientos, liquidacionesMes, totalPorCobrar, planDePagos, resumenFinanzas, saldosCuentas, type MovF, type PagoF, type VentaF } from "@/lib/finanzas";
 
 const OCT = { desde: new Date("2026-10-01T04:00:00Z"), hasta: new Date("2026-11-01T04:00:00Z") };
 const v = (id: string, x: Partial<VentaF> = {}): VentaF => ({ id, lead_id: `L${id}`, producto_id: "GRUPAL", vendedor_id: "CLOSER", facturacion: 1997, cash_collected: 500, fecha: "2026-10-05T15:00:00Z", metodo: "stripe", tipo_pago: "reserva", devuelto: null, devuelto_en: null, ...x });
@@ -24,12 +24,25 @@ describe("resumen de finanzas", () => {
     expect(r.egresosProfit).toBe(1020); // «Personal» no cuenta; el gasto sin categoría sí
     expect(r.profit).toBe(2297 + 150 - 1020);
     expect(r.roas).toBe(2.25); // 2297 / 1020
-    expect(r.porCobrar).toBe(1997 - 500 - 700 - 100 + 1997 - 500 - 300);
+    expect(r.porCobrar).toBeNull(); // sin plazos no se calcula (antes sumaba lo que faltaba de todas las ventas)
     expect(r.porDia.get("2026-10-05")).toBe(500 + 997);
   });
   it("el día de un cobro se cuenta en la hora del proyecto", () => {
     const r = resumenFinanzas({ ...datos, ventas: [v("x", { fecha: "2026-10-06T02:00:00Z" })], pagos: [] }, OCT, "America/New_York");
     expect([...r.porDia.keys()]).toEqual(["2026-10-05"]);
+  });
+  it("arreglo 12: «Cuentas por cobrar» = «Total por cobrar» de Pagos pendientes (sin «no paga» ni lo cobrado)", () => {
+    const vencs = [
+      { id: "a", venta_id: "1", importe: 700, vence_el: "2020-01-01", estado: "pendiente" as const }, // tapado por el pago de 700
+      { id: "b", venta_id: "1", importe: 797, vence_el: "2099-01-01", estado: "pendiente" as const }, // falta 797 − 100 = 697 (por vencer)
+      { id: "c", venta_id: "3", importe: 1197, vence_el: "2020-02-01", estado: "pendiente" as const }, // falta 1197 − 300 = 897 (vencido)
+      { id: "d", venta_id: "9", importe: 400, vence_el: "2020-03-01", estado: "no_paga" as const }, // no cuenta
+      { id: "e", venta_id: null, importe: 250, vence_el: "2099-02-01", estado: "pendiente" as const }, // deudor puesto a mano
+    ];
+    const r = resumenFinanzas({ ...datos, vencimientos: vencs }, OCT);
+    expect(r.porCobrar).toBe(697 + 897 + 250);
+    const det = [...detalleVencimientos(vencs, datos.pagos, "2026-10-10").values()].filter((x) => x.estado === "por_vencer" || x.estado === "vencido").reduce((s, x) => s + x.falta, 0);
+    expect(totalPorCobrar(vencs, datos.pagos, "2026-10-10")).toBe(det); // misma cifra que la pestaña Pagos pendientes
   });
   it("sin gastos, el ROAS no se puede calcular", () => {
     expect(resumenFinanzas({ ...datos, movimientos: [] }, OCT).roas).toBeNull();

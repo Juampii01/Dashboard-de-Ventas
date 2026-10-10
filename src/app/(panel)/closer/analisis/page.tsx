@@ -31,7 +31,7 @@ export default async function AnalisisPage({ searchParams }: PageProps<"/closer/
   const vis = closersVisibles(perfil, gente, s("closer") || null);
   const ids = vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"];
   const [filas, configs, productos] = await Promise.all([
-    todas<Fila>((a, b) => db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("creado_en", { ascending: false }).range(a, b)),
+    todas<Fila>((a, b) => db().from("analisis_llamadas").select("*, grabaciones(titulo, inicio), leads(nombre, apellido)").eq("proyecto_id", proyecto.id).in("closer_id", ids).order("creado_en", { ascending: false }).order("id").range(a, b)),
     jefe ? db().from("config_ia").select("producto_id, contexto, agentes").eq("proyecto_id", proyecto.id) : Promise.resolve({ data: [] }),
     jefe ? db().from("productos").select("id, nombre").eq("proyecto_id", proyecto.id).order("orden") : Promise.resolve({ data: [] }),
   ]);

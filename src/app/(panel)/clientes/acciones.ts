@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db, registrarActividad, todas } from "@/lib/datos";
+import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
+import { db, registrarActividad, todas, escribir } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
 import { esJefe } from "@/lib/auth";
 import { telefonoClave } from "@/lib/leads";
@@ -36,11 +36,12 @@ export async function cambiarEstadoCliente(leadId: string, estado: EstadoCliente
 // Seguimiento: una nota (opcional) y la próxima fecha de contacto (vacía = sin fecha)
 export async function anotarSeguimiento(leadId: string, nota: string, proximo: string) {
   return seguro(async () => {
+    nota = notaValida(nota);
     const { perfil, proyecto } = await clientePermitido(leadId);
     if (proximo && !FECHA.test(proximo)) throw new ErrorUsuario("Fecha no válida.");
     if (nota.length > 4000) throw new ErrorUsuario("La nota es demasiado larga.");
     if (nota.trim()) {
-      await db().from("seguimientos_cliente").insert({ proyecto_id: proyecto.id, lead_id: leadId, nota: nota.trim(), perfil_id: perfil.id });
+      await escribir(db().from("seguimientos_cliente").insert({ proyecto_id: proyecto.id, lead_id: leadId, nota: nota.trim(), perfil_id: perfil.id }), "seguimientos_cliente");
       await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "nota", resultado: null, nota: `Seguimiento de cliente: ${nota.trim()}` });
     }
     await actualizarFicha(proyecto.id, leadId, { proximo_contacto: proximo || null });
@@ -94,7 +95,7 @@ export async function guardarPasoOnboarding(id: string | null, nombre: string) {
 export async function borrarPasoOnboarding(id: string) {
   return seguro(async () => {
     const { proyecto } = await exigirSeccion("clientes");
-    await db().from("pasos_onboarding").delete().eq("id", id).eq("proyecto_id", proyecto.id);
+    await escribir(db().from("pasos_onboarding").delete().eq("id", id).eq("proyecto_id", proyecto.id), "pasos_onboarding");
     refrescar();
   });
 }
@@ -114,7 +115,7 @@ export async function nuevoCliente(formData: FormData) {
     let leadId: string | null = null;
     if (email) leadId = (await db().from("leads").select("id").eq("proyecto_id", proyecto.id).ilike("email", email).maybeSingle()).data?.id ?? null;
     if (!leadId && telefonoClave(telefono).length >= 6) {
-      const data = await todas<{ id: string; telefono: string | null }>((a, b) => db().from("leads").select("id, telefono").eq("proyecto_id", proyecto.id).not("telefono", "is", null).range(a, b));
+      const data = await todas<{ id: string; telefono: string | null }>((a, b) => db().from("leads").select("id, telefono").eq("proyecto_id", proyecto.id).not("telefono", "is", null).order("id").range(a, b));
       leadId = data.find((l) => telefonoClave(l.telefono) === telefonoClave(telefono))?.id ?? null;
     }
     let creado = false;

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { cifrar, descifrar } from "@/lib/cifrado";
 import { getSesion, esJefe } from "@/lib/auth";
 import { sincronizarFathom } from "@/lib/fathom-sync";
@@ -38,10 +38,10 @@ export async function guardarCuentaFathom(id: string | null, c: { nombre: string
     if (id) {
       const { data: ya } = await db().from("cuentas_fathom").select("perfil_id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
       if (!ya || (!esJefe(perfil) && ya.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa cuenta no es tuya.");
-      await db().from("cuentas_fathom").update({ nombre: c.nombre.trim(), formato_titulo: formato, perfil_id: dueno, ...(key ? { api_key: cifrar(key) } : {}) }).eq("id", id);
+      await escribir(db().from("cuentas_fathom").update({ nombre: c.nombre.trim(), formato_titulo: formato, perfil_id: dueno, ...(key ? { api_key: cifrar(key) } : {}) }).eq("id", id), "cuentas_fathom");
     } else {
       if (!key) throw new ErrorUsuario("Pega la API key de Fathom.");
-      await db().from("cuentas_fathom").insert({ proyecto_id: proyecto.id, perfil_id: dueno, nombre: c.nombre.trim(), api_key: cifrar(key), formato_titulo: formato });
+      await escribir(db().from("cuentas_fathom").insert({ proyecto_id: proyecto.id, perfil_id: dueno, nombre: c.nombre.trim(), api_key: cifrar(key), formato_titulo: formato }), "cuentas_fathom");
     }
     refrescar();
   });
@@ -52,7 +52,7 @@ export async function borrarCuentaFathom(id: string) {
     const { perfil, proyecto } = await sesionAgendas();
     const { data: ya } = await db().from("cuentas_fathom").select("perfil_id").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!ya || (!esJefe(perfil) && ya.perfil_id !== perfil.id)) throw new ErrorUsuario("Esa cuenta no es tuya.");
-    await db().from("cuentas_fathom").delete().eq("id", id); // las grabaciones ya traídas se quedan
+    await escribir(db().from("cuentas_fathom").delete().eq("id", id), "cuentas_fathom"); // las grabaciones ya traídas se quedan
     refrescar();
   });
 }
@@ -98,7 +98,7 @@ export async function conciliarGrabacionManual(id: string, citaId: string) {
     if (g.closer_id && cita.closer_id !== g.closer_id) throw new ErrorUsuario("La cita es de otro closer.");
     const { data: otra } = await db().from("grabaciones").select("id").eq("cita_id", citaId).neq("id", id).maybeSingle();
     if (otra) throw new ErrorUsuario("Esa cita ya tiene otra grabación.");
-    await db().from("grabaciones").update({ cita_id: citaId, conciliacion: "manual", motivo: "A mano" }).eq("id", id);
+    await escribir(db().from("grabaciones").update({ cita_id: citaId, conciliacion: "manual", motivo: "A mano" }).eq("id", id), "grabaciones");
     await encolarAnalisis(proyecto.id, id);
     analizarDespues(proyecto.id);
     refrescar();
@@ -108,7 +108,7 @@ export async function conciliarGrabacionManual(id: string, citaId: string) {
 export async function desunirGrabacion(id: string, descartar = false) {
   return seguro(async () => {
     await grabacionPermitida(id);
-    await db().from("grabaciones").update({ cita_id: null, conciliacion: descartar ? "descartada" : "pendiente", motivo: descartar ? "Descartada (no es una llamada de venta)" : "Desunida a mano" }).eq("id", id);
+    await escribir(db().from("grabaciones").update({ cita_id: null, conciliacion: descartar ? "descartada" : "pendiente", motivo: descartar ? "Descartada (no es una llamada de venta)" : "Desunida a mano" }).eq("id", id), "grabaciones");
     refrescar();
   });
 }

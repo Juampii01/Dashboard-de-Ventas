@@ -1,5 +1,5 @@
 import "server-only";
-import { db, equipo } from "@/lib/datos";
+import { db, equipo, escribir } from "@/lib/datos";
 import type { Proyecto, Respuesta } from "@/lib/tipos";
 import type { LeadEntrada } from "@/lib/csv";
 import { enHorario, horarioValido } from "@/lib/horarios";
@@ -23,9 +23,10 @@ export async function turnosRotativos(proyecto: Proyecto, n: number, ahora = new
     if (enTurno.length) callers = enTurno;
   }
   if (!callers.length || n === 0) return Array(n).fill(null);
-  const { data } = await db().from("proyectos").select("rotacion_indice").eq("id", proyecto.id).single();
-  const inicio = data?.rotacion_indice ?? 0;
-  await db().from("proyectos").update({ rotacion_indice: inicio + n }).eq("id", proyecto.id);
+  // Arreglo 17: leer y avanzar el turno en un solo paso (en la base), para que dos leads a la vez no vayan al mismo caller
+  const { data: inicioDb, error } = await db().rpc("avanzar_rotacion", { p_proyecto: proyecto.id, p_n: n });
+  if (error) throw new Error(`No se pudo avanzar el turno del reparto: ${error.message}`);
+  const inicio = Number(inicioDb) || 0;
   return Array.from({ length: n }, (_, i) => callers[(inicio + i) % callers.length].id);
 }
 
@@ -39,6 +40,48 @@ export function unirRespuestas(antes: Respuesta[], nuevas: Respuesta[]) {
   const m = new Map(antes.map((r) => [r.pregunta.toLowerCase(), r]));
   for (const r of nuevas) if (r.respuesta) m.set(r.pregunta.toLowerCase(), r);
   return [...m.values()];
+}
+
+type FilaClave = { id: string; ghl_contact_id: string | null; email: string | null; telefono: string | null };
+function indexar(filas: FilaClave[], m = new Map<string, string>()) {
+  for (const l of filas) {
+    if (l.ghl_contact_id) m.set(`g:${l.ghl_contact_id}`, l.id);
+    if (l.email) m.set(`e:${l.email.toLowerCase()}`, l.id);
+    if (telefonoValido(l.telefono)) m.set(`t:${telefonoClave(l.telefono)}`, l.id);
+  }
+  return m;
+}
+
+// Arreglo 15: con pocos leads (webhook, landing, «nuevo cliente») se busca solo por sus claves, sin leer
+// todos los del proyecto. Con un CSV grande se leen todos de una vez (más rápido que miles de búsquedas).
+const POCOS = 50;
+async function buscarExistentes(proyectoId: string, entradas: LeadEntrada[]) {
+  const sel = "id, ghl_contact_id, email, telefono";
+  if (entradas.length > POCOS) {
+    const m = new Map<string, string>();
+    for (let i = 0; ; i += 1000) {
+      const { data, error } = await db().from("leads").select(sel).eq("proyecto_id", proyectoId).order("id").range(i, i + 999);
+      if (error) throw new Error(error.message);
+      indexar((data ?? []) as FilaClave[], m);
+      if (!data || data.length < 1000) break;
+    }
+    return m;
+  }
+  const ghl = [...new Set(entradas.map((e) => e.ghl_contact_id).filter((x): x is string => !!x))];
+  const emails = [...new Set(entradas.map((e) => e.email?.toLowerCase()).filter((x): x is string => !!x))];
+  const tels = [...new Set(entradas.filter((e) => !e.email && telefonoValido(e.telefono)).map((e) => telefonoClave(e.telefono)))];
+  const consultas = [
+    ghl.length ? db().from("leads").select(sel).eq("proyecto_id", proyectoId).in("ghl_contact_id", ghl) : null,
+    emails.length ? db().from("leads").select(sel).eq("proyecto_id", proyectoId).in("email", emails) : null,
+    tels.length ? db().from("leads").select(sel).eq("proyecto_id", proyectoId).in("telefono_clave", tels) : null,
+  ].filter((q) => q !== null);
+  const res = await Promise.all(consultas);
+  const m = new Map<string, string>();
+  for (const r of res) {
+    if (r.error) throw new Error(r.error.message);
+    indexar((r.data ?? []) as FilaClave[], m);
+  }
+  return m;
 }
 
 // Inserta o actualiza leads (por Contact Id de GHL, por email o, si no hay email, por teléfono).
@@ -56,21 +99,8 @@ export async function guardarLeads(
 ) {
   const etapaId = opciones.etapaId !== undefined && opciones.etapaId !== null ? opciones.etapaId : opciones.pipelineId ? await primeraEtapa(opciones.pipelineId) : null;
 
-  // Leads ya existentes del proyecto
-  const existentes = new Map<string, string>();
-  for (let i = 0; ; i += 1000) {
-    const { data } = await db()
-      .from("leads")
-      .select("id, ghl_contact_id, email, telefono")
-      .eq("proyecto_id", proyecto.id)
-      .range(i, i + 999);
-    (data ?? []).forEach((l) => {
-      if (l.ghl_contact_id) existentes.set(`g:${l.ghl_contact_id}`, l.id);
-      if (l.email) existentes.set(`e:${l.email.toLowerCase()}`, l.id);
-      if (telefonoValido(l.telefono)) existentes.set(`t:${telefonoClave(l.telefono)}`, l.id);
-    });
-    if (!data || data.length < 1000) break;
-  }
+  // Leads ya existentes del proyecto que pueden coincidir
+  const existentes = await buscarExistentes(proyecto.id, entradas);
 
   const nuevos: LeadEntrada[] = [];
   const actualizar: { id: string; e: LeadEntrada }[] = [];
@@ -113,8 +143,25 @@ export async function guardarLeads(
       ...(e.creado_en ? { creado_en: e.creado_en } : {}),
       ...(e.extra ? { fuente: e.extra.fuente, evento: e.extra.evento, seguimiento: e.extra.seguimiento, quiz_score: e.extra.quiz_score, datos: e.extra.datos } : {}),
     }));
-    const { data, error } = await db().from("leads").insert(lote).select("id");
-    if (error) throw new Error(`Error guardando leads: ${error.message}`);
+    let { data, error } = await db().from("leads").insert(lote).select("id");
+    // Arreglo 16: si otro envío creó el mismo lead a la vez (email o contacto repetido), se insertan de uno
+    // en uno y el que choca pasa a «actualizar» en vez de fallar todo el lote.
+    if (error?.code === "23505") {
+      data = [];
+      error = null;
+      for (const [k, fila] of lote.entries()) {
+        const uno = await db().from("leads").insert(fila).select("id").single();
+        if (!uno.error) data.push(uno.data);
+        else if (uno.error.code === "23505") {
+          const e = nuevos[i + k];
+          const ya = await buscarExistentes(proyecto.id, [e]);
+          const id = (e.ghl_contact_id && ya.get(`g:${e.ghl_contact_id}`)) || (e.email && ya.get(`e:${e.email.toLowerCase()}`));
+          if (!id) throw new Error(`Error guardando leads: ${uno.error.message}`);
+          actualizar.push({ id, e });
+        } else throw new Error(`Error guardando leads: ${uno.error.message}`);
+      }
+    }
+    if (error || !data) throw new Error(`Error guardando leads: ${error?.message}`);
     insertados += data.length;
     await db()
       .from("actividades")
@@ -157,7 +204,7 @@ export async function guardarLeads(
         nota: `${opciones.notaActividad ?? "Volvió a entrar"}${otraVez.length ? ` · ${otraVez.join(" · ")}` : ""}`,
       });
     }
-    await db().from("leads").update(cambios).eq("id", id);
+    await escribir(db().from("leads").update(cambios).eq("id", id), "leads");
   }
 
   return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length };

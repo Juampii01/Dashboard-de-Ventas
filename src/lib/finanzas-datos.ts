@@ -25,12 +25,12 @@ export async function asegurarFinanzas(proyectoId: string) {
 export async function cargarFinanzas(proyectoId: string) {
   await asegurarFinanzas(proyectoId);
   const [ventas, pagos, movimientos, categorias, cuentas, vencimientos, productos] = await Promise.all([
-    todas<VentaF & { tipo_pago: string; num_cuotas: number | null }>((a, b) => db().from("ventas").select("id, lead_id, producto_id, vendedor_id, facturacion, cash_collected, fecha, metodo, tipo_pago, num_cuotas, devuelto, devuelto_en").eq("proyecto_id", proyectoId).range(a, b)),
-    todas<PagoF>((a, b) => db().from("pagos").select("id, venta_id, importe, fecha, metodo, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyectoId).range(a, b)),
-    todas<MovF & { descripcion: string | null; origen: string }>((a, b) => db().from("movimientos").select("*").eq("proyecto_id", proyectoId).order("fecha", { ascending: false }).range(a, b)),
+    todas<VentaF & { tipo_pago: string; num_cuotas: number | null }>((a, b) => db().from("ventas").select("id, lead_id, producto_id, vendedor_id, facturacion, cash_collected, fecha, metodo, tipo_pago, num_cuotas, devuelto, devuelto_en").eq("proyecto_id", proyectoId).order("id").range(a, b)),
+    todas<PagoF>((a, b) => db().from("pagos").select("id, venta_id, importe, fecha, metodo, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyectoId).order("id").range(a, b)),
+    todas<MovF & { descripcion: string | null; origen: string }>((a, b) => db().from("movimientos").select("*").eq("proyecto_id", proyectoId).order("fecha", { ascending: false }).order("id").range(a, b)),
     db().from("categorias_finanzas").select("id, tipo, nombre, en_profit").eq("proyecto_id", proyectoId).order("nombre"),
     db().from("cuentas").select("id, nombre, metodos, por_defecto").eq("proyecto_id", proyectoId).order("creado_en"),
-    todas<VencF & { lead_id: string | null; nombre: string | null; numero: number; pagado_en: string | null }>((a, b) => db().from("vencimientos").select("*").eq("proyecto_id", proyectoId).order("vence_el").range(a, b)),
+    todas<VencF & { lead_id: string | null; nombre: string | null; numero: number; pagado_en: string | null }>((a, b) => db().from("vencimientos").select("*").eq("proyecto_id", proyectoId).order("vence_el").order("id").range(a, b)),
     db().from("productos").select("id, nombre, backend_offer, comisiones").eq("proyecto_id", proyectoId),
   ]);
   const num = <T extends { importe?: number }>(x: T) => ({ ...x, importe: Number(x.importe) });

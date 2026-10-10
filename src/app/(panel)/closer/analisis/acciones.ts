@@ -3,7 +3,7 @@
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { getSesion, esJefe } from "@/lib/auth";
 import { AGENTES, type ConfigAgentes } from "@/lib/ia-agentes";
 import { hayClaveIa, encolarAnalisis, pedirJson, peticion, procesarPendientes, type LlamarClaude } from "@/lib/ia";
@@ -53,7 +53,7 @@ export async function guardarConfigIa(productoId: string | null, contexto: strin
 export async function borrarConfigIa(productoId: string) {
   return seguro(async () => {
     const { proyecto } = await jefe();
-    await db().from("config_ia").delete().eq("proyecto_id", proyecto.id).eq("producto_id", productoId);
+    await escribir(db().from("config_ia").delete().eq("proyecto_id", proyecto.id).eq("producto_id", productoId), "config_ia");
     refrescar();
   });
 }
@@ -96,13 +96,13 @@ export async function aceptarAutocompletado(id: string) {
     if (!a.cita_id) throw new ErrorUsuario("La grabación ya no está unida a una cita.");
     if (auto.estado === "cerrada") {
       // La venta se registra en la ficha (al guardarla, la cita pasa sola a «cerrada»)
-      await db().from("analisis_llamadas").update({ autocompletado_estado: "aceptado" }).eq("id", id);
+      await escribir(db().from("analisis_llamadas").update({ autocompletado_estado: "aceptado" }).eq("id", id), "analisis_llamadas");
       refrescar();
       return { irAVenta: a.lead_id as string };
     }
     const r = await cambiarEstadoCita(a.cita_id, auto.estado, `IA: ${auto.nota}`, auto.estrellas);
     if (r && typeof r === "object" && "error" in r) throw new ErrorUsuario(String(r.error));
-    await db().from("analisis_llamadas").update({ autocompletado_estado: "aceptado" }).eq("id", id);
+    await escribir(db().from("analisis_llamadas").update({ autocompletado_estado: "aceptado" }).eq("id", id), "analisis_llamadas");
     refrescar();
     return { irAVenta: null };
   });
@@ -111,7 +111,7 @@ export async function aceptarAutocompletado(id: string) {
 export async function rechazarAutocompletado(id: string) {
   return seguro(async () => {
     await analisisPermitido(id);
-    await db().from("analisis_llamadas").update({ autocompletado_estado: "rechazado" }).eq("id", id);
+    await escribir(db().from("analisis_llamadas").update({ autocompletado_estado: "rechazado" }).eq("id", id), "analisis_llamadas");
     refrescar();
   });
 }
@@ -160,7 +160,7 @@ export async function calcularScoringIa(llamar?: LlamarClaude) {
       if (!validas.has(`${p.pregunta}\u0000${p.respuesta}`)) continue; // solo respuestas que existen
       (pesos[p.pregunta] ??= {})[p.respuesta] = Math.max(-10, Math.min(10, Math.round(Number(p.puntos) || 0)));
     }
-    await db().from("scoring_ia").upsert({ proyecto_id: proyecto.id, pesos, explicacion: (o.explicacion ?? "").slice(0, 6000), modelo, creado_en: new Date().toISOString() });
+    await escribir(db().from("scoring_ia").upsert({ proyecto_id: proyecto.id, pesos, explicacion: (o.explicacion ?? "").slice(0, 6000), modelo, creado_en: new Date().toISOString() }), "scoring_ia");
     refrescar();
     return { respuestas: Object.values(pesos).reduce((s, x) => s + Object.keys(x).length, 0) };
   });

@@ -40,7 +40,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
 
   const hoy = rangoDe("hoy", proyecto.zona_horaria);
   const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring] = await Promise.all([
-    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).range(a, b)),
+    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq("caller_id", caller.id).order("id").range(a, b)),
     db().from("actividades").select("tipo, resultado").eq("perfil_id", caller.id).eq("proyecto_id", proyecto.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("citas").select("id", { count: "exact", head: true }).eq("agendada_por", caller.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("ventas").select("id", { count: "exact", head: true }).eq("vendedor_id", caller.id).gte("fecha", hoy.desde!.toISOString()),

@@ -37,7 +37,7 @@ export function TabResumen({ d, rango, proyecto }: { d: DatosFinanzas; rango: Ra
         <Kpi titulo="ROAS" valor={r.roas === null ? "—" : `${r.roas.toLocaleString("es-ES")}x`} icono={Megaphone} tono="morado" detalle={r.roas === null ? "sin gastos en el periodo" : `por cada ${dinero(1, proyecto)} gastado`} />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Kpi titulo="Cuentas por cobrar" valor={$(r.porCobrar)} icono={Hourglass} tono="aviso" detalle="lo que falta de todas las ventas" />
+        <Kpi titulo="Cuentas por cobrar" valor={$(r.porCobrar ?? 0)} icono={Hourglass} tono="aviso" detalle="plazos por vencer y vencidos (hoy)" />
         <Kpi titulo="Gastos en profit/ROAS" valor={$(r.egresosProfit)} icono={DollarSign} tono="mal" detalle={r.egresos !== r.egresosProfit ? `de ${$(r.egresos)} de gastos en total` : "todos los gastos del periodo"} />
         <Kpi titulo="Ingresos extra" valor={$(r.ingresosExtra)} icono={TrendingUp} tono="ok" detalle="fuera de las ventas" />
       </div>

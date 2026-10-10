@@ -58,7 +58,7 @@ export async function conciliarPendientes(proyectoId: string, closerId: string, 
   const { data: pend } = await db().from("grabaciones").select("id, inicio, titulo, invitados").eq("proyecto_id", proyectoId).eq("closer_id", closerId).eq("conciliacion", "pendiente");
   if (!pend?.length) return 0;
   const citas = await todas<{ id: string; fecha: string; closer_id: string | null; leads: { nombre: string; apellido: string; email: string | null } | null }>((a, b) =>
-    db().from("citas").select("*, leads(nombre, apellido, email)").eq("proyecto_id", proyectoId).eq("closer_id", closerId).range(a, b)
+    db().from("citas").select("*, leads(nombre, apellido, email)").eq("proyecto_id", proyectoId).eq("closer_id", closerId).order("id").range(a, b)
   );
   // Una cita ya unida a otra grabación no se vuelve a usar
   const { data: usadas } = await db().from("grabaciones").select("cita_id").eq("proyecto_id", proyectoId).not("cita_id", "is", null);

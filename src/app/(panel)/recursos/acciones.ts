@@ -3,7 +3,7 @@
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, puedeRecursos } from "@/lib/auth";
-import { db } from "@/lib/datos";
+import { db, escribir } from "@/lib/datos";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 
 const TIPOS = ["pdf", "enlace", "guion", "video"] as const;
@@ -27,7 +27,8 @@ export async function prepararSubidaPdf() {
 }
 
 export async function crearRecurso(_prev: unknown, formData: FormData) {
-  try {
+  // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
+  return seguro(async () => {
     const { perfil, proyecto } = await exigir(puedeRecursos);
     const titulo = String(formData.get("titulo") ?? "").trim();
     const tipo = String(formData.get("tipo")) as (typeof TIPOS)[number];
@@ -66,9 +67,7 @@ export async function crearRecurso(_prev: unknown, formData: FormData) {
     }
     revalidatePath("/recursos");
     return { ok: "Recurso añadido." };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Error." };
-  }
+  });
 }
 
 export async function borrarRecurso(id: string) {
@@ -77,7 +76,7 @@ export async function borrarRecurso(id: string) {
     const { data } = await db().from("recursos").select("archivo_path").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!data) throw new ErrorUsuario("Recurso no encontrado.");
     if (data.archivo_path) await db().storage.from("recursos").remove([data.archivo_path]);
-    await db().from("recursos").delete().eq("id", id);
+    await escribir(db().from("recursos").delete().eq("id", id), "recursos");
     revalidatePath("/recursos");
   });
 }
@@ -87,7 +86,7 @@ export async function guardarLinkPago(productoId: string, url: string) {
     const { proyecto } = await exigir(puedeRecursos);
     const limpio = url.trim();
     if (limpio && !urlValida(limpio)) throw new ErrorUsuario("Pon un enlace válido (https://…).");
-    await db().from("productos").update({ link_pago: limpio || null }).eq("id", productoId).eq("proyecto_id", proyecto.id);
+    await escribir(db().from("productos").update({ link_pago: limpio || null }).eq("id", productoId).eq("proyecto_id", proyecto.id), "productos");
     revalidatePath("/recursos");
   });
 }

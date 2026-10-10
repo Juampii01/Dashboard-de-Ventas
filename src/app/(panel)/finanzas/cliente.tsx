@@ -218,6 +218,7 @@ export function AccionesVencimiento({ id, deVenta, estado, venceEl }: { id: stri
       {!deVenta && estado !== "pagado" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => marcarVencimiento(id, "pagado"), "Marcado como cobrado")}><Check className="h-3.5 w-3.5" /> Cobrado</button>}
       {estado !== "no_paga" && estado !== "pagado" && <button className="btn-secundario px-2 py-1 text-xs hover:text-mal" disabled={pendiente} onClick={() => confirm("¿Marcar como «no paga»?") && ejecutar(() => marcarVencimiento(id, "no_paga"), "Marcado como no paga")}>No paga</button>}
       {estado === "no_paga" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => marcarVencimiento(id, "pendiente"), "Vuelve a pendiente")}><Undo2 className="h-3.5 w-3.5" /> Pendiente</button>}
+      {!deVenta && estado === "pagado" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} title="Se marcó como cobrado por error: vuelve a pendiente y se borra el ingreso que se creó" onClick={() => confirm("¿Deshacer el cobro? Vuelve a pendiente y se borra el ingreso que se creó.") && ejecutar(() => marcarVencimiento(id, "pendiente"), "Cobro deshecho")}><Undo2 className="h-3.5 w-3.5" /> Deshacer</button>}
       {estado !== "pagado" && (fecha ? (
         <input type="date" defaultValue={venceEl} className="campo w-auto py-1 text-xs" autoFocus onBlur={(e) => { setFecha(false); if (e.target.value && e.target.value !== venceEl) ejecutar(() => cambiarVencimiento(id, e.target.value), "Fecha cambiada"); }} aria-label="Nueva fecha" />
       ) : (
@@ -313,7 +314,7 @@ export function GuiaFinanciera() {
               ["De dónde viene el cash", "Venta nueva (lo cobrado el día de la venta), cuotas (cobros posteriores) y back-end (todo lo cobrado de programas marcados como «back-end offer»)."],
               ["Profit (caja)", "Cash collected + ingresos extra − gastos que cuentan en el profit. Lo que de verdad te queda."],
               ["ROAS", "Cash collected ÷ gastos que cuentan en el profit. Por ejemplo, 3 = entran 3 € por cada € gastado."],
-              ["Cuentas por cobrar", "Lo que falta por cobrar de todas las ventas (reservas y cuotas)."],
+              ["Cuentas por cobrar", "Lo que falta por cobrar hoy de los plazos por vencer y vencidos (reservas, cuotas y deudores). Es lo mismo que «Total por cobrar» en Pagos pendientes; no cuenta lo marcado «No paga»."],
               ["Liquidaciones", "Las comisiones del mes de cada persona. Se pagan sobre lo cobrado en el mes; también se enseña sobre lo facturado. Una devolución no descuenta lo ya pagado."],
             ].map(([t, d]) => <div key={t}><dt className="font-semibold">{t}</dt><dd className="text-texto-2">{d}</dd></div>)}
           </dl>

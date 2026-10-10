@@ -1,7 +1,8 @@
+import { escribir } from "@/lib/datos";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { guardarLeads, type LeadEntrada } from "@/lib/leads";
+import { guardarLeads, telefonoClave, type LeadEntrada } from "@/lib/leads";
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
@@ -39,17 +40,34 @@ function aLead(b: Json): LeadEntrada {
   return { ...r.lead, extra: { fuente: r.fuente, evento: r.evento, seguimiento: r.seguimiento, quiz_score: r.quiz_score, datos: r.datos } };
 }
 
-async function buscarOCrearLead(proyecto: Proyecto, b: Json) {
-  const e = aLead(b);
-  const filtro = e.ghl_contact_id ? `ghl_contact_id.eq.${e.ghl_contact_id}` : e.email ? `email.eq.${e.email}` : null;
-  if (filtro) {
-    const { data } = await db().from("leads").select("id, pipeline_id").eq("proyecto_id", proyecto.id).or(filtro).limit(1).maybeSingle();
+// Arreglo 18: se busca con filtros normales (.eq), nunca pegando el texto dentro del filtro (una coma o un
+// paréntesis en el email lo rompía), y también por teléfono (últimas 9 cifras, como el resto de la app).
+async function buscarLead(proyectoId: string, e: LeadEntrada) {
+  const base = () => db().from("leads").select("id, pipeline_id").eq("proyecto_id", proyectoId);
+  if (e.ghl_contact_id) {
+    const { data } = await base().eq("ghl_contact_id", e.ghl_contact_id).limit(1).maybeSingle();
     if (data) return data;
   }
+  if (e.email) {
+    const { data } = await base().eq("email", e.email.toLowerCase()).limit(1).maybeSingle();
+    if (data) return data;
+  }
+  const tel = telefonoClave(e.telefono);
+  if (!e.email && tel.length >= 6) {
+    const { data } = await base().eq("telefono_clave", tel).limit(1).maybeSingle();
+    if (data) return data;
+  }
+  return null;
+}
+
+async function buscarOCrearLead(proyecto: Proyecto, b: Json) {
+  const e = aLead(b);
+  if (!e.ghl_contact_id && !e.email && telefonoClave(e.telefono).length < 6) throw new Error("No se pudo identificar el lead: no viene email, teléfono ni contacto de GHL");
+  const ya = await buscarLead(proyecto.id, e);
+  if (ya) return ya;
   const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).order("orden").limit(1).maybeSingle();
   await guardarLeads(proyecto, [e], { pipelineId: pipe?.id ?? null, origen: "ghl", perfilId: null, repartir: true });
-  const { data } = await db().from("leads").select("id, pipeline_id").eq("proyecto_id", proyecto.id).or(filtro ?? "id.is.null").limit(1).maybeSingle();
-  return data;
+  return buscarLead(proyecto.id, e);
 }
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhooks/ghl/[proyectoId]">) {
@@ -97,18 +115,22 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       if (!inicio || isNaN(fecha.getTime())) throw new Error("La cita no trae fecha");
       const closerEmail = primero(body, ["closer_email", "customData.closer_email", "user.email", "assigned_user.email"]).toLowerCase();
       let closerId: string | null = null;
+      // Arreglo 20: el closer se busca solo entre los miembros de este proyecto
       if (closerEmail) {
-        const { data: c } = await db().from("perfiles").select("id").eq("email", closerEmail).eq("rol", "closer").maybeSingle();
-        closerId = c?.id ?? null;
+        const { data: c } = await db().from("miembros_proyecto").select("perfil_id, perfiles!inner(email, rol)").eq("proyecto_id", proyecto.id).eq("perfiles.email", closerEmail).eq("perfiles.rol", "closer").limit(1).maybeSingle();
+        closerId = c?.perfil_id ?? null;
       }
       // Si GHL reenvía la misma cita, se actualiza la que ya existe (no se duplica)
       const ghlCitaId = primero(body, ["calendar.appointmentId", "appointment.id", "appointment_id"]) || null;
-      const { data: yaExiste } = ghlCitaId ? await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ghlCitaId).maybeSingle() : { data: null };
+      // Arreglo 19: sin id de GHL, se busca una cita del mismo lead a la misma hora antes de crear otra
+      const { data: yaExiste } = ghlCitaId
+        ? await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ghlCitaId).maybeSingle()
+        : await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("lead_id", lead.id).eq("fecha", fecha.toISOString()).neq("estado", "reagendada").limit(1).maybeSingle();
       if (yaExiste) await db().from("citas").update({ fecha: fecha.toISOString(), ...(closerId ? { closer_id: closerId } : {}) }).eq("id", yaExiste.id);
       else
-        await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId });
-      await db().from("leads").update({ estado_caller: "agendado", ...(closerId ? { closer_id: closerId } : {}) }).eq("id", lead.id);
-      await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cita", resultado: "agendada", nota: "Cita agendada en el calendario de GHL" });
+        await escribir(db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId }), "citas");
+      await escribir(db().from("leads").update({ estado_caller: "agendado", ...(closerId ? { closer_id: closerId } : {}) }).eq("id", lead.id), "leads");
+      await escribir(db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cita", resultado: "agendada", nota: "Cita agendada en el calendario de GHL" }), "actividades");
     } else if (tipo === "cambio_etapa") {
       const lead = await buscarOCrearLead(proyecto, body);
       if (!lead) throw new Error("No se pudo identificar el lead");
@@ -119,8 +141,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       if (pipelineNombre) q = q.ilike("pipelines.nombre", pipelineNombre);
       const { data: etapa } = await q.limit(1).maybeSingle();
       if (!etapa) throw new Error(`No existe la columna «${etapaNombre}» en la app`);
-      await db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id);
-      await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cambio_etapa", nota: `GHL: movido a «${etapaNombre}»` });
+      await escribir(db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id), "leads");
+      await escribir(db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cambio_etapa", nota: `GHL: movido a «${etapaNombre}»` }), "actividades");
     } else {
       throw new Error(`Tipo desconocido: ${tipo}`);
     }
