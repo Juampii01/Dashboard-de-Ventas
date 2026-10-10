@@ -12,7 +12,7 @@ export async function cargarAgendas(proyecto: Proyecto) {
     todas<VentaM>((a, b) => db().from("ventas").select("id, lead_id, vendedor_id, producto_id, facturacion, cash_collected, fecha, devuelto, devuelto_en").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<PagoM>((a, b) => db().from("pagos").select("venta_id, importe, fecha, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
     todas<LeadM>((a, b) => db().from("leads").select("id, pipeline_id, evento, seguimiento").eq("proyecto_id", pid).order("id").range(a, b)),
-    db().from("pipelines").select("id, nombre").eq("proyecto_id", pid).order("orden"),
+    db().from("pipelines").select("id, nombre").eq("proyecto_id", pid).eq("tipo", "normal").order("orden"),
     db().from("productos").select("id, nombre").eq("proyecto_id", pid).order("orden"),
     equipo(pid),
   ]);

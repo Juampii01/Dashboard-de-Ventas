@@ -170,11 +170,11 @@ describe("Pipelines y columnas", () => {
     await ok(crearEtapa(id, "Extra", "#000000"));
     const etapas = async () => (await db.from("etapas").select("id, nombre, orden").eq("pipeline_id", id).order("orden")).data!;
     let lista = await etapas();
-    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "No contesta", "Llamar luego", "Agendados", "Cerrados", "Descartados", "Extra"]);
+    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "Agendados", "Cerrados", "Descartados", "Extra"]); // Paso 0: la llamada se ve en «Callers»
     const extra = lista.find((x) => x.nombre === "Extra")!;
     await ok(moverEtapa(extra.id, -1));
     lista = await etapas();
-    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "No contesta", "Llamar luego", "Agendados", "Cerrados", "Extra", "Descartados"]);
+    expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "Agendados", "Cerrados", "Extra", "Descartados"]);
     await db.from("leads").update({ pipeline_id: id, etapa_id: extra.id }).eq("id", e.leads.LeadLibre);
     await ok(borrarEtapa(extra.id));
     expect((await leerLead(e.leads.LeadLibre)).etapa_id).toBe(lista[0].id);
@@ -238,7 +238,7 @@ describe("Administración", () => {
     expect((await crearProyecto(null, formulario({ nombre: `TEST-AUTO ${e.id} España`, region: "es", color: "#123456" })))?.ok).toMatch(/EUR, Europe\/Madrid/);
     const { data: nuevo } = await db.from("proyectos").select("*").eq("nombre", `TEST-AUTO ${e.id} España`).single();
     expect(nuevo).toMatchObject({ moneda: "EUR", zona_horaria: "Europe/Madrid", color: "#123456" });
-    expect((await db.from("pipelines").select("id").eq("proyecto_id", nuevo!.id)).data).toHaveLength(1);
+    expect((await db.from("pipelines").select("tipo").eq("proyecto_id", nuevo!.id).order("orden")).data!.map((p) => p.tipo)).toEqual(["normal", "callers", "closers"]); // Paso 0
     // Trabajar dentro del proyecto nuevo
     const sesionNueva = { ...e, proyecto: nuevo as Proyecto };
     como(sesionNueva, e.p.ceo);

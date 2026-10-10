@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Phone, ClipboardCheck } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Phone, ClipboardCheck, MessageCircle } from "lucide-react";
 import { cambiarEstadoCita, reagendarCita } from "../acciones";
 import { AccionesCita } from "../acciones-cita";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
+import { moverCitaColumna } from "@/app/(panel)/crm/acciones";
 import { borrarVenta, cambiarFormaPago, registrarCobro } from "@/app/(panel)/ventas/acciones";
 import { FilaVentaAcciones } from "@/app/(panel)/ventas/fila-acciones";
 import { useAccion, Mensajes, FormVenta } from "@/components/acciones-lead";
@@ -12,18 +13,19 @@ import { Modal } from "@/components/modal";
 import { SelectorEstrellas } from "@/components/estrellas";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
-import type { SubPostcall } from "@/lib/llamadas";
+import { esClavePrecall, type ClaveCloser } from "@/lib/llamadas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 
-// Post-call como tablero (Paso H6, Cristian 10 oct 2026): mismo estilo que Pre-call y todo se mueve,
-// arrastrando o con «Mover a…». Citas: a cualquier columna (en Seguimiento y Perdidas se piden las
-// estrellas, en Reagendadas la fecha y en Reserva o Cuotas la venta). Ventas: Reserva ↔ Cuotas cambia la
-// forma de pago; a cualquier otra columna se borra la venta y su cita pasa a esa columna.
+// Tablero «Closers» (Paso 0, Cristian 10 oct 2026): Pre-call y Post-call juntos, en el CRM y en Agendas.
+// Columnas unidas: Pre-call cambia el estado de la cita; Post-call como en el H6 (estrellas, fecha, venta; las
+// ventas entre Reserva, Cuotas y Cerradas; fuera de ellas se borran). Columnas libres: la cita se queda ahí
+// hasta que cambie su estado. Todo se mueve arrastrando o con «Mover a…».
 
-export type TarjetaCitaPC = {
+export type TarjetaCitaC = {
   id: string;
   lead_id: string;
   estado: EstadoCita;
+  natural: ClaveCloser | null; // la columna que le toca por su estado
   nombre: string;
   telefono: string | null;
   fechaTxt: string;
@@ -32,68 +34,101 @@ export type TarjetaCitaPC = {
   closer: string | null;
   pasada: boolean;
 };
-export type TarjetaVentaPC = { id: string; lead_id: string; nombre: string; detalle: string; facturacionTxt: string; faltaTxt: string; pendiente: number; cobrado: number; devuelta: boolean };
-export type ColumnaPC = { v: SubPostcall; t: string; d: string; color: string; citas?: TarjetaCitaPC[]; ventas?: TarjetaVentaPC[] };
+export type TarjetaVentaC = { id: string; lead_id: string; nombre: string; detalle: string; facturacionTxt: string; faltaTxt: string; pendiente: number; cobrado: number; devuelta: boolean };
+export type ColumnaC = { id: string; clave: ClaveCloser | null; t: string; d?: string; color: string; citas: TarjetaCitaC[]; ventas: TarjetaVentaC[] };
 
-type Item = { clase: "cita"; cita: TarjetaCitaPC; origen: SubPostcall } | { clase: "venta"; venta: TarjetaVentaPC; origen: SubPostcall };
-// Ventana abierta al soltar: lo que falta pedir antes de mover
-type Ventana = { item: Item; destino: SubPostcall };
+type Item = { clase: "cita"; cita: TarjetaCitaC; origen: string } | { clase: "venta"; venta: TarjetaVentaC; origen: string };
+type Ventana = { item: Item; destino: ColumnaC };
 
-const DIRECTO: Partial<Record<SubPostcall, EstadoCita>> = { pendientes: "pendiente", no_show: "no_show", cancelada: "cancelada" };
-const esVenta = (v: SubPostcall) => v === "reserva" || v === "cuotas" || v === "cerradas";
+const DIRECTO: Partial<Record<ClaveCloser, EstadoCita>> = { pendientes: "pendiente", no_show: "no_show", cancelada: "cancelada" };
+const esVenta = (c: ClaveCloser | null) => c === "reserva" || c === "cuotas" || c === "cerradas";
 
-export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar = false }: { columnas: ColumnaPC[]; productos: Producto[]; moneda: string; jefe: boolean; soloMirar?: boolean }) {
+export function TableroClosers({
+  columnas,
+  productos,
+  moneda,
+  jefe,
+  soloMirar = false,
+  menuColumna,
+  alFinal,
+}: {
+  columnas: ColumnaC[];
+  productos: Producto[];
+  moneda: string;
+  jefe: boolean;
+  soloMirar?: boolean;
+  menuColumna?: (col: ColumnaC, i: number) => ReactNode; // CRM: «⋯» de la columna (quien puede editar)
+  alFinal?: ReactNode; // CRM: «Añadir columna» y avisos
+}) {
   const { pendiente, error, ejecutar } = useAccion();
   const toast = useToast();
-  const [sobre, setSobre] = useState<SubPostcall | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
   const [ventana, setVentana] = useState<Ventana | null>(null);
-  const titulo = (v: SubPostcall) => columnas.find((c) => c.v === v)?.t ?? v;
   const nombre = (i: Item) => (i.clase === "cita" ? i.cita.nombre : i.venta.nombre);
 
   // Borra la venta y devuelve su cita (la que estaba «cerrada»), o avisa si no hay
-  async function quitarVenta(venta: TarjetaVentaPC) {
+  async function quitarVenta(venta: TarjetaVentaC) {
     const r = (await exigirOk(borrarVenta(venta.id))) as { aviso: string | null; citaId: string | null };
     if (r.aviso) toast(r.aviso, "error");
     if (!r.citaId) throw new Error("Venta borrada. Su cita no se ha movido: el lead tiene otra venta o no tenía cita cerrada.");
     return r.citaId;
   }
 
-  function mover(item: Item, destino: SubPostcall) {
-    if (item.origen === destino) return;
+  function mover(item: Item, destino: ColumnaC) {
+    if (item.origen === destino.id) return;
+    const clave = destino.clave;
+    // Columna libre: solo citas (se quedan ahí hasta que cambie su estado)
+    if (!clave) {
+      if (item.clase === "venta") toast("Una venta solo va a Reserva, Cuotas o Cerradas, o a una columna de citas (y se borra).", "error");
+      else ejecutar(() => moverCitaColumna(item.cita.id, destino.id), `${item.cita.nombre} → ${destino.t}`);
+      return;
+    }
+    // Vuelve a la columna de su estado: no cambia nada más
+    if (item.clase === "cita" && item.cita.natural === clave) {
+      ejecutar(() => moverCitaColumna(item.cita.id, null), `${item.cita.nombre} → ${destino.t}`);
+      return;
+    }
+    // Pre-call: cambia el estado de la cita
+    if (esClavePrecall(clave)) {
+      if (item.clase === "cita") ejecutar(() => cambiarEstadoCita(item.cita.id, clave, ""), `${item.cita.nombre} → ${destino.t}`);
+      else if (confirm(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`))
+        ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), clave, "")), `${item.venta.nombre} → ${destino.t}`);
+      return;
+    }
     // Venta entre Reserva, Cuotas y Cerradas
-    if (item.clase === "venta" && esVenta(destino)) {
+    if (item.clase === "venta" && esVenta(clave)) {
       const pagada = item.venta.pendiente <= 0.001;
-      if (destino === "cerradas") {
+      if (clave === "cerradas") {
         // Cerradas = pagadas del todo: se registra el cobro de lo que falta (criterio de Claude, 10 oct 2026)
         if (pagada) toast("Esta venta ya está pagada del todo.");
         else setVentana({ item, destino });
-      } else if (pagada) toast(`Esta venta ya está pagada del todo: no hay nada que pasar a ${destino === "cuotas" ? "cuotas" : "reserva"}.`, "error");
-      else if (destino === "cuotas") setVentana({ item, destino });
+      } else if (pagada) toast(`Esta venta ya está pagada del todo: no hay nada que pasar a ${clave === "cuotas" ? "cuotas" : "reserva"}.`, "error");
+      else if (clave === "cuotas") setVentana({ item, destino });
       else if (confirm(`¿Pasar la venta de ${item.venta.nombre} a reserva? Lo que falta (${item.venta.faltaTxt}) queda en un solo plazo a 30 días.`))
         ejecutar(() => cambiarFormaPago(item.venta.id, "reserva"), `${item.venta.nombre} → Reserva`);
       return;
     }
-    const estado = DIRECTO[destino];
+    const estado = DIRECTO[clave];
     if (estado) {
-      if (item.clase === "cita") ejecutar(() => cambiarEstadoCita(item.cita.id, estado, ""), `${item.cita.nombre} → ${titulo(destino)}`);
-      else if (confirm(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${titulo(destino)}»? Se borran también sus cobros y plazos; no se puede deshacer.`))
-        ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), estado, "")), `${item.venta.nombre} → ${titulo(destino)}`);
+      if (item.clase === "cita") ejecutar(() => cambiarEstadoCita(item.cita.id, estado, ""), `${item.cita.nombre} → ${destino.t}`);
+      else if (confirm(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`))
+        ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), estado, "")), `${item.venta.nombre} → ${destino.t}`);
       return;
     }
     setVentana({ item, destino }); // estrellas, fecha o venta
   }
 
-  function soltar(destino: SubPostcall, texto: string) {
+  function soltar(destino: ColumnaC, texto: string) {
     if (soloMirar) return; // H5: un caller con «Agendas», solo mirar
-    let d: { clase?: string; id?: string; origen?: SubPostcall } = {};
+    let d: { clase?: string; id?: string; origen?: string } = {};
     try {
       d = JSON.parse(texto);
     } catch {
-      return; // no es una tarjeta de Post-call
+      return; // no es una tarjeta de este tablero
     }
-    const col = columnas.find((c) => c.v === d.origen);
-    const cita = d.clase === "cita" ? col?.citas?.find((x) => x.id === d.id) : undefined;
-    const venta = d.clase === "venta" ? col?.ventas?.find((x) => x.id === d.id) : undefined;
+    const col = columnas.find((c) => c.id === d.origen);
+    const cita = d.clase === "cita" ? col?.citas.find((x) => x.id === d.id) : undefined;
+    const venta = d.clase === "venta" ? col?.ventas.find((x) => x.id === d.id) : undefined;
     if (cita) mover({ clase: "cita", cita, origen: d.origen! }, destino);
     else if (venta) mover({ clase: "venta", venta, origen: d.origen! }, destino);
   }
@@ -102,46 +137,50 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
   const citaDe = async (i: Item) => (i.clase === "cita" ? i.cita.id : await quitarVenta(i.venta));
   const avisoBorrar = (i: Item) =>
     i.clase === "venta" ? <p className="rounded-lg bg-mal-suave px-3 py-2 text-xs text-mal">Se borrará la venta de {i.venta.nombre} ({i.venta.facturacionTxt}) con sus cobros y plazos. No se puede deshacer.</p> : null;
+  const claveV = ventana?.destino.clave;
 
   return (
     <>
       <div className={`flex gap-3 overflow-x-auto pb-2 ${pendiente ? "cursor-progress" : ""}`}>
-        {columnas.map((col) => {
-          const total = (col.citas?.length ?? 0) + (col.ventas?.length ?? 0);
+        {columnas.map((col, i) => {
+          const total = col.citas.length + col.ventas.length;
           return (
             <div
-              key={col.v}
+              key={col.id}
               onDragOver={(ev) => {
                 ev.preventDefault();
-                setSobre(col.v);
+                setSobre(col.id);
               }}
-              onDragLeave={() => setSobre((s) => (s === col.v ? null : s))}
+              onDragLeave={() => setSobre((s) => (s === col.id ? null : s))}
               onDrop={(ev) => {
                 ev.preventDefault();
                 setSobre(null);
-                soltar(col.v, ev.dataTransfer.getData("text/plain"));
+                soltar(col, ev.dataTransfer.getData("text/plain"));
               }}
-              className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre === col.v ? "border-primario bg-primario-suave/40" : "border-borde bg-panel-2/60"}`}
+              className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre === col.id ? "border-primario bg-primario-suave/40" : "border-borde bg-panel-2/60"}`}
             >
-              <div className="border-b border-borde px-3 py-2.5" style={{ borderTop: `3px solid ${col.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-                <div className="flex items-center justify-between text-sm font-semibold">
-                  {col.t}
-                  <span className="rounded-full bg-panel px-1.5 text-[11px] tabular-nums text-texto-2">{total}</span>
+              <div className="flex items-start justify-between gap-2 border-b border-borde px-3 py-2.5" style={{ borderTop: `3px solid ${col.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <span className="truncate">{col.t}</span>
+                    <span className="rounded-full bg-panel px-1.5 text-[11px] tabular-nums text-texto-2">{total}</span>
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-texto-3">{col.d ?? (col.clave ? "" : "Columna libre")}</div>
                 </div>
-                <div className="mt-0.5 text-[11px] text-texto-3">{col.d}</div>
+                {menuColumna?.(col, i)}
               </div>
-              <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
+              <div className="flex max-h-[70vh] min-h-24 flex-col gap-2 overflow-y-auto p-2">
                 {total === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
-                {col.citas?.map((c) => (
-                  <TarjetaCita key={c.id} c={c} origen={col.v} columnas={columnas} productos={productos} moneda={moneda} soloMirar={soloMirar} onMover={(dest) => mover({ clase: "cita", cita: c, origen: col.v }, dest)} />
+                {col.citas.map((c) => (
+                  <TarjetaCita key={c.id} c={c} origen={col.id} columnas={columnas} productos={productos} moneda={moneda} soloMirar={soloMirar} onMover={(dest) => mover({ clase: "cita", cita: c, origen: col.id }, dest)} />
                 ))}
-                {col.ventas?.map((v) => (
+                {col.ventas.map((v) => (
                   <div
                     key={v.id}
                     draggable={!soloMirar}
                     onDragStart={(e) => {
                       e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "venta", id: v.id, origen: col.v }));
+                      e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "venta", id: v.id, origen: col.id }));
                     }}
                     className={`space-y-1.5 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm ${soloMirar ? "" : "cursor-grab active:cursor-grabbing"}`}
                   >
@@ -152,7 +191,7 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
                       {v.pendiente > 0.001 ? <span className="text-aviso">Falta {v.faltaTxt}</span> : <span className="text-ok">Pagada</span>}
                     </div>
                     {!soloMirar && <div className="relative flex flex-wrap items-center justify-between gap-1.5">
-                      <MoverA origen={col.v} columnas={columnas} onMover={(dest) => mover({ clase: "venta", venta: v, origen: col.v }, dest)} />
+                      <MoverA origen={col.id} columnas={columnas} onMover={(dest) => mover({ clase: "venta", venta: v, origen: col.id }, dest)} />
                       <FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={v.devuelta} jefe={jefe} />
                     </div>}
                   </div>
@@ -161,28 +200,29 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
             </div>
           );
         })}
+        {alFinal}
       </div>
       <Mensajes error={error} ok="" />
 
-      {ventana && (ventana.destino === "seguimiento" || ventana.destino === "perdida") && (
-        <Modal titulo={`${nombre(ventana.item)} → ${titulo(ventana.destino)}`} onCerrar={() => setVentana(null)}>
+      {ventana && (claveV === "seguimiento" || claveV === "perdida") && (
+        <Modal titulo={`${nombre(ventana.item)} → ${ventana.destino.t}`} onCerrar={() => setVentana(null)}>
           <form
             className="space-y-3"
             action={(fd) => {
-              const { item, destino } = ventana;
-              const e = destino as "seguimiento" | "perdida";
-              ejecutar(async () => exigirOk(cambiarEstadoCita(await citaDe(item), e, String(fd.get("nota") ?? ""), Number(fd.get("estrellas")))), e === "seguimiento" ? "En seguimiento" : "Perdida");
+              const { item } = ventana;
+              const e = claveV as "seguimiento" | "perdida";
+              ejecutar(async () => exigirOk(cambiarEstadoCita(await citaDe(item), e, String(fd.get("nota") ?? ""), Number(fd.get("estrellas")))), ventana.destino.t);
               setVentana(null);
             }}
           >
             {avisoBorrar(ventana.item)}
             <SelectorEstrellas quien="closer" />
-            <label className="block"><span className="etiqueta-campo">Nota (opcional)</span><textarea name="nota" rows={2} className="campo" placeholder={ventana.destino === "seguimiento" ? "Qué falta para que decida" : "Por qué no compró"} /></label>
+            <label className="block"><span className="etiqueta-campo">Nota (opcional)</span><textarea name="nota" rows={2} className="campo" placeholder={claveV === "seguimiento" ? "Qué falta para que decida" : "Por qué no compró"} /></label>
             <button className="btn-primario w-full">Guardar</button>
           </form>
         </Modal>
       )}
-      {ventana && ventana.destino === "reagendadas" && (
+      {ventana && claveV === "reagendadas" && (
         <Modal titulo={`Reagendar a ${nombre(ventana.item)}`} onCerrar={() => setVentana(null)}>
           <form
             className="space-y-3"
@@ -198,13 +238,13 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
           </form>
         </Modal>
       )}
-      {ventana && ventana.item.clase === "cita" && esVenta(ventana.destino) && (
-        <Modal titulo={`Registrar venta de ${ventana.item.cita.nombre} (${ventana.destino === "reserva" ? "reserva" : ventana.destino === "cuotas" ? "cuotas" : "pago completo"})`} onCerrar={() => setVentana(null)} ancho="max-w-lg">
+      {ventana && ventana.item.clase === "cita" && esVenta(claveV ?? null) && (
+        <Modal titulo={`Registrar venta de ${ventana.item.cita.nombre} (${claveV === "reserva" ? "reserva" : claveV === "cuotas" ? "cuotas" : "pago completo"})`} onCerrar={() => setVentana(null)} ancho="max-w-lg">
           <FormVenta
             productos={productos}
             moneda={moneda}
             desdeCita
-            tipoInicial={ventana.destino === "cerradas" ? "completo" : (ventana.destino as "reserva" | "cuotas")}
+            tipoInicial={claveV === "cerradas" ? "completo" : (claveV as "reserva" | "cuotas")}
             onEnviar={(fd) => {
               if (ventana.item.clase !== "cita") return;
               const { lead_id, id } = ventana.item.cita;
@@ -215,18 +255,18 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
           />
         </Modal>
       )}
-      {ventana && ventana.item.clase === "venta" && ventana.destino === "cerradas" && (
+      {ventana && ventana.item.clase === "venta" && claveV === "cerradas" && (
         <Modal titulo={`Cobrar lo que falta de ${ventana.item.venta.nombre}`} onCerrar={() => setVentana(null)}>
           <form
             className="space-y-3"
             action={(fd) => {
               if (ventana.item.clase !== "venta") return;
               const v = ventana.item.venta;
-              ejecutar(() => registrarCobro(v.id, String(fd.get("importe")), String(fd.get("metodo")), String(fd.get("fecha") ?? "")), `${v.nombre} → Cerradas`);
+              ejecutar(() => registrarCobro(v.id, String(fd.get("importe")), String(fd.get("metodo")), String(fd.get("fecha") ?? "")), `${v.nombre} → ${ventana.destino.t}`);
               setVentana(null);
             }}
           >
-            <p className="text-sm text-texto-2">«Cerradas» son las ventas pagadas del todo. Para pasarla, registra el cobro de lo que falta: <b>{ventana.item.venta.faltaTxt}</b>.</p>
+            <p className="text-sm text-texto-2">«{ventana.destino.t}» son las ventas pagadas del todo. Para pasarla, registra el cobro de lo que falta: <b>{ventana.item.venta.faltaTxt}</b>.</p>
             <label className="block"><span className="etiqueta-campo">Importe cobrado</span><input name="importe" inputMode="decimal" required defaultValue={ventana.item.venta.pendiente.toFixed(2)} className="campo" /></label>
             <label className="block">
               <span className="etiqueta-campo">Método</span>
@@ -237,14 +277,14 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
           </form>
         </Modal>
       )}
-      {ventana && ventana.item.clase === "venta" && ventana.destino === "cuotas" && (
+      {ventana && ventana.item.clase === "venta" && claveV === "cuotas" && (
         <Modal titulo={`Pasar a cuotas la venta de ${ventana.item.venta.nombre}`} onCerrar={() => setVentana(null)}>
           <form
             className="space-y-3"
             action={(fd) => {
               if (ventana.item.clase !== "venta") return;
               const v = ventana.item.venta;
-              ejecutar(() => cambiarFormaPago(v.id, "cuotas", String(fd.get("cuotas"))), `${v.nombre} → Cuotas`);
+              ejecutar(() => cambiarFormaPago(v.id, "cuotas", String(fd.get("cuotas"))), `${v.nombre} → ${ventana.destino.t}`);
               setVentana(null);
             }}
           >
@@ -259,17 +299,28 @@ export function TableroPostcall({ columnas, productos, moneda, jefe, soloMirar =
 }
 
 // «Mover a…»: lo mismo que arrastrar (sirve en el móvil)
-function MoverA({ origen, columnas, onMover }: { origen: SubPostcall; columnas: ColumnaPC[]; onMover: (d: SubPostcall) => void }) {
+function MoverA({ origen, columnas, onMover }: { origen: string; columnas: ColumnaC[]; onMover: (d: ColumnaC) => void }) {
   return (
-    <select aria-label="Mover a" className="campo w-auto py-1 text-xs" value="" onChange={(e) => e.target.value && onMover(e.target.value as SubPostcall)}>
+    <select
+      aria-label="Mover a"
+      className="campo w-auto py-1 text-xs"
+      value=""
+      onChange={(e) => {
+        const d = columnas.find((c) => c.id === e.target.value);
+        if (d) onMover(d);
+      }}
+    >
       <option value="">Mover a…</option>
-      {columnas.filter((c) => c.v !== origen).map((c) => <option key={c.v} value={c.v}>{c.t}</option>)}
+      {columnas.filter((c) => c.id !== origen).map((c) => <option key={c.id} value={c.id}>{c.t}</option>)}
     </select>
   );
 }
 
-function TarjetaCita({ c, origen, columnas, productos, moneda, soloMirar, onMover }: { c: TarjetaCitaPC; origen: SubPostcall; columnas: ColumnaPC[]; productos: Producto[]; moneda: string; soloMirar: boolean; onMover: (d: SubPostcall) => void }) {
+const REGISTRABLES: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "seguimiento"];
+
+function TarjetaCita({ c, origen, columnas, productos, moneda, soloMirar, onMover }: { c: TarjetaCitaC; origen: string; columnas: ColumnaC[]; productos: Producto[]; moneda: string; soloMirar: boolean; onMover: (d: ColumnaC) => void }) {
   const [registrar, setRegistrar] = useState(false);
+  const tel = (c.telefono ?? "").replace(/\D/g, "");
   return (
     <div
       draggable={!soloMirar}
@@ -288,12 +339,13 @@ function TarjetaCita({ c, origen, columnas, productos, moneda, soloMirar, onMove
       <div className="text-[11px] text-texto-3">{c.quien}</div>
       {c.nota && <div className="text-xs text-texto-2">📝 {c.nota}</div>}
       {!soloMirar && <div className="flex flex-wrap gap-1.5">
-        {(origen === "pendientes" || origen === "seguimiento") && (
+        {REGISTRABLES.includes(c.estado) && (
           <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
         )}
         <MoverA origen={origen} columnas={columnas} onMover={onMover} />
+        {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
       </div>}
-      {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={c.pasada} productos={productos} moneda={moneda} /></div>}
+      {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={c.pasada || esClavePrecall(c.natural)} productos={productos} moneda={moneda} /></div>}
     </div>
   );
 }

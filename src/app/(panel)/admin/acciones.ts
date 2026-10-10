@@ -178,7 +178,7 @@ export async function quitarDelProyecto(perfilId: string) {
 // Comprueba que el pipeline y la columna son de este proyecto (y que la columna es de ese pipeline).
 async function destinoValido(proyectoId: string, pipelineId: string | null, etapaId: string | null) {
   if (!pipelineId) return { pipeline_id: null, etapa_id: null };
-  const { data: p } = await db().from("pipelines").select("id").eq("id", pipelineId).eq("proyecto_id", proyectoId).maybeSingle();
+  const { data: p } = await db().from("pipelines").select("id").eq("id", pipelineId).eq("proyecto_id", proyectoId).eq("tipo", "normal").maybeSingle();
   if (!p) throw new ErrorUsuario("Ese pipeline no es de este proyecto.");
   if (etapaId) {
     const { data: e } = await db().from("etapas").select("id").eq("id", etapaId).eq("pipeline_id", pipelineId).maybeSingle();

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Inbox, Download, ChevronLeft, ChevronRight, List, CalendarDays, Columns3 } from "lucide-react";
 import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
-import { db, todas, equipo } from "@/lib/datos";
+import { db, equipo } from "@/lib/datos";
 import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { closersVisibles } from "@/lib/agendas-datos";
-import { ABIERTAS, columnasPrecall, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esColumnaVentas, esPrecall, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
+import { ABIERTAS, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esColumnaVentas, esPrecall, partirCloser, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
+import { cargarCitasVentas, columnasCloser, etapasCloser, nombreDe, type CitaFila } from "@/lib/tablero-closers";
 import { Cabecera, Contenido, Insignia, Vacio } from "@/components/ui";
 import { FiltroUrl } from "@/components/barra-periodo";
 import { VerEstrellas } from "@/components/estrellas";
@@ -15,13 +16,9 @@ import { FilaVentaAcciones } from "@/app/(panel)/ventas/fila-acciones";
 import { Grabaciones } from "./grabaciones";
 import { RevisionIa } from "./revision-ia";
 import { Cualificacion } from "./cualificacion";
-import { TableroPostcall, type ColumnaPC } from "./tablero-postcall";
-import { BuscadorUrl, ColumnaPrecall, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl, TarjetaPrecall } from "./cliente";
-import type { Cita, Lead, Producto } from "@/lib/tipos";
-
-type LeadCita = Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "email" | "seguimiento">;
-type CitaFila = Cita & { leads: LeadCita | null };
-type VentaFila = { id: string; lead_id: string; vendedor_id: string | null; facturacion: number; cash_collected: number; tipo_pago: string; num_cuotas: number | null; fecha: string; devuelto: number | null; pagos: { importe: number }[]; leads: { nombre: string; apellido: string } | null; productos: { nombre: string } | null };
+import { TableroClosers } from "./tablero-closers";
+import { BuscadorUrl, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl } from "./cliente";
+import type { Producto } from "@/lib/tipos";
 
 const TABS = [
   { v: "agendas", t: "Agendas" },
@@ -48,7 +45,6 @@ const sumarMes = (ym: string, n: number) => {
   d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 7);
 };
-const nombreDe = (l: { nombre: string; apellido: string } | null) => (l ? `${l.nombre} ${l.apellido}`.trim() || "Sin nombre" : "Lead");
 
 export default async function LlamadasPage({ searchParams }: PageProps<"/closer/llamadas">) {
   const { perfil, proyecto } = await exigirPagina("agendas"); // H5
@@ -66,13 +62,11 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const gente = await equipo(proyecto.id);
   const vis = closersVisibles(perfil, gente, str("closer") || null);
   const nombrePersona = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
-  const [citasTodas, ventasTodas, productos] = await Promise.all([
-    todas<CitaFila>((a, b) => {
-      const q = db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyecto.id).in("closer_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]);
-      return (mirar ? q.eq("agendada_por", perfil.id) : q).order("fecha").order("id").range(a, b);
-    }),
-    todas<VentaFila>((a, b) => db().from("ventas").select("*, pagos(importe), leads(nombre, apellido), productos(nombre)").eq("proyecto_id", proyecto.id).in("vendedor_id", vis.ids.length ? vis.ids : ["00000000-0000-0000-0000-000000000000"]).order("id").range(a, b)),
+  // Paso 0: las mismas citas, ventas y columnas que el pipeline «Closers» del CRM
+  const [{ citas: citasTodas, ventas: ventasTodas }, productos, { etapas: etapasCl }] = await Promise.all([
+    cargarCitasVentas(proyecto.id, vis.ids, mirar ? perfil.id : null),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
+    etapasCloser(proyecto.id),
   ]);
   // GHL: si está conectado y qué citas no se han podido unir a un lead
   const [{ data: pg }, { data: sinUnir }] = await Promise.all([
@@ -86,9 +80,13 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const utm = str("utm");
   const citas = citasTodas.filter((c) => coincide(q, nombreDe(c.leads), c.leads?.email, c.leads?.telefono) && (!utm || (c.leads?.seguimiento?.utm_source || "Sin UTM") === utm));
   const utms = [...new Set(citasTodas.map((c) => c.leads?.seguimiento?.utm_source || "Sin UTM"))].sort();
-  // H5: al caller, solo las ventas de los leads que agendó
-  const leadsMios = new Set(citasTodas.map((c) => c.lead_id));
-  const ventas = ventasTodas.filter((v) => !mirar || leadsMios.has(v.lead_id)).map((v) => ({ ...v, pendiente: Math.max(0, Number(v.facturacion) - Number(v.cash_collected) - v.pagos.reduce((s, p) => s + Number(p.importe), 0)) }));
+  const ventas = ventasTodas;
+  const partes = partirCloser(etapasCl);
+  // Tablero «Closers» (Pre-call o Post-call): las columnas de esa parte, con las citas que pasan el buscador
+  const tablero = (lista: typeof etapasCl) => {
+    const { columnas } = columnasCloser(lista, citas, ventas, { proyecto, jefe, nombrePersona });
+    return <TableroClosers columnas={columnas} productos={prods} moneda={proyecto.moneda} jefe={jefe} soloMirar={mirar} />;
+  };
 
   // Contadores de arriba (este mes)
   const mesIni = inicioDia(`${hoyEnZona(zona).slice(0, 8)}01`, zona).getTime();
@@ -307,32 +305,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
         {tabla ? (
           <div className="tarjeta overflow-hidden"><ListaCitas filas={pre} /></div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {columnasPrecall(proyecto.precall_columnas).map((col) => {
-              const en = pre.filter((c) => c.estado === col.estado);
-              return (
-                <ColumnaPrecall key={col.estado} estado={col.estado} titulo={col.titulo} color={col.color} total={en.length} soloMirar={mirar}>
-                  <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
-                    {en.length === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
-                    {en.map((c) => (
-                      <TarjetaPrecall
-                        key={c.id}
-                        soloMirar={mirar}
-                        columnas={columnasPrecall(proyecto.precall_columnas)}
-                        cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }}
-                        lead={{ nombre: nombreDe(c.leads), telefono: c.leads?.telefono ?? null }}
-                        fechaTxt={fechaHora(c.fecha, proyecto)}
-                        agendadaTxt={fechaHora(c.creado_en, proyecto)}
-                        closer={jefe ? nombrePersona(c.closer_id) : null}
-                        productos={prods}
-                        moneda={proyecto.moneda}
-                      />
-                    ))}
-                  </div>
-                </ColumnaPrecall>
-              );
-            })}
-          </div>
+          tablero(partes.pre)
         )}
       </div>
     );
@@ -354,48 +327,12 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
         </div>
       </div>
     );
-    // Pipeline (Paso H6): una columna por cada estado de Post-call, como Pre-call
+    // Pipeline: las columnas de «Closers» desde la primera de Post-call (Paso 0)
     if (!tabla) {
-      const COLOR: Record<SubPostcall, string> = { pendientes: "var(--aviso)", reagendadas: "var(--oro)", reserva: "var(--primario)", cuotas: "var(--morado)", cerradas: "var(--ok)", seguimiento: "var(--oro)", no_show: "var(--mal)", cancelada: "var(--texto-3)", perdida: "var(--mal)" };
-      const columnas: ColumnaPC[] = SUB_POSTCALL.map((s) =>
-        esColumnaVentas(s.v)
-          ? {
-              v: s.v, t: s.t, d: s.d, color: COLOR[s.v],
-              ventas: deColumna(s.v).map((v) => ({
-                id: v.id,
-                lead_id: v.lead_id,
-                nombre: nombreDe(v.leads),
-                detalle: `${v.productos?.nombre ?? "Producto"} · vendida el ${soloFecha(v.fecha, proyecto)}${jefe ? ` · ${nombrePersona(v.vendedor_id)}` : ""}${v.num_cuotas ? ` · ${v.num_cuotas} cuotas` : ""}`,
-                facturacionTxt: dinero(Number(v.facturacion), proyecto),
-                faltaTxt: dinero(v.pendiente, proyecto),
-                pendiente: v.pendiente,
-                cobrado: Number(v.facturacion) - v.pendiente,
-                devuelta: !!v.devuelto,
-              })),
-            }
-          : {
-              v: s.v, t: s.t, d: s.d, color: COLOR[s.v],
-              citas: citas
-                .filter((c) => enPostcall(c, s.v, ahora))
-                .sort((a, b) => b.fecha.localeCompare(a.fecha))
-                .map((c) => ({
-                  id: c.id,
-                  lead_id: c.lead_id,
-                  estado: c.estado,
-                  nombre: nombreDe(c.leads),
-                  telefono: c.leads?.telefono ?? null,
-                  fechaTxt: fechaHora(c.fecha, proyecto),
-                  quien: c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombrePersona(c.agendada_por)}`,
-                  nota: c.nota,
-                  closer: jefe ? nombrePersona(c.closer_id) : null,
-                  pasada: new Date(c.fecha).getTime() < ahora,
-                })),
-            }
-      );
       return (
         <div className="space-y-3">
           {interruptor}
-          <TableroPostcall columnas={columnas} productos={prods} moneda={proyecto.moneda} jefe={jefe} soloMirar={mirar} />
+          {tablero(partes.post)}
         </div>
       );
     }

@@ -19,7 +19,7 @@ export async function asegurarProyectoBase(db, { simular = false, log = console.
     [proyecto] = await must(db.from("proyectos").insert(cfg).select(), "crear proyecto");
   } else log(`= Proyecto ${cfg.nombre} ya existe`);
 
-  const existentes = await must(db.from("pipelines").select("nombre").eq("proyecto_id", proyecto.id), "leer pipelines");
+  const existentes = await must(db.from("pipelines").select("nombre").eq("proyecto_id", proyecto.id).eq("tipo", "normal"), "leer pipelines");
   for (const [i, p] of BASE.pipelines.entries()) {
     if (existentes.some((e) => e.nombre === p.nombre)) {
       log(`= Pipeline ${p.nombre} ya existe`);
@@ -29,7 +29,7 @@ export async function asegurarProyectoBase(db, { simular = false, log = console.
     if (simular) continue;
     const [pipe] = await must(db.from("pipelines").insert({ proyecto_id: proyecto.id, nombre: p.nombre, orden: i }).select(), `pipeline ${p.nombre}`);
     await must(
-      db.from("etapas").insert(p.columnas.map((nombre, j) => ({ pipeline_id: pipe.id, nombre, orden: j, color: BASE.colores[j % BASE.colores.length], estado_caller: BASE.estados?.[nombre] ?? null }))),
+      db.from("etapas").insert(p.columnas.map((nombre, j) => ({ pipeline_id: pipe.id, nombre, orden: j, color: BASE.colores[j % BASE.colores.length] }))),
       `columnas ${p.nombre}`
     );
   }

@@ -31,7 +31,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
   if (!closers.length) throw new Error("Ningún closer tiene puesto su calendario de GHL (Administración → Integraciones).");
 
   const contactos = new Map<string, ContactoGhl | null>();
-  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).order("orden").limit(1).maybeSingle();
+  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
 
   for (const c of closers) {
     let eventos;

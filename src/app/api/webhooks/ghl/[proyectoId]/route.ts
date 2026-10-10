@@ -65,7 +65,7 @@ async function buscarOCrearLead(proyecto: Proyecto, b: Json) {
   if (!e.ghl_contact_id && !e.email && telefonoClave(e.telefono).length < 6) throw new Error("No se pudo identificar el lead: no viene email, teléfono ni contacto de GHL");
   const ya = await buscarLead(proyecto.id, e);
   if (ya) return ya;
-  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).order("orden").limit(1).maybeSingle();
+  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
   await guardarLeads(proyecto, [e], { pipelineId: pipe?.id ?? null, origen: "ghl", perfilId: null, repartir: true });
   return buscarLead(proyecto.id, e);
 }
@@ -99,11 +99,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
 
   try {
     if (tipo === "lead_nuevo") {
-      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).order("orden").limit(1).maybeSingle();
+      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
       const pipelineNombre = primero(body, ["pipeline", "customData.pipeline"]);
       let pipelineId = pipe?.id ?? null;
       if (pipelineNombre) {
-        const { data: p } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).ilike("nombre", pipelineNombre).maybeSingle();
+        const { data: p } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").ilike("nombre", pipelineNombre).maybeSingle();
         if (p) pipelineId = p.id;
       }
       await guardarLeads(proyecto, [aLead(body)], { pipelineId, origen: "ghl", perfilId: null, repartir: true });
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       const etapaNombre = primero(body, ["etapa", "pipeline_stage", "pipleline_stage", "stage", "customData.etapa"]);
       const pipelineNombre = primero(body, ["pipeline_name", "pipeline", "customData.pipeline"]);
       if (!etapaNombre) throw new Error("No viene el nombre de la etapa");
-      let q = db().from("etapas").select("id, pipeline_id, pipelines!inner(proyecto_id, nombre)").eq("pipelines.proyecto_id", proyecto.id).ilike("nombre", etapaNombre);
+      let q = db().from("etapas").select("id, pipeline_id, pipelines!inner(proyecto_id, nombre, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").ilike("nombre", etapaNombre);
       if (pipelineNombre) q = q.ilike("pipelines.nombre", pipelineNombre);
       const { data: etapa } = await q.limit(1).maybeSingle();
       if (!etapa) throw new Error(`No existe la columna «${etapaNombre}» en la app`);

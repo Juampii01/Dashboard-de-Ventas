@@ -49,9 +49,17 @@ export type Base = Awaited<ReturnType<typeof cargarBase>>;
 // Cash neto de un grupo de ventas en el periodo, igual que Finanzas y Agendas (arreglos 5 y 7):
 // lo cobrado al vender (ventas del periodo) + cuotas cobradas en el periodo − devoluciones del periodo.
 export function cashNeto(base: Base, ventasGrupo: Base["ventas"], r: { desde: Date | null; hasta: Date | null }) {
+  return cashDelPeriodo(ventasGrupo, base.pagos, r);
+}
+// Lo mismo sin la base entera (la usa también Ventas desde el 10 oct 2026, para medir el cash igual que Finanzas)
+export function cashDelPeriodo(
+  ventasGrupo: { id: string; fecha: string; cash_collected: number; devuelto?: number | null; devuelto_en?: string | null }[],
+  pagos: { venta_id: string; fecha: string; importe: number }[],
+  r: { desde: Date | null; hasta: Date | null }
+) {
   const ids = new Set(ventasGrupo.map((v) => v.id));
-  const alVender = ventasGrupo.filter((v) => enRango(v.fecha, r)).reduce((s, v) => s + v.cash_collected, 0);
-  const cuotas = base.pagos.filter((pg) => ids.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + pg.importe, 0);
+  const alVender = ventasGrupo.filter((v) => enRango(v.fecha, r)).reduce((s, v) => s + Number(v.cash_collected), 0);
+  const cuotas = pagos.filter((pg) => ids.has(pg.venta_id) && enRango(pg.fecha, r)).reduce((s, pg) => s + Number(pg.importe), 0);
   const devuelto = ventasGrupo.filter((v) => v.devuelto && v.devuelto_en && enRango(v.devuelto_en, r)).reduce((s, v) => s + Number(v.devuelto), 0);
   return alVender + cuotas - devuelto;
 }

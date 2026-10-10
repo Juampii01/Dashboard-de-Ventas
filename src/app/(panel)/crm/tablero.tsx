@@ -18,6 +18,7 @@ import {
   Phone,
   Mail,
   UserPlus,
+  KeyRound,
 } from "lucide-react";
 import {
   asignarLeads,
@@ -33,18 +34,19 @@ import {
   moverLead,
   renombrarPipeline,
   unirEstado,
-  guardarColumnasPrecall,
+  guardarPermisoPipeline,
 } from "./acciones";
 import { registrarLlamada, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { VentanaEstado, type DestinoConVentana } from "./ventanas-estado";
-import type { ColumnaPrecall } from "@/lib/llamadas";
+import { CLAVES_CLOSER } from "@/lib/llamadas";
+import { TableroClosers, type ColumnaC } from "@/app/(panel)/closer/llamadas/tablero-closers";
 import { ETIQUETA_ESTADO_CALLER } from "@/lib/formato";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
-import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta } from "@/lib/tipos";
+import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
 
 export type LeadTarjeta = {
   id: string;
@@ -62,6 +64,13 @@ export type LeadTarjeta = {
 };
 
 type Persona = { id: string; nombre: string };
+type FilaPermiso = { pipeline_id: string; rol: string | null; perfil_id: string | null; nivel: string };
+// Uniones de una columna según el pipeline (Paso 0): «Callers», estados del lead; «Closers», Pre-call y Post-call
+const UNIONES: Record<TipoPipeline, { v: string; t: string }[]> = {
+  normal: [],
+  callers: (Object.keys(ETIQUETA_ESTADO_CALLER) as EstadoCaller[]).map((k) => ({ v: k, t: ETIQUETA_ESTADO_CALLER[k] })),
+  closers: CLAVES_CLOSER.map((c) => ({ v: c.v, t: c.t })),
+};
 const COLORES = ["#64748b", "#2f55d4", "#d97706", "#7c3aed", "#0891b2", "#db2777", "#16a34a", "#dc2626"];
 const POR_COLUMNA = 40;
 
@@ -74,11 +83,13 @@ export function TableroCrm({
   callers,
   closers,
   admin,
+  editar,
   jefe,
   productos,
   moneda,
   estrellasOpcionales,
-  precall,
+  tableroClosers,
+  permisos,
 }: {
   pipelines: Pipeline[];
   pipeline: Pipeline | null;
@@ -87,12 +98,14 @@ export function TableroCrm({
   conteos: Record<string, number>;
   callers: Persona[];
   closers: Persona[];
-  admin: boolean; // Paso H7: columnas, pipelines y Pre-call (CEO y director con Administración)
+  admin: boolean; // crear pipelines y sus permisos (CEO y director con Administración)
+  editar: boolean; // Paso 0: «Editar» en este pipeline = sus columnas, renombrar y borrar
   jefe: boolean; // importar, crear y asignar leads (director y CEO)
   productos: Producto[];
   moneda: string;
   estrellasOpcionales: boolean;
-  precall: ColumnaPrecall[];
+  tableroClosers: { columnas: ColumnaC[]; sinColumna: number; soloMirar: boolean } | null;
+  permisos: { filas: FilaPermiso[]; gente: { id: string; nombre: string; rol: string }[] } | null;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -103,7 +116,7 @@ export function TableroCrm({
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [verMas, setVerMas] = useState<Record<string, number>>({});
-  const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline" | "precall">(null);
+  const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline" | "permisos">(null);
   const [ventana, setVentana] = useState<{ lead: LeadTarjeta; destino: DestinoConVentana; etapaId: string } | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
@@ -178,6 +191,38 @@ export function TableroCrm({
   }
 
   const sinColumna = leads.filter((l) => !l.etapa_id || !etapas.some((e) => e.id === l.etapa_id));
+  const tipo: TipoPipeline = pipeline?.tipo ?? "normal";
+  const deOrigen = tipo === "normal"; // aquí entran los leads (CSV, nuevo lead)
+  const menu = (e: Etapa, i: number) =>
+    editar ? (
+      <MenuColumna
+        etapa={e}
+        uniones={UNIONES[tipo]}
+        unida={(tipo === "closers" ? e.columna_cita : e.estado_caller) ?? null}
+        primera={i === 0}
+        ultima={i === etapas.length - 1}
+        onEditar={(n, c) => ejecutar(() => exigirOk(editarEtapa(e.id, n, c)))}
+        onMover={(d) => ejecutar(() => exigirOk(moverEtapa(e.id, d)))}
+        onBorrar={() => {
+          if (confirm(`¿Borrar la columna «${e.nombre}»? ${deOrigen ? "Sus leads pasan a la primera columna." : "Sus tarjetas vuelven a la columna de su estado."}`)) ejecutar(() => exigirOk(borrarEtapa(e.id)));
+        }}
+        onUnir={(estado) => {
+          const t = UNIONES[tipo].find((u) => u.v === estado)?.t;
+          ejecutar(() => exigirOk(unirEstado(e.id, estado)), estado ? `«${e.nombre}» unida a «${t}»` : `«${e.nombre}» ya no está unida`);
+        }}
+      />
+    ) : null;
+  const anadirColumna = editar && pipeline && (
+    <button
+      onClick={() => {
+        const n = prompt("Nombre de la nueva columna");
+        if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
+      }}
+      className="flex h-14 w-60 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-borde-fuerte text-sm text-texto-2 hover:border-primario hover:text-primario"
+    >
+      <Plus className="h-4 w-4" /> Añadir columna
+    </button>
+  );
 
   return (
     <div className="space-y-4">
@@ -202,13 +247,13 @@ export function TableroCrm({
             </button>
           )}
         </div>
-        {admin && (
-          <button className="btn-secundario" onClick={() => setModal("precall")} title="Nombre, color y orden de las columnas de Pre-call">
-            Columnas de Pre-call
-          </button>
-        )}
-        {admin && pipeline && (
+        {(editar || admin) && pipeline && (
           <div className="flex gap-1">
+            {admin && permisos && (
+              <button className="btn-secundario px-2.5" title="Quién ve este pipeline (permisos)" onClick={() => setModal("permisos")}>
+                <KeyRound className="h-4 w-4" />
+              </button>
+            )}
             <button
               className="btn-secundario px-2.5"
               title="Renombrar pipeline"
@@ -219,7 +264,7 @@ export function TableroCrm({
             >
               <Pencil className="h-4 w-4" />
             </button>
-            <button
+            {deOrigen && <button
               className="btn-secundario px-2.5 hover:text-mal"
               title="Borrar pipeline"
               onClick={() => {
@@ -231,7 +276,7 @@ export function TableroCrm({
               }}
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </button>}
           </div>
         )}
       </div>
@@ -246,7 +291,7 @@ export function TableroCrm({
           <input type="checkbox" checked={soloSinCaller} onChange={(e) => setSoloSinCaller(e.target.checked)} className="accent-[var(--primario)]" />
           Sin caller asignado
         </label>}
-        {jefe && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
+        {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
           <button onClick={() => setVista("tablero")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${vista === "tablero" ? "bg-panel text-texto shadow-sm" : "text-texto-3"}`}>
             <LayoutGrid className="h-4 w-4" /> Tablero
           </button>
@@ -254,7 +299,7 @@ export function TableroCrm({
             <List className="h-4 w-4" /> Lista
           </button>
         </div>}
-        {jefe && (
+        {jefe && deOrigen && (
           <>
             <button onClick={() => setModal("lead")} className="btn-secundario">
               <UserPlus className="h-4 w-4" /> Nuevo lead
@@ -270,6 +315,25 @@ export function TableroCrm({
 
       {!pipeline ? (
         <div className="tarjeta p-10 text-center text-sm text-texto-3">{admin ? "No hay pipelines. Crea el primero con «+ Pipeline»." : "Todavía no hay pipelines."}</div>
+      ) : tipo === "closers" && tableroClosers ? (
+        <TableroClosers
+          columnas={tableroClosers.columnas}
+          productos={productos}
+          moneda={moneda}
+          jefe={jefe}
+          soloMirar={tableroClosers.soloMirar}
+          menuColumna={(col, i) => menu(etapas.find((e) => e.id === col.id)!, i)}
+          alFinal={
+            <>
+              {anadirColumna}
+              {tableroClosers.sinColumna > 0 && (
+                <div className="w-72 shrink-0 rounded-xl border border-dashed border-aviso/50 p-3 text-xs text-aviso">
+                  {tableroClosers.sinColumna} tarjetas sin columna: su estado no está unido a ninguna. Une una columna a ese estado con «⋯».
+                </div>
+              )}
+            </>
+          }
+        />
       ) : vista === "tablero" || !jefe ? (
         <div className={`flex gap-3 overflow-x-auto pb-3 ${pendiente ? "cursor-progress" : ""}`}>
           {etapas.map((e, i) => {
@@ -299,17 +363,7 @@ export function TableroCrm({
                       {e.estado_caller && <span title="Columna unida a un estado: los botones del caller mueven aquí y soltar aquí cambia el estado"> · ↔ {ETIQUETA_ESTADO_CALLER[e.estado_caller]}</span>}
                     </div>
                   </div>
-                  {admin && <MenuColumna
-                    etapa={e}
-                    primera={i === 0}
-                    ultima={i === etapas.length - 1}
-                    onEditar={(n, c) => ejecutar(() => exigirOk(editarEtapa(e.id, n, c)))}
-                    onMover={(d) => ejecutar(() => exigirOk(moverEtapa(e.id, d)))}
-                    onBorrar={() => {
-                      if (confirm(`¿Borrar la columna «${e.nombre}»? Sus leads pasan a la primera columna.`)) ejecutar(() => exigirOk(borrarEtapa(e.id)));
-                    }}
-                    onUnir={(estado) => ejecutar(() => exigirOk(unirEstado(e.id, estado)), estado ? `«${e.nombre}» unida a «${ETIQUETA_ESTADO_CALLER[estado]}»` : `«${e.nombre}» ya no está unida`)}
-                  />}
+                  {menu(e, i)}
                 </div>
                 <div className="flex max-h-[calc(100vh-330px)] min-h-32 flex-col gap-2 overflow-y-auto p-2">
                   {enColumna.slice(0, limite).map((l) => (
@@ -324,15 +378,7 @@ export function TableroCrm({
               </div>
             );
           })}
-          {admin && <button
-            onClick={() => {
-              const n = prompt("Nombre de la nueva columna");
-              if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
-            }}
-            className="flex h-14 w-60 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-borde-fuerte text-sm text-texto-2 hover:border-primario hover:text-primario"
-          >
-            <Plus className="h-4 w-4" /> Añadir columna
-          </button>}
+          {anadirColumna}
           {sinColumna.length > 0 && (
             <div className="w-72 shrink-0 rounded-xl border border-dashed border-aviso/50 p-3 text-xs text-aviso">
               {sinColumna.length} leads sin columna. Arrástralos o muévelos desde su ficha.
@@ -369,8 +415,8 @@ export function TableroCrm({
           onGuardar={(accion, mensaje) => mover(ventana.lead.id, ventana.etapaId, accion, mensaje)}
         />
       )}
-      {modal === "precall" && <ModalPrecall inicial={precall} onCerrar={() => setModal(null)} onGuardar={(lista) => ejecutar(async () => { await exigirOk(guardarColumnasPrecall(lista)); setModal(null); }, "Columnas de Pre-call guardadas")} />}
-      {modal === "importar" && <ModalImportar pipelines={pipelines} pipelineId={pipeline?.id} onCerrar={() => setModal(null)} />}
+      {modal === "permisos" && permisos && pipeline && <ModalPermisos pipeline={pipeline} datos={permisos} onCerrar={() => setModal(null)} onGuardar={(quien, nivel, msg) => ejecutar(() => exigirOk(guardarPermisoPipeline(pipeline.id, quien, nivel)), msg)} />}
+      {modal === "importar" && <ModalImportar pipelines={pipelines.filter((p) => p.tipo === "normal")} pipelineId={pipeline?.id} onCerrar={() => setModal(null)} />}
       {modal === "lead" && (
         <Modal titulo="Nuevo lead" onCerrar={() => setModal(null)}>
           <form
@@ -403,7 +449,7 @@ export function TableroCrm({
             className="space-y-3"
           >
             <label className="block"><span className="etiqueta-campo">Nombre</span><input name="nombre" required className="campo" placeholder="Ej: Webinar 2" /></label>
-            <p className="text-xs text-texto-3">Se crea con 6 columnas (Nuevos, No contesta, Llamar luego, Agendados, Cerrados y Descartados), ya unidas a los estados del caller. Luego puedes añadir, renombrar, unir o borrar columnas.</p>
+            <p className="text-xs text-texto-3">Se crea con 4 columnas (Nuevos, Agendados, Cerrados y Descartados). Luego puedes añadir, renombrar o borrar columnas. El resultado de cada llamada se ve en el pipeline «Callers».</p>
             <button className="btn-primario w-full" disabled={pendiente}>Crear pipeline</button>
           </form>
         </Modal>
@@ -445,6 +491,8 @@ function Tarjeta({ lead, caller, onDrag, arrastrando }: { lead: LeadTarjeta; cal
 
 function MenuColumna({
   etapa,
+  uniones,
+  unida,
   primera,
   ultima,
   onEditar,
@@ -453,12 +501,14 @@ function MenuColumna({
   onUnir,
 }: {
   etapa: Etapa;
+  uniones: { v: string; t: string }[]; // vacío = pipeline de origen, sin uniones
+  unida: string | null;
   primera: boolean;
   ultima: boolean;
   onEditar: (nombre: string, color: string) => void;
   onMover: (d: -1 | 1) => void;
   onBorrar: () => void;
-  onUnir: (estado: EstadoCaller | null) => void;
+  onUnir: (estado: string | null) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   return (
@@ -494,20 +544,20 @@ function MenuColumna({
                 />
               ))}
             </div>
-            <label className="block px-2 pb-2">
-              <span className="text-[11px] text-texto-3">Unir a un estado del lead</span>
+            {uniones.length > 0 && <label className="block px-2 pb-2">
+              <span className="text-[11px] text-texto-3">Unir a un estado</span>
               <select
                 className="campo mt-1 py-1 text-xs"
-                value={etapa.estado_caller ?? ""}
+                value={unida ?? ""}
                 onChange={(e) => {
-                  onUnir((e.target.value || null) as EstadoCaller | null);
+                  onUnir(e.target.value || null);
                   setAbierto(false);
                 }}
               >
                 <option value="">Sin unir (columna libre)</option>
-                {(Object.keys(ETIQUETA_ESTADO_CALLER) as EstadoCaller[]).map((k) => <option key={k} value={k}>{ETIQUETA_ESTADO_CALLER[k]}</option>)}
+                {uniones.map((u) => <option key={u.v} value={u.v}>{u.t}</option>)}
               </select>
-            </label>
+            </label>}
             {!primera && (
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2" onClick={() => { onMover(-1); setAbierto(false); }}>
                 <ArrowLeft className="h-4 w-4" /> Mover a la izquierda
@@ -722,35 +772,82 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
   );
 }
 
-// Pre-call (Paso H7): nombre, color y orden de sus 4 columnas (siguen siendo los 4 estados de la cita)
-function ModalPrecall({ inicial, onCerrar, onGuardar }: { inicial: ColumnaPrecall[]; onCerrar: () => void; onGuardar: (lista: ColumnaPrecall[]) => void }) {
-  const [lista, setLista] = useState(inicial);
-  const cambiar = (i: number, c: Partial<ColumnaPrecall>) => setLista((l) => l.map((x, k) => (k === i ? { ...x, ...c } : x)));
-  const subir = (i: number, d: -1 | 1) =>
-    setLista((l) => {
-      const j = i + d;
-      if (j < 0 || j >= l.length) return l;
-      const c = [...l];
-      [c[i], c[j]] = [c[j], c[i]];
-      return c;
-    });
+// Permisos de un pipeline (Paso 0, como GHL): por rol y por persona; manda la persona. CEO y director con
+// Administración, siempre «Editar».
+const NIVELES = [
+  { v: "editar", t: "Editar (también columnas)" },
+  { v: "ver", t: "Ver (mueve sus tarjetas)" },
+  { v: "sin_acceso", t: "Sin acceso" },
+];
+const DEFECTO_PIPE: Record<TipoPipeline, Record<string, string>> = {
+  normal: { director: "ver", closer: "ver", caller: "ver" },
+  callers: { director: "ver", closer: "sin_acceso", caller: "ver" },
+  closers: { director: "ver", closer: "ver", caller: "sin_acceso" },
+};
+const ROLES_PIPE = [
+  { v: "director", t: "Directores" },
+  { v: "closer", t: "Closers" },
+  { v: "caller", t: "Callers" },
+];
+function ModalPermisos({
+  pipeline,
+  datos,
+  onCerrar,
+  onGuardar,
+}: {
+  pipeline: Pipeline;
+  datos: { filas: FilaPermiso[]; gente: { id: string; nombre: string; rol: string }[] };
+  onCerrar: () => void;
+  onGuardar: (quien: { rol: string } | { perfilId: string }, nivel: string | null, mensaje: string) => void;
+}) {
+  const texto = (v: string) => NIVELES.find((n) => n.v === v)?.t.split(" (")[0] ?? v;
+  const delRol = (rol: string) => datos.filas.find((f) => f.rol === rol)?.nivel ?? null;
   return (
-    <Modal titulo="Columnas de Pre-call" onCerrar={onCerrar}>
-      <div className="space-y-3">
-        <p className="text-xs text-texto-3">Cambia el nombre, el color y el orden. Las 4 columnas siguen siendo los 4 estados de la cita (no se añaden ni se borran).</p>
-        {lista.map((c, i) => (
-          <div key={c.estado} className="flex items-center gap-2">
-            <div className="flex flex-col">
-              <button type="button" className="text-texto-3 hover:text-texto disabled:opacity-30" disabled={i === 0} onClick={() => subir(i, -1)} aria-label="Subir"><ArrowLeft className="h-3.5 w-3.5 rotate-90" /></button>
-              <button type="button" className="text-texto-3 hover:text-texto disabled:opacity-30" disabled={i === lista.length - 1} onClick={() => subir(i, 1)} aria-label="Bajar"><ArrowRight className="h-3.5 w-3.5 rotate-90" /></button>
-            </div>
-            <input aria-label={`Nombre de la columna ${i + 1}`} className="campo flex-1" maxLength={40} value={c.titulo} onChange={(e) => cambiar(i, { titulo: e.target.value })} />
-            <select aria-label={`Color de la columna ${i + 1}`} className="campo w-auto" value={c.color} onChange={(e) => cambiar(i, { color: e.target.value })} style={{ color: c.color }}>
-              {[...new Set([c.color, ...COLORES])].map((x) => <option key={x} value={x} style={{ color: x }}>●  {x}</option>)}
-            </select>
-          </div>
-        ))}
-        <button className="btn-primario w-full" onClick={() => onGuardar(lista)}>Guardar</button>
+    <Modal titulo={`Quién ve «${pipeline.nombre}»`} onCerrar={onCerrar} ancho="max-w-xl">
+      <div className="space-y-4">
+        <p className="text-xs text-texto-3">Como en GHL: <b>Editar</b> = también sus columnas · <b>Ver</b> = mueve sus tarjetas (cada uno las suyas) · <b>Sin acceso</b> = no lo ve. Manda lo de la persona sobre lo de su rol. El CEO y el director con Administración, siempre Editar.</p>
+        <div className="space-y-1.5">
+          <div className="titulo-seccion">Por rol</div>
+          {ROLES_PIPE.map((r) => {
+            const propio = delRol(r.v);
+            const defecto = DEFECTO_PIPE[pipeline.tipo][r.v];
+            return (
+              <div key={r.v} className="flex items-center justify-between gap-3">
+                <span className="text-sm">{r.t}</span>
+                <select
+                  aria-label={`${r.t} en ${pipeline.nombre}`}
+                  className="campo w-auto py-1 text-xs"
+                  value={propio ?? ""}
+                  onChange={(e) => onGuardar({ rol: r.v }, e.target.value || null, `${r.t}: ${e.target.value ? texto(e.target.value) : "lo de siempre"}`)}
+                >
+                  <option value="">Lo de siempre ({texto(defecto)})</option>
+                  {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+        <div className="max-h-[45vh] space-y-1.5 overflow-y-auto">
+          <div className="titulo-seccion">Por persona</div>
+          {datos.gente.map((g) => {
+            const propio = datos.filas.find((f) => f.perfil_id === g.id)?.nivel ?? "";
+            const deSuRol = delRol(g.rol) ?? DEFECTO_PIPE[pipeline.tipo][g.rol] ?? "ver";
+            return (
+              <div key={g.id} className="flex items-center justify-between gap-3">
+                <span className="text-sm">{g.nombre} <span className="text-xs text-texto-3">· {g.rol}</span></span>
+                <select
+                  aria-label={`${g.nombre} en ${pipeline.nombre}`}
+                  className="campo w-auto py-1 text-xs"
+                  value={propio}
+                  onChange={(e) => onGuardar({ perfilId: g.id }, e.target.value || null, `${g.nombre}: ${e.target.value ? texto(e.target.value) : "como su rol"}`)}
+                >
+                  <option value="">Como su rol ({texto(deSuRol)})</option>
+                  {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </Modal>
   );

@@ -126,7 +126,7 @@ export async function nuevoCliente(formData: FormData) {
     }
     let creado = false;
     if (!leadId) {
-      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).order("orden").limit(1).maybeSingle();
+      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
       const { data: etapa } = pipe ? await db().from("etapas").select("id").eq("pipeline_id", pipe.id).order("orden").limit(1).maybeSingle() : { data: null };
       const { data: nuevo, error } = await db()
         .from("leads")

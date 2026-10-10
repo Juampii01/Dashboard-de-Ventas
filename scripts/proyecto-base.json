@@ -1,14 +1,13 @@
 {
   "_nota": "Configuración inicial del proyecto Maestria. La usan seed.mjs (local) y preparar-proyecto.mjs (producción). Los precios de servicios para empresas están pendientes de Cristian.",
   "proyecto": { "nombre": "Maestria", "moneda": "USD", "zona_horaria": "America/New_York", "color": "#2f55d4" },
-  "_estados": "Paso H7 (10 oct 2026): columnas unidas a un estado del caller (los botones mueven la tarjeta ahí). En Orgánico la venta va a Low ticket / Grupal / VIP por el nombre del producto.",
-  "estados": { "Nuevos": "nuevo", "No contesta": "no_contesta", "Llamar luego": "llamar_luego", "Agendados": "agendado", "Cerrados": "vendido", "Descartados": "no_interesa" },
+  "_pipelines": "Paso 0 (10 oct 2026): los pipelines de origen como antes del H7 (los botones mueven por el nombre de la columna; en Orgánico la venta va a Low ticket / Grupal / VIP). «Callers» y «Closers» los crea la base sola al crear el proyecto.",
   "colores": ["#64748b", "#2f55d4", "#d97706", "#7c3aed", "#0891b2", "#db2777", "#16a34a", "#dc2626"],
   "pipelines": [
-    { "nombre": "Webinar 1", "columnas": ["Nuevos", "No contesta", "Llamar luego", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
-    { "nombre": "Biblioteca Recursos", "columnas": ["Nuevos", "No contesta", "Llamar luego", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
-    { "nombre": "Orgánico", "columnas": ["Nuevos", "No contesta", "Llamar luego", "Agendados", "En seguimiento", "Low ticket", "Grupal", "VIP", "Cerrados", "Descartados"] },
-    { "nombre": "DFY AI Services", "columnas": ["Nuevos", "No contesta", "Llamar luego", "Agendados", "En seguimiento", "Cerrados", "Descartados"] }
+    { "nombre": "Webinar 1", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
+    { "nombre": "Biblioteca Recursos", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] },
+    { "nombre": "Orgánico", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Low ticket", "Grupal", "VIP", "Cerrados", "Descartados"] },
+    { "nombre": "DFY AI Services", "columnas": ["Nuevos", "Agendados", "En seguimiento", "Cerrados", "Descartados"] }
   ],
   "productos": [
     { "nombre": "Low ticket", "precio": 47, "vende_caller": true, "orden": 0 },

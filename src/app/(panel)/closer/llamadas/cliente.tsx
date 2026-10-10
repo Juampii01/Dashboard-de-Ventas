@@ -2,17 +2,14 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Plus, Upload, Search, MessageCircle, Phone, ClipboardCheck, RefreshCw, Link2, X } from "lucide-react";
+import { Plus, Upload, Search, RefreshCw, Link2, X } from "lucide-react";
 import { Modal } from "@/components/modal";
-import { useAccion, Mensajes } from "@/components/acciones-lead";
+import { useAccion } from "@/components/acciones-lead";
 import { SelectorEstrellas } from "@/components/estrellas";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { agendarCita } from "@/app/(panel)/leads/acciones";
-import { buscarLeadsParaLlamada, cambiarEstadoCita, descartarCitaSinLead, importarCitas, sincronizarGhl, unirCitaSinLead } from "../acciones";
+import { buscarLeadsParaLlamada, descartarCitaSinLead, importarCitas, sincronizarGhl, unirCitaSinLead } from "../acciones";
 import { useToast } from "@/components/toasts";
-import { AccionesCita } from "../acciones-cita";
-import type { ColumnaPrecall } from "@/lib/llamadas";
-import type { EstadoCita, Producto } from "@/lib/tipos";
 
 type LeadBuscado = { id: string; nombre: string; apellido: string; telefono: string | null; email: string | null };
 
@@ -138,100 +135,6 @@ export function BuscadorUrl({ placeholder }: { placeholder: string }) {
       <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
       <input value={q} onChange={(e) => setQ(e.target.value)} onBlur={() => q !== (params.get("q") ?? "") && aplicar()} placeholder={placeholder} className="campo pl-9" aria-label="Buscar" />
     </form>
-  );
-}
-
-// Tarjeta del pre-call: Registrar · Mover a · Chat
-export function TarjetaPrecall({
-  soloMirar = false,
-  columnas,
-  cita,
-  lead,
-  fechaTxt,
-  agendadaTxt,
-  closer,
-  productos,
-  moneda,
-}: {
-  soloMirar?: boolean; // H5: un caller con «Agendas», solo mirar
-  columnas: ColumnaPrecall[];
-  cita: { id: string; estado: EstadoCita; lead_id: string };
-  lead: { nombre: string; telefono: string | null };
-  fechaTxt: string;
-  agendadaTxt: string;
-  closer: string | null;
-  productos: Producto[];
-  moneda: string;
-}) {
-  const { pendiente, error, ejecutar } = useAccion();
-  const [registrar, setRegistrar] = useState(false);
-  const tel = (lead.telefono ?? "").replace(/\D/g, "");
-  return (
-    <div
-      draggable={!soloMirar}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", JSON.stringify({ id: cita.id, estado: cita.estado }));
-      }}
-      className={`${soloMirar ? "" : "cursor-grab"} space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm active:cursor-grabbing ${pendiente ? "opacity-60" : ""}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <a href={`/leads/${cita.lead_id}`} className="font-medium hover:text-primario">{lead.nombre}</a>
-        {closer && <span className="chip bg-panel-2 text-texto-3">{closer}</span>}
-      </div>
-      {lead.telefono && <a href={`tel:${lead.telefono}`} className="flex items-center gap-1.5 text-primario"><Phone className="h-3.5 w-3.5" />{lead.telefono}</a>}
-      <div className="text-xs text-texto-2">📅 {fechaTxt}</div>
-      <div className="text-[11px] text-texto-3">Agendada el {agendadaTxt}</div>
-      {!soloMirar && <div className="flex flex-wrap gap-1.5">
-        <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
-        <select
-          aria-label="Mover a"
-          className="campo w-auto py-1 text-xs"
-          value=""
-          disabled={pendiente}
-          onChange={(e) => e.target.value && ejecutar(() => cambiarEstadoCita(cita.id, e.target.value as EstadoCita, ""), "Movida")}
-        >
-          <option value="">Mover a…</option>
-          {columnas.filter((c) => c.estado !== cita.estado).map((c) => <option key={c.estado} value={c.estado}>{c.titulo}</option>)}
-        </select>
-        {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
-      </div>}
-      {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={cita} pasada productos={productos} moneda={moneda} /></div>}
-      <Mensajes error={error} ok="" />
-    </div>
-  );
-}
-
-// Columna del tablero de pre-call (Paso H6): soltar una tarjeta = «Mover a» esta columna
-export function ColumnaPrecall({ estado, titulo, color, total, soloMirar = false, children }: { estado: EstadoCita; titulo: string; color: string; total: number; soloMirar?: boolean; children: React.ReactNode }) {
-  const { pendiente, ejecutar } = useAccion();
-  const [sobre, setSobre] = useState(false);
-  return (
-    <div
-      onDragOver={(ev) => {
-        ev.preventDefault();
-        setSobre(true);
-      }}
-      onDragLeave={() => setSobre(false)}
-      onDrop={(ev) => {
-        ev.preventDefault();
-        setSobre(false);
-        if (soloMirar) return; // H5: solo mirar
-        let datos: { id?: string; estado?: string } = {};
-        try {
-          datos = JSON.parse(ev.dataTransfer.getData("text/plain"));
-        } catch {
-          return; // no es una tarjeta de pre-call
-        }
-        if (datos.id && datos.estado !== estado) ejecutar(() => cambiarEstadoCita(datos.id!, estado, ""), `Movida a «${titulo}»`);
-      }}
-      className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre ? "border-primario bg-primario-suave/40" : "border-borde bg-panel-2/60"} ${pendiente ? "cursor-progress" : ""}`}
-    >
-      <div className="flex items-center justify-between border-b border-borde px-3 py-2.5 text-sm font-semibold" style={{ borderTop: `3px solid ${color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-        {titulo}<span className="rounded-full bg-panel px-1.5 text-[11px] tabular-nums text-texto-2">{total}</span>
-      </div>
-      {children}
-    </div>
   );
 }
 

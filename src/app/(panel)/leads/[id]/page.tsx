@@ -62,8 +62,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     db().from("ventas").select("*, productos(nombre)").eq("lead_id", id).order("fecha", { ascending: false }),
     equipo(proyecto.id),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
-    db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden"),
-    db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden"),
+    db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
+    db().from("etapas").select("*, pipelines!inner(proyecto_id, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").order("orden"),
   ]);
   const nombre = (pid: string | null) => gente.find((g) => g.id === pid)?.nombre ?? "—";
   const pipeline = (pipelines.data as Pipeline[]).find((p) => p.id === lead.pipeline_id);

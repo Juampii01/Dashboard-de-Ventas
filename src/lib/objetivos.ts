@@ -28,7 +28,8 @@ export type FilaObjetivo = {
 };
 export type Lanzamiento = { id: string; nombre: string; inicio: string; fin: string; evento: string | null };
 
-export async function cargarObjetivos(proyectoId: string) {
+// `enFecha`: solo carga los leads de los lanzamientos en curso ese día (los únicos que se usan). Sin fecha, todos.
+export async function cargarObjetivos(proyectoId: string, enFecha?: string) {
   const [filas, lanzamientos] = await Promise.all([
     todas<FilaObjetivo>((a, b) =>
       db().from("objetivos").select("id, rol, perfil_id, periodo, lanzamiento_id, cifra, valor, dias, creado_en").eq("proyecto_id", proyectoId).order("id").range(a, b)
@@ -36,7 +37,9 @@ export async function cargarObjetivos(proyectoId: string) {
     todas<Lanzamiento>((a, b) => db().from("lanzamientos").select("id, nombre, inicio, fin, evento").eq("proyecto_id", proyectoId).order("id").range(a, b)),
   ]);
   // Leads de cada evento unido a un lanzamiento
-  const eventos = [...new Set(lanzamientos.map((l) => l.evento).filter((e): e is string => !!e))];
+  // Pendiente 9 (10 oct 2026): «Mis objetivos» se recarga cada minuto; ya no lee los leads de lanzamientos pasados
+  const usados = enFecha ? lanzamientos.filter((l) => l.inicio <= enFecha && enFecha <= l.fin) : lanzamientos;
+  const eventos = [...new Set(usados.map((l) => l.evento).filter((e): e is string => !!e))];
   const leadsEvento = new Map<string, Set<string>>();
   for (const ev of eventos) {
     const ids = await todas<{ id: string }>((a, b) => db().from("leads").select("id").eq("proyecto_id", proyectoId).eq("evento", ev).order("id").range(a, b));
@@ -114,18 +117,31 @@ function diaSemana(fecha: string) {
   return ((new Date(`${fecha}T12:00:00Z`).getUTCDay() + 6) % 7) + 1; // 1 = lunes
 }
 
-// Avance de cada persona en sus objetivos de ahora (día, semana, mes y lanzamientos en curso)
-export function calcularAvances(base: Base, datos: DatosObjetivos, personas: Perfil[], zona: string) {
-  const hoy = hoyEnZona(zona);
-  const equipoIds = new Set(base.gente.filter((g) => g.rol === "caller" || g.rol === "closer").map((g) => g.id));
+// Día, semana (lunes a domingo) y mes que contienen la fecha `ref`, y los lanzamientos en curso ese día
+export function tramosDe(ref: string, zona: string, lanzamientos: Lanzamiento[]) {
+  const esHoy = ref === hoyEnZona(zona);
+  const lunes = sumarDias(ref, -(diaSemana(ref) - 1));
+  const primero = `${ref.slice(0, 8)}01`;
+  const sig = new Date(`${primero}T12:00:00Z`);
+  sig.setUTCMonth(sig.getUTCMonth() + 1);
+  const ultimo = sumarDias(sig.toISOString().slice(0, 10), -1);
   const tramos: { periodo: PeriodoObjetivo; rango: Rango; etiqueta: string; lanzamiento?: Lanzamiento }[] = [
-    { periodo: "dia", rango: rangoDe("hoy", zona), etiqueta: "Hoy" },
-    { periodo: "semana", rango: rangoDe("semana", zona), etiqueta: "Esta semana" },
-    { periodo: "mes", rango: rangoDe("mes", zona), etiqueta: "Este mes" },
-    ...datos.lanzamientos
-      .filter((l) => l.inicio <= hoy && hoy <= l.fin)
+    { periodo: "dia", rango: rangoDe("rango", zona, ref, ref), etiqueta: esHoy ? "Hoy" : `El ${ref}` },
+    { periodo: "semana", rango: rangoDe("rango", zona, lunes, sumarDias(lunes, 6)), etiqueta: esHoy ? "Esta semana" : `Semana del ${lunes}` },
+    { periodo: "mes", rango: rangoDe("rango", zona, primero, ultimo), etiqueta: esHoy ? "Este mes" : `Mes ${ref.slice(0, 7)}` },
+    ...lanzamientos
+      .filter((l) => l.inicio <= ref && ref <= l.fin)
       .map((l) => ({ periodo: "lanzamiento" as const, rango: rangoDe("rango", zona, l.inicio, l.fin), etiqueta: l.nombre, lanzamiento: l })),
   ];
+  return tramos;
+}
+
+// Avance de cada persona en sus objetivos del día `ref` (por defecto hoy): ese día, su semana, su mes y los
+// lanzamientos en curso. Cada periodo usa los objetivos que había al acabar (el histórico se guarda).
+export function calcularAvances(base: Base, datos: DatosObjetivos, personas: Perfil[], zona: string, ref = hoyEnZona(zona)) {
+  const hoy = ref;
+  const equipoIds = new Set(base.gente.filter((g) => g.rol === "caller" || g.rol === "closer").map((g) => g.id));
+  const tramos = tramosDe(ref, zona, datos.lanzamientos);
 
   // Índices de cada tramo (una vez por periodo, no por persona)
   const ixTramo = tramos.map((tr) => indices(tr.lanzamiento?.evento ? soloLeads(base, datos.leadsEvento.get(tr.lanzamiento.evento) ?? new Set()) : base, tr.rango, zona));
@@ -249,9 +265,9 @@ export function calcularRacha(base: Base, filas: FilaObjetivo[], p: Perfil, zona
 
 // Lo que ve cada caller o closer: sus objetivos, su racha y el objetivo del equipo (los del director)
 export async function panelObjetivos(proyecto: { id: string; zona_horaria: string }, p: Perfil) {
-  const datos = await cargarObjetivos(proyecto.id);
   const zona = proyecto.zona_horaria;
   const hoy = hoyEnZona(zona);
+  const datos = await cargarObjetivos(proyecto.id, hoy);
   const inicios = [rangoDe("semana", zona).desde!, rangoDe("mes", zona).desde!, ...datos.lanzamientos.filter((l) => l.inicio <= hoy && hoy <= l.fin).map((l) => rangoDe("rango", zona, l.inicio, l.fin).desde!)];
   const desde = new Date(Math.min(...inicios.map((x) => x.getTime())));
   const hayDiarios = datos.filas.some((f) => f.periodo === "dia");

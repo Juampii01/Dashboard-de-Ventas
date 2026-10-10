@@ -1,24 +1,13 @@
 // Reparto de las citas en las pestañas de «Llamadas» (V2-2). Sin base de datos.
 // Pre-call: citas abiertas que aún no han pasado. Post-call: lo que ya pasó, por estado.
 export const ABIERTAS = ["pendiente", "confirmacion_pendiente", "confirmada"] as const;
-export const COLUMNAS_PRECALL = [
-  { estado: "pendiente", titulo: "Pendiente", color: "var(--aviso)" },
-  { estado: "confirmacion_pendiente", titulo: "Confirmación pendiente", color: "var(--oro)" },
-  { estado: "confirmada", titulo: "Confirmado", color: "var(--ok)" },
-  { estado: "no_califica", titulo: "No califica", color: "var(--mal)" },
+// Las 4 columnas de Pre-call: cada una es un estado de la cita
+export const CLAVES_PRECALL = [
+  { v: "pendiente", t: "Pendiente" },
+  { v: "confirmacion_pendiente", t: "Confirmación pendiente" },
+  { v: "confirmada", t: "Confirmado" },
+  { v: "no_califica", t: "No califica" },
 ] as const;
-export type ColumnaPrecall = { estado: (typeof COLUMNAS_PRECALL)[number]["estado"]; titulo: string; color: string };
-// Paso H7: nombre, color y orden que puso el admin en el CRM (proyectos.precall_columnas); si falta algo, lo de siempre
-export function columnasPrecall(config: unknown): ColumnaPrecall[] {
-  const lista = Array.isArray(config) ? (config as Partial<ColumnaPrecall>[]) : [];
-  const base = COLUMNAS_PRECALL.map((c) => ({ ...c }) as ColumnaPrecall);
-  const ordenadas = lista.map((x) => base.find((c) => c.estado === x.estado)).filter((c): c is ColumnaPrecall => !!c);
-  const resto = base.filter((c) => !ordenadas.includes(c));
-  return [...ordenadas, ...resto].map((c) => {
-    const p = lista.find((x) => x.estado === c.estado);
-    return { estado: c.estado, titulo: (p?.titulo ?? "").trim() || c.titulo, color: /^(#[0-9a-fA-F]{6}|var\(--[a-z0-9-]+\))$/.test(p?.color ?? "") ? p!.color! : c.color };
-  });
-}
 export const SUB_POSTCALL = [
   { v: "pendientes", t: "Pendientes", d: "Ya pasaron y falta registrar el resultado" },
   { v: "reagendadas", t: "Reagendadas", d: "Citas que se movieron a otra fecha" },
@@ -54,6 +43,47 @@ export const esColumnaVentas = (sub: SubPostcall): sub is "reserva" | "cuotas" |
 export function ventasPostcall<V extends VentaL>(ventas: V[], sub: "reserva" | "cuotas" | "cerradas", desdeMs = 0): V[] {
   if (sub === "cerradas") return ventas.filter((v) => v.pendiente <= 0.001 && !!v.fecha && new Date(v.fecha).getTime() >= desdeMs);
   return ventas.filter((v) => v.tipo_pago === sub && v.pendiente > 0.001);
+}
+
+// ---------- Pipeline «Closers» (Paso 0): Pre-call y Post-call juntos ----------
+// Cada columna puede estar unida a una «clave» (un estado de Pre-call o una columna de Post-call) o ser libre.
+export type ClavePrecall = (typeof CLAVES_PRECALL)[number]["v"];
+export type ClaveCloser = ClavePrecall | SubPostcall;
+export const CLAVES_CLOSER: { v: ClaveCloser; t: string }[] = [...CLAVES_PRECALL, ...SUB_POSTCALL.map((s) => ({ v: s.v, t: s.t }))];
+export const esClavePrecall = (c: string | null | undefined): c is ClavePrecall => CLAVES_PRECALL.some((x) => x.v === c);
+
+// La columna que le toca a una cita por su estado y su fecha (null = no sale: cerrada, o no califica ya pasada)
+export function claveNatural(c: CitaL, ahora: number): ClaveCloser | null {
+  if (esPrecall(c, ahora)) return c.estado as ClavePrecall;
+  return SUB_POSTCALL.find((s) => !esColumnaVentas(s.v) && enPostcall(c, s.v, ahora))?.v ?? null;
+}
+
+type EtapaC = { id: string; columna_cita?: string | null };
+type CitaC = CitaL & { etapa_closers_id?: string | null };
+// Reparte citas y ventas en las columnas de «Closers»: la cita movida a una columna libre se queda ahí;
+// si no, va a la columna unida a su clave. Lo que no tiene columna (la borraron) sale aparte.
+export function repartirCloser<C extends CitaC, V extends VentaL>(etapas: EtapaC[], citas: C[], ventas: V[], ahora: number, desdeMesMs: number) {
+  const porColumna = new Map<string, { citas: C[]; ventas: V[] }>(etapas.map((e) => [e.id, { citas: [], ventas: [] }]));
+  const unida = (clave: string) => etapas.find((e) => e.columna_cita === clave)?.id;
+  const sinColumna: { citas: C[]; ventas: V[] } = { citas: [], ventas: [] };
+  for (const c of citas) {
+    const libre = c.etapa_closers_id && etapas.some((e) => e.id === c.etapa_closers_id && !e.columna_cita) ? c.etapa_closers_id : null;
+    const natural = claveNatural(c, ahora);
+    const destino = libre ?? (natural ? unida(natural) : undefined);
+    if (destino) porColumna.get(destino)!.citas.push(c);
+    else if (natural) sinColumna.citas.push(c);
+  }
+  for (const sub of ["reserva", "cuotas", "cerradas"] as const) {
+    const destino = unida(sub);
+    for (const v of ventasPostcall(ventas, sub, desdeMesMs)) (destino ? porColumna.get(destino)!.ventas : sinColumna.ventas).push(v);
+  }
+  return { porColumna, sinColumna };
+}
+
+// En Agendas: Pre-call son las columnas hasta la primera unida a Post-call; Post-call, el resto
+export function partirCloser<E extends EtapaC>(etapas: E[]) {
+  const i = etapas.findIndex((e) => e.columna_cita && !esClavePrecall(e.columna_cita));
+  return i < 0 ? { pre: etapas, post: [] as E[] } : { pre: etapas.slice(0, i), post: etapas.slice(i) };
 }
 
 // «YYYY-MM-DD» de una fecha en la zona del proyecto

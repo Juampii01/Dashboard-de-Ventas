@@ -1,0 +1,46 @@
+import "server-only";
+import { db } from "@/lib/datos";
+import { puedeAdmin } from "@/lib/auth";
+import { ErrorUsuario } from "@/lib/resultado";
+import type { Perfil, Pipeline, TipoPipeline } from "@/lib/tipos";
+
+// Paso 0 (Cristian, 10 oct 2026): permisos de cada pipeline, como GHL.
+// Editar = también sus columnas · Ver = mueve sus tarjetas · Sin acceso = ni lo ve. Manda la persona, luego su rol.
+// El CEO y el director con Administración, siempre Editar.
+export type Nivel = "editar" | "ver" | "sin_acceso";
+export const NIVELES: { v: Nivel; t: string }[] = [
+  { v: "editar", t: "Editar" },
+  { v: "ver", t: "Ver" },
+  { v: "sin_acceso", t: "Sin acceso" },
+];
+export type FilaPermisoPipeline = { pipeline_id: string; rol: string | null; perfil_id: string | null; nivel: Nivel };
+
+// Lo de siempre: los de origen, Ver para todos; «Callers», para callers y directores; «Closers», para closers y directores
+export function nivelDefecto(tipo: TipoPipeline, rol: Perfil["rol"]): Nivel {
+  if (rol === "ceo") return "editar";
+  if (tipo === "callers") return rol === "closer" ? "sin_acceso" : "ver";
+  if (tipo === "closers") return rol === "caller" ? "sin_acceso" : "ver";
+  return "ver";
+}
+
+export function calcularNivel(perfil: Perfil, pipeline: Pick<Pipeline, "id" | "tipo">, filas: FilaPermisoPipeline[]): Nivel {
+  if (puedeAdmin(perfil)) return "editar";
+  const deEste = filas.filter((f) => f.pipeline_id === pipeline.id);
+  return deEste.find((f) => f.perfil_id === perfil.id)?.nivel ?? deEste.find((f) => f.rol === perfil.rol)?.nivel ?? nivelDefecto(pipeline.tipo, perfil.rol);
+}
+
+export async function filasPermisoPipeline(pipelineIds: string[]) {
+  if (!pipelineIds.length) return [] as FilaPermisoPipeline[];
+  const { data } = await db().from("permisos_pipeline").select("pipeline_id, rol, perfil_id, nivel").in("pipeline_id", pipelineIds);
+  return (data ?? []) as FilaPermisoPipeline[];
+}
+
+// El pipeline (de este proyecto) y el nivel de quien pregunta; falla si no llega al nivel pedido
+export async function exigirNivel(perfil: Perfil, proyectoId: string, pipelineId: string, minimo: "ver" | "editar") {
+  const { data } = await db().from("pipelines").select("*").eq("id", pipelineId).eq("proyecto_id", proyectoId).maybeSingle<Pipeline>();
+  if (!data) throw new ErrorUsuario("Pipeline no encontrado.");
+  const nivel = calcularNivel(perfil, data, await filasPermisoPipeline([data.id]));
+  if (nivel === "sin_acceso" || (minimo === "editar" && nivel !== "editar"))
+    throw new ErrorUsuario(minimo === "editar" ? `No tienes permiso para cambiar las columnas de «${data.nombre}».` : `No tienes acceso al pipeline «${data.nombre}».`);
+  return { pipeline: data, nivel };
+}

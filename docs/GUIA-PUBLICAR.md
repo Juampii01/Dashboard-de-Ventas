@@ -1,0 +1,181 @@
+# Guía · Publicar Eternity
+
+> Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
+> Escrita el 9 oct 2026 y actualizada el mismo día con la v2 (IA, Fathom, llamadas de GHL, Finanzas). Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
+
+---
+
+## Antes de empezar
+
+**Necesitas:**
+- Un email para crear 3 cuentas gratuitas: **GitHub**, **Supabase** y **Vercel**.
+- Para la v2 (opcional, se puede añadir después): una cuenta en la **API de Claude** (Anthropic) y otra en **Deepgram**. Son de pago por uso.
+- Docker Desktop abierto (para el paso 3).
+- El CSV del equipo (paso 6) y una exportación nueva de contactos de GHL (paso 7).
+
+**Qué es cada cosa:**
+| Servicio | Para qué | Qué guarda |
+|---|---|---|
+| GitHub | Guardar el código | El código de la app (sin claves) |
+| Supabase | Base de datos y login | Leads, ventas, usuarios… |
+| Vercel | Poner la web en internet | Nada propio: lee de Supabase |
+| API de Claude (v2) | Analizar llamadas, coach, scoring | Nada: solo procesa lo que se le manda |
+| Deepgram (v2) | Pasar a texto las llamadas de GHL que GHL no transcribe | Nada: solo procesa el audio |
+
+**Idea clave:** la versión publicada **empieza limpia**. Los datos de prueba de tu ordenador **no se suben**: en la nube se crea la base de datos vacía, el proyecto Maestria, el equipo real y se suben los leads reales.
+
+---
+
+## Paso 1 · GitHub (guardar el código)
+
+1. Crea una cuenta en github.com.
+2. Crea un repositorio **privado** llamado `eternity` (sin README).
+3. Pásame la dirección del repositorio y yo subo el código desde tu ordenador (con tu permiso). No se sube ninguna clave: `.env.local` está excluido.
+
+## Paso 2 · Supabase (base de datos)
+
+1. Crea una cuenta en supabase.com y un proyecto nuevo:
+   - Nombre: `eternity`
+   - Contraseña de la base de datos: una larga; **guárdala en tu gestor de contraseñas**.
+   - Región: **East US** (cerca de Nueva York y del equipo). ⚠ comprobar el nombre exacto de la región.
+2. **Cierra el registro libre** (muy importante): Authentication → Providers / Sign In → desactiva **«Allow new users to sign up»**. Así solo entra quien crea el CEO o un director desde la app. ⚠ comprobar dónde está el interruptor en tu panel; el nombre sí es ese (documentación oficial de Supabase).
+3. Copia estas 3 cosas (Project Settings → API Keys / General) y guárdalas en tu gestor de contraseñas:
+   - **Project URL** (`https://xxxx.supabase.co`)
+   - **Publishable key** (`sb_publishable_…`)
+   - **Secret key** (`sb_secret_…`) → **nunca la compartas**.
+   - Y el **Project ref** (el código `xxxx` de la URL).
+
+## Paso 3 · Crear las tablas en la nube
+
+Esto lo hago yo contigo delante (necesita tu contraseña de la base de datos, que escribes tú):
+
+```bash
+cd "Proyecto dashboard/app"
+supabase login
+supabase link --project-ref TU_PROJECT_REF
+supabase db push --dry-run
+supabase db push
+```
+
+- `--dry-run` enseña qué va a crear sin tocar nada; luego `db push` lo crea de verdad (tablas, permisos cerrados y el espacio para los PDF).
+- ⚠ comprobar: la Supabase CLI de tu Mac es la 2.90.0; si algún comando cambia, se actualiza con `brew upgrade supabase`.
+
+## Paso 4 · Vercel (poner la web en internet)
+
+1. Crea una cuenta en vercel.com entrando **con tu cuenta de GitHub**.
+2. «Add New → Project» → elige el repositorio `eternity`.
+3. **Root Directory:** `app` (el código está en esa carpeta).
+4. **Environment Variables:** añade las 3 del paso 2 (los nombres están en `app/.env.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SECRET_KEY`
+   - `CLAVE_CIFRADO`: **nueva y obligatoria** para conectar GHL y Fathom. Genérala en la terminal con `openssl rand -base64 32`, pégala aquí y **guárdala también en tu gestor de contraseñas**: si se pierde o se cambia, hay que volver a pegar el token de GHL y las claves de Fathom. (Con ella se guardan cifrados en la base de datos.)
+   - Importante: `NEXT_PUBLIC_SUPABASE_URL` tiene que estar puesta **antes** de pulsar Deploy (la regla de seguridad que deja subir PDF y CSV a Supabase se escribe al compilar).
+   - (v2) `ANTHROPIC_API_KEY`: la clave de la API de Claude. Sin ella, la app funciona pero no analiza llamadas ni responde el coach (avisa en amarillo).
+   - (v2) `DEEPGRAM_API_KEY`: la clave de Deepgram. Sin ella, solo se analizan las llamadas de GHL que GHL ya haya transcrito.
+5. Pulsa **Deploy**. En unos minutos tendrás una dirección tipo `eternity-xxxx.vercel.app`.
+6. Recomendado: en Settings → Functions, región **Washington, D.C. (iad1)** para que esté junto a Supabase. ⚠ comprobar.
+
+## Paso 5 · Preparar el proyecto Maestria
+
+Crea el proyecto con sus 4 pipelines, columnas y productos (los de `app/scripts/proyecto-base.json`):
+
+```bash
+cd "Proyecto dashboard/app"
+node --env-file=.env.produccion scripts/preparar-proyecto.mjs
+node --env-file=.env.produccion scripts/preparar-proyecto.mjs --confirmar
+```
+
+- `.env.produccion` es un archivo que creas tú (copia de `.env.example` con las claves de la nube). Está excluido de GitHub.
+- La primera orden solo **simula**; la segunda lo crea.
+- Antes, pon en `proyecto-base.json` los precios de servicios para empresas y las columnas reales que falten.
+
+## Paso 6 · Crear el equipo real
+
+1. Haz un CSV `equipo.csv` con este formato (ejemplo con nombres inventados):
+
+```
+nombre,email,rol,proyecto
+Cristian Ortiz,cristian@tudominio.com,ceo,Maestria
+Nombre Director,director@tudominio.com,director,Maestria
+Nombre Closer,closer@tudominio.com,closer,Maestria
+Nombre Caller,caller@tudominio.com,caller,Maestria
+```
+
+2. Simula y crea:
+
+```bash
+node --env-file=.env.produccion scripts/crear-usuarios.mjs equipo.csv
+node --env-file=.env.produccion scripts/crear-usuarios.mjs equipo.csv --confirmar
+```
+
+3. Las contraseñas temporales quedan en `app/scripts/salida/` (excluido de GitHub). Pásaselas a cada persona por un canal privado y **borra el archivo después**.
+4. La primera vez que cada uno entra, hace el onboarding (nombre, teléfono, WhatsApp).
+5. En la app, Administración → Equipo: activa el acceso de administración a los directores si quieres.
+
+## Paso 7 · Subir los leads reales
+
+1. En GHL, exporta los contactos de nuevo (para que estén al día).
+2. Entra en la app como CEO → CRM → **Subir CSV** → revisa qué es cada columna → elige el pipeline → Importar.
+
+## Paso 8 · Conectar GHL
+
+Sigue **GUIA-GHL.md**: los webhooks de entrada (lead, cita, etapa), las entradas directas de las landings, el calendario de cada closer y las llamadas por API, y el workflow de avisos de los reportes.
+
+## Paso 8 bis · (v2) Fathom de cada closer
+
+Cada closer, en **Agendas → Llamadas → 04 Grabaciones → Cuentas → Añadir cuenta**: un nombre, su **API key de Fathom** (en Fathom: Settings → API Access) y el formato de título de sus reuniones (por ejemplo `{nombre cliente}: Sesión…`). Pulsa **Probar** y después **Sincronizar Fathom**.
+
+## Paso 8 ter · (v2) Configurar la IA
+
+Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto del negocio (qué vendéis, a quién, objeciones típicas) y los agentes que quieres. Sin esto la IA también funciona, pero analiza peor.
+
+## Paso 9 · Comprobar que todo va
+
+- [ ] Entras como CEO y ves Maestria con sus 4 pipelines y productos.
+- [ ] Un caller entra, hace el onboarding y ve sus leads.
+- [ ] Un lead de prueba de GHL llega solo (Administración → Integraciones → «Últimos eventos»).
+- [ ] Un reporte de fin de día manda el aviso por email/WhatsApp.
+- [ ] Desde el móvil se ve bien.
+- [ ] (v2) Una grabación de Fathom se une sola a su cita y, al rato, sale analizada en Agendas → Análisis.
+- [ ] (v2) «Traer llamadas de GHL» trae llamadas y salen transcritas y analizadas.
+- [ ] (v2) El coach responde («Coach IA» en la ficha de un lead).
+- [ ] (v2) Finanzas: una venta en cuotas aparece en «Pagos pendientes».
+
+## Paso 10 · (Opcional) Dominio propio
+
+En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.com` y sigue las instrucciones para el DNS de tu dominio. Después, actualiza la URL en los workflows de GHL.
+
+---
+
+## Seguridad: lo que ya está hecho y lo que depende de ti
+
+**Ya hecho en la app:** la base de datos no se puede leer con la clave pública (las 42 tablas con RLS); cada acción comprueba el rol o el permiso de la sección; límite de intentos en el login y en el webhook, contado en la base de datos (exacto aunque Vercel use varias copias del servidor); cabeceras de seguridad, con nonce por petición para los scripts; el token de GHL y las API keys de Fathom se guardan cifrados (`CLAVE_CIFRADO`); los PDF y CSV se suben directos a Supabase (Vercel no deja pasar más de 4,5 MB); los PDF solo se abren con enlace temporal; las claves de GHL, Fathom, Claude y Deepgram nunca llegan al navegador; a Claude no se le mandan emails ni teléfonos de los leads; los CSV que se exportan están protegidos contra fórmulas de Excel; permisos de cada sección por rol y por persona (Administración → Permisos); permisos de cada pipeline del CRM (como GHL); 340+ tests automáticos.
+
+**Depende de ti:**
+- Desactivar «Allow new users to sign up» en Supabase (paso 2).
+- No compartir nunca la **Secret key** ni la clave del webhook.
+- Dar de baja a quien deje el equipo: **solo el CEO** puede desactivar (Administración → Desactivar), porque afecta a todos los proyectos; un director puede quitarlo de su proyecto (sus leads quedan sin asignar).
+- Guardar `CLAVE_CIFRADO` en el gestor de contraseñas (paso 4).
+- ⚠ comprobar en tu plan de Supabase cómo funcionan las **copias de seguridad** y si el proyecto gratuito se pausa por inactividad; con uso diario no debería pasar, pero no lo he verificado.
+
+**Limitaciones conocidas:**
+- (v2) El análisis con IA y las transcripciones se hacen en segundo plano, **4 llamadas por vez** (en Vercel una función dura como mucho 300 s en el plan gratuito; documentación oficial de Vercel, «Configuring Maximum Duration»). Si hay muchas, se van haciendo en las siguientes sincronizaciones o con «Analizar pendientes».
+- (v2) Gasto de Claude y Deepgram: lo marca su uso. Mira el consumo en sus paneles los primeros días. ⚠ No medido con llamadas reales.
+
+## Si algo falla
+
+| Síntoma | Qué mirar |
+|---|---|
+| La web da error al entrar | Vercel → Deployments → Logs. Suele ser una variable mal copiada. |
+| «Email o contraseña incorrectos» con la contraseña buena | Que el usuario exista (paso 6). Un admin puede poner otra contraseña en Administración → Equipo. |
+| GHL no crea leads | Administración → Integraciones → «Últimos eventos». Si sale error, el mensaje dice qué falta. |
+| No llegan avisos de reportes | Administración → Proyecto → «Webhook de avisos» y el workflow de GHL (GUIA-GHL.md). |
+| (v2) Llamadas «En cola» que no avanzan | Que estén `ANTHROPIC_API_KEY` (y `DEEPGRAM_API_KEY`) en Vercel; después «Analizar pendientes» o «Reintentar». El motivo sale en cada llamada. |
+| (v2) «Fathom no acepta la API key» | La clave de esa cuenta: Cuentas → Editar → pegarla otra vez. |
+| (v2) «GHL no deja leer las llamadas» | Al token de GHL le falta el permiso `conversations/message.readonly` (GUIA-GHL.md, Parte 4). |
+| «Falta la variable CLAVE_CIFRADO» al guardar el token de GHL o una cuenta de Fathom | Ponerla en Vercel (paso 4) y volver a desplegar (Deployments → Redeploy). |
+| «Hay que volver a pegar el token de GHL / la API key de Fathom» | `CLAVE_CIFRADO` ha cambiado (o la clave se guardó antes de cifrar): pegar otra vez el token o la API key. |
+| No se pueden subir PDF (Links y recursos) o CSV (CRM) | `NEXT_PUBLIC_SUPABASE_URL` tiene que estar en Vercel **al compilar**: comprobarla y volver a desplegar. |
+
+Fuentes consultadas: [Supabase · General configuration](https://supabase.com/docs/guides/auth/general-configuration) · [Vercel · Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration) · [Fathom · List meetings](https://developers.fathom.ai/api-reference/meetings/list-meetings) · [Deepgram · Pre-recorded audio](https://developers.deepgram.com/docs/pre-recorded-audio).

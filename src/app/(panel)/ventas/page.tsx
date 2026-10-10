@@ -4,6 +4,7 @@ import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { dinero, fechaHora, rangoDe, type Periodo, ETIQUETA_ROL } from "@/lib/formato";
+import { cashDelPeriodo } from "@/lib/metricas";
 import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
 import { FilaVentaAcciones } from "./fila-acciones";
@@ -49,10 +50,24 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
     return { ...v, facturacion: Number(v.facturacion), cobrado, pendiente: Math.max(0, Number(v.facturacion) - cobrado) };
   });
 
+  // Cash collected como Finanzas (Cristian, 10 oct 2026): el dinero que entró DENTRO del periodo de las ventas
+  // de este vendedor (o de todos): lo cobrado al vender + cuotas cobradas en el periodo (aunque la venta sea de
+  // antes) − devoluciones del periodo. La columna «Cobrado» de cada venta sigue siendo todo lo cobrado de ella.
+  const [todasLasVentas, pagosPeriodo] = await Promise.all([
+    todas<{ id: string; fecha: string; cash_collected: number; devuelto: number | null; devuelto_en: string | null }>((a, b) => {
+      let q = db().from("ventas").select("id, fecha, cash_collected, devuelto, devuelto_en").eq("proyecto_id", proyecto.id);
+      if (vendedorId) q = q.eq("vendedor_id", vendedorId);
+      return q.order("id").range(a, b);
+    }),
+    todas<{ venta_id: string; fecha: string; importe: number }>((a, b) => {
+      let q = db().from("pagos").select("venta_id, fecha, importe, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", proyecto.id);
+      if (rango.desde) q = q.gte("fecha", rango.desde.toISOString());
+      if (rango.hasta) q = q.lt("fecha", rango.hasta.toISOString());
+      return q.order("id").range(a, b);
+    }),
+  ]);
   const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
-  // Cash neto: lo cobrado de estas ventas menos lo devuelto (como Finanzas y el Funnel). Lo pendiente y
-  // el máximo de una devolución siguen con lo cobrado bruto: una devolución no crea deuda.
-  const cobrado = ventas.reduce((s, v) => s + v.cobrado - Number(v.devuelto ?? 0), 0);
+  const cobrado = cashDelPeriodo(todasLasVentas, pagosPeriodo, rango);
   const pendiente = ventas.reduce((s, v) => s + v.pendiente, 0);
   const porProducto = Object.entries(
     ventas.reduce<Record<string, { n: number; f: number }>>((acc, v) => {
@@ -71,7 +86,7 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
         <Filtros vendedores={jefe ? gente.filter((g) => g.rol !== "ceo" && g.rol !== "director").map((g) => ({ id: g.id, nombre: g.nombre, rol: ETIQUETA_ROL[g.rol] })) : undefined} />
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <Kpi titulo="Facturación" valor={$(facturacion)} icono={DollarSign} tono="oro" destacado detalle="Valor de los contratos cerrados" />
-          <Kpi titulo="Cash collected" valor={$(cobrado)} icono={Wallet} tono="ok" detalle="Cobrado de estas ventas (con cuotas, menos devoluciones)" />
+          <Kpi titulo="Cash collected" valor={$(cobrado)} icono={Wallet} tono="ok" detalle="Dinero que entró en el periodo, como Finanzas: al vender + cuotas − devoluciones" />
           <Kpi titulo="Pendiente de cobro" valor={$(pendiente)} icono={Hourglass} tono="aviso" detalle="Reservas y cuotas por cobrar" />
           <Kpi titulo="Ventas" valor={ventas.length} icono={ShoppingCart} detalle={ventas.length ? `Ticket medio ${$(facturacion / ventas.length)}` : undefined} />
         </div>

@@ -23,11 +23,13 @@ export type Proyecto = {
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   color: string;
-  precall_columnas?: unknown; // H7: nombre, color y orden de las columnas de Pre-call
 };
 
-export type Pipeline = { id: string; proyecto_id: string; nombre: string; orden: number };
-export type Etapa = { id: string; pipeline_id: string; nombre: string; orden: number; color: string; estado_caller?: EstadoCaller | null }; // H7: columna unida a un estado
+// Paso 0: «Callers» y «Closers» son pipelines del equipo (uno de cada por proyecto)
+export type TipoPipeline = "normal" | "callers" | "closers";
+export type Pipeline = { id: string; proyecto_id: string; nombre: string; orden: number; tipo: TipoPipeline };
+// estado_caller: columna de «Callers» unida a un estado del lead · columna_cita: de «Closers», unida a Pre-call o Post-call
+export type Etapa = { id: string; pipeline_id: string; nombre: string; orden: number; color: string; estado_caller?: EstadoCaller | null; columna_cita?: string | null };
 
 export type Respuesta = { pregunta: string; respuesta: string };
 

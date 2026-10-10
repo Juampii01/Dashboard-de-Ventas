@@ -24,16 +24,13 @@ async function leadPermitido(leadId: string): Promise<{ lead: Lead; perfil: Perf
   return { lead, perfil, proyecto };
 }
 
-// Mueve la tarjeta del lead en el CRM según su nuevo estado (Paso H7): 1) `primero` (p. ej. la columna del
-// producto en Orgánico), 2) la columna unida a ese estado, 3) como antes, por nombre (`nombres`).
+// Mueve la tarjeta del lead en su pipeline de origen según su nuevo estado: 1) `primero` (p. ej. la columna del
+// producto en Orgánico), 2) por nombre (`nombres`), como antes del H7. En «Callers» lo mueve la base (Paso 0).
 async function moverAColumna(lead: Lead, estado: EstadoCaller, nombres: string[], primero: string[] = []) {
   if (!lead.pipeline_id) return;
-  const { data } = await db().from("etapas").select("id, nombre, estado_caller").eq("pipeline_id", lead.pipeline_id);
+  const { data } = await db().from("etapas").select("id, nombre").eq("pipeline_id", lead.pipeline_id);
   const etapas = data ?? [];
-  const destino =
-    etapas.find((e) => primero.includes(e.nombre.toLowerCase())) ??
-    etapas.find((e) => e.estado_caller === estado) ??
-    etapas.find((e) => nombres.includes(e.nombre.toLowerCase()));
+  const destino = etapas.find((e) => primero.includes(e.nombre.toLowerCase())) ?? etapas.find((e) => nombres.includes(e.nombre.toLowerCase()));
   if (destino && destino.id !== lead.etapa_id) await db().from("leads").update({ etapa_id: destino.id }).eq("id", lead.id);
 }
 
@@ -217,7 +214,7 @@ export async function cambiarEtapaLead(leadId: string, etapaId: string) {
     await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
     if (!esJefe(perfil)) throw new ErrorUsuario("Solo el director o el CEO mueven leads en el CRM.");
-    const { data: etapa } = await db().from("etapas").select("id, nombre, pipeline_id, pipelines!inner(proyecto_id)").eq("id", etapaId).eq("pipelines.proyecto_id", proyecto.id).maybeSingle();
+    const { data: etapa } = await db().from("etapas").select("id, nombre, pipeline_id, pipelines!inner(proyecto_id, tipo)").eq("id", etapaId).eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").maybeSingle();
     if (!etapa) throw new ErrorUsuario("Columna no encontrada.");
     await escribir(db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id), "leads");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: lead.id, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${etapa.nombre}»` });

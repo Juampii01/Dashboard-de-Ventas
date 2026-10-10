@@ -5,7 +5,7 @@ import { cargarBase } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
-import { dinero, rangoDe, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
+import { dinero, rangoDe, hoyEnZona, sumarDias, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Avatar, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
@@ -60,7 +60,16 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   // ---------- Objetivos ----------
   const datos = await cargarObjetivos(proyecto.id);
   const personas = base.gente.filter((g) => !("baja" in g && g.baja) && (g.rol === "caller" || g.rol === "closer" || g.rol === "director"));
-  const avances = calcularAvances(base, datos, personas, proyecto.zona_horaria);
+  // Pendiente 9 (10 oct 2026): ver el avance de un periodo pasado (?ver=AAAA-MM-DD; sin fecha, ahora)
+  const hoy = hoyEnZona(proyecto.zona_horaria);
+  const ver = typeof sp.ver === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.ver) && sp.ver <= hoy ? sp.ver : hoy;
+  const avances = calcularAvances(base, datos, personas, proyecto.zona_horaria, ver);
+  const finMesPasado = sumarDias(`${hoy.slice(0, 8)}01`, -1);
+  const saltos = [
+    { t: "Ahora", f: hoy },
+    { t: "Semana pasada", f: sumarDias(hoy, -7) },
+    { t: "Mes pasado", f: finMesPasado },
+  ];
   const delEquipo = avancesDelEquipo(base, datos, proyecto.zona_horaria);
   const actuales = vigentes(datos.filas, null);
   const nombre = new Map(base.gente.map((g) => [g.id, g.nombre]));
@@ -78,7 +87,15 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <BarrasObjetivos avances={delEquipo} dinero={$} sinNotaRol vacio="Pon un objetivo a «Directores (equipo entero)» y lo verá todo el equipo." />
         </Seccion>
 
-        <Seccion titulo="Avance de ahora (hoy, esta semana, este mes y lanzamientos en curso)">
+        <Seccion titulo={ver === hoy ? "Avance de ahora (hoy, esta semana, este mes y lanzamientos en curso)" : `Avance del ${ver} (ese día, su semana, su mes y los lanzamientos de entonces)`}>
+          <form className="mb-4 flex flex-wrap items-center gap-2 text-sm" action="/kpis">
+            <input type="hidden" name="vista" value="objetivos" />
+            {saltos.map((x) => (
+              <Link key={x.t} href={x.f === hoy ? "/kpis?vista=objetivos" : `/kpis?vista=objetivos&ver=${x.f}`} className={`rounded-full px-3 py-1 ${ver === x.f ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>{x.t}</Link>
+            ))}
+            <label className="flex items-center gap-1.5 text-texto-2">o el día <input type="date" name="ver" max={hoy} defaultValue={ver} className="campo w-auto py-1" aria-label="Ver el avance de este día" /></label>
+            <button className="btn-secundario px-2.5 py-1 text-xs">Ver</button>
+          </form>
           {personas.length === 0 ? (
             <Vacio icono={Target} texto="No hay callers, closers ni directores en este proyecto." />
           ) : (

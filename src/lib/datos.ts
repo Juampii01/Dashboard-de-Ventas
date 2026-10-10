@@ -16,15 +16,24 @@ export async function escribir<T extends { error: { message: string } | null }>(
 export async function todas<T>(
   consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
 ): Promise<T[]> {
+  // Paso G (10 oct 2026): las páginas de 1000 filas se piden de 8 en 8 a la vez (antes, de una en una).
+  // Mismas filas y en el mismo orden: se juntan por su número de página y se para en la primera incompleta.
   const out: T[] = [];
   const paso = 1000;
-  for (let i = 0; ; i += paso) {
-    const { data, error } = await consulta(i, i + paso - 1);
-    if (error) throw new Error(error.message);
-    out.push(...(data ?? []));
-    if (!data || data.length < paso) break;
+  const aLaVez = 8;
+  for (let ola = 0; ; ola += aLaVez) {
+    const paginas = await Promise.all(
+      Array.from({ length: aLaVez }, (_, k) => {
+        const i = (ola + k) * paso;
+        return consulta(i, i + paso - 1);
+      })
+    );
+    for (const { data, error } of paginas) {
+      if (error) throw new Error(error.message);
+      out.push(...(data ?? []));
+      if (!data || data.length < paso) return out;
+    }
   }
-  return out;
 }
 
 export async function equipo(proyectoId: string): Promise<Perfil[]> {

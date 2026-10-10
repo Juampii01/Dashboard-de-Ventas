@@ -14,7 +14,7 @@ if (!url.includes("127.0.0.1") && !url.includes("localhost")) {
 const db = createClient(url, key, { auth: { persistSession: false } });
 
 // Usuarios de PRUEBA (solo local). Contraseña común para todos.
-export const PASSWORD_PRUEBA = "Eternity-prueba-2026";
+export const PASSWORD_PRUEBA = "Test1234@"; // la que puso Cristian el 10 oct 2026
 const USUARIOS = [
   { email: "ceo@eternity.test", nombre: "CEO Prueba", rol: "ceo" },
   { email: "director@eternity.test", nombre: "Director Prueba", rol: "director", admin_activo: true },

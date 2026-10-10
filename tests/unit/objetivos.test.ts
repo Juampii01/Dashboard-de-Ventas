@@ -146,3 +146,17 @@ describe("Objetivo del equipo (H4)", () => {
     expect(eq.map((a) => [a.cifra, a.hecho, a.pct])).toEqual([["llamadas", 4, 50]]);
   });
 });
+
+describe("Periodos pasados (pendiente 9, 10 oct 2026)", () => {
+  it("la semana pasada cuenta sus llamadas y usa el objetivo que había entonces", () => {
+    const d = datos([
+      obj({ rol: "caller", cifra: "llamadas", valor: 5 }, "2026-10-01T12:00:00Z"),
+      obj({ rol: "caller", cifra: "llamadas", valor: 50 }, "2026-10-12T12:00:00Z"), // puesto esta semana: no vale para la pasada
+    ]);
+    const pasada = calcularAvances(base(), d, [carla], NY, "2026-10-07").get("carla")!;
+    const semana = pasada.find((a) => a.periodo === "semana")!;
+    expect(semana).toMatchObject({ etiqueta: "Semana del 2026-10-05", meta: 5, hecho: 1 }); // solo la del lunes 5
+    const ahora = calcularAvances(base(), d, [carla], NY).get("carla")!.find((a) => a.periodo === "semana")!;
+    expect(ahora).toMatchObject({ etiqueta: "Esta semana", meta: 50, hecho: 3 }); // sin fecha = hoy, como antes
+  });
+});

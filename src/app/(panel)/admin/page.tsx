@@ -106,7 +106,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (tab === "entradas") {
     const [{ data: en }, { data: pl }] = await Promise.all([
       db().from("entradas").select("*").eq("proyecto_id", proyecto.id).order("creado_en"),
-      db().from("pipelines").select("id, nombre, etapas(id, nombre, orden)").eq("proyecto_id", proyecto.id).order("orden"),
+      db().from("pipelines").select("id, nombre, etapas(id, nombre, orden)").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
     ]);
     entradas = en ?? [];
     pipes = ((pl ?? []) as { id: string; nombre: string; etapas: { id: string; nombre: string; orden: number }[] }[]).map((p) => ({ ...p, etapas: [...p.etapas].sort((a, b) => a.orden - b.orden) }));

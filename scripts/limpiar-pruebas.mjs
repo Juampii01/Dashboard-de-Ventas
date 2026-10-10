@@ -70,7 +70,7 @@ await hacer("Leads de prueba (email *.test)", await contar("leads", (q) => q.lik
 
 // 5. Columnas que no son de la configuración base
 for (const proyecto of reales) {
-  const { data: pipelines } = await db.from("pipelines").select("id, nombre, etapas(id, nombre, orden)").eq("proyecto_id", proyecto.id);
+  const { data: pipelines } = await db.from("pipelines").select("id, nombre, etapas(id, nombre, orden)").eq("proyecto_id", proyecto.id).eq("tipo", "normal");
   for (const p of pipelines) {
     const base = BASE.pipelines.find((b) => b.nombre === p.nombre);
     if (!base) {
@@ -92,7 +92,7 @@ await hacer("Leads con asignaciones o estados de prueba (se dejan como nuevos)",
   db.from("leads").update({ caller_id: null, closer_id: null, estado_caller: "nuevo", llamar_en: null }).or("caller_id.not.is.null,closer_id.not.is.null,estado_caller.neq.nuevo,llamar_en.not.is.null")
 );
 for (const proyecto of reales) {
-  const { data: pipelines } = await db.from("pipelines").select("id, nombre, etapas(id, orden)").eq("proyecto_id", proyecto.id);
+  const { data: pipelines } = await db.from("pipelines").select("id, nombre, etapas(id, orden)").eq("proyecto_id", proyecto.id).eq("tipo", "normal");
   for (const p of pipelines) {
     const primera = [...p.etapas].sort((a, b) => a.orden - b.orden)[0];
     if (!primera) continue;
