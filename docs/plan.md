@@ -223,7 +223,7 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 | Paso 0 pipelines «Callers» y «Closers» como GHL, con permisos por pipeline | `6a887c6` |
 | Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
 | 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
-| 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | (commit de hoy) |
+| 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | `f102dce` |
 
 **Comprobado el 11 oct (tras los bloques 1 y 2):** 390 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 26 migraciones (11 oct: `horarios_calendario` y `reparto_porcentaje`) · 42 tablas, todas con RLS · nada subido a la nube.
 
