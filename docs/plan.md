@@ -8,7 +8,7 @@
 
 **Resumen:** la v1 y la v2 están **terminadas en local y probadas**, sin publicar. Los 36 arreglos de la auditoría están hechos. El 10 oct se hicieron las peticiones de Cristian del Paso H (H1-H8), todo con commit (el último, `adb7080`).
 
-**Siguiente paso:** Cristian prueba el Paso 0 y los pendientes 2-9 (hechos en local el 10 oct, noche) → **commit** cuando él lo diga → su revisión completa (Paso A; también los arrastres con su ratón).
+**Siguiente paso:** la revisión completa de Cristian (Paso A; también los arrastres con su ratón). Paso 0 y pendientes 2-9 guardados en el commit `6a887c6`.
 
 **Pendiente de que decida Cristian:**
 | # | Qué |
@@ -26,10 +26,10 @@
 **Estado comprobado (10 oct 2026, noche):**
 | Qué | Estado |
 |---|---|
-| Código | **24 commits** en `main` de `app/` (último `adb7080`, H5-H8) + **sin commit:** Paso 0 y pendientes 2-9 (10 oct, noche). Rama `diseno-glass` borrada. `next build` correcto. **No está subido a ningún sitio** |
+| Código | **26 commits** en `main` de `app/` (`adb7080` H5-H8, `6a887c6` Paso 0 y pendientes 2-9, y este plan al día). Rama `diseno-glass` borrada. `next build` correcto. **No está subido a ningún sitio** |
 | Tests | **343 de 343** pasan (`npm test` en `app/`, 44 archivos) · tsc y eslint limpios · `npm audit` de producción: 0. Medición de velocidad aparte: `MEDIR=1` |
 | Base de datos local | **22 migraciones** · **42 tablas, todas con RLS** |
-| Datos locales | **Maestria** (datos reales, solo mirar): 893 leads, 1 venta, 2 citas (del 9 oct), sin objetivos · **Proyecto Prueba** (donde Claude prueba): 3 leads, 1 venta, miembros Ana Closer y CEO Prueba |
+| Datos locales | **Maestria** (datos reales, solo mirar): 893 leads, sin ventas, citas ni objetivos (limpia de pruebas) · **Proyecto Prueba** (donde Claude prueba): 3 leads, 1 venta, miembros Ana Closer y CEO Prueba |
 | Nube y GHL | Nada creado (sin GitHub, Supabase ni Vercel). GHL sin conectar |
 
 **Cómo entrar en local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (a veces lo tiene arrancado otro chat; entonces Claude prueba con Playwright contra el 3100). Versión compilada: `npm run build` en `app/` + servidor `eternity-produccion` → http://localhost:3200 (ambos en `PROYECTOS/GENERAL/.claude/launch.json`).
@@ -114,7 +114,7 @@ Equipo: 6 callers, 2 closers, 2 directores y el CEO. Productos de Maestria: Low 
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
-### Paso 0 · Pipelines «Callers» y «Closers» en el CRM, como GHL ✅ (hecho en local el 10 oct 2026, noche; sin commit)
+### Paso 0 · Pipelines «Callers» y «Closers» en el CRM, como GHL ✅ (10 oct 2026, noche; commit `6a887c6`)
 Pedido tal cual: *«no debería ser "columna de callers", debería ser otro pipeline que diga "Callers"»*.
 - **Cómo lo hace GHL** (comprobado en su ayuda oficial, [Pipeline Permissions](https://help.gohighlevel.com/support/solutions/articles/155000006523-pipeline-permissions) y [User Permissions, Assigned Data](https://help.gohighlevel.com/support/solutions/articles/48000982601), y en 2 blogs): una persona puede estar en **varios pipelines a la vez** (en cada uno es una «oportunidad» con su propia columna) · cada pipeline tiene **permisos**: compartir con todos / con algunos / todos menos algunos, y nivel **Solo ver** (mueve tarjetas, no toca columnas), **Editar** (también columnas y el pipeline) o **Sin acceso** (ni lo ve); el admin siempre todo · con «solo sus datos», cada usuario ve solo las oportunidades asignadas a él.
 - **Decisiones de Cristian (10 oct 2026):**
@@ -177,7 +177,7 @@ Pedido tal cual: *«no debería ser "columna de callers", debería ser otro pipe
 ### Paso F · Opcional ⬜
 - [ ] Limpiar la copia local (`limpiar-pruebas.mjs --confirmar`), solo con permiso. No hace falta para publicar (la nube empieza limpia). Añadirle antes una copia de seguridad.
 
-### Paso G · Que las cifras vayan rápido con muchos leads ✅ (10 oct 2026, noche; sin commit)
+### Paso G · Que las cifras vayan rápido con muchos leads ✅ (10 oct 2026, noche; commit `6a887c6`)
 Cristian: «Ahora, dentro del 0-9». **Lo que medí antes de tocar nada** (30.000 leads, `MEDIR=1`): calcular es rápido (Funnel 167 ms, KPIs 148 ms); **lo lento era cargar** (Funnel 2.774 ms, Agendas 787, Finanzas 759). Por eso no se pasó el cálculo a SQL (mucho trabajo y riesgo de que las cifras cambien) y se arregló la carga:
 - [x] `todas()` (`src/lib/datos.ts`) pide las páginas de 1000 filas **de 8 en 8 a la vez** (antes, una detrás de otra). Mismas filas y mismo orden: comprobado con 60.000 actividades, idénticas, alternando 3 veces: ~1,9 s → ~0,55 s.
 - [x] Migración `20261013100000_indices_carga.sql`: índices (proyecto, id) en leads, actividades, citas y ventas (antes la base reordenaba todo el proyecto en cada página). No cambia datos.
@@ -192,7 +192,7 @@ Cristian: «Ahora, dentro del 0-9». **Lo que medí antes de tocar nada** (30.00
 
 ## 5. Datos de prueba que quedan (no se borra nada sin permiso de Cristian)
 - **Limpieza del 10 oct (noche), aprobada por Cristian:** borrados en Maestria los 3 leads «Prueba» (con su cita), las 3 citas del 10 oct de Carla y Ana y el objetivo «Agendas diario 3»; en Proyecto Prueba el gasto de 150,50 €, el cambio 0,92, «Cliente Prueba» (con su venta), la nota de seguimiento, la cuenta «Fathom prueba», la configuración de IA, la grabación + análisis «PRUEBA», los 3 objetivos y la línea «cita confirmada»; los 67 registros de Playwright (65 + 2 de ese día).
-- **Quedan (no estaban en la lista):** en Maestria (leads reales), Lázaro sigue «agendado» con Ana y con 11 líneas de historial del 10 oct, y Ruben Torresdey con 2 líneas del 10 oct (su «vendido» es de la venta del 9 oct); en Proyecto Prueba, sus 3 leads (test, PRUEBA Subida CSV, ana), la venta de 1000 € de «ana» (a nombre del CEO, con 300 € devueltos), la cuenta «Todo», categorías y 3 pasos de onboarding de ejemplo.
+- **Quedan (no estaban en la lista):** ~~Lázaro y Ruben Torresdey~~ ✅ limpiados también (Cristian, 10 oct): como recién importados (Nuevo, sin closer ni estrellas; se quedan la importación y la asignación a Carla), borrados su historial de prueba (20 líneas), sus citas y la venta de prueba de Ruben (Mentoría grupal, reserva) con su plazo; en Proyecto Prueba, sus 3 leads (test, PRUEBA Subida CSV, ana), la venta de 1000 € de «ana» (a nombre del CEO, con 300 € devueltos), la cuenta «Todo», categorías y 3 pasos de onboarding de ejemplo.
 
 ## 6. Riesgos y avisos
 - **Volumen:** con 30.000 leads el Funnel carga en ~1 s en local (Paso G). En la nube cada página es un viaje por internet: sin medir; si fuese lento, el siguiente paso es traer los datos con una sola llamada a la base.
