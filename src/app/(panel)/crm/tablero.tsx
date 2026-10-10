@@ -198,7 +198,7 @@ export function TableroCrm({
       {/* Barra de herramientas */}
       <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
         <div className="relative min-w-60 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
         <label className="flex items-center gap-2 px-2 text-sm text-texto-2">
@@ -611,7 +611,7 @@ function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: Pipelin
             <div className="border-b border-borde bg-panel-2 px-3 py-2 text-xs font-medium">{vista.filas} filas · {vista.columnas.length} columnas · ¿qué es cada columna?</div>
             <div className="max-h-72 divide-y divide-borde overflow-y-auto">
               {vista.columnas.map((c) => (
-                <div key={c} className="grid grid-cols-[1fr_200px] items-center gap-3 px-3 py-2">
+                <div key={c} className="grid grid-cols-[minmax(0,1fr)_200px] items-center gap-3 px-3 py-2">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium" title={c}>{c}</div>
                     <div className="truncate text-xs text-texto-3">Ej: {vista.ejemplo[c] || "—"}</div>

@@ -36,7 +36,7 @@ export function TablaPermisos({ secciones, permitidos }: { secciones: { v: strin
                         aria-label={`${s.t} para ${r.t.toLowerCase()}`}
                         disabled={pendiente}
                         onClick={() => ejecutar(() => guardarPermisoSeccion(r.v, s.v, !on), `${s.t}: ${on ? "quitado a" : "abierto a"} ${r.t.toLowerCase()}`)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${on ? "bg-ok" : "bg-panel-2 ring-1 ring-borde"}`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${on ? "bg-ok" : "bg-apagado"}`}
                       >
                         <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
                       </button>

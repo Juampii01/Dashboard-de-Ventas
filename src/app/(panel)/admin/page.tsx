@@ -114,7 +114,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         </div>
 
         {tab === "equipo" && (
-          <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Seccion titulo={`Equipo de ${proyecto.nombre} · ${gente.length} personas`}>
               <div className="-mx-4 overflow-x-auto sm:-mx-5">
                 <table className="tabla">
@@ -195,7 +195,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         )}
 
         {tab === "entradas" && (
-          <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-5">
               {entradas.length === 0 && (
                 <Seccion titulo="Entradas">

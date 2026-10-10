@@ -98,7 +98,7 @@ export function TableroCaller({
     <div className="space-y-3">
       <div className="tarjeta flex flex-wrap items-center gap-3 p-2.5">
         <div className="relative min-w-60 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o teléfono…" className="campo pl-9" />
         </div>
         <p className="text-xs text-texto-3">Al soltar en «Llamar luego», «Agendado», «No interesa» o «Vendido» te pedimos los datos que faltan.</p>

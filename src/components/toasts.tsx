@@ -31,7 +31,7 @@ export function ProveedorToasts({ children }: { children: ReactNode }) {
             key={t.id}
             role={t.tipo === "error" ? "alert" : "status"}
             className={`pointer-events-auto flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-panel ${
-              t.tipo === "ok" ? "border-ok/30 bg-panel text-texto" : "border-mal/40 bg-mal-suave text-mal"
+              t.tipo === "ok" ? "vidrio border-ok/30 text-texto" : "border-mal/40 bg-mal-suave text-mal"
             }`}
           >
             {t.tipo === "ok" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-ok" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}

@@ -87,7 +87,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         }
       />
       <Contenido>
-        <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-5">
             <Seccion titulo="Respuestas del formulario">
               {lead.respuestas.length === 0 ? (

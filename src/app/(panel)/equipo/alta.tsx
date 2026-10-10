@@ -1,5 +1,6 @@
 "use client";
 
+import { Portal } from "@/components/portal";
 import { useState } from "react";
 import { Check, UserPlus, Briefcase, PieChart, KeyRound, Shield, CircleCheck, Plus, Users, User, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
@@ -29,7 +30,7 @@ export function AltaMiembro({ areas, puestos, productos, comisionesRol, rolesQue
   return (
     <>
       <button className="btn-primario" onClick={() => setAbierto(true)}><Plus className="h-4 w-4" /> Dar de alta un miembro</button>
-      {abierto && <Asistente {...{ areas, puestos, productos, comisionesRol, rolesQuePuedoDar, puedeComision, moneda }} onCerrar={() => setAbierto(false)} />}
+      {abierto && <Portal><Asistente {...{ areas, puestos, productos, comisionesRol, rolesQuePuedoDar, puedeComision, moneda }} onCerrar={() => setAbierto(false)} /></Portal>}
     </>
   );
 }
@@ -86,8 +87,8 @@ function Asistente({ areas, puestos, productos, comisionesRol, rolesQuePuedoDar,
   const aviso = faltaPaso(paso);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-6" role="dialog" aria-modal="true" aria-label="Alta de miembro">
-      <div className="tarjeta flex max-h-full w-full max-w-6xl flex-col overflow-hidden lg:flex-row">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-2 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Alta de miembro">
+      <div className="tarjeta ventana flex max-h-full w-full max-w-6xl flex-col overflow-hidden lg:flex-row">
         {/* Pasos */}
         <aside className="hidden w-72 shrink-0 border-r border-borde p-5 lg:block">
           <div className="titulo-seccion text-oro">Alta de miembro</div>

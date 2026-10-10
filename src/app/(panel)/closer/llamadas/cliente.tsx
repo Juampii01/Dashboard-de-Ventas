@@ -135,7 +135,7 @@ export function BuscadorUrl({ placeholder }: { placeholder: string }) {
   };
   return (
     <form className="relative min-w-56 flex-1" onSubmit={(e) => { e.preventDefault(); aplicar(); }}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
       <input value={q} onChange={(e) => setQ(e.target.value)} onBlur={() => q !== (params.get("q") ?? "") && aplicar()} placeholder={placeholder} className="campo pl-9" aria-label="Buscar" />
     </form>
   );

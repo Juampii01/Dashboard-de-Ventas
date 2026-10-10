@@ -79,7 +79,7 @@ export function BarraLateral({
         <div className="titulo-seccion mb-2 px-1">Proyecto</div>
         <div className="relative">
           <span
-            className="pointer-events-none absolute left-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md"
+            className="pointer-events-none absolute left-2.5 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md"
             style={{ background: proyecto.color }}
           >
             <Image src="/marca/maestria-blanco.png" alt="" width={16} height={15} style={{ height: "auto" }} />
@@ -102,7 +102,7 @@ export function BarraLateral({
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
+          <ChevronDown className="pointer-events-none absolute right-2.5 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
         </div>
       </div>
 
@@ -119,9 +119,9 @@ export function BarraLateral({
                     <Link
                       href={it.href}
                       onClick={() => setAbierto(false)}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 ${
                         activo
-                          ? "bg-primario-suave font-medium text-primario ring-1 ring-primario/25"
+                          ? "bg-primario font-medium text-white shadow-[0_6px_18px_-8px_rgb(43_89_209/0.7)]"
                           : "text-texto-2 hover:bg-panel-2 hover:text-texto"
                       }`}
                     >
@@ -173,14 +173,14 @@ export function BarraLateral({
     <>
       <button
         onClick={() => setAbierto(true)}
-        className="fixed left-3 top-3 z-30 rounded-lg border border-borde bg-panel p-2 lg:hidden"
+        className="vidrio fixed left-3 top-3 z-30 rounded-xl border border-borde p-2 lg:hidden"
         aria-label="Abrir menú"
       >
         <Menu className="h-5 w-5" />
       </button>
-      {abierto && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setAbierto(false)} />}
+      {abierto && <div className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setAbierto(false)} />}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-borde bg-panel transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`vidrio fixed inset-y-0 left-0 z-40 w-64 border-r border-borde transition-transform lg:sticky lg:top-3 lg:m-3 lg:h-[calc(100vh-1.5rem)] lg:translate-x-0 lg:rounded-[26px] lg:border ${
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >

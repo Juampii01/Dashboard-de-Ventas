@@ -65,7 +65,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
         }
       />
       <Contenido>
-        <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
           <Seccion titulo={verInactivos ? "Personas inactivas" : "Organigrama"}>
             <div className="grid gap-4 md:grid-cols-2">
               {eq.areas.map((a) => {

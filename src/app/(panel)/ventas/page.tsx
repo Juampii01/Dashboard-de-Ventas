@@ -51,7 +51,9 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
   });
 
   const facturacion = ventas.reduce((s, v) => s + v.facturacion, 0);
-  const cobrado = ventas.reduce((s, v) => s + v.cobrado, 0);
+  // Cash neto: lo cobrado de estas ventas menos lo devuelto (como Finanzas y el Funnel). Lo pendiente y
+  // el máximo de una devolución siguen con lo cobrado bruto: una devolución no crea deuda.
+  const cobrado = ventas.reduce((s, v) => s + v.cobrado - Number(v.devuelto ?? 0), 0);
   const pendiente = ventas.reduce((s, v) => s + v.pendiente, 0);
   const porProducto = Object.entries(
     ventas.reduce<Record<string, { n: number; f: number }>>((acc, v) => {
@@ -70,12 +72,12 @@ export default async function VentasPage({ searchParams }: PageProps<"/ventas">)
         <Filtros vendedores={jefe ? gente.filter((g) => g.rol !== "ceo" && g.rol !== "director").map((g) => ({ id: g.id, nombre: g.nombre, rol: ETIQUETA_ROL[g.rol] })) : undefined} />
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <Kpi titulo="Facturación" valor={$(facturacion)} icono={DollarSign} tono="oro" destacado detalle="Valor de los contratos cerrados" />
-          <Kpi titulo="Cash collected" valor={$(cobrado)} icono={Wallet} tono="ok" detalle="Cobrado de estas ventas (incluye cuotas)" />
+          <Kpi titulo="Cash collected" valor={$(cobrado)} icono={Wallet} tono="ok" detalle="Cobrado de estas ventas (con cuotas, menos devoluciones)" />
           <Kpi titulo="Pendiente de cobro" valor={$(pendiente)} icono={Hourglass} tono="aviso" detalle="Reservas y cuotas por cobrar" />
           <Kpi titulo="Ventas" valor={ventas.length} icono={ShoppingCart} detalle={ventas.length ? `Ticket medio ${$(facturacion / ventas.length)}` : undefined} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
           <Seccion titulo="Ventas registradas">
             {ventas.length === 0 ? (
               <Vacio icono={Receipt} texto="No hay ventas en este periodo." />

@@ -3,17 +3,20 @@
 /* Tema por clase: <html class="dark"> */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---------- Tokens: tema claro ---------- */
+/* ---------- Tokens: tema claro (glass estilo iOS, colores de marca) ---------- */
 :root {
-  --fondo: #f3f6fb;
-  --fondo-2: #e9eef8;
-  --panel: #ffffff;
-  --panel-2: #f7f9fd;
-  --borde: #e1e8f3;
-  --borde-fuerte: #cdd7e8;
+  --fondo: #eef2f9;
+  --fondo-2: #e4eaf5;
+  /* Superficies de vidrio: translúcidas; el desenfoque lo pone .tarjeta / .vidrio */
+  --panel: rgb(255 255 255 / 0.55);
+  --panel-2: rgb(255 255 255 / 0.45);
+  --borde: rgb(15 26 51 / 0.09);
+  --borde-fuerte: rgb(15 26 51 / 0.16);
+  --brillo: rgb(255 255 255 / 0.75); /* filo de luz arriba del vidrio */
+  --apagado: rgb(110 120 145 / 0.38); /* interruptor apagado (como en iOS: gris visible) */
   --texto: #0f1a33;
-  --texto-2: #4a5878;
-  --texto-3: #7d8aa6;
+  --texto-2: #46546f;
+  --texto-3: #66738f; /* antes #7d8aa6: más oscuro para llegar a 4,5:1 sobre el vidrio */
   --primario: #2b59d1;
   --primario-2: #3f6ee6;
   --primario-suave: #e6edfd;
@@ -26,21 +29,24 @@
   --aviso: #c46a08;
   --aviso-suave: #fdf0e1;
   --morado: #7c4ddb;
-  --sombra: 0 1px 2px rgb(15 26 51 / 0.04), 0 4px 16px rgb(15 26 51 / 0.05);
+  --sombra: 0 1px 2px rgb(15 26 51 / 0.04), 0 8px 32px rgb(15 26 51 / 0.08);
   --marca-eternity: #7b1a22;
+  --desenfoque: 30px;
 }
 
-/* ---------- Tokens: tema oscuro (azul profundo, sin brillos) ---------- */
+/* ---------- Tokens: tema oscuro (glass sobre azul profundo) ---------- */
 .dark {
-  --fondo: #070c1c;
+  --fondo: #060a18;
   --fondo-2: #0b1328;
-  --panel: #0d1630;
-  --panel-2: #111c3b;
-  --borde: #1b2a52;
-  --borde-fuerte: #263a6d;
-  --texto: #e8eefc;
-  --texto-2: #a8b6d8;
-  --texto-3: #6f80a8;
+  --panel: rgb(22 32 64 / 0.48);
+  --panel-2: rgb(40 54 100 / 0.4);
+  --borde: rgb(255 255 255 / 0.09);
+  --borde-fuerte: rgb(255 255 255 / 0.16);
+  --brillo: rgb(255 255 255 / 0.08);
+  --apagado: rgb(255 255 255 / 0.18);
+  --texto: #eef2fd;
+  --texto-2: #b3c0de;
+  --texto-3: #8392b8; /* antes #6f80a8: más claro para llegar a 4,5:1 */
   --primario: #4f7cf0;
   --primario-2: #6a92f7;
   --primario-suave: #15275a;
@@ -53,7 +59,7 @@
   --aviso: #f0a24a;
   --aviso-suave: #2c1d0d;
   --morado: #a07cf5;
-  --sombra: 0 1px 0 rgb(255 255 255 / 0.02) inset, 0 8px 24px rgb(0 0 0 / 0.25);
+  --sombra: 0 10px 40px rgb(0 0 0 / 0.35);
 }
 
 @theme inline {
@@ -79,6 +85,7 @@
   --color-aviso-suave: var(--aviso-suave);
   --color-morado: var(--morado);
   --color-eternity: var(--marca-eternity);
+  --color-apagado: var(--apagado);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --shadow-panel: var(--sombra);
@@ -90,22 +97,51 @@ body {
   color: var(--texto);
 }
 
+/* En Apple se usa la letra del sistema (SF Pro), como en iOS; en el resto, Geist */
 body {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Fondo del tema oscuro: un degradado muy suave, nada chillón */
-.dark body {
+/* Fondo con luz de color de marca (azul Maestria y granate Eternity) para que el vidrio se note */
+body {
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgb(43 89 209 / 0.12), transparent 60%),
+    radial-gradient(800px 640px at 10% 0%, rgb(43 89 209 / 0.3), transparent 62%),
+    radial-gradient(760px 600px at 100% 15%, rgb(123 26 34 / 0.22), transparent 62%),
+    radial-gradient(900px 700px at 55% 105%, rgb(99 132 230 / 0.26), transparent 60%),
+    radial-gradient(500px 400px at 40% 45%, rgb(201 138 18 / 0.08), transparent 70%),
     var(--fondo);
   background-attachment: fixed;
+}
+.dark body {
+  background:
+    radial-gradient(800px 640px at 10% 0%, rgb(63 110 230 / 0.34), transparent 62%),
+    radial-gradient(760px 600px at 100% 15%, rgb(170 40 55 / 0.32), transparent 62%),
+    radial-gradient(900px 700px at 55% 105%, rgb(63 110 230 / 0.24), transparent 60%),
+    var(--fondo);
+  background-attachment: fixed;
+}
+
+/* Vidrio: translúcido + desenfoque + filo de luz arriba (estilo iOS). @utility para poder usarlo con @apply */
+@utility vidrio {
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(var(--desenfoque)) saturate(180%);
+  backdrop-filter: blur(var(--desenfoque)) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--brillo), var(--sombra);
+}
+
+/* Ventanas (encima del fondo oscurecido): vidrio casi opaco, como las hojas de iOS */
+.ventana {
+  --panel: rgb(255 255 255 / 0.88);
+}
+.dark .ventana {
+  --panel: rgb(20 30 60 / 0.85);
 }
 
 /* ---------- Piezas reutilizables ---------- */
 @layer components {
   .tarjeta {
-    @apply rounded-xl border border-borde bg-panel shadow-panel;
+    @apply vidrio rounded-[22px] border border-borde;
   }
   .titulo-seccion {
     @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-texto-2;
@@ -114,16 +150,16 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primario {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 bg-primario text-white hover:bg-primario-2;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 bg-primario text-white shadow-[0_6px_20px_-6px_rgb(43_89_209/0.6)] hover:bg-primario-2;
   }
   .btn-secundario {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border border-borde bg-panel text-texto hover:bg-panel-2;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 vidrio border border-borde text-texto hover:bg-panel-2;
   }
   .btn-peligro {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border border-mal/30 bg-mal-suave text-mal hover:bg-mal/15;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 border border-mal/30 bg-mal-suave text-mal hover:bg-mal/15;
   }
   .campo {
-    @apply w-full rounded-lg border border-borde bg-panel-2 px-3 py-2 text-sm text-texto outline-none placeholder:text-texto-3 focus:border-primario focus:ring-2 focus:ring-primario/20;
+    @apply w-full rounded-xl border border-borde bg-panel-2 px-3 py-2 text-sm text-texto outline-none backdrop-blur-md transition-colors placeholder:text-texto-3 focus:border-primario focus:ring-4 focus:ring-primario/15;
   }
   .etiqueta-campo {
     @apply mb-1 block text-xs font-medium text-texto-2;
@@ -153,4 +189,14 @@ body {
   background: var(--borde-fuerte);
   border-radius: 999px;
   border: 2px solid var(--fondo);
+}
+
+/* Accesibilidad: quien pide menos transparencia (ajuste del sistema) ve superficies sólidas */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --panel: #ffffff; --panel-2: #f7f9fd; }
+  .dark { --panel: #101a38; --panel-2: #16224a; }
+  .vidrio, .tarjeta { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
