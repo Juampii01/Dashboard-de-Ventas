@@ -7,7 +7,9 @@ import { getSesion } from "@/lib/auth";
 import { db } from "@/lib/datos";
 import { preguntasDe, rolDeReporte, tasasCloser } from "@/lib/reportes";
 import { enviarAviso } from "@/lib/avisos";
-import { hoyEnZona } from "@/lib/formato";
+import { ETIQUETA_ROL, fecha as fmtFecha, hoyEnZona } from "@/lib/formato";
+import { urlApp } from "@/lib/email";
+import { plantillaEmail } from "@/lib/plantilla-email";
 
 export async function enviarReporte(_prev: unknown, formData: FormData) {
   // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
@@ -47,6 +49,20 @@ export async function enviarReporte(_prev: unknown, formData: FormData) {
       ...preguntas.map((p) => `${p.texto.replace(/[¿?]/g, "")}: ${respuestas[p.clave]}`),
       ...(rol === "closer" ? [`Tasa de agendamiento: ${tasasCloser(respuestas).agendamiento} · Tasa de cierre: ${tasasCloser(respuestas).cierre}`] : []),
     ].join("\n");
+    // El mismo reporte con el diseño glass de la app (Cristian, 11 oct 2026)
+    const html = plantillaEmail({
+      urlBase: urlApp(),
+      titulo: `Reporte de ${perfil.nombre}`,
+      intro: `${ETIQUETA_ROL[rol]} · ${fmtFecha(`${fecha}T12:00:00Z`, proyecto)} · ${proyecto.nombre}`,
+      filas: [
+        ...preguntas.map((p): [string, string] => [p.texto.replace(/[¿?]/g, ""), String(respuestas[p.clave])]),
+        ...(rol === "closer"
+          ? ([["Tasa de agendamiento", String(tasasCloser(respuestas).agendamiento)], ["Tasa de cierre", String(tasasCloser(respuestas).cierre)]] as [string, string][])
+          : []),
+      ],
+      boton: { texto: "Ver reportes", url: `${urlApp()}/reportes` },
+      pie: "Aviso automático de la app de ventas de Eternity.",
+    });
     const aviso = await enviarAviso(proyecto, "reporte_fin_de_dia", {
       texto,
       persona: perfil.nombre,
@@ -54,7 +70,7 @@ export async function enviarReporte(_prev: unknown, formData: FormData) {
       fecha,
       respuestas: preguntas.map((p) => ({ pregunta: p.texto, respuesta: respuestas[p.clave] })),
       ...(rol === "closer" ? { tasa_agendamiento: tasasCloser(respuestas).agendamiento, tasa_cierre: tasasCloser(respuestas).cierre } : {}),
-    });
+    }, html);
     revalidatePath("/reportes");
     return {
       ok: aviso.enviado

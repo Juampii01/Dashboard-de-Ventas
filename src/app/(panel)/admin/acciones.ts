@@ -13,6 +13,7 @@ import type { RolPermiso } from "@/lib/permisos-constantes";
 import { ajustesValidos, type AjustesCalendario } from "@/lib/disponibilidad";
 import type { Rol } from "@/lib/tipos";
 import { enviarEmail, urlApp } from "@/lib/email";
+import { plantillaEmail } from "@/lib/plantilla-email";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
 type Res = { ok?: string; error?: string } | null;
@@ -95,13 +96,17 @@ export async function enviarEnlaceMagico(perfilId: string) {
       para: [objetivo.email],
       asunto: `Tu enlace para entrar en ${proyecto.nombre} · Eternity`,
       texto: `Hola ${objetivo.nombre}:\n\nPulsa este enlace para entrar en la app de ventas de Eternity (caduca en 1 hora y solo vale una vez):\n\n${enlace}\n\nSi no lo has pedido tú, ignora este email.`,
-      html: `<p>Hola ${escaparHtml(objetivo.nombre)}:</p><p>Pulsa el botón para entrar en la app de ventas de Eternity. Caduca en 1 hora y solo vale una vez.</p><p><a href="${enlace}" style="display:inline-block;padding:12px 20px;background:#7a1f2b;color:#fff;border-radius:8px;text-decoration:none">Entrar en Eternity</a></p><p style="color:#666;font-size:13px">Si no lo has pedido tú, ignora este email.</p>`,
+      html: plantillaEmail({
+        urlBase: urlApp(),
+        titulo: "Tu enlace para entrar",
+        intro: `Hola ${objetivo.nombre}: pulsa el botón para entrar en la app de ventas de Eternity. Caduca en 1 hora y solo vale una vez.`,
+        boton: { texto: "Entrar en Eternity", url: enlace },
+        pie: "Si no lo has pedido tú, ignora este email.",
+      }),
     });
     if (!r.enviado) throw new ErrorUsuario(`No se pudo enviar el email (${r.motivo}).`);
   });
 }
-
-const escaparHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 // ---------- Reparto automático con % (bloque 2 de 1.0, Cristian 11 oct 2026) ----------
 // Encendido: los % de los callers tienen que sumar 100. Apagado: todo al 0 % o que sumen 100 (se guardan para luego).

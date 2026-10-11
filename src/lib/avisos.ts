@@ -8,7 +8,8 @@ import type { Proyecto } from "@/lib/tipos";
 // · al webhook de entrada de GHL del proyecto (un workflow «Inbound Webhook» manda el WhatsApp, y el email si se quiere);
 // · por email con Resend (bloque 6, 11 oct 2026), si hay RESEND_API_KEY.
 // Se da por enviado si llega por cualquiera de los dos.
-export async function enviarAviso(proyecto: Proyecto, tipo: string, datos: Record<string, unknown>) {
+// `html` (opcional) es la versión con diseño del email; a GHL solo van los datos.
+export async function enviarAviso(proyecto: Proyecto, tipo: string, datos: Record<string, unknown>, html?: string) {
   // Arreglo 34 (decisión de Cristian): el CEO recibe siempre los avisos, aunque no sea miembro del proyecto
   const [miembros, { data: ceos }] = await Promise.all([equipo(proyecto.id), db().from("perfiles").select("*").eq("rol", "ceo").eq("activo", true)]);
   const porId = new Map<string, Perfil>();
@@ -22,6 +23,7 @@ export async function enviarAviso(proyecto: Proyecto, tipo: string, datos: Recor
           para: destinatarios.map((d) => d.email),
           asunto: typeof datos.asunto === "string" ? datos.asunto : `${proyecto.nombre} · ${tipo === "reporte_fin_de_dia" ? `Reporte de ${String(datos.persona ?? "")}` : tipo}`,
           texto: typeof datos.texto === "string" ? datos.texto : JSON.stringify(datos, null, 2),
+          ...(html ? { html } : {}),
         })
       : Promise.resolve({ enviado: false, motivo: "" }),
   ]);

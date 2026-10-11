@@ -72,6 +72,10 @@ describe("Aviso del reporte por email", () => {
     expect(para).toEqual(expect.arrayContaining([e.p.ceo.email, e.p.director.email, e.p.directorAdmin.email]));
     expect(para).not.toContain(e.p.closerA.email);
     expect(String(email.cuerpo.text)).toContain(e.p.closerA.nombre);
+    // Versión con el diseño glass: título, respuestas y botón a la app
+    expect(String(email.cuerpo.html)).toContain(`Reporte de ${e.p.closerA.nombre}`);
+    expect(String(email.cuerpo.html)).toContain("Cerrar antes");
+    expect(String(email.cuerpo.html)).toContain("/reportes");
   });
 });
 
@@ -85,6 +89,8 @@ describe("Enlace mágico", () => {
     const email = recibidos.slice(n)[0];
     expect(email.cuerpo.to).toEqual([e.p.callerA.email]);
     expect(String(email.cuerpo.text)).toMatch(/\/auth\/confirm\?token_hash=[^&\s]+&type=magiclink/);
+    expect(String(email.cuerpo.html)).toMatch(/href="[^"]*\/auth\/confirm\?token_hash=[^&"]+&amp;type=magiclink"/);
+    expect(String(email.cuerpo.html)).toContain("Entrar en Eternity");
   });
 
   it("a alguien de otro proyecto no se le manda", async () => {
