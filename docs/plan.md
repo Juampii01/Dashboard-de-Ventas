@@ -10,13 +10,13 @@
 - **Lo que hay en la nube:**
   - **GitHub:** repositorio privado `eternitydevzz/Dashboard-de-ventas` (rama `main`).
   - **Supabase:** proyecto «eternity» (ref `crbwqaxpeexeonffuiyo`, East US, plan gratis), con los 30 cambios de base de datos, el registro libre cerrado y «Confirm email» activado (los usuarios se crean ya confirmados).
-  - **Vercel:** proyecto `dashboard-de-ventas` en la cuenta gratis (Hobby) `cristianortizmaestria-9940`, unida al GitHub `eternitydevzz`. 4 variables: dirección y publishable de Supabase (Config), secret de Supabase y `CLAVE_CIFRADO` (Secret). Cada cambio que se sube a `main` se publica solo.
+  - **Vercel:** proyecto `dashboard-de-ventas` en la cuenta gratis (Hobby) `cristianortizmaestria-9940`, unida al GitHub `eternitydevzz`. 6 variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `APP_URL` (Config); `SUPABASE_SECRET_KEY`, `CLAVE_CIFRADO` y `RESEND_API_KEY` (Secret). Cada cambio que se sube a `main` se publica solo.
   - **Maestria preparada:** 4 pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY AI Services), «Callers» (7 columnas, con «Link enviado») y «Closers» (13), y 4 productos (Membresía 47 $, Grupal 1.997 $, VIP 4.997 $, DFY a medida).
   - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub).
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
-- **En local:** 436 tests (431 + 5 de emails; con Docker apagado solo se pasan los 192 rápidos), la app compila, 30 cambios de base de datos.
+- **En local:** 436 tests escritos (431 + 5 de emails). **Ojo:** la suite completa se pasó entera por última vez con 431 (antes de Resend). Después de Resend solo se han pasado los 192 rápidos y los 9 de emails y avisos (estos, con Docker encendido). **Falta pasar la suite completa** con Docker encendido. La app compila; 30 cambios de base de datos.
 - **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
-- **Sin Resend** (decisión de Cristian, 11 oct): no hay enlaces mágicos ni cambio de email por correo; el equipo entra con email y contraseña.
+- **Resend (emails) casi listo** (4.1): código publicado y clave puesta; falta que Resend verifique el dominio y la prueba real. Mientras, el equipo entra con email y contraseña.
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ## 2. Pendiente de que decidas tú
@@ -62,8 +62,8 @@
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
 - [x] Base en Supabase con los 30 cambios y el registro libre cerrado. Al subirlos falló uno (`gen_random_bytes` necesita `extensions.` en la nube); arreglado en `cc562d0`.
-- [x] Vercel con sus 4 variables y publicado. Sin la de Resend (aplazado).
-- [ ] ~~Resend: verificar eternity.llc~~ → aplazado (4.1).
+- [x] Vercel con sus variables y publicado (hoy son 6, con `APP_URL` y `RESEND_API_KEY`).
+- [ ] Resend: dominio verificado y prueba real → ver 4.1.
 - [x] Maestria preparada (simulación y de verdad); la base creó sola «Callers» y «Closers».
 - [x] Equipo real (10) y los 2 perfiles de prueba creados (los lanzó Cristian).
 - [x] Cristian entra como CEO en la app publicada.
@@ -71,7 +71,7 @@
 - [ ] Comprobar en la nube: subir PDF y CSV, límite de intentos de login y que la consola del navegador no da errores. (HTTPS y cabeceras: ✅ comprobado.)
 - [ ] Ajustes de Vercel: región de las funciones junto a Supabase (Washington, iad1) ⚠ comprobar en Settings → Functions.
 - [ ] Repasar contigo la lista «Comprobar al terminar» de la guía.
-- [ ] Dejar la app lista con tus datos: link de agenda, reparto, horarios, comisiones, permisos, IA, onboarding, Finanzas, links y recursos.
+- [ ] Dejar la app lista con tus datos: reparto, horarios, comisiones, permisos, IA, onboarding, Finanzas, links y recursos. (El link de agenda ya está.)
 - [ ] Actualizar la herramienta de Supabase de mi Mac (de la 2.90 a la 2.120) cuando ejecutes `brew trust supabase/tap`. Hoy funciona con la 2.90.
 
 ### 4.3 Conectar GHL (sigo `GUIA-GHL.md`)
@@ -109,17 +109,22 @@
 ## 5. Lo que te toca a ti (Cristian)
 
 ### Ahora
-- [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
+- [ ] **Guardar la clave de Resend** (`re_…`) en tu gestor o en `contraseñas.md`: **no está en `contraseñas.md`** (comprobado el 11 oct) y Resend no la vuelve a enseñar.
+- [ ] Cuando Resend diga «Verified»: probar el enlace mágico y un reporte (lo hacemos juntos).
 - [x] Link de agenda: `https://codigomaestria.com/agenda` (puesto, 11 oct).
 - [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 2 archivos** de contraseñas (lo haces tú).
 - [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
-### Para conectar GHL
+### Para conectar GHL (paso 6, el siguiente)
 - [ ] El token de GHL (Private Integration) y los ids de calendario de cada closer (los pegas tú).
 - [ ] Crear en GHL los workflows que te indique.
+- [ ] Decirme qué calendario (o calendarios) de GHL hay detrás de la landing `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo.
+
+### Después de GHL (paso 7)
+- [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
 
 ### Cuando puedas
-- [ ] Crear la cuenta de Resend y conseguir que alguien añada los DNS de eternity.llc (para el bloque 6).
+- [x] Cuenta de Resend y DNS de eternity.llc (hechos el 11 oct con «Auto configure» de GoDaddy).
 - [ ] Pasar Vercel a Pro.
 - [ ] Recorrer la app con calma (lo nuevo del 1.0 y del 11 oct), arrastrar tarjetas con tu ratón y mirarla en el móvil.
 - [ ] Revisar mis criterios (6.2).
@@ -137,7 +142,7 @@
 |---|---|
 | Base | Sin Stripe ni pasarelas: cada venta la apunta quien la hace. **La app es el CRM; GHL solo trae datos** (webhooks, landings, calendarios y llamadas). |
 | Aspecto | Diseño glass con granate Eternity y azul Maestria; español de España; dólares y hora de Nueva York por defecto. |
-| Nube | Planes gratuitos para empezar (Supabase gratis; Vercel Hobby mientras no funcione la tarjeta) y la dirección gratuita de Vercel (sin dominio propio). Publicada sin Resend. |
+| Nube | Planes gratuitos para empezar (Supabase gratis; Vercel Hobby mientras no funcione la tarjeta) y la dirección gratuita de Vercel (sin dominio propio). Emails con Resend (11 oct). |
 | Equipo real | Creado con `scripts/salida/equipo.csv`. Una sola cuenta CEO para «Cris y José»; Juan y Junior, directores con Administración. Los accesos los manda Cristian por WhatsApp. |
 | Roles | Solo el CEO cambia el rol o desactiva a alguien. Administración, Finanzas y Equipo nunca para callers ni closers. Las comisiones las cambian el CEO y los directores (un director, ni la suya ni la de su rol). |
 | Permisos | Por sección y por pipeline (Editar / Ver / Sin acceso), por rol o por persona; manda la persona. Una sección de otro rol = solo lo suyo. CEO y director con Administración, siempre todo. |
@@ -161,7 +166,7 @@
 | Reporte | Preguntas editables en Administración; del closer, las 3 de las tasas son fijas. Cada reporte guarda sus preguntas. |
 | Onboarding de closers | Sus clientes = a quienes les registró una venta. Los puntos los editan el CEO y los directores. |
 | Cola del caller | La prioridad A/B/C no ordena; primero los «llamar luego» y «link enviado» que ya tocan, luego nuevos, luego «no contesta», y dentro, del más nuevo al más viejo. |
-| Emails | Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos; sin email de bienvenida. Aplazado hasta tener la cuenta y los DNS. |
+| Emails | (11 oct) La app manda ella misma los emails con Resend, desde `Eternity <no-reply@eternity.llc>` (dominio raíz, decisión de Cristian): el aviso de cada reporte (al CEO y a los directores) y el enlace mágico que un administrador manda desde la ficha (caduca en 1 h, un solo uso). No se toca el correo de Supabase. El cambio de email lo hace un administrador directamente (no manda email). Sin email de bienvenida: los accesos van por WhatsApp. |
 | Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, el link de agenda, y los links y recursos. |
 | Commits | Por bloques. En este repositorio van firmados por `eternitydevzz` (si no, Vercel Hobby bloquea la publicación). |
 
@@ -210,6 +215,7 @@
 | 4.4 · Ranking con las mismas reglas que «KPIs por persona» | `d47c48e` |
 | 4.4 · Agendar por link de GHL; fuera la rotación; citas de GHL reagendables en la app | `b8ff0e3` |
 | Publicar: guía corregida (Root Directory vacío), migraciones arregladas para la nube, primera publicación | `46886d9`, `cc562d0`, `959af89`, `119d64a`, `06b4064` |
+| Bloque 6 · Resend: avisos de reportes por email, enlace mágico, `/auth/confirm`; publicado con la clave | `e2fefba`, `ed40af6` |
 
 ---
 
@@ -218,7 +224,8 @@
 **Pueden hacer daño el primer día:**
 - **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (4.3). Y con el agendar por link, **sin el workflow «Cita agendada» ningún caller suma agendas**.
 - **Velocidad en la nube:** sin medir con datos (4.2).
-- **Sin Resend:** no hay enlaces mágicos ni cambio de email por correo; si alguien olvida su contraseña, se la cambia un administrador desde su ficha.
+- **Emails:** hasta que Resend verifique el dominio, no sale ningún email (ni avisos de reportes ni enlaces mágicos). Si alguien olvida su contraseña, un administrador se la cambia desde su ficha o le manda un enlace mágico.
+- **Dominio raíz en Resend** (decisión de Cristian): si algún email de la app se marcara como spam, afectaría también a la reputación del correo normal de @eternity.llc (Google Workspace). Resend recomendaba un subdominio.
 
 **A tener en cuenta:**
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
@@ -242,6 +249,7 @@
 - **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
 - **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
 - **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.
+- **Perfiles de prueba en la nube:** closer-test@ y caller-test@eternity.llc (contraseñas en `scripts/salida/usuarios-creados-2026-10-11-13-46.csv`; no cuentan en cifras).
 - **Usuarios de prueba en local** (`@eternity.test`, contraseña en `scripts/seed.mjs`): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@.
 - **Datos locales:** Maestria = 1.005 leads reales de la Biblioteca (no se toca en las pruebas). Proyecto Prueba = donde pruebo.
 - **Para programar:** toda ventana nueva va dentro de `<Portal>`.
