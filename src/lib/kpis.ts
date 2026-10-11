@@ -103,6 +103,7 @@ export function kpiCloser(ix: Indices, ids: Set<string>) {
   // Citas atendidas (H3): las ya registradas por el closer, viniera o no el lead
   const atendidas = citas.filter((c) => ATENDIDAS.includes(c.estado)).length;
   const cerradas = citas.filter((c) => c.estado === "cerrada").length;
+  const noShow = citas.filter((c) => c.estado === "no_show").length; // para el Ranking (11 oct)
   const suyas = base.ventas.filter((v) => v.vendedor_id && ids.has(v.vendedor_id));
   const delPeriodo = suyas.filter((v) => enRango(v.fecha, rango));
   const facturacion = delPeriodo.reduce((s, v) => s + v.facturacion, 0);
@@ -116,6 +117,7 @@ export function kpiCloser(ix: Indices, ids: Set<string>) {
     asistidas,
     atendidas,
     cerradas,
+    noShow,
     ventas: delPeriodo.length,
     facturacion,
     // Cash del periodo, igual que Finanzas y el Funnel

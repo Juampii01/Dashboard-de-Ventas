@@ -7,7 +7,8 @@
 ## 1. Dónde estamos
 
 - **La app está hecha y probada en local, sin publicar.** Incluye v1, v2, la auditoría, el Paso H, el Paso 0 y el 1.0 menos el bloque 6. Lo hecho y su commit, en la sección 7.
-- **Comprobado el 11 oct:** 424 tests automáticos pasan, la app compila sin errores, 0 fallos de seguridad conocidos en las librerías, 29 cambios de base de datos (todos aplicados en local) y 43 tablas protegidas. Todo guardado en git; nada subido a la nube.
+- **11 oct (tarde):** pasada de punta a punta hecha y 3 de los 4 puntos que salieron de ella arreglados (reparto, venta adelantada, Ventas vs Cerradas + Ranking). Ahora **431 tests** pasan y la app compila.
+- **Comprobado el 11 oct (mañana):** 424 tests automáticos pasan, la app compila sin errores, 0 fallos de seguridad conocidos en las librerías, 29 cambios de base de datos (todos aplicados en local) y 43 tablas protegidas. Todo guardado en git; nada subido a la nube.
 - **Revisión cruzada del 11 oct** (app, guías y plan): las 31 pantallas cargan sin errores en Proyecto Prueba y las 29 de Maestria, en menos de 0,7 s; `preparar-proyecto` y `crear-usuarios` funcionan en simulación y los campos de `proyecto-base.json` existen en la base; no quedan restos de lo que se quitó; las cifras de la Biblioteca de la guía cuadran con la base; los textos de pantalla que citan las guías existen. Puestas al día las 2 guías (fecha, onboarding con horario, la ficha de cada persona, preguntas editables).
 - **No se publica hasta que esté todo** (Cristian, 11 oct).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
@@ -18,7 +19,9 @@
 |---|---|
 | Mis criterios (sección 6.2) | Revisarlos en tu revisión (paso 3). |
 
-Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «imprescindible para publicar» (4.2) se queda tal cual; las 3 mejoras de la 4.4 van **antes de publicar**, y la zona horaria, como dice la 6.1. Resend sigue sin cuenta ni DNS.
+Decidido el 11 oct: la lista de «imprescindible para publicar» (4.2) se queda tal cual; todas las mejoras de la 4.4 van **antes de publicar**; la zona horaria, como dice la 6.1. Resend sigue sin cuenta ni DNS.
+
+Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba (9 oct) a nombre del CEO, por eso Ana sale con «1 cerrada · 0 €»; y `calcularVendedores` quedó sin uso en la app (¿quitarlo con sus 3 tests?).
 
 ## 3. Lo siguiente, en orden
 
@@ -27,7 +30,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 | 1 | **Pasada de punta a punta contigo**: CSV → reparto → caller → agenda → venta → Funnel, con los 1.005 leads de la Biblioteca, en Proyecto Prueba. | Cristian la hizo, Claude guió y comprobó en la base | **Hecha (11 oct)**: funciona y los números cuadran; salieron 6 mejoras (4.4) y el cambio de agendar por link de GHL. Datos de la pasada borrados con permiso (las 37 tablas como antes). |
 | 2 | **Bloque 6 · Emails con Resend** (sección 4.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (5.1) |
 | 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Después de la pasada, a la vez que el 2 |
-| 4 | **Las mejoras de la 4.4**, en su orden (primero los 4 puntos de la pasada, luego agendar por link de GHL, luego el resto), una a una, con su commit | Claude | **Siguiente** (Cristian, 11 oct: antes de publicar) |
+| 4 | **Las mejoras de la 4.4**, en su orden (primero los 4 puntos de la pasada, luego agendar por link de GHL, luego el resto), una a una, con su commit | Claude | **En marcha**: 3 de los 4 puntos hechos (11 oct); sigue «Stripe por defecto» |
 | 5 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2, 3 y 4 |
 | 6 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
 | 7 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
@@ -76,7 +79,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 **Lo primero (salió en la pasada del 11 oct; antes de cada uno, preguntar a Cristian cómo lo quiere):**
 - [x] «Repartir» apagado sin explicación → **hecho (11 oct)**: la vista previa sale sola al abrir y se recalcula con cada cambio; sin botón «Ver reparto». Sin filtro con leads, el botón dice «No hay leads que repartir con esos filtros»; con número no válido, «Pon un número de 1 o más». Probado en pantalla en Proyecto Prueba (con Carla, reparto real de 1 lead, deshecho después).
 - [x] La ficha del lead deja registrar la venta antes de la hora de la cita → **hecho (11 oct)**, decisión de Cristian: la venta se guarda y la cita se cierra con la hora de ahora («Cita adelantada: era el 12 oct, 16:00» en el historial), así cuenta como asistida hoy. La sincronización de GHL ya no cambia hora, closer ni estado de una cita terminada en la app (si no, devolvería la adelantada a su hora). 3 tests nuevos; probado en pantalla con Ana en Proyecto Prueba y borrado después. Detalle: si luego se borra esa venta, la cita vuelve a «seguimiento» con la hora adelantada (la original queda en el historial).
-- [x] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) daban números distintos → **hecho (11 oct)**, decisiones de Cristian: el Funnel deja solo «KPIs por persona» (se quita «Vendedores»), y una venta que un jefe registra desde la ficha sin elegir vendedor va a nombre del closer de la cita (en el selector sale «Ana Closer (closer de la cita)», con «Yo» y el resto para elegir a mano). 3 tests nuevos. Pendiente de decidir: «Ranking del equipo» sigue con las reglas viejas de «Vendedores».
+- [x] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) daban números distintos → **hecho (11 oct)**, decisiones de Cristian: el Funnel deja solo «KPIs por persona» (se quita «Vendedores»), y una venta que un jefe registra desde la ficha sin elegir vendedor va a nombre del closer de la cita (en el selector sale «Ana Closer (closer de la cita)», con «Yo» y el resto para elegir a mano). 3 tests nuevos. «Ranking del equipo» alineado (11 oct): usa el mismo cálculo que «KPIs por persona» (callers por agendados, con cerrados y low ticket aparte; closers por facturación, con cerradas, % cierre/asist., asistidas y no show). `calcularVendedores` queda sin uso en la app (solo en 3 tests).
 - [ ] El método de pago sale «Stripe» por defecto.
 
 **Después: agendar por link de GHL (Cristian, 11 oct, tras hablar con el equipo):**
@@ -101,7 +104,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 - [ ] Conseguir a alguien que añada los registros DNS de eternity.llc (puede tardar en activarse: cuanto antes, mejor).
 
 ### 5.2 Tu revisión (se puede hacer ya)
-- [ ] Ver conmigo la pasada de punta a punta (paso 1 de la sección 3).
+- [x] Ver conmigo la pasada de punta a punta (hecha el 11 oct).
 - [ ] Recorrer la app con los usuarios de prueba (sección 9). Lo nuevo del 1.0: Biblioteca (KPIs), «Mi perfil», horarios, reparto y rotación (Administración → Proyecto y reparto), Comisiones y Reportes (Administración), la ficha de cada persona (Equipo), «Onboarding» de los closers y Links y recursos.
 - [ ] Arrastrar tarjetas **con tu ratón** en el CRM («Callers» y «Closers» también), en Agendas → Pre-call y en Post-call. Yo solo pude simularlo.
 - [ ] Mirar el diseño en tu móvil (misma wifi, la IP del Mac en vez de `localhost`).
@@ -193,6 +196,11 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 | 1.0 · Rotación de closers, comisiones por tramos, «Cuenta para comisión» | `0f6c688` |
 | 1.0 · Pasada en pantalla de lo que solo estaba en tests, y arreglo del formulario de landings | `ed4bcce` |
 | 1.0 · Ficha de cada persona, reporte editable, onboarding de closers, Links y recursos, cola sin prioridad | `c3bf914` |
+| Pasada de punta a punta (11 oct) y su plan | `115a99a` |
+| 4.4 · Vista previa automática al repartir | `f64f64a` |
+| 4.4 · Venta antes de la hora cierra la cita «ahora»; GHL no toca citas terminadas | `a094747` |
+| 4.4 · Funnel con una sola tabla por persona; venta desde la ficha al closer de la cita | `b6dbca1` |
+| 4.4 · Ranking con las mismas reglas que «KPIs por persona» | (este commit) |
 
 ---
 

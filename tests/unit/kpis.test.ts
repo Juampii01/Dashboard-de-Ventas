@@ -107,6 +107,11 @@ describe("KPIs de closers (H2)", () => {
     expect(beto.cierreSobreAgenda).toBe(0);
   });
 
+  it("no show con las mismas citas (para el Ranking, 11 oct)", () => {
+    expect(beto.noShow).toBe(1); // c2
+    expect(ana.noShow).toBe(0);
+  });
+
   it("facturación, cash del periodo (como Finanzas) y % cobrado de lo vendido (como Ventas)", () => {
     expect(ana.facturacion).toBe(1997);
     expect(ana.cash).toBe(500 + 300 + 400); // incluye la cuota de octubre de la venta de septiembre
