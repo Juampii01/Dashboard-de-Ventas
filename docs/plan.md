@@ -74,7 +74,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 
 ### 4.4 Mejoras (Cristian, 11 oct: antes de publicar; paso 4)
 **Lo primero (salió en la pasada del 11 oct; antes de cada uno, preguntar a Cristian cómo lo quiere):**
-- [ ] «Repartir» apagado sin explicación: que diga «Pulsa primero Ver reparto» o que la vista previa salga sola.
+- [x] «Repartir» apagado sin explicación → **hecho (11 oct)**: la vista previa sale sola al abrir y se recalcula con cada cambio; sin botón «Ver reparto». Sin filtro con leads, el botón dice «No hay leads que repartir con esos filtros»; con número no válido, «Pon un número de 1 o más». Probado en pantalla en Proyecto Prueba (con Carla, reparto real de 1 lead, deshecho después).
 - [ ] La ficha del lead deja registrar la venta antes de la hora de la cita (el botón «Cerrada» de la cita no); la cita cuenta entonces como «asistida» sin haber pasado.
 - [ ] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) dan números distintos para la misma persona: una cuenta ventas a su nombre y la otra sus citas que acabaron en venta (pasa cuando un director registra la venta en la cita de un closer). Unificar o renombrar.
 - [ ] El método de pago sale «Stripe» por defecto.
@@ -169,7 +169,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 - Pipelines por defecto: los de origen, Ver para todos; «Callers», para callers y directores; «Closers», para closers y directores.
 - Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas; sin email se le reconoce por el teléfono (últimas 9 cifras).
 - En Agendas solo cuentan las ventas de closers; un gasto sin categoría cuenta en el profit; Fathom se sincroniza con el botón.
-- Reparto: vista previa antes de repartir; el tope cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego.
+- Reparto: vista previa automática antes de repartir (sale sola, sin botón); el tope cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego.
 - Reparto y rotación: le toca a quien tiene menos para su %, y la cuenta empieza de cero al cambiar los %.
 - Rotación: por defecto apagada y «lo elige quien agenda»; cuenta todas las citas agendadas en la app; un closer sin horario no entra.
 - Al reagendar con un closer sin horario, solo se comprueba que no choque con otra cita.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Shuffle } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
@@ -47,18 +47,31 @@ export function RepartirLeads({
   });
   const cambiar = <T,>(f: (v: T) => void) => (v: T) => {
     f(v);
-    setVista(null); // cualquier cambio obliga a volver a ver la vista previa
+    setVista(null); // cualquier cambio deja sin vista previa hasta que se recalcula
   };
-  const ver = () => {
-    setError("");
-    iniciar(async () => {
+  // Mejora de la pasada (Cristian, 11 oct): la vista previa sale sola al abrir y se recalcula con cada cambio
+  // (sin botón «Ver reparto»). «Repartir» solo se enciende con la vista previa de lo que hay en pantalla.
+  const numeroOk = Number.isInteger(Number(numero)) && Number(numero) >= 1;
+  const clave = JSON.stringify(peticion());
+  const ultima = useRef(0);
+  const [calculando, setCalculando] = useState(false);
+  useEffect(() => {
+    if (!abierto || !numeroOk) return;
+    const id = ++ultima.current;
+    const t = setTimeout(async () => {
+      setCalculando(true);
+      setError("");
       try {
-        setVista((await exigirOk(previsualizarReparto(peticion()))) as Vista);
+        const v = (await exigirOk(previsualizarReparto(JSON.parse(clave) as PeticionReparto))) as Vista;
+        if (id === ultima.current) setVista(v); // solo la respuesta de la última petición
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Algo falló.");
+        if (id === ultima.current) setError(e instanceof Error ? e.message : "Algo falló.");
+      } finally {
+        if (id === ultima.current) setCalculando(false);
       }
-    });
-  };
+    }, 300);
+    return () => clearTimeout(t);
+  }, [abierto, clave, numeroOk]);
   const repartir = () => {
     setError("");
     iniciar(async () => {
@@ -138,6 +151,8 @@ export function RepartirLeads({
               </label>
             </div>
             <p className="text-xs text-texto-3">{MODOS_REPARTO.find((m) => m.v === modo)?.d}. Se reparten primero los más nuevos.</p>
+            {!numeroOk && <p className="rounded-lg bg-aviso-suave px-3 py-2 text-aviso">Pon un número de 1 o más.</p>}
+            {numeroOk && !vista && !error && <p className="text-xs text-texto-3">Calculando el reparto…</p>}
             {vista && (
               <div className="rounded-lg border border-borde p-3">
                 <div className="mb-2 font-medium">Se repartirán {vista.total} de {vista.disponibles} disponibles</div>
@@ -148,11 +163,10 @@ export function RepartirLeads({
                 </ul>
               </div>
             )}
-            {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-mal">{error}</p>}
-            <div className="flex gap-2">
-              <button className="btn-secundario flex-1" disabled={pendiente} onClick={ver}>Ver reparto</button>
-              <button className="btn-primario flex-1" disabled={pendiente || !vista || !vista.total} onClick={repartir}>Repartir {vista ? vista.total : ""}</button>
-            </div>
+            {numeroOk && error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-mal">{error}</p>}
+            <button className="btn-primario w-full" disabled={pendiente || calculando || !vista || !vista.total} onClick={repartir}>
+              {pendiente ? "Repartiendo…" : vista && !vista.total ? "No hay leads que repartir con esos filtros" : `Repartir ${vista ? vista.total : ""}`}
+            </button>
           </div>
         </Modal>
       )}
