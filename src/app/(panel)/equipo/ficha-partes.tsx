@@ -94,7 +94,7 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
         {f.soyCeo && !f.soyYo && (
           <label className="flex items-start gap-2 text-xs">
             <input type="checkbox" className="mt-0.5" checked={p.es_prueba} disabled={pendiente} onChange={(e) => hacer(() => marcarPrueba(p.id, e.target.checked), e.target.checked ? "Marcado como perfil de prueba" : "Ya no es perfil de prueba")} />
-            <span><b>Perfil de prueba</b> · no cuenta en cifras, reparto, rotación ni liquidaciones, y no sale en Equipo (solo el CEO lo cambia).</span>
+            <span><b>Perfil de prueba</b> · no cuenta en cifras, reparto ni liquidaciones, y no sale en Equipo (solo el CEO lo cambia).</span>
           </label>
         )}
       </Bloque>
@@ -132,15 +132,15 @@ export function PipelinesPersona({ f, recargar }: { f: Ficha; recargar: () => vo
   );
 }
 
-// ---------- Reparto y rotación: su %, que se cambia en «Proyecto y reparto» (allí se ve la suma de 100) ----------
+// ---------- Reparto (callers): su %, que se cambia en «Proyecto y reparto» (allí se ve la suma de 100) ----------
+// La rotación de closers se quitó el 11 oct (4.4): el closer de las citas por link lo pone GHL.
 export function PctPersona({ f }: { f: Ficha }) {
-  const caller = f.persona.rol === "caller";
-  const pct = caller ? f.reparto.pct : f.rotacion.pct;
-  const encendido = caller ? f.reparto.auto && pct > 0 : pct > 0;
+  const pct = f.reparto.pct;
+  const encendido = f.reparto.auto && pct > 0;
   return (
     <p className="text-sm">
-      {caller ? "Reparto automático de leads" : "Rotación al agendar"}: <b>{pct} %</b>
-      <span className="text-texto-3"> · {encendido ? "le llegan" : caller && !f.reparto.auto ? "el reparto está apagado" : "no le llegan"}</span>{" "}
+      Reparto automático de leads: <b>{pct} %</b>
+      <span className="text-texto-3"> · {encendido ? "le llegan" : !f.reparto.auto ? "el reparto está apagado" : "no le llegan"}</span>{" "}
       <Link href="/admin?tab=proyecto" className="text-xs text-primario hover:underline">Cambiar en Proyecto y reparto →</Link>
     </p>
   );

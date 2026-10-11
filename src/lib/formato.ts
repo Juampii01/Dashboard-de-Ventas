@@ -136,6 +136,7 @@ export const ETIQUETA_ESTADO_CALLER: Record<string, string> = {
   nuevo: "Nuevo",
   no_contesta: "No contesta",
   llamar_luego: "Llamar luego",
+  link_enviado: "Link enviado",
   agendado: "Agendado",
   no_interesa: "No interesa",
   vendido: "Vendido",

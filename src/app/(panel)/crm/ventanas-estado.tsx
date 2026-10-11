@@ -1,6 +1,6 @@
 "use client";
 
-import { agendarCita, registrarLlamada, registrarVenta } from "@/app/(panel)/leads/acciones";
+import { agendarCita, marcarLinkEnviado, registrarLlamada, registrarVenta } from "@/app/(panel)/leads/acciones";
 import { FormVenta } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 import { SelectorEstrellas } from "@/components/estrellas";
@@ -9,7 +9,7 @@ import { CamposCita } from "@/components/campos-cita";
 
 // Ventanas que se abren al soltar un lead en una columna unida a un estado (Paso H7). Son las mismas que
 // tenía el CRM del caller: cada una hace lo mismo que su botón (y el servidor mueve la tarjeta a esa columna).
-export type DestinoConVentana = "llamar_luego" | "agendado" | "no_interesa" | "vendido";
+export type DestinoConVentana = "llamar_luego" | "link_enviado" | "agendado" | "no_interesa" | "vendido";
 
 export function VentanaEstado({
   lead,
@@ -45,6 +45,17 @@ export function VentanaEstado({
           <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={3} className="campo" /></label>
           <SelectorEstrellas quien="caller" />
           <button className="btn-primario w-full">Guardar</button>
+        </form>
+      </Modal>
+    );
+  // 4.4 (11 oct): soltar en «Link enviado» = su botón, con las estrellas de la llamada
+  if (destino === "link_enviado")
+    return (
+      <Modal titulo={`Link de agenda enviado a ${lead.nombre}`} onCerrar={onCerrar}>
+        <form className="space-y-3" action={(fd) => guardar(() => marcarLinkEnviado(lead.id, Number(fd.get("estrellas"))), `${lead.nombre} → Link enviado`)}>
+          <p className="text-sm text-texto-2">Si en 2 días no ha llegado su cita de GHL, vuelve a la cola del caller.</p>
+          <SelectorEstrellas quien="caller" />
+          <button className="btn-primario w-full">Marcar como enviado</button>
         </form>
       </Modal>
     );

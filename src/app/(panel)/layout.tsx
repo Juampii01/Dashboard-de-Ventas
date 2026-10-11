@@ -22,7 +22,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       .select("id", { count: "exact", head: true })
       .eq("proyecto_id", proyecto.id)
       .eq("caller_id", perfil.id)
-      .eq("estado_caller", "llamar_luego")
+      .in("estado_caller", ["llamar_luego", "link_enviado"])
       .lte("llamar_en", new Date().toISOString());
     vencidos = count ?? 0;
   }

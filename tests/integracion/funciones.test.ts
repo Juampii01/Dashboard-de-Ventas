@@ -65,8 +65,10 @@ describe("Ventas y cobros", () => {
 
 describe("Citas", () => {
   it("al reagendar, la agenda sigue siendo mérito del caller y la nueva hora es correcta", async () => {
-    como(e, e.p.callerB);
+    // 4.4: los callers ya no agendan a mano; la agenda la hace un jefe y se la apuntamos al caller (como una de antes)
+    como(e, e.p.director);
     await ok(agendarCita(e.leads.LeadB, e.p.closerA.id, "2026-11-01T09:00", "nota", 4));
+    await db.from("citas").update({ agendada_por: e.p.callerB.id }).eq("lead_id", e.leads.LeadB);
     const { data: cita } = await db.from("citas").select("*").eq("lead_id", e.leads.LeadB).eq("agendada_por", e.p.callerB.id).single();
     expect(cita!.fecha).toMatch(/^2026-11-01T14:00:00/); // día del cambio de hora en NY
     como(e, e.p.closerA);

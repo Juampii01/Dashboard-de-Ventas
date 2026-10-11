@@ -11,7 +11,7 @@ export type Perfil = {
   whatsapp: string | null;
   admin_activo: boolean;
   onboarding_completo: boolean;
-  es_prueba?: boolean; // 1.0: perfil de prueba (no cuenta en cifras, reparto, rotación ni liquidaciones)
+  es_prueba?: boolean; // 1.0: perfil de prueba (no cuenta en cifras, reparto ni liquidaciones)
   activo: boolean;
 };
 
@@ -22,12 +22,12 @@ export type Proyecto = {
   zona_horaria: "America/New_York" | "Europe/Madrid";
   reparto_auto: boolean; // 1.0 bloque 2: reparto automático al entrar, con % por caller
   reparto_solo_horario: boolean;
-  rotacion_modo?: "elige" | "propone" | "decide"; // 1.0 bloque 3: cómo se elige el closer al agendar
   preguntas_reporte?: unknown; // 1.0 bloque 7: preguntas del reporte por rol (lib/reportes)
   tramos_comision?: unknown; // 1.0 bloque 4: tramos de comisión de callers y closers (lib/comisiones)
   calendario?: unknown; // 1.0 bloque 1: ajustes de las llamadas de los closers (lib/disponibilidad)
   webhook_secreto: string;
   aviso_webhook_url: string | null;
+  link_agenda?: string | null; // link del calendario de GHL que el caller manda al lead (11 oct)
   color: string;
 };
 
@@ -39,7 +39,7 @@ export type Etapa = { id: string; pipeline_id: string; nombre: string; orden: nu
 
 export type Respuesta = { pregunta: string; respuesta: string };
 
-export type EstadoCaller = "nuevo" | "no_contesta" | "llamar_luego" | "agendado" | "no_interesa" | "vendido";
+export type EstadoCaller = "nuevo" | "no_contesta" | "llamar_luego" | "link_enviado" | "agendado" | "no_interesa" | "vendido";
 
 export type Lead = {
   id: string;
@@ -58,6 +58,8 @@ export type Lead = {
   closer_id: string | null;
   estado_caller: EstadoCaller;
   llamar_en: string | null;
+  link_enviado_por?: string | null;
+  link_enviado_en?: string | null;
   creado_en: string;
   ultima_actividad: string | null;
   // v2: de dónde viene y todo lo que mandó

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, PhoneCall, Check } from "lucide-react";
-import { agendarCita, anadirNota, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
+import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, PhoneCall, Check, Link2 } from "lucide-react";
+import { agendarCita, anadirNota, marcarLinkEnviado, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
 import { Modal } from "@/components/modal";
 import { CoachIa } from "@/components/coach";
 import { SelectorEstrellas } from "@/components/estrellas";
@@ -54,6 +54,7 @@ export function AccionesLead({
   vendedores,
   closerCita,
   miId,
+  linkAgenda,
   moneda,
   compacto = false,
 }: {
@@ -65,11 +66,12 @@ export function AccionesLead({
   vendedores?: Persona[];
   closerCita?: Persona; // closer de la cita abierta del lead: por defecto la venta es suya (11 oct)
   miId?: string;
+  linkAgenda?: string | null; // link del calendario de GHL del proyecto (4.4, 11 oct)
   moneda: string;
   compacto?: boolean;
 }) {
   const { pendiente, error, ok, ejecutar } = useAccion();
-  const [modal, setModal] = useState<null | "luego" | "agendar" | "venta" | "nota" | "no_interesa">(null);
+  const [modal, setModal] = useState<null | "luego" | "agendar" | "link" | "venta" | "nota" | "no_interesa">(null);
   const [nota, setNota] = useState("");
   const telLimpio = (telefono ?? "").replace(/[^\d]/g, "");
   const productosVisibles = rol === "caller" ? productos.filter((p) => p.vende_caller) : productos;
@@ -101,9 +103,17 @@ export function AccionesLead({
         <button className={boton} disabled={pendiente} onClick={() => setModal("luego")}>
           <Clock className="h-4 w-4 text-aviso" /> Llamar luego
         </button>
-        <button className={boton} disabled={pendiente} onClick={() => setModal("agendar")}>
-          <CalendarPlus className="h-4 w-4 text-primario" /> Agendar
-        </button>
+        {/* 4.4 (Cristian, 11 oct): el caller manda el link de GHL (con sus estrellas); los closers agendan a mano */}
+        {rol !== "closer" && (
+          <button className={boton} disabled={pendiente} onClick={() => setModal("link")}>
+            <Link2 className="h-4 w-4 text-primario" /> Link enviado
+          </button>
+        )}
+        {rol !== "caller" && (
+          <button className={boton} disabled={pendiente} onClick={() => setModal("agendar")}>
+            <CalendarPlus className="h-4 w-4 text-primario" /> Agendar
+          </button>
+        )}
         <button className={boton} disabled={pendiente} onClick={() => setModal("no_interesa")}>
           <ThumbsDown className="h-4 w-4 text-mal" /> No interesa
         </button>
@@ -162,6 +172,30 @@ export function AccionesLead({
             <label className="block"><span className="etiqueta-campo">Nota para el closer</span><textarea name="nota" rows={3} className="campo" placeholder="Situación, dolor, cifra…" /></label>
             <SelectorEstrellas quien="caller" opcional={rol !== "caller"} />
             <button className="btn-primario w-full">Agendar</button>
+          </form>
+        </Modal>
+      )}
+      {modal === "link" && (
+        <Modal titulo="Link de agenda enviado" onCerrar={() => setModal(null)}>
+          <form
+            className="space-y-3"
+            action={(fd) => {
+              const n = Number(fd.get("estrellas"));
+              // Con link y teléfono, WhatsApp se abre con el link ya escrito
+              if (linkAgenda && telLimpio) window.open(`https://wa.me/${telLimpio}?text=${encodeURIComponent(`¡Hola! Aquí tienes el link para agendar tu llamada: ${linkAgenda}`)}`, "_blank", "noopener");
+              ejecutar(() => marcarLinkEnviado(leadId, n), "Link enviado: si no reserva, vuelve a tu cola en 2 días");
+              setModal(null);
+            }}
+          >
+            <p className="text-sm text-texto-2">
+              {linkAgenda && telLimpio
+                ? "Se abre WhatsApp con el link para que el lead elija su hora. La cita llega sola desde GHL."
+                : linkAgenda
+                  ? "Este lead no tiene teléfono: mándale el link por otro medio. La cita llega sola desde GHL."
+                  : "Falta el link de agenda en Administración → Proyecto y reparto: mándalo por tu cuenta."}
+            </p>
+            <SelectorEstrellas quien="caller" />
+            <button className="btn-primario w-full">{linkAgenda && telLimpio ? "Abrir WhatsApp y marcar" : "Marcar como enviado"}</button>
           </form>
         </Modal>
       )}

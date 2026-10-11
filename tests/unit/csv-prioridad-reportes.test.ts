@@ -97,6 +97,13 @@ describe("Cola del caller", () => {
     expect(colaCaller(leads, "llamar", ahora).some((l) => l.id === "futuro")).toBe(false);
     expect(colaCaller(leads, "luego", ahora).map((l) => l.id)).toEqual(["vencido", "futuro"]);
   });
+  it("«Link enviado» sale de la cola y vuelve a los 2 días como un «llamar luego» que ya toca (11 oct)", () => {
+    const conLink = [...leads, lead("link_reciente", "link_enviado", "2026-10-11T15:00:00Z"), lead("link_viejo", "link_enviado", "2026-10-09T13:00:00Z")];
+    const ids = colaCaller(conLink, "llamar", ahora).map((l) => l.id);
+    expect(ids).not.toContain("link_reciente");
+    expect(ids.slice(0, 2).sort()).toEqual(["link_viejo", "vencido"]);
+    expect(colaCaller(conLink, "luego", ahora).map((l) => l.id)).toEqual(["link_viejo", "vencido", "futuro", "link_reciente"]);
+  });
 });
 
 describe("Recursos visibles por rol", () => {

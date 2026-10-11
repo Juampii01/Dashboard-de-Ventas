@@ -1,7 +1,7 @@
 // V2-0: estrellas del caller y del closer, y devoluciones.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
-import { agendarCita, registrarLlamada, registrarVenta } from "@/app/(panel)/leads/acciones";
+import { agendaPorLink, borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
+import { marcarLinkEnviado, registrarLlamada, registrarVenta } from "@/app/(panel)/leads/acciones";
 import { cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 import { registrarCobro, registrarDevolucion } from "@/app/(panel)/ventas/acciones";
 
@@ -29,11 +29,11 @@ describe("Estrellas del caller", () => {
     await ok(registrarLlamada(e.leads.LeadA, "llamar_luego", "", "2026-10-20T10:00", 4));
     expect((await lead(e.leads.LeadA)).estrellas_caller).toBe(4);
   });
-  it("al agendar son obligatorias y se copian a la cita", async () => {
+  it("al enviar el link son obligatorias y pasan a la cita que llega de GHL (4.4, 11 oct)", async () => {
     como(e, e.p.callerA);
-    await falla(agendarCita(e.leads.LeadA, e.p.closerA.id, "2026-10-21T10:00", ""), /de 2 a 5/);
-    expect((await db.from("citas").select("id").eq("lead_id", e.leads.LeadA)).data).toHaveLength(0); // no se creó nada
-    await ok(agendarCita(e.leads.LeadA, e.p.closerA.id, "2026-10-21T10:00", "", 5));
+    await falla(marcarLinkEnviado(e.leads.LeadA, undefined as never), /de 2 a 5/);
+    expect((await lead(e.leads.LeadA)).estrellas_caller).toBe(4); // no se tocó nada
+    await agendaPorLink(e, e.leads.LeadA, e.p.callerA, e.p.closerA.id, "2026-10-21T10:00", 5);
     expect((await citaDe(e.leads.LeadA)).estrellas_caller).toBe(5);
     expect((await lead(e.leads.LeadA)).estrellas_caller).toBe(5);
   });
@@ -65,8 +65,7 @@ describe("Estrellas del closer", () => {
 
 describe("Vendedor al cerrar una cita", () => {
   it("si el CEO cierra la cita de un closer, la venta es del closer de la cita", async () => {
-    como(e, e.p.callerB);
-    await ok(agendarCita(e.leads.LeadB, e.p.closerB.id, "2026-10-08T10:00", "", 3));
+    await agendaPorLink(e, e.leads.LeadB, e.p.callerB, e.p.closerB.id, "2026-10-08T10:00", 3);
     como(e, e.p.ceo);
     await ok(registrarVenta(e.leads.LeadB, formulario({ producto: e.productos["Mentoría grupal"], facturacion: "1997", cash: "1997", tipo_pago: "completo", metodo: "stripe", desde_cita: "1", estrellas: "4" })));
     const { data } = await db.from("ventas").select("vendedor_id").eq("lead_id", e.leads.LeadB).single();

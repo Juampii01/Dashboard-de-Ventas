@@ -186,6 +186,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 vendedores={jefe ? gente.filter((g) => g.rol === "closer" || g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre })) : undefined}
                 closerCita={closerCita}
                 miId={perfil.id}
+                linkAgenda={proyecto.link_agenda}
                 moneda={proyecto.moneda}
                 compacto
               />

@@ -42,7 +42,6 @@ export async function cargarFicha(perfilId: string) {
       horario: horarioValido(miembro.horario),
       calendario: { general, propios: miembro.calendario ? ajustesValidos(miembro.calendario, general) : null },
       reparto: { auto: proyecto.reparto_auto, pct: Number(miembro.reparto_pct ?? 0) },
-      rotacion: { modo: proyecto.rotacion_modo ?? "elige", pct: Number(miembro.rotacion_pct ?? 0) },
       ghl: { userId: (miembro.ghl_user_id as string | null) ?? "", calendarId: (miembro.ghl_calendar_id as string | null) ?? "" },
       fathom: (fathom ?? []) as { id: string; nombre: string }[],
       permisos,

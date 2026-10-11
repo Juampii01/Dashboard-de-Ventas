@@ -36,7 +36,7 @@ export async function todas<T>(
   }
 }
 
-// 1.0 (Cristian, 11 oct): los perfiles de prueba no salen en el equipo (cifras, reparto, rotación, liquidaciones,
+// 1.0 (Cristian, 11 oct): los perfiles de prueba no salen en el equipo (cifras, reparto, liquidaciones,
 // Equipo y filtros); `conPrueba` los incluye, para que un perfil de prueba vea a los otros de prueba.
 export async function equipo(proyectoId: string, conPrueba = false): Promise<Perfil[]> {
   const { data, error } = await db()

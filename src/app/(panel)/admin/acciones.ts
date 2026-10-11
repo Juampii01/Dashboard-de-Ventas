@@ -103,31 +103,6 @@ export async function guardarReparto(r: { auto: boolean; soloHorario: boolean; p
   });
 }
 
-// ---------- Rotación de closers (bloque 3 de 1.0, Cristian 11 oct 2026) ----------
-// Todos al 0 % = apagada. Encendida: los % de los closers suman 100. Al cambiar los %, la cuenta vuelve a cero.
-export async function guardarRotacion(r: { modo: string; pcts: Record<string, number> }) {
-  return seguro(async () => {
-    const { proyecto } = await exigir(puedeAdmin);
-    if (!["elige", "propone", "decide"].includes(r.modo)) throw new ErrorUsuario("Elige cómo se elige el closer.");
-    const closers = (await equipo(proyecto.id)).filter((p) => p.rol === "closer");
-    const pcts = new Map<string, number>();
-    for (const c of closers) {
-      const v = Number(r.pcts[c.id] ?? 0);
-      if (!Number.isFinite(v) || v < 0 || v > 100) throw new ErrorUsuario(`El % de ${c.nombre} tiene que ir de 0 a 100.`);
-      pcts.set(c.id, Math.round(v * 100) / 100);
-    }
-    const suma = Math.round([...pcts.values()].reduce((a, b) => a + b, 0) * 100) / 100;
-    if (suma !== 0 && suma !== 100) throw new ErrorUsuario(`Los % suman ${suma}; tienen que sumar 100 (o estar todos a 0 para apagar la rotación).`);
-    const { data: antes } = await db().from("miembros_proyecto").select("perfil_id, rotacion_pct").eq("proyecto_id", proyecto.id).in("perfil_id", closers.map((c) => c.id));
-    const cambian = (antes ?? []).some((a) => Number(a.rotacion_pct) !== pcts.get(a.perfil_id));
-    for (const [id, v] of pcts) {
-      await escribir(db().from("miembros_proyecto").update({ rotacion_pct: v, ...(cambian ? { rotacion_cuenta: 0 } : {}) }).eq("proyecto_id", proyecto.id).eq("perfil_id", id), "miembros_proyecto");
-    }
-    await escribir(db().from("proyectos").update({ rotacion_modo: r.modo }).eq("id", proyecto.id), "proyectos");
-    refrescar();
-  });
-}
-
 // ---------- Tramos de comisión (bloque 4 de 1.0, Cristian 10 y 11 oct 2026) ----------
 // Los de callers o los de closers, en la moneda del proyecto. Mismas reglas que las comisiones por rol: solo el CEO o
 // un director (con Administración), y el director no los de su propio rol (aquí no aplica: son de callers y closers).
@@ -165,6 +140,25 @@ export async function guardarPreguntasReporte(rol: "caller" | "closer", lista: u
 }
 
 // ---------- Proyecto ----------
+// 4.4 (Cristian, 11 oct): el link del calendario de GHL que el caller manda al lead al pulsar «Link enviado»
+export async function guardarLinkAgenda(link: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    const limpio = link.trim();
+    if (limpio) {
+      let ok = false;
+      try {
+        ok = new URL(limpio).protocol === "https:";
+      } catch {
+        ok = false;
+      }
+      if (!ok) throw new ErrorUsuario("El link de agenda tiene que empezar por https://");
+    }
+    await escribir(db().from("proyectos").update({ link_agenda: limpio || null }).eq("id", proyecto.id), "proyectos");
+    refrescar();
+  });
+}
+
 export async function guardarProyecto(_prev: Res, fd: FormData): Promise<Res> {
   // Arreglo 30: mismo envoltorio que el resto (lo inesperado no enseña detalles internos)
   return seguro(async () => {

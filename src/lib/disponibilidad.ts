@@ -68,12 +68,4 @@ export function libreA(o: {
 // Estados de cita que ya no ocupan hueco
 export const CITA_NO_OCUPA = ["cancelada", "reagendada"];
 
-// Rotación de closers (bloque 3 de 1.0): el orden en que se prueban los closers con % > 0. Primero quien tenga
-// menos citas para su % ((cuenta + 1) / %, la misma regla que el reparto de leads); a igualdad, el orden del equipo.
-export type ModoRotacion = "elige" | "propone" | "decide";
-export function ordenRotacion(closers: { id: string; pct: number; cuenta: number; orden: number }[]) {
-  return closers
-    .filter((c) => c.pct > 0)
-    .sort((a, b) => (a.cuenta + 1) / a.pct - (b.cuenta + 1) / b.pct || a.orden - b.orden || a.id.localeCompare(b.id))
-    .map((c) => c.id);
-}
+

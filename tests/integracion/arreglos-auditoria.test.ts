@@ -1,6 +1,6 @@
 // Arreglos 8 a 36 de la auditoría (Arreglar-dashboard.md, 10 oct 2026): un test por arreglo que toca la base.
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
+import { agendaPorLink, borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
 import { agendarCita, anadirNota, registrarLlamada, registrarVenta } from "@/app/(panel)/leads/acciones";
 import { guardarPrograma, type DatosPrograma } from "@/app/(panel)/programas/acciones";
 import { asignarLeads, crearLeadManual } from "@/app/(panel)/crm/acciones";
@@ -33,8 +33,7 @@ const nuevoLead = async (nombre: string, extra: Record<string, unknown> = {}) =>
 describe("Arreglo 8: venta con la cita en «confirmación pendiente»", () => {
   it("la cita pasa a «cerrada», la venta es del closer de la cita y se guardan sus estrellas", async () => {
     const l = await nuevoLead("Arreglo8", { caller_id: e.p.callerA.id });
-    como(e, e.p.callerA);
-    await ok(agendarCita(l, e.p.closerB.id, "2026-10-21T10:00", "", 4));
+    await agendaPorLink(e, l, e.p.callerA, e.p.closerB.id, "2026-10-21T10:00", 4);
     await db.from("citas").update({ estado: "confirmacion_pendiente" }).eq("lead_id", l);
     como(e, e.p.ceo);
     await ok(registrarVenta(l, formulario({ producto: e.productos["Mentoría grupal"], facturacion: "1997", cash: "1997", tipo_pago: "completo", metodo: "stripe", desde_cita: "1", estrellas: "5" })));
@@ -176,8 +175,7 @@ describe("Arreglos 23 y 24: Administración", () => {
 describe("Arreglo 26: borrar una venta", () => {
   it("la cita vuelve a «seguimiento», el lead deja de estar vendido y avisa si hay comisiones calculadas", async () => {
     const l = await nuevoLead("Arreglo26", { caller_id: e.p.callerA.id });
-    como(e, e.p.callerA);
-    await ok(agendarCita(l, e.p.closerA.id, "2026-10-21T10:00", "", 3));
+    await agendaPorLink(e, l, e.p.callerA, e.p.closerA.id, "2026-10-21T10:00", 3);
     como(e, e.p.ceo);
     await ok(registrarVenta(l, formulario({ producto: e.productos["Mentoría grupal"], facturacion: "1000", cash: "1000", tipo_pago: "completo", metodo: "stripe", desde_cita: "1", estrellas: "4" })));
     expect((await citaDe(l)).estado).toBe("cerrada");
@@ -229,7 +227,7 @@ describe("Arreglo 30: errores inesperados sin texto técnico", () => {
 describe("Arreglos 31 y 32: estados de las citas", () => {
   it("31: «cerrada» no se puede poner a mano; 32 (quitado por Cristian el 10 oct 2026): se reagenda cualquier cita menos la cerrada", async () => {
     const l = await nuevoLead("Arreglo31", { caller_id: e.p.callerA.id });
-    como(e, e.p.callerA);
+    como(e, e.p.director); // 4.4: cita hecha a mano (las de GHL se reagendan en GHL)
     await ok(agendarCita(l, e.p.closerA.id, "2026-10-24T10:00", "", 3));
     const c = await citaDe(l);
     como(e, e.p.closerA);

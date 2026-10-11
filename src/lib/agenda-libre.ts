@@ -7,7 +7,7 @@ import type { Horario } from "@/lib/horarios";
 
 const TODO_EL_DIA: Horario = { semana: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((d) => [d, [{ desde: "00:00", hasta: "24:00" }]])), fechas: {} };
 
-// Bloque 1 de 1.0: «¿está libre este closer a esta hora?» con sus datos de la base (lo usa la rotación, bloque 3).
+// Bloque 1 de 1.0: «¿está libre este closer a esta hora?» con sus datos de la base (al agendar y reagendar a mano).
 // `sinCita`: la cita que se está moviendo (al reagendar no choca consigo misma).
 // `sinHorarioLibre`: si el closer aún no tiene horario, se le trata como libre todo el día (al reagendar).
 export async function closerLibreA(proyecto: Pick<Proyecto, "id" | "zona_horaria" | "calendario">, closerId: string, inicio: Date, o: { sinCita?: string; ahora?: Date; sinHorarioLibre?: boolean } = {}) {

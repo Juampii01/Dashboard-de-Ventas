@@ -1,7 +1,7 @@
 // V2-6: Finanzas contra la base local: permisos, plazos al vender, gastos, cuentas, banco, deudores y liquidaciones.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
-import { agendarCita, registrarVenta } from "@/app/(panel)/leads/acciones";
+import { agendaPorLink, borrarEscenario, como, crearEscenario, db, falla, formulario, ok, type Escenario } from "../apoyo/escenario";
+import { registrarVenta } from "@/app/(panel)/leads/acciones";
 import { registrarCobro } from "@/app/(panel)/ventas/acciones";
 import { guardarComisionRol } from "@/app/(panel)/equipo/acciones";
 import { asegurarFinanzas } from "@/lib/finanzas-datos";
@@ -129,8 +129,7 @@ describe("Finanzas", () => {
     // Bloque 4: este test es el de «su % propio» (los tramos, en comisiones-tramos.test.ts)
     await cargarEquipo(e.proyecto.id);
     await db.from("miembros_equipo").update({ comision_modo: "propio" }).eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.closerA.id, e.p.closerB.id, e.p.callerA.id]);
-    como(e, e.p.callerA);
-    await ok(agendarCita(e.leads.LeadA, e.p.closerA.id, new Date(Date.now() + 3600_000).toISOString().slice(0, 16), "", 4));
+    await agendaPorLink(e, e.leads.LeadA, e.p.callerA, e.p.closerA.id, new Date(Date.now() + 3600_000).toISOString().slice(0, 16), 4);
     como(e, e.p.closerA);
     await ok(registrarVenta(e.leads.LeadA, formulario({ producto: e.productos["Mentoría grupal"], facturacion: "2000", cash: "1000", tipo_pago: "reserva", metodo: "stripe", desde_cita: "1", estrellas: "5" })));
     const { data: venta } = await db.from("ventas").select("id").eq("lead_id", e.leads.LeadA).single();

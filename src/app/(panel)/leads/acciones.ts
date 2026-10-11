@@ -11,7 +11,6 @@ import { planDePagos } from "@/lib/finanzas";
 import type { EstadoCaller, Lead, Perfil, Proyecto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { ABIERTAS } from "@/lib/llamadas";
-import { closerDeRotacion, contarEnRotacion, estadoRotacion } from "@/lib/rotacion";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -86,23 +85,41 @@ export async function anadirNota(leadId: string, nota: string) {
   });
 }
 
+// ---------- Link de agenda enviado (4.4, Cristian, 11 oct) ----------
+// El caller manda al lead el link del calendario de GHL. El lead sale de la cola y vuelve a los 2 días si no ha
+// llegado su cita; cuando llega, la agenda es de quien envió el link.
+export async function marcarLinkEnviado(leadId: string, estrellas: number) {
+  return seguro(async () => {
+    await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
+    const { perfil, proyecto } = await leadPermitido(leadId);
+    // Cómo fue la llamada (2 a 5), como antes al agendar: se copian a la cita cuando llegue de GHL
+    const n = estrellasEntre(estrellas, 2, 5);
+    const ahora = new Date();
+    await escribir(
+      db()
+        .from("leads")
+        .update({ estado_caller: "link_enviado", estrellas_caller: n, link_enviado_por: perfil.id, link_enviado_en: ahora.toISOString(), llamar_en: new Date(ahora.getTime() + 2 * 86_400_000).toISOString() })
+        .eq("id", leadId),
+      "leads"
+    );
+    // Cuenta como contacto (como un WhatsApp)
+    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "whatsapp", nota: "Link de agenda enviado" });
+    refrescar();
+  });
+}
+
 // ---------- Agendar cita con un closer ----------
+// 4.4 (Cristian, 11 oct): los callers ya no agendan a mano; mandan el link de GHL. Directores, CEO y closers sí.
 export async function agendarCita(leadId: string, closerId: string, fechaLocal: string, nota: string, estrellas?: number) {
   return seguro(async () => {
     await exigirSeccion("cola", "crm", "agendas", "clientes"); // H5
     nota = notaValida(nota);
     const { lead, perfil, proyecto } = await leadPermitido(leadId);
+    if (perfil.rol === "caller") throw new ErrorUsuario("Los callers no agendan a mano: manda el link de agenda al lead y pulsa «Link enviado».");
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
-    // El caller dice cómo fue su llamada (2 a 5); si agenda un jefe o un closer, es opcional
-    const n = perfil.rol === "caller" || estrellas !== undefined ? estrellasEntre(estrellas, 2, 5) : null;
+    // Las estrellas de la llamada (2 a 5) son opcionales para quien agenda a mano (jefe o closer)
+    const n = estrellas !== undefined ? estrellasEntre(estrellas, 2, 5) : null;
     const fecha = aIso(fechaLocal, proyecto.zona_horaria);
-    // Bloque 3: con «lo decide la rotación», el servidor pone el closer aunque se intente otro
-    const rotacion = await estadoRotacion(proyecto);
-    if (rotacion.encendida && rotacion.modo === "decide") {
-      const r = await closerDeRotacion(proyecto, new Date(fecha));
-      if (!r.closer) throw new ErrorUsuario("Ningún closer de la rotación está libre a esa hora: elige otra hora.");
-      closerId = r.closer;
-    }
     const { data: closer } = await db()
       .from("miembros_proyecto")
       .select("perfil_id, perfiles!inner(rol, nombre)")
@@ -115,7 +132,6 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
     const { error: errCita } = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
     if (errCita?.code === "23505") throw new ErrorUsuario("Ese lead ya tiene una cita con ese closer a esa hora.");
     if (errCita) throw new Error(`No se pudo guardar en «citas»: ${errCita.message}`);
-    if (rotacion.encendida) await contarEnRotacion(proyecto.id, closerId);
     // Arreglo 9: si agenda un jefe o un closer sin estrellas, no se borran las que puso el caller
     await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;

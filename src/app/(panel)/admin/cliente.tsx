@@ -3,7 +3,7 @@
 import { sinVaciar } from "@/components/sin-vaciar";
 import { useActionState, useState } from "react";
 import { Copy, Check, RefreshCw } from "lucide-react";
-import { anadirAlProyecto, crearProyecto, crearUsuario, guardarProyecto, regenerarSecreto } from "./acciones";
+import { anadirAlProyecto, crearProyecto, crearUsuario, guardarLinkAgenda, guardarProyecto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 
 type Res = { ok?: string; error?: string } | null;
@@ -45,6 +45,23 @@ export function FormProyecto({ aviso }: { aviso: string }) {
       <Resultado estado={estado} />
       <button className="btn-primario" disabled={enviando}>Guardar</button>
     </form>
+  );
+}
+
+// 4.4 (Cristian, 11 oct): el link del calendario de GHL que el caller manda al lead con «Link enviado»
+export function LinkAgenda({ inicial }: { inicial: string }) {
+  const { pendiente, error, ok, ejecutar } = useAccion();
+  const [valor, setValor] = useState(inicial);
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="etiqueta-campo" htmlFor="admin-link-agenda">Link del calendario de GHL</label>
+        <input id="admin-link-agenda" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="https://…" className="campo" />
+        <p className="mt-1 text-xs text-texto-3">El de reservas que reparte entre los closers. Cuando un caller pulsa «Link enviado», se abre WhatsApp con este link ya escrito. La hora y el closer llegan luego desde GHL.</p>
+      </div>
+      <Mensajes error={error} ok={ok} />
+      <button className="btn-primario" disabled={pendiente} onClick={() => ejecutar(() => guardarLinkAgenda(valor), "Link de agenda guardado")}>Guardar</button>
+    </div>
   );
 }
 

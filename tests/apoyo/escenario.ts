@@ -121,3 +121,21 @@ export async function ok<T>(promesa: Promise<T>): Promise<Exclude<T, { error: st
   if (r && typeof r === "object" && "error" in r) throw new Error(`La acción falló: ${(r as { error: string }).error}`);
   return r as Exclude<T, { error: string }>;
 }
+
+// 4.4 (11 oct): el caller ya no agenda a mano. Simula el flujo nuevo: el caller pulsa «Link enviado» (con sus
+// estrellas) y luego llega la cita de GHL, como la crea el webhook (a su nombre y con sus estrellas).
+export async function agendaPorLink(e: Escenario, leadId: string, caller: Perfil, closerId: string, fechaLocal: string, estrellas = 4) {
+  const { marcarLinkEnviado } = await import("@/app/(panel)/leads/acciones");
+  const { datosAgendaGhl } = await import("@/lib/leads");
+  const { localAIso } = await import("@/lib/formato");
+  como(e, caller);
+  await ok(marcarLinkEnviado(leadId, estrellas));
+  const { data, error } = await db
+    .from("citas")
+    .insert({ proyecto_id: e.proyecto.id, lead_id: leadId, closer_id: closerId, fecha: localAIso(fechaLocal, e.proyecto.zona_horaria), origen: "ghl", ...(await datosAgendaGhl(leadId)) })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  await db.from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null }).eq("id", leadId);
+  return data.id as string;
+}

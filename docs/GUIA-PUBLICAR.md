@@ -1,7 +1,7 @@
 # Guía · Publicar Eternity
 
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
-> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto y rotación, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Falta el paso de Resend (emails), que se añade con el bloque 6. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
+> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto, agendar por link de GHL, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Falta el paso de Resend (emails), que se añade con el bloque 6. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
 
 ---
 
@@ -138,8 +138,8 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 - [ ] (v2) Finanzas: una venta en cuotas aparece en «Pagos pendientes».
 - [ ] KPIs → Biblioteca: salen las 1.005 personas y la escalera (Membresía 627, Grupal 242, VIP 96, DFY 65).
 - [ ] Una venta de Membresía deja en «Pagos pendientes» el cobro del mes siguiente; «Dar de baja» (en Ventas) lo quita.
-- [ ] Administración → Proyecto y reparto: la rotación de closers con su modo y sus % (o todo al 0 % = apagada); al agendar desde la app sale el closer que propone o decide.
-- [ ] La ficha de cada persona (Empresa → Equipo o Administración → Equipo → «Ficha»): datos y comisión, acceso (email, contraseña, rol), permisos de secciones y pipelines, horario y su % de reparto o rotación, GHL y Fathom.
+- [ ] Administración → Proyecto y reparto: el «Link de agenda» (el calendario de GHL). Un caller pulsa «Link enviado» en un lead: pide estrellas, abre WhatsApp con el link y el lead pasa a la columna «Link enviado» de «Callers».
+- [ ] La ficha de cada persona (Empresa → Equipo o Administración → Equipo → «Ficha»): datos y comisión, acceso (email, contraseña, rol), permisos de secciones y pipelines, horario y su % de reparto (callers), GHL y Fathom.
 - [ ] Administración → Reportes: las preguntas del reporte de callers y closers (o las de siempre). Un closer ve «Onboarding» en su menú con sus clientes; los puntos se cambian en «Onboarding closers».
 - [ ] Links y recursos: cada producto con su link de dossier (se pone en Programas) encima del link de pago.
 - [ ] Administración → Comisiones: los tramos de callers y closers (en dólares); en Equipo, quién va por tramos y quién con su % propio; en Programas, la Membresía sin «Cuenta para comisión»; Finanzas → Liquidaciones enseña el tramo de cada persona.

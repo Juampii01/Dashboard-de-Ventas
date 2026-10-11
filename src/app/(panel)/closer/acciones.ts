@@ -10,7 +10,7 @@ import { db, registrarActividad, todas, escribir } from "@/lib/datos";
 import { localAIso, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import type { Cita, EstadoCita } from "@/lib/tipos";
-import { telefonoClave } from "@/lib/leads";
+import { datosAgendaGhl, telefonoClave } from "@/lib/leads";
 
 // Arreglo 31: «cerrada» no se puede poner a mano: una cita se cierra registrando su venta
 const PERMITIDOS: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "seguimiento", "no_show", "cancelada", "perdida"];
@@ -68,6 +68,8 @@ export async function reagendarCita(citaId: string, fechaLocal: string) {
     await exigirSeccion("agendas"); // H5
     const { cita, perfil, proyecto } = await citaPermitida(citaId);
     if (NO_REAGENDABLES.includes(cita.estado)) throw new ErrorUsuario(`Esta cita ya está «${ETIQUETA_ESTADO_CITA[cita.estado]}»: no se puede reagendar. Crea una llamada nueva desde el lead.`);
+    // 4.4 (Cristian, 11 oct): también las citas de GHL se reagendan aquí (la app es el CRM; GHL solo trae datos).
+    // La nueva cita no lleva el id de GHL, así la sincronización no le cambia la hora.
     if (!fechaLocal) throw new ErrorUsuario("Elige la nueva fecha.");
     const fecha = localAIso(fechaLocal, proyecto.zona_horaria);
     // Bloque 3 (Cristian, 11 oct 2026): se queda el mismo closer; si no está libre a la nueva hora, se elige otra.
@@ -190,7 +192,7 @@ export async function unirCitaSinLead(id: string, leadId: string) {
     const { data: lead } = await db().from("leads").select("id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!lead) throw new ErrorUsuario("Elige un lead de este proyecto.");
     const { data: ya } = await db().from("citas").select("id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", s.ghl_cita_id).maybeSingle();
-    if (!ya) await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: s.closer_id, fecha: s.fecha, origen: "ghl", ghl_cita_id: s.ghl_cita_id, nota: s.titulo });
+    if (!ya) await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: s.closer_id, ...(await datosAgendaGhl(leadId)), fecha: s.fecha, origen: "ghl", ghl_cita_id: s.ghl_cita_id, nota: s.titulo });
     if (s.ghl_contact_id) await db().from("leads").update({ ghl_contact_id: s.ghl_contact_id }).eq("id", leadId).is("ghl_contact_id", null);
     await escribir(db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("id", id), "citas_sin_lead");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: "Cita de GHL unida a mano" });

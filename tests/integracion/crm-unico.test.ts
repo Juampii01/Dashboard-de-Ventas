@@ -4,7 +4,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { borrarPipeline, crearEtapa, guardarPermisoPipeline, moverCitaColumna, moverLead, unirEstado } from "@/app/(panel)/crm/acciones";
-import { agendarCita, registrarLlamada, volverANuevo } from "@/app/(panel)/leads/acciones";
+import { agendarCita, marcarLinkEnviado, registrarLlamada, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { cambiarEstadoCita } from "@/app/(panel)/closer/acciones";
 
 let e: Escenario;
@@ -27,7 +27,7 @@ afterAll(async () => {
 describe("Pipelines del equipo", () => {
   it("al crear un proyecto se crean «Callers» y «Closers» con sus columnas unidas, y no se pueden borrar", async () => {
     const { data: c } = await db.from("etapas").select("nombre, estado_caller").eq("pipeline_id", callers).order("orden");
-    expect(c!.map((x) => x.estado_caller)).toEqual(["nuevo", "no_contesta", "llamar_luego", "agendado", "vendido", "no_interesa"]);
+    expect(c!.map((x) => x.estado_caller)).toEqual(["nuevo", "no_contesta", "llamar_luego", "link_enviado", "agendado", "vendido", "no_interesa"]);
     const { data: k } = await db.from("etapas").select("columna_cita").eq("pipeline_id", closers).order("orden");
     expect(k!.map((x) => x.columna_cita)).toEqual(["pendiente", "confirmacion_pendiente", "confirmada", "no_califica", "pendientes", "reagendadas", "reserva", "cuotas", "cerradas", "seguimiento", "no_show", "cancelada", "perdida"]);
     como(e, e.p.ceo);
@@ -59,6 +59,10 @@ describe("Los botones del caller", () => {
     expect(await lead(e.leads.LeadA)).toEqual({ etapa_id: e.etapas.Nuevos, etapa_callers_id: await col(callers, "No contesta") });
     await ok(volverANuevo(e.leads.LeadA));
     expect((await lead(e.leads.LeadA)).etapa_callers_id).toBe(await col(callers, "Nuevos"));
+    // 4.4: el caller manda el link (va a «Link enviado»; el de origen no tiene esa columna) y agenda un jefe
+    await ok(marcarLinkEnviado(e.leads.LeadA, 4));
+    expect(await lead(e.leads.LeadA)).toEqual({ etapa_id: e.etapas.Nuevos, etapa_callers_id: await col(callers, "Link enviado") });
+    como(e, e.p.director);
     await ok(agendarCita(e.leads.LeadA, e.p.closerA.id, "2026-11-20T16:00", "", 4));
     expect(await lead(e.leads.LeadA)).toEqual({ etapa_id: e.etapas.Agendados, etapa_callers_id: await col(callers, "Agendados") });
   });

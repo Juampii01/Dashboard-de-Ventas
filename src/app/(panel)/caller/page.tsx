@@ -59,7 +59,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
 
   const ahora = ahoraMs();
   const filtrados = colaCaller(leads, pestana, ahora, pesos);
-  const vencidos = leads.filter((l) => l.estado_caller === "llamar_luego" && l.llamar_en && new Date(l.llamar_en).getTime() <= ahora);
+  const vencidos = leads.filter((l) => (l.estado_caller === "llamar_luego" || l.estado_caller === "link_enviado") && l.llamar_en && new Date(l.llamar_en).getTime() <= ahora);
   const seleccionado = filtrados.find((l) => l.id === sp.lead) ?? filtrados[0] ?? null;
   const base = (extra: Record<string, string>) => {
     const p = new URLSearchParams();
@@ -134,7 +134,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                       </div>
                       <div className="mt-0.5 flex items-center justify-between text-xs text-texto-3">
                         <span>{l.telefono}</span>
-                        <span>{l.estado_caller === "llamar_luego" && l.llamar_en ? `⏰ ${fechaHora(l.llamar_en, proyecto)}` : ETIQUETA_ESTADO_CALLER[l.estado_caller]}</span>
+                        <span>{l.estado_caller === "llamar_luego" && l.llamar_en ? `⏰ ${fechaHora(l.llamar_en, proyecto)}` : l.estado_caller === "link_enviado" && l.llamar_en ? `🔗 Link enviado · insistir ${fechaHora(l.llamar_en, proyecto)}` : ETIQUETA_ESTADO_CALLER[l.estado_caller]}</span>
                       </div>
                     </Link>
                   </li>
@@ -164,6 +164,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                     closers={closers}
                     productos={(productos.data ?? []) as Producto[]}
                     rol={perfil.rol}
+                    linkAgenda={proyecto.link_agenda}
                     moneda={proyecto.moneda}
                   />
                 </div>

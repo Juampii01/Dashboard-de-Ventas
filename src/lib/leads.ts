@@ -227,3 +227,11 @@ export async function guardarLeads(
 
   return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length, cambianOferta };
 }
+
+// 4.4 (Cristian, 11 oct): datos de una cita que llega de GHL. La agenda (KPIs, Ranking y comisión) es de quien marcó
+// «Link enviado»; si nadie lo marcó, del caller del lead; sin caller, de nadie. Las estrellas son las que puso el
+// caller al enviar el link.
+export async function datosAgendaGhl(leadId: string): Promise<{ agendada_por: string | null; estrellas_caller: number | null }> {
+  const { data } = await db().from("leads").select("link_enviado_por, caller_id, estrellas_caller").eq("id", leadId).maybeSingle();
+  return { agendada_por: data?.link_enviado_por ?? data?.caller_id ?? null, estrellas_caller: data?.estrellas_caller ?? null };
+}

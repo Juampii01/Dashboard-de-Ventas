@@ -94,7 +94,7 @@ export function FichaPersona({
             )}
             {f && pestana === "agenda" && (
               <div className="space-y-4">
-                <PctPersona f={f} />
+                {f.persona.rol === "caller" && <PctPersona f={f} />}
                 <div className="border-t border-borde pt-3">
                   <h3 className="mb-2 text-sm font-semibold">{rol === "closer" ? "Horario para recibir llamadas" : "Horario de trabajo"}</h3>
                   <EditorHorario inicial={f.horario} zona={f.zona} perfilId={f.persona.id} />

@@ -205,7 +205,7 @@ export async function unirEstado(etapaId: string, estado: string | null) {
     refrescar();
   });
 }
-const ESTADOS: EstadoCaller[] = ["nuevo", "no_contesta", "llamar_luego", "agendado", "no_interesa", "vendido"];
+const ESTADOS: EstadoCaller[] = ["nuevo", "no_contesta", "llamar_luego", "link_enviado", "agendado", "no_interesa", "vendido"];
 
 // Permisos de un pipeline (como GHL): por rol o por persona; null = lo de siempre. Solo CEO y director con Administración.
 export async function guardarPermisoPipeline(pipelineId: string, quien: { rol: string } | { perfilId: string }, nivel: string | null) {
