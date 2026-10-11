@@ -259,7 +259,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 | 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | `f102dce` |
 | 1.0 Bloques 3 y 4 (rotación de closers, comisiones por tramos, «Cuenta para comisión») | `0f6c688` |
 | 1.0 1.1 (pasada en pantalla y arreglo de la landing) | `ed4bcce` |
-| 1.0 Bloques 5 y 7 (ficha de cada persona, reporte editable, onboarding de closers, Links y recursos, cola sin prioridad) | (commit de hoy) |
+| 1.0 Bloques 5 y 7 (ficha de cada persona, reporte editable, onboarding de closers, Links y recursos, cola sin prioridad) | `c3bf914` |
 
 **Comprobado el 11 oct (tras los bloques 5 y 7):** 424 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 29 migraciones (11 oct: `rotacion_closers`, `comisiones_tramos` y `bloque7`) · 43 tablas, todas con RLS · nada subido a la nube.
 
