@@ -10,6 +10,7 @@ import { AccionesLead } from "@/components/acciones-lead";
 import { SelectoresLead } from "./selectores";
 import { VerEstrellas } from "@/components/estrellas";
 import type { Actividad, Cita, Etapa, Lead, Pipeline, Producto, Venta } from "@/lib/tipos";
+import { ABIERTAS } from "@/lib/llamadas";
 
 const ICONO_ACT: Record<string, string> = {
   llamada: "📞",
@@ -67,6 +68,9 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     db().from("etapas").select("*, pipelines!inner(proyecto_id, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").order("orden"),
   ]);
   const nombre = (pid: string | null) => gente.find((g) => g.id === pid)?.nombre ?? "—";
+  // La cita que cerraría una venta (la abierta más reciente, como en registrarVenta): su closer es el vendedor por defecto
+  const citaAbierta = (citas.data as Cita[] | null)?.find((c) => [...ABIERTAS, "seguimiento"].includes(c.estado) && c.closer_id);
+  const closerCita = citaAbierta?.closer_id ? { id: citaAbierta.closer_id, nombre: nombre(citaAbierta.closer_id) } : undefined;
   const pipeline = (pipelines.data as Pipeline[]).find((p) => p.id === lead.pipeline_id);
   const etapa = (etapas.data as Etapa[]).find((e) => e.id === lead.etapa_id);
   const nombreCompleto = `${lead.nombre} ${lead.apellido}`.trim() || "Sin nombre";
@@ -180,6 +184,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 productos={(productos.data ?? []) as Producto[]}
                 rol={perfil.rol}
                 vendedores={jefe ? gente.filter((g) => g.rol === "closer" || g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre })) : undefined}
+                closerCita={closerCita}
+                miId={perfil.id}
                 moneda={proyecto.moneda}
                 compacto
               />

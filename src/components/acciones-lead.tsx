@@ -52,6 +52,8 @@ export function AccionesLead({
   productos,
   rol,
   vendedores,
+  closerCita,
+  miId,
   moneda,
   compacto = false,
 }: {
@@ -61,6 +63,8 @@ export function AccionesLead({
   productos: Producto[];
   rol: string;
   vendedores?: Persona[];
+  closerCita?: Persona; // closer de la cita abierta del lead: por defecto la venta es suya (11 oct)
+  miId?: string;
   moneda: string;
   compacto?: boolean;
 }) {
@@ -166,6 +170,8 @@ export function AccionesLead({
           <FormVenta
             productos={productosVisibles}
             vendedores={vendedores}
+            closerCita={closerCita}
+            miId={miId}
             moneda={moneda}
             onEnviar={(fd) => {
               ejecutar(() => registrarVenta(leadId, fd), "Venta registrada");
@@ -198,6 +204,8 @@ export function AccionesLead({
 export function FormVenta({
   productos,
   vendedores,
+  closerCita,
+  miId,
   moneda,
   onEnviar,
   desdeCita = false,
@@ -205,6 +213,8 @@ export function FormVenta({
 }: {
   productos: Producto[];
   vendedores?: Persona[];
+  closerCita?: Persona;
+  miId?: string;
   moneda: string;
   onEnviar: (fd: FormData) => void;
   desdeCita?: boolean; // el closer cierra su cita: pide las estrellas del prospecto
@@ -303,10 +313,12 @@ export function FormVenta({
       </div>
       {vendedores && vendedores.length > 0 && (
         <div>
-          <label className="etiqueta-campo" htmlFor="acciones-lead-vendedor-si-no-eres-tu">Vendedor (si no eres tú)</label>
+          <label className="etiqueta-campo" htmlFor="acciones-lead-vendedor-si-no-eres-tu">Vendedor</label>
+          {/* Con cita, por defecto el closer de la cita (lo decide también el servidor si no se elige nada) */}
           <select id="acciones-lead-vendedor-si-no-eres-tu" name="vendedor" defaultValue="" className="campo">
-            <option value="">Yo</option>
-            {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+            <option value="">{closerCita ? `${closerCita.nombre} (closer de la cita)` : "Yo"}</option>
+            {closerCita && miId && <option value={miId}>Yo</option>}
+            {vendedores.filter((v) => v.id !== closerCita?.id).map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
         </div>
       )}

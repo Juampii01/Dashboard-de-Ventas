@@ -170,9 +170,12 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (citaElegida && !cita) throw new ErrorUsuario("Esa cita no es de este lead o ya está cerrada.");
     // Vendedor: al cerrar una cita, la venta es del closer de esa cita aunque la cierre
     // el director o el CEO; si no, quien la registra (o a quien elija un jefe).
+    // Mejora de la pasada (Cristian, 11 oct): un jefe que la registra desde la ficha sin elegir vendedor
+    // también la deja a nombre del closer de la cita (así «Cerradas» y su facturación cuentan lo mismo).
     let vendedor = perfil.id;
     const vendedorForm = String(formData.get("vendedor") ?? "");
     if (formData.get("desde_cita") && cita?.closer_id) vendedor = cita.closer_id;
+    else if (esJefe(perfil) && !vendedorForm && cita?.closer_id) vendedor = cita.closer_id;
     else if (esJefe(perfil) && vendedorForm) {
       const { data: delProyecto } = await db().from("miembros_proyecto").select("perfil_id").eq("proyecto_id", proyecto.id).eq("perfil_id", vendedorForm).maybeSingle();
       if (!delProyecto) throw new ErrorUsuario("El vendedor elegido no es de este proyecto.");
