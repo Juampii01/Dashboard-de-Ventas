@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
-import { db, equipo } from "@/lib/datos";
+import { conBajas, db, equipo } from "@/lib/datos";
 import { rangoDe, fecha as fmtFecha, ETIQUETA_ROL } from "@/lib/formato";
 import { PREGUNTAS, preguntasDe, preguntasValidas, rolDeReporte, tasasCloser, type Pregunta } from "@/lib/reportes";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio, Avatar } from "@/components/ui";
@@ -20,7 +20,9 @@ export default async function ReportesPage({ searchParams }: PageProps<"/reporte
   if (persona) q = q.eq("perfil_id", persona);
   const { data } = await q;
   const reportes = (data ?? []) as Reporte[];
-  const nombre = (id: string) => gente.find((g) => g.id === id)?.nombre ?? "—";
+  // Los nombres, también de los perfiles de prueba y de quien ya no está en el proyecto (salía «—», 11 oct 2026)
+  const conNombre = await conBajas(await equipo(proyecto.id, true), reportes.map((r) => r.perfil_id));
+  const nombre = (id: string) => (id === perfil.id ? perfil.nombre : conNombre.find((g) => g.id === id)?.nombre) ?? "—";
 
   // Datos del sistema de hoy, para pre-rellenar el reporte
   const rol = rolDeReporte(perfil.rol);
