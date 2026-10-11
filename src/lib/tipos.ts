@@ -22,6 +22,8 @@ export type Proyecto = {
   zona_horaria: "America/New_York" | "Europe/Madrid";
   reparto_auto: boolean; // 1.0 bloque 2: reparto automático al entrar, con % por caller
   reparto_solo_horario: boolean;
+  rotacion_modo?: "elige" | "propone" | "decide"; // 1.0 bloque 3: cómo se elige el closer al agendar
+  tramos_comision?: unknown; // 1.0 bloque 4: tramos de comisión de callers y closers (lib/comisiones)
   calendario?: unknown; // 1.0 bloque 1: ajustes de las llamadas de los closers (lib/disponibilidad)
   webhook_secreto: string;
   aviso_webhook_url: string | null;
@@ -101,6 +103,7 @@ export type Producto = {
   precio: number | null;
   link_pago: string | null;
   vende_caller: boolean;
+  cuenta_comision?: boolean; // 1.0 bloque 4: si no, no paga comisión ni suma para el tramo
   activo: boolean;
   orden: number;
   // v2 (Programas)

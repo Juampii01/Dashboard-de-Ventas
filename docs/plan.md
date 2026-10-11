@@ -1,14 +1,14 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras los bloques 1 y 2). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
+> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras los bloques 3 y 4). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
 
 ---
 
 ## 0. Dónde estamos (léelo primero al retomar)
 
-La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 y 2), **sin publicar**. Bloques 1 + 2 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
+La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 a 4), **sin publicar**. Bloques 3 + 4 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** que Cristian vea los bloques 1 y 2 (se hicieron seguidos, con su permiso). Después, el Bloque 3 (rotación de closers) y el 4, juntos en el siguiente commit. Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente:** que Cristian vea los bloques 3 y 4. Después, los bloques 5 y 6, juntos en el siguiente commit. Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -86,16 +86,27 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - **Tests:** `reparto-auto.test.ts` (7) y puestos al día los del reparto viejo (`funciones`, `arreglos-auditoria`, `v2-11`, `perfiles-prueba`). Rotos a propósito: «solo en horario» (fallan 2) y «apagado» (falla 1). Lo del 0 % está a la vez en el código y en la base: quitarlo solo del código no lo rompe.
 - **Navegador (11 oct, CEO, Maestria):** encender con todo al 0 % da el aviso «suman 0»; «A partes iguales» pone 25 % a cada uno y se guarda (Caller Test fuera). Devuelto a apagado y 0 %.
 
-#### Bloque 3 · Rotación de closers
-- [ ] En Administración: **% por closer** (todos al 0 % = apagada) y **cómo se elige el closer al agendar**: «lo elige quien agenda» (por defecto, como hoy), «lo propone la rotación (se puede cambiar)» o «lo decide la rotación».
-- [ ] Toca el closer con más % pendiente según su peso; si **no está libre** a esa hora (bloque 1), salta al siguiente; si ninguno lo está, avisa y deja elegir.
-- [ ] En todos los sitios donde se agenda: cola del caller, CRM («Agendados»), Crear llamada, ficha del lead y Post-call (reagendar). Con «lo decide la rotación», el servidor pone el closer aunque se intente otro.
+#### Bloque 3 · Rotación de closers ✅ (11 oct)
+- **Decisiones de Cristian (11 oct):** al **reagendar** se queda el mismo closer y solo se comprueba que esté libre a la nueva hora (si no, avisa y se elige otra) · con «lo decide la rotación» y ningún closer libre, **no deja agendar** y pide otra hora (no debería pasar nunca) · con «lo elige quien agenda» y el closer **no libre**, **avisa pero deja agendar** · las citas que llegan de GHL traen su closer: la rotación **no las toca ni las cuenta**.
+- [x] En Administración: **% por closer** (todos al 0 % = apagada) y **cómo se elige el closer al agendar**: «lo elige quien agenda» (por defecto, como hoy), «lo propone la rotación (se puede cambiar)» o «lo decide la rotación».
+- [x] Toca el closer con más % pendiente según su peso; si **no está libre** a esa hora (bloque 1), salta al siguiente; si ninguno lo está, avisa (y con «lo decide», no deja: ver decisiones).
+- [x] En todos los sitios donde se agenda: cola del caller, CRM («Agendados»), Crear llamada, ficha del lead y Post-call (reagendar). Con «lo decide la rotación», el servidor pone el closer aunque se intente otro.
+- **Cómo cuenta (criterio de Claude):** la misma regla que el reparto (menos citas para su %); cuenta cada cita que se agenda en la app con la rotación encendida, en cualquier modo; al cambiar los %, la cuenta empieza de cero. Los perfiles de prueba y los closers sin horario nunca salen en la rotación (Administración avisa «sin horario»). Al reagendar, si el closer aún no tiene horario, solo se comprueba que no choque con otra cita.
+- **Hecho y comprobado (11 oct):** migración `20261014110000_rotacion_closers.sql` (`rotacion_modo`, `rotacion_pct`, `rotacion_cuenta`, función `sumar_rotacion`) · `lib/rotacion.ts` y `ordenRotacion` en `lib/disponibilidad.ts` · `agendarCita` (con «decide» pone el closer) y `reagendarCita` (mismo closer y libre) · acción `consultarAgenda` y componente `campos-cita.tsx`, usado en la cola y la ficha del lead, el CRM («Agendados») y Crear llamada · Administración → «Rotación de closers (al agendar)».
+- **Tests:** `rotacion.test.ts` (10). Rotos a propósito «saltar al no libre», «decide manda» y «reagendar comprueba»: fallan 4, 4 y 2.
+- **Navegador (11 oct, CEO, Maestria; sin agendar nada):** con Ana y Bruno al 50 % y «lo propone», al elegir el lunes 19 oct 10:00 sale «La rotación propone a Ana Closer»; el domingo, «Ningún closer de la rotación está libre» y el aviso de que Ana está fuera de su horario, pero deja agendar. Devuelto todo (rotación apagada, sin horarios; 0 citas en Maestria).
 
-#### Bloque 4 · Comisiones por tramos
-- [ ] **Tramos por rol** (editables en Equipo): callers 0-9.999 € → 3 % · 10.000-24.999 € → 3,5 % · 25.000-49.999 € → 4 % · 50.000-74.999 € → 4,5 % · 75.000-99.999 € → 5 % · desde 100.000 € → 5,5 %. Closers: 7 % en todos los tramos (el equipo los define luego).
-- [ ] **Cómo se calcula** (Cristian, 10 oct): cada mes se suma la facturación de sus ventas del mes (caller: las ventas cerradas de los leads que agendó + su low ticket; closer: lo que vendió) · el % del tramo alcanzado se aplica a **toda** esa facturación · se reinicia cada mes · se paga sobre lo cobrado · **lo que se cobra después (cuotas) va con el % del mes en que se hizo la venta**.
-- [ ] **Interruptor por persona** en su ficha: «manda su % propio» o «mandan los tramos» (Cristian: que se pueda elegir con un botón quién manda).
-- [ ] Liquidaciones de Finanzas con los tramos (y el tramo alcanzado a la vista).
+#### Bloque 4 · Comisiones por tramos ✅ (11 oct)
+- **Decisiones de Cristian (11 oct):** tramos **en dólares** (los importes, en la moneda del proyecto), editables en **Administración** · **callers y closers con tramos** por defecto; CEO y directores con su % propio (el sistema de hoy); el interruptor vuelve al sistema de hoy · una venta **devuelta sigue contando** para el tramo de su mes · **casilla por producto «Cuenta para comisión»**: la **Membresía en «no»** (de momento; lo revisará el equipo): no paga comisión a nadie **ni suma para el tramo** · los precios de los productos se cambian en Programas (ya existe; se comprueba).
+- [x] **Tramos por rol** (editables en **Administración → Comisiones**, decisión del 11 oct): callers 0-9.999 € → 3 % · 10.000-24.999 € → 3,5 % · 25.000-49.999 € → 4 % · 50.000-74.999 € → 4,5 % · 75.000-99.999 € → 5 % · desde 100.000 € → 5,5 %. Closers: 7 % en todos los tramos (el equipo los define luego).
+- [x] **Cómo se calcula** (Cristian, 10 oct): cada mes se suma la facturación de sus ventas del mes (caller: las ventas cerradas de los leads que agendó + su low ticket; closer: lo que vendió) · el % del tramo alcanzado se aplica a **toda** esa facturación · se reinicia cada mes · se paga sobre lo cobrado · **lo que se cobra después (cuotas) va con el % del mes en que se hizo la venta**.
+- [x] **Interruptor por persona** en su ficha: «manda su % propio» o «mandan los tramos» (Cristian: que se pueda elegir con un botón quién manda).
+- [x] Liquidaciones de Finanzas con los tramos (y el tramo alcanzado a la vista).
+- [x] Casilla **«Cuenta para comisión»** en cada programa (Programas → Básico); la Membresía en «no». Cambiarla es cambiar comisiones: solo el CEO o un director (criterio de Claude).
+- **Hecho y comprobado (11 oct):** migración `20261014120000_comisiones_tramos.sql` (`proyectos.tramos_comision` con los del plan, `miembros_equipo.comision_modo`, `productos.cuenta_comision` con la Membresía en «no», `liquidaciones.tramo`) · `lib/comisiones.ts` (tramos, `pctDeTramo`, `modoComision`) · `liquidacionesMes` con tramos (base por persona y mes de la venta; las cuotas, con el % del mes de la venta) · Administración → pestaña **Comisiones** · interruptor en Equipo (la tarjeta dice «Tramos») · la casilla en Programas · el tramo en Liquidaciones · `proyecto-base.json` con la Membresía sin comisión.
+- **Tests:** `comisiones-tramos.test.ts` unitario (7, con tu ejemplo de 9.950 $ + 2 Membresías = 3 %) y de integración (4). Los 2 tests de liquidación de antes pasan a ser los de «su % propio». Rotos a propósito «la Membresía cuenta», «cuota con el % de hoy» y «al caller no le suman sus agendas»: fallan 2, 3 y 3.
+- **Navegador (11 oct, CEO, Maestria; sin cambiar nada):** pestaña Comisiones con los 6 tramos de callers y el 7 % de closers en USD; la Membresía con la casilla quitada; en Equipo, Ana sale con «Los tramos» marcado y todas las tarjetas de callers y closers dicen «Tramos».
+- ⚠ No probado en pantalla: Liquidaciones con el tramo (en Maestria no hay ventas; sí en tests) y guardar tramos desde la pantalla (sí en tests).
 
 #### Bloque 5 · Ficha completa de cada persona (Empresa → Equipo)
 - [ ] Clic en una persona → ventana con todo: la marca «perfil de prueba» · datos (nombre, email, teléfono, WhatsApp, área, puesto) · rol, Administración y permisos de secciones y de pipelines · **comisiones** (su %, el interruptor del bloque 4, por producto) · **reparto y rotación** (su %) · **horario y ajustes de calendario** (bloque 1) · **calendario y usuario de GHL** y **cuenta de Fathom** · **cambiar contraseña** · **cambiar email** (lo cambia el administrador directamente) · **enviar enlace mágico** (bloque 6). La usan **el CEO y los directores con Administración**. Las personas sin acceso a la app (solo en el organigrama) tienen la parte de datos y comisión.
@@ -135,6 +146,7 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - [ ] `preparar-proyecto` sobre una base vacía (que crea Maestria con «Callers» y «Closers»).
 - [ ] Ver la pantalla «Algo ha fallado» con un error de verdad.
 - [ ] Detalle: al crear una entrada de landing, el formulario se queda con el nombre escrito (se podría crear dos veces).
+- [ ] **Pendiente (Cristian, 11 oct):** que un administrador pueda **cambiar la zona horaria del proyecto** (hoy solo se elige al crearlo). Cuidado: mueve todas las fechas (ventas, KPIs, objetivos, horarios); decidir cómo antes de hacerlo.
 
 ### 1.2 Después de tu revisión
 - [ ] Arreglar lo que encuentres (lo apunto aquí y tú decides qué va antes de publicar).
@@ -224,8 +236,9 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 | Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
 | 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
 | 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | `f102dce` |
+| 1.0 Bloques 3 y 4 (rotación de closers, comisiones por tramos, «Cuenta para comisión») | (commit de hoy) |
 
-**Comprobado el 11 oct (tras los bloques 1 y 2):** 390 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 26 migraciones (11 oct: `horarios_calendario` y `reparto_porcentaje`) · 42 tablas, todas con RLS · nada subido a la nube.
+**Comprobado el 11 oct (tras los bloques 3 y 4):** 411 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 28 migraciones (11 oct: `rotacion_closers` y `comisiones_tramos`) · 42 tablas, todas con RLS · nada subido a la nube.
 
 ---
 
@@ -250,7 +263,8 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - **Reparto (1.0):** solo entre callers; botón con 4 formas y reasignar; automático al entrar con % por caller (suman 100), apagado por defecto; todo al 0 % hasta que lo configuren los directores; con «solo en horario» y nadie en horario, se reparte igual entre los que tienen %.
 - **Horario (1.0, bloque 1):** en la hora del proyecto, con la del aparato al lado; cada uno el suyo (onboarding obligatorio y «Mi perfil»), el administrador el de cualquiera; los ajustes de llamadas de los closers, solo el administrador.
 - **Rotación de closers (1.0):** % por closer y modo de elección configurables (como GHL); salta al siguiente si no está libre; disponibilidad como los calendarios de GHL (duración por defecto 30 min, descansos, días libres).
-- **Comisiones (1.0):** tramos mensuales sobre toda la facturación del mes; cuotas posteriores con el % del mes de la venta; interruptor por persona para que mande su % propio o los tramos.
+- **Comisiones (1.0):** tramos mensuales sobre toda la facturación del mes; cuotas posteriores con el % del mes de la venta; interruptor por persona para que mande su % propio o los tramos; callers y closers por tramos por defecto, CEO y directores con su % propio; en dólares, editables en Administración; una venta devuelta sigue contando para su tramo; la Membresía no paga comisión ni suma para el tramo (casilla por programa).
+- **Rotación de closers (bloque 3):** reagendar = mismo closer y tiene que estar libre; «decide» sin nadie libre = no deja agendar; «elige» con el closer no libre = avisa y deja; las citas de GHL no las toca ni las cuenta.
 - **Emails (1.0):** Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos de reportes; sin email de bienvenida.
 - **Cola del caller:** los leads más nuevos primero; la prioridad A/B/C no ordena.
 - **Biblioteca (11 oct):** primera pestaña de KPIs, para director y CEO; datos de los leads de la app (también por CSV y, con GHL, sola); se reparte desde ella; su clasificación es un dato propio de cada lead («Oferta»), calculado para todos y recalculado solo; se ve en la ficha y en el CRM junto a la etiqueta de siempre; cada CSV nuevo pone al día todos los datos.

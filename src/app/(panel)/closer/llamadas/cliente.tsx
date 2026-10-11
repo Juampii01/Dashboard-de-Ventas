@@ -10,6 +10,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { agendarCita } from "@/app/(panel)/leads/acciones";
 import { buscarLeadsParaLlamada, descartarCitaSinLead, importarCitas, sincronizarGhl, unirCitaSinLead } from "../acciones";
 import { useToast } from "@/components/toasts";
+import { CamposCita } from "@/components/campos-cita";
 
 type LeadBuscado = { id: string; nombre: string; apellido: string; telefono: string | null; email: string | null };
 
@@ -54,11 +55,7 @@ export function CrearLlamada({ closers, soyCloser }: { closers: { id: string; no
               }}
             >
               <p className="text-sm">Lead: <b>{`${lead.nombre} ${lead.apellido}`.trim()}</b> <button type="button" className="text-xs text-primario hover:underline" onClick={() => setLead(null)}>cambiar</button></p>
-              <div>
-                <label className="etiqueta-campo" htmlFor="cliente-closer">Closer</label>
-                <select id="cliente-closer" name="closer" required className="campo" defaultValue={soyCloser ?? ""}>{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
-              </div>
-              <label className="block"><span className="etiqueta-campo">Fecha y hora (hora del proyecto)</span><input type="datetime-local" name="fecha" required className="campo" /></label>
+              <CamposCita closers={closers} inicial={soyCloser ?? undefined} id="cliente-closer" />
               <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={2} className="campo" /></label>
               <SelectorEstrellas quien="caller" opcional />
               <button className="btn-primario w-full" disabled={pendiente}>Crear llamada</button>

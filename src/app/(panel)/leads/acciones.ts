@@ -11,6 +11,7 @@ import { planDePagos } from "@/lib/finanzas";
 import type { EstadoCaller, Lead, Perfil, Proyecto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { ABIERTAS } from "@/lib/llamadas";
+import { closerDeRotacion, contarEnRotacion, estadoRotacion } from "@/lib/rotacion";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -94,6 +95,14 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
     if (!fechaLocal) throw new ErrorUsuario("Elige fecha y hora.");
     // El caller dice cómo fue su llamada (2 a 5); si agenda un jefe o un closer, es opcional
     const n = perfil.rol === "caller" || estrellas !== undefined ? estrellasEntre(estrellas, 2, 5) : null;
+    const fecha = aIso(fechaLocal, proyecto.zona_horaria);
+    // Bloque 3: con «lo decide la rotación», el servidor pone el closer aunque se intente otro
+    const rotacion = await estadoRotacion(proyecto);
+    if (rotacion.encendida && rotacion.modo === "decide") {
+      const r = await closerDeRotacion(proyecto, new Date(fecha));
+      if (!r.closer) throw new ErrorUsuario("Ningún closer de la rotación está libre a esa hora: elige otra hora.");
+      closerId = r.closer;
+    }
     const { data: closer } = await db()
       .from("miembros_proyecto")
       .select("perfil_id, perfiles!inner(rol, nombre)")
@@ -102,11 +111,11 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
       .eq("perfiles.rol", "closer")
       .maybeSingle();
     if (!closer) throw new ErrorUsuario("Elige un closer del proyecto.");
-    const fecha = aIso(fechaLocal, proyecto.zona_horaria);
     // Paso H6: un doble clic creaba dos citas iguales; la base ya no deja repetir lead, closer y hora
     const { error: errCita } = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, agendada_por: perfil.id, fecha, nota: nota || null, estrellas_caller: n });
     if (errCita?.code === "23505") throw new ErrorUsuario("Ese lead ya tiene una cita con ese closer a esa hora.");
     if (errCita) throw new Error(`No se pudo guardar en «citas»: ${errCita.message}`);
+    if (rotacion.encendida) await contarEnRotacion(proyecto.id, closerId);
     // Arreglo 9: si agenda un jefe o un closer sin estrellas, no se borran las que puso el caller
     await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;

@@ -30,6 +30,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
   const puedeComisionRol = (r: Rol) => jefe && (perfil.rol === "ceo" || r !== perfil.rol);
   const puesto = (id: string | null) => eq.puestos.find((p) => p.id === id)?.nombre;
   const resumenComision = (m: (typeof miembros)[number]) => {
+    if ((m.rol === "caller" || m.rol === "closer") && (m.comision_modo ?? "tramos") === "tramos") return "Tramos"; // bloque 4
     if (!m.comision) return null;
     const partes = [m.comision.pct_venta ? `${pct(m.comision.pct_venta)} venta` : "", m.comision.pct_agenda ? `${pct(m.comision.pct_agenda)} agenda` : "", m.comision.por_producto && Object.keys(m.comision.por_producto).length ? "por producto" : ""].filter(Boolean);
     return partes.length ? `Propia: ${partes.join(" · ")}` : null;
@@ -88,7 +89,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
           <div className="space-y-5">
             <Seccion titulo="Comisión de cada rol">
               {!jefe && <p className="mb-2 rounded-lg bg-panel-2 px-3 py-2 text-xs text-texto-2">Solo el CEO o el director pueden cambiar comisiones.</p>}
-              <p className="mb-3 text-xs text-texto-3">Es la que se usa si la persona o el producto no tienen una propia. «% por venta»: de lo que vende él. Caller: además, «% por agenda cerrada» cuando el closer cierra una agenda suya. Se paga sobre lo cobrado, cada mes.</p>
+              <p className="mb-3 text-xs text-texto-3">Es la que se usa si la persona o el producto no tienen una propia. «% por venta»: de lo que vende él. Caller: además, «% por agenda cerrada» cuando el closer cierra una agenda suya. Se paga sobre lo cobrado, cada mes. Callers y closers van por tramos (Administración → Comisiones): esta solo se les aplica si en su ficha manda «su % propio».</p>
               <div className="space-y-2">
                 <div className="grid grid-cols-[1fr_72px_72px_auto] gap-2 text-[11px] text-texto-3"><span>Rol</span><span className="text-right">% venta</span><span className="text-right">% agenda</span><span className="w-7" /></div>
                 {(["closer", "caller", "director", "ceo"] as Rol[]).map((r) => <ComisionRolForm key={r} rol={r} editable={puedeComisionRol(r)} pctVenta={eq.comisionesRol[r]?.pct_venta ?? 0} pctAgenda={eq.comisionesRol[r]?.pct_agenda ?? 0} />)}

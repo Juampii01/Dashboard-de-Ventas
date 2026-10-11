@@ -28,6 +28,7 @@ function aDatos(p: Producto | null): DatosPrograma {
     activo: p?.activo ?? true,
     backend_offer: p?.backend_offer ?? false,
     vende_caller: p?.vende_caller ?? false,
+    cuenta_comision: p?.cuenta_comision ?? true,
     modo_pago: p?.modo_pago ?? "unico",
     num_cuotas: p?.num_cuotas ?? 3,
     precio: p?.precio === null || p?.precio === undefined ? "" : String(p.precio),
@@ -96,6 +97,7 @@ function Ventana({ programa, moneda, comisionesRol, editables, onCerrar }: { pro
                 </div>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.activo} onChange={(e) => poner({ activo: e.target.checked })} /> Activo (se puede vender)</label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.vende_caller} onChange={(e) => poner({ vende_caller: e.target.checked })} /> Lo puede vender el caller (low ticket)</label>
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={d.cuenta_comision !== false} onChange={(e) => poner({ cuenta_comision: e.target.checked })} /><span>Cuenta para comisión<span className="block text-xs text-texto-3">Si lo quitas, sus ventas no pagan comisión a nadie ni suman para los tramos (como la Membresía, de momento).</span></span></label>
                 <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={d.backend_offer} onChange={(e) => poner({ backend_offer: e.target.checked })} /><span>Back-end offer<span className="block text-xs text-texto-3">En Finanzas → Resumen, lo cobrado de este programa cuenta como «Back-end» en vez de «Venta nueva» o «Cuotas». Vale también para lo ya cobrado.</span></span></label>
               </>
             )}

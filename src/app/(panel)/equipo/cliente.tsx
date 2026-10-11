@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Pencil, Save, Trash2, KeyRound, Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { useAccion } from "@/components/acciones-lead";
-import { actualizarMiembroEquipo, borrarArea, darAccesoMiembro, guardarArea, guardarComisionRol } from "./acciones";
+import { actualizarMiembroEquipo, borrarArea, cambiarModoComision, darAccesoMiembro, guardarArea, guardarComisionRol } from "./acciones";
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
@@ -12,7 +12,7 @@ import { leerNumero } from "@/lib/numero";
 type Area = { id: string; nombre: string; color: string };
 type Puesto = { id: string; area_id: string | null; nombre: string };
 type Producto = { id: string; nombre: string };
-type Miembro = { id: string; nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona; perfil_id: string | null; rol: Rol | null };
+type Miembro = { id: string; nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona; comision_modo?: "tramos" | "propio" | null; perfil_id: string | null; rol: Rol | null };
 const ROL_TXT: Record<string, string> = { ceo: "CEO", director: "Director de ventas", closer: "Closer", caller: "Caller" };
 
 export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, puedeComision }: { m: Miembro; areas: Area[]; puestos: Puesto[]; productos: Producto[]; rolesQuePuedoDar: Rol[]; puedeComision: boolean }) {
@@ -28,6 +28,9 @@ export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, 
   const [agenda, setAgenda] = useState(String(m.comision?.pct_agenda ?? ""));
   const [pp, setPp] = useState<Record<string, string>>(Object.fromEntries(Object.entries(m.comision?.por_producto ?? {}).map(([k, v]) => [k, String(v)])));
   const [acceso, setAcceso] = useState(false);
+  // Bloque 4: callers y closers van por tramos salvo que se elija su % propio
+  const conTramos = m.rol === "caller" || m.rol === "closer";
+  const [modo, setModo] = useState<"tramos" | "propio">(conTramos ? (m.comision_modo ?? "tramos") : "propio");
   return (
     <>
       <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-texto" onClick={() => setAbierto(true)} title="Editar" aria-label={`Editar a ${m.nombre}`}><Pencil className="h-3.5 w-3.5" /></button>
@@ -40,6 +43,14 @@ export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, 
               <label className="block"><span className="etiqueta-campo">Puesto</span><select className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
             </div>
             <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
+            {conTramos && (
+              <fieldset className="rounded-lg border border-borde p-3" disabled={!puedeComision || pendiente}>
+                <legend className="px-1 text-xs font-medium text-texto-2">¿Qué manda en su comisión?</legend>
+                <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={modo === "tramos"} onChange={() => { setModo("tramos"); ejecutar(() => cambiarModoComision(m.id, "tramos"), "Mandan los tramos"); }} /> Los tramos</label>
+                <label className="inline-flex items-center gap-2"><input type="radio" checked={modo === "propio"} onChange={() => { setModo("propio"); ejecutar(() => cambiarModoComision(m.id, "propio"), "Manda su % propio"); }} /> Su % propio</label>
+                <p className="mt-1 text-xs text-texto-3">{modo === "tramos" ? "Cobra el % del tramo que alcance cada mes (Administración → Comisiones). Lo de abajo no se usa." : "Cobra su % de abajo (o el de su rol)."}</p>
+              </fieldset>
+            )}
             {!puedeComision ? (
               <div className="rounded-lg border border-borde p-3">
                 <div className="text-xs font-medium text-texto-2">Comisión</div>

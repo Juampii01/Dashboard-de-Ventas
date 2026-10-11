@@ -61,6 +61,7 @@ Por qué la clave va en la cabecera y no en la URL: la propia documentación de 
 - `closer_email`: elige el **email del usuario asignado a la cita**. Tiene que ser el mismo email con el que el closer entra en la app **y el closer tiene que estar añadido a este proyecto**; si no, la cita llega sin closer y la asigna el director.
 - **Cómo encuentra la app al lead de la cita:** por el Contact Id de GHL; si no, por el email; si no trae email, por el **teléfono** (últimas 9 cifras, así «+34 600 111 222» y «600 111 222» son el mismo). Si no existe, lo crea. Si la cita no trae ninguno de los tres, sale en «Últimos eventos» con el error «no viene email, teléfono ni contacto de GHL».
 - **No se duplican citas:** si GHL reenvía la misma cita, se actualiza la que ya existe (por su id de GHL; y si no trae id, por el mismo lead a la misma hora).
+- **Rotación de closers:** las citas que llegan de GHL traen ya su closer (el que asignó el calendario de GHL): la rotación de la app (Administración → Proyecto y reparto) **no las cambia ni las cuenta**. La rotación de la app vale para las citas que se agendan **dentro de la app** (cola del caller, CRM, Crear llamada y ficha del lead). Si usáis también la rotación del calendario de GHL, poned los mismos % en los dos sitios.
 
 ### Workflow 3 · Cambio de etapa (solo si hace falta)
 

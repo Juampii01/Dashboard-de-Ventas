@@ -64,21 +64,21 @@ describe("¿Está libre el closer? (con sus citas de verdad)", () => {
     const p = await proyecto(); // 45 min + 15 de descanso; aviso 60 min
     const lunes = (hm: string) => new Date(`2026-10-12T${hm}:00-04:00`); // Nueva York
     const ahora = lunes("07:00");
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:00"), undefined, ahora)).toEqual({ libre: true });
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("07:30"), undefined, ahora)).toEqual({ libre: false, motivo: "aviso" });
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("12:30"), undefined, ahora)).toEqual({ libre: false, motivo: "fuera_horario" }); // acabaría 13:15
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:00"), { ahora })).toEqual({ libre: true });
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("07:30"), { ahora })).toEqual({ libre: false, motivo: "aviso" });
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("12:30"), { ahora })).toEqual({ libre: false, motivo: "fuera_horario" }); // acabaría 13:15
     const { data: cita } = await db.from("citas").insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadA, closer_id: e.p.closerA.id, fecha: lunes("10:00").toISOString() }).select("id").single();
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:30"), undefined, ahora)).toEqual({ libre: false, motivo: "ocupado" });
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:50"), undefined, ahora)).toEqual({ libre: false, motivo: "ocupado" }); // su descanso
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("11:00"), undefined, ahora)).toEqual({ libre: true });
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:00"), cita!.id, ahora)).toEqual({ libre: true }); // al mover esa misma cita
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:30"), { ahora })).toEqual({ libre: false, motivo: "ocupado" });
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:50"), { ahora })).toEqual({ libre: false, motivo: "ocupado" }); // su descanso
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("11:00"), { ahora })).toEqual({ libre: true });
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:00"), { sinCita: cita!.id, ahora })).toEqual({ libre: true }); // al mover esa misma cita
     await db.from("citas").update({ estado: "cancelada" }).eq("id", cita!.id);
-    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:30"), undefined, ahora)).toEqual({ libre: true });
+    expect(await closerLibreA(p, e.p.closerA.id, lunes("10:30"), { ahora })).toEqual({ libre: true });
     // closerB: máximo 1 al día (sus propios ajustes)
     await db.from("citas").insert({ proyecto_id: e.proyecto.id, lead_id: e.leads.LeadB, closer_id: e.p.closerB.id, fecha: lunes("09:00").toISOString() });
-    expect(await closerLibreA(p, e.p.closerB.id, lunes("15:00"), undefined, ahora)).toEqual({ libre: false, motivo: "maximo" });
+    expect(await closerLibreA(p, e.p.closerB.id, lunes("15:00"), { ahora })).toEqual({ libre: false, motivo: "maximo" });
     // El 19 oct es día libre de los dos
-    expect(await closerLibreA(p, e.p.closerA.id, new Date("2026-10-19T10:00:00-04:00"), undefined, ahora)).toEqual({ libre: false, motivo: "fuera_horario" });
+    expect(await closerLibreA(p, e.p.closerA.id, new Date("2026-10-19T10:00:00-04:00"), { ahora })).toEqual({ libre: false, motivo: "fuera_horario" });
   });
 });
 

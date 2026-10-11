@@ -16,7 +16,7 @@ const moverMes = (mes: string, n: number) => {
   d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 7);
 };
-type Liq = { id: string; perfil_id: string; mes: string; base_facturado: number; base_cobrado: number; comision_facturado: number; comision_cobrado: number; detalle: LineaL[]; estado: "pendiente" | "pagada"; pagada_en: string | null; calculada_en: string };
+type Liq = { id: string; perfil_id: string; mes: string; base_facturado: number; base_cobrado: number; comision_facturado: number; comision_cobrado: number; detalle: LineaL[]; tramo: { base: number; pct: number } | null; estado: "pendiente" | "pagada"; pagada_en: string | null; calculada_en: string };
 
 export async function TabLiquidaciones({ d, proyecto, sp, yo }: { d: DatosFinanzas; proyecto: Proyecto; sp: SP; yo: Perfil }) {
   const $ = (n: number) => dinero(n, proyecto, 2);
@@ -52,7 +52,7 @@ export async function TabLiquidaciones({ d, proyecto, sp, yo }: { d: DatosFinanz
       </div>
       <Seccion titulo={`Comisiones de ${nombreMes}`}>
         {lista.length === 0 ? (
-          <p className="py-6 text-center text-sm text-texto-3">{todas.length ? "Nada en este filtro." : "No hay comisiones en este mes. Si acaban de entrar ventas o cobros, pulsa «Calcular comisiones a todos». Solo cobra quien tiene un % puesto (en Equipo o en el programa)."}</p>
+          <p className="py-6 text-center text-sm text-texto-3">{todas.length ? "Nada en este filtro." : "No hay comisiones en este mes. Si acaban de entrar ventas o cobros, pulsa «Calcular comisiones a todos». Callers y closers cobran por tramos (Administración → Comisiones); el resto, si tiene un % puesto (en Equipo o en el programa)."}</p>
         ) : (
           <div className="space-y-3">
             {lista.map((l) => {
@@ -63,6 +63,8 @@ export async function TabLiquidaciones({ d, proyecto, sp, yo }: { d: DatosFinanz
                     <span className="min-w-40 font-medium">{p?.nombre ?? "Persona dada de baja"} <span className="text-xs text-texto-3">{p ? ETIQUETA_ROL[p.rol] : ""}</span></span>
                     <span className="text-xs text-texto-3">Sobre facturado <b className="tabular-nums text-texto-2">{$(l.comision_facturado)}</b> <span className="tabular-nums">(de {$(l.base_facturado)})</span></span>
                     <span className="text-xs text-texto-3">Sobre cobrado <b className="text-base tabular-nums text-texto">{$(l.comision_cobrado)}</b> <span className="tabular-nums">(de {$(l.base_cobrado)})</span></span>
+                    {/* Bloque 4: el tramo que alcanzó en el mes */}
+                    {l.tramo && <Insignia tono="oro">Tramo {pct(l.tramo.pct)} · {$(l.tramo.base)} facturados en el mes</Insignia>}
                     <span className="ml-auto flex items-center gap-2">
                       <Insignia tono={l.estado === "pagada" ? "ok" : "aviso"}>{l.estado === "pagada" ? "Pagada" : "Pendiente"}</Insignia>
                       {/* Nadie paga ni desmarca la suya, salvo el CEO (arreglo 2) */}
@@ -80,7 +82,7 @@ export async function TabLiquidaciones({ d, proyecto, sp, yo }: { d: DatosFinanz
                             <td><Link href={`/leads/${x.lead_id}`} className="hover:text-primario">{d.leads.get(x.lead_id)?.nombre ?? "—"}</Link></td>
                             <td className="text-texto-2">{d.producto.get(x.producto_id ?? "") ?? "—"}</td>
                             <td>{x.tipo === "agenda" ? "Agenda cerrada" : "Venta"}</td>
-                            <td className="text-right tabular-nums">{pct(x.pct)}</td>
+                            <td className="text-right tabular-nums">{pct(x.pct)}{x.tramo && <span className="text-xs text-texto-3"> tramo</span>}</td>
                             <td className="text-right tabular-nums">{$(x.facturado)}</td>
                             <td className="text-right tabular-nums">{$(x.cobrado)}</td>
                             <td className="text-right font-medium tabular-nums">{$(x.com_cobrado)}</td>

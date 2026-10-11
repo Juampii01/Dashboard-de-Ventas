@@ -59,6 +59,7 @@ describe("Arreglo 9: agendar como jefe o closer no borra las estrellas del calle
 describe("Arreglos 10 y 11: quien se va a mitad de mes", () => {
   it("cobra la comisión de ese mes y sigue en el Ranking como «(baja)», aunque se desactive y se quite del proyecto", async () => {
     await cargarEquipo(e.proyecto.id);
+    await db.from("miembros_equipo").update({ comision_modo: "propio" }).eq("proyecto_id", e.proyecto.id).eq("perfil_id", e.p.closerA.id); // bloque 4: con su % propio
     como(e, e.p.ceo);
     await ok(guardarComisionRol("closer", "10", ""));
     const l = await nuevoLead("Arreglo10");

@@ -5,6 +5,7 @@ import { agendarCita, registrarVenta } from "@/app/(panel)/leads/acciones";
 import { registrarCobro } from "@/app/(panel)/ventas/acciones";
 import { guardarComisionRol } from "@/app/(panel)/equipo/acciones";
 import { asegurarFinanzas } from "@/lib/finanzas-datos";
+import { cargarEquipo } from "@/lib/equipo";
 import { hoyEnZona } from "@/lib/formato";
 import {
   calcularLiquidaciones,
@@ -125,6 +126,9 @@ describe("Finanzas", () => {
     como(e, e.p.ceo);
     await ok(guardarComisionRol("closer", "10", ""));
     await ok(guardarComisionRol("caller", "0", "3"));
+    // Bloque 4: este test es el de «su % propio» (los tramos, en comisiones-tramos.test.ts)
+    await cargarEquipo(e.proyecto.id);
+    await db.from("miembros_equipo").update({ comision_modo: "propio" }).eq("proyecto_id", e.proyecto.id).in("perfil_id", [e.p.closerA.id, e.p.closerB.id, e.p.callerA.id]);
     como(e, e.p.callerA);
     await ok(agendarCita(e.leads.LeadA, e.p.closerA.id, new Date(Date.now() + 3600_000).toISOString().slice(0, 16), "", 4));
     como(e, e.p.closerA);

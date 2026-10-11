@@ -9,7 +9,7 @@ import { inicioDia, localAIso } from "@/lib/formato";
 import { cargarFinanzas } from "@/lib/finanzas-datos";
 import { liquidacionesMes, type CitaL, type PersonaL } from "@/lib/finanzas";
 import { cargarEquipo } from "@/lib/equipo";
-import type { ComisionProducto } from "@/lib/comisiones";
+import { modoComision, tramosDe, type ComisionProducto } from "@/lib/comisiones";
 import { leerNumero } from "@/lib/numero";
 
 const refrescar = () => revalidatePath("/", "layout");
@@ -235,9 +235,14 @@ export async function calcularLiquidaciones(mes: string) {
     ]);
     // Arreglo 10: también quien ya no está pero vendió o agendó (cobra lo que ganó ese mes)
     const todos = await conBajas(gente, [...f.ventas.map((v) => v.vendedor_id), ...citas.flatMap((c) => [c.closer_id, c.agendada_por])]);
-    const personas: PersonaL[] = todos.map((g) => ({ perfil_id: g.id, nombre: g.nombre, rol: g.rol, comision: eq.miembros.find((m) => m.perfil_id === g.id)?.comision ?? null }));
+    // Bloque 4: tramos del proyecto, quién va por tramos y qué productos no cuentan para comisión
+    const personas: PersonaL[] = todos.map((g) => {
+      const m = eq.miembros.find((x) => x.perfil_id === g.id);
+      return { perfil_id: g.id, nombre: g.nombre, rol: g.rol, comision: m?.comision ?? null, modo: modoComision(g.rol, m?.comision_modo) };
+    });
     const productos = new Map(f.productos.map((p) => [p.id, (p.comisiones ?? null) as ComisionProducto]));
-    const res = liquidacionesMes({ ventas: f.ventas, pagos: f.pagos, citas, personas, comisionesRol: eq.comisionesRol, productos, mes: rango });
+    const sinComision = new Set(f.productos.filter((p) => p.cuenta_comision === false).map((p) => p.id));
+    const res = liquidacionesMes({ ventas: f.ventas, pagos: f.pagos, citas, personas, comisionesRol: eq.comisionesRol, productos, mes: rango, tramos: tramosDe(proyecto.tramos_comision), sinComision, zona: proyecto.zona_horaria });
     const { data: yaPagadas } = await db().from("liquidaciones").select("perfil_id").eq("proyecto_id", proyecto.id).eq("mes", mes).eq("estado", "pagada");
     const pagadas = new Set((yaPagadas ?? []).map((x) => x.perfil_id));
     await escribir(db().from("liquidaciones").delete().eq("proyecto_id", proyecto.id).eq("mes", mes).eq("estado", "pendiente"), "liquidaciones");

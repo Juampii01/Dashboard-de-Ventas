@@ -1,5 +1,7 @@
 "use server";
 
+import { closerLibreA } from "@/lib/agenda-libre";
+import { TEXTO_MOTIVO } from "@/lib/disponibilidad";
 import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
@@ -68,6 +70,14 @@ export async function reagendarCita(citaId: string, fechaLocal: string) {
     if (NO_REAGENDABLES.includes(cita.estado)) throw new ErrorUsuario(`Esta cita ya está «${ETIQUETA_ESTADO_CITA[cita.estado]}»: no se puede reagendar. Crea una llamada nueva desde el lead.`);
     if (!fechaLocal) throw new ErrorUsuario("Elige la nueva fecha.");
     const fecha = localAIso(fechaLocal, proyecto.zona_horaria);
+    // Bloque 3 (Cristian, 11 oct 2026): se queda el mismo closer; si no está libre a la nueva hora, se elige otra.
+    // Si el closer aún no tiene horario puesto no se puede comprobar su horario, pero sí que no choque con otra cita.
+    if (cita.closer_id) {
+      const libre = await closerLibreA(proyecto, cita.closer_id, new Date(fecha), { sinCita: citaId, sinHorarioLibre: true });
+      if (!libre.libre) {
+        throw new ErrorUsuario(`No está libre a esa hora: ${TEXTO_MOTIVO[libre.motivo].toLowerCase()}. Elige otra hora.`);
+      }
+    }
     await escribir(db().from("citas").update({ estado: "reagendada" }).eq("id", citaId), "citas");
     await escribir(db().from("citas").insert({
       proyecto_id: proyecto.id,

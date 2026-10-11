@@ -14,7 +14,9 @@ import { reglasValidas } from "@/lib/entrada";
 import { SECCIONES_TODAS, DEFECTO, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/lib/permisos";
 import { TablaPermisos, FichaPermisos, type DatosPermisos } from "./permisos";
 import { HorariosEquipo, FormAjustes } from "./horarios";
-import { RepartoPorcentaje } from "./reparto-pct";
+import { RepartoPorcentaje, RotacionClosers } from "./reparto-pct";
+import { EditorTramos } from "./tramos";
+import { tramosDe } from "@/lib/comisiones";
 import { horarioValido } from "@/lib/horarios";
 import { ajustesValidos } from "@/lib/disponibilidad";
 
@@ -22,6 +24,7 @@ const PESTANAS = [
   { v: "equipo", t: "Equipo" },
   { v: "proyecto", t: "Proyecto y reparto" },
   { v: "productos", t: "Productos" },
+  { v: "comisiones", t: "Comisiones" }, // 1.0 bloque 4: tramos
   { v: "entradas", t: "Entradas (landings)" },
   { v: "integraciones", t: "Integraciones GHL" },
   { v: "permisos", t: "Permisos" }, // H5: también el director con Administración
@@ -67,12 +70,12 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   }
 
   const [{ data: miembros }, { data: productos }, { data: eventos }] = await Promise.all([
-    db().from("miembros_proyecto").select("orden, horario, calendario, reparto_pct, perfiles(*)").eq("proyecto_id", proyecto.id).order("orden"),
+    db().from("miembros_proyecto").select("orden, horario, calendario, reparto_pct, rotacion_pct, perfiles(*)").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("webhook_eventos").select("id, tipo, procesado, error, recibido_en").eq("proyecto_id", proyecto.id).order("recibido_en", { ascending: false }).limit(15),
   ]);
   const gente = ((miembros ?? []) as unknown as { orden: number; perfiles: Perfil }[]).map((m) => m.perfiles);
-  const filaDe = new Map(((miembros ?? []) as unknown as { horario: unknown; calendario: unknown; reparto_pct: number; perfiles: Perfil }[]).map((m) => [m.perfiles.id, m]));
+  const filaDe = new Map(((miembros ?? []) as unknown as { horario: unknown; calendario: unknown; reparto_pct: number; rotacion_pct: number; perfiles: Perfil }[]).map((m) => [m.perfiles.id, m]));
   const calendarioGeneral = ajustesValidos(proyecto.calendario);
   // Personas de otros proyectos que se pueden añadir a este (solo el CEO)
   let deFuera: { id: string; nombre: string; rol: string }[] = [];
@@ -181,6 +184,12 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                 callers={gente.filter((g) => g.rol === "caller" && g.activo && !g.es_prueba).map((g) => ({ id: g.id, nombre: g.nombre, pct: Number(filaDe.get(g.id)?.reparto_pct ?? 0), horario: !!horarioValido(filaDe.get(g.id)?.horario) }))}
               />
             </Seccion>
+            <Seccion titulo="Rotación de closers (al agendar)">
+              <RotacionClosers
+                modo={proyecto.rotacion_modo ?? "elige"}
+                closers={gente.filter((g) => g.rol === "closer" && g.activo && !g.es_prueba).map((g) => ({ id: g.id, nombre: g.nombre, pct: Number(filaDe.get(g.id)?.rotacion_pct ?? 0), horario: !!horarioValido(filaDe.get(g.id)?.horario) }))}
+              />
+            </Seccion>
             <Seccion titulo={`Horarios del equipo (hora de ${proyecto.zona_horaria})`} className="xl:col-span-2">
               <p className="mb-3 text-xs text-texto-3">Callers y closers ponen el suyo al entrar y lo cambian en «Mi perfil»; desde aquí puedes cambiar el de cualquiera. Los días sueltos (vacaciones, festivos) mandan sobre la semana.</p>
               <HorariosEquipo
@@ -214,6 +223,16 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
             <TablaPermisos datos={permisos} />
             <p className="mt-3 text-xs text-texto-3">Ojo: quien tenga Finanzas ve todo el dinero del negocio, y quien tenga Equipo puede dar de alta personas y cambiar comisiones. Equipo y Finanzas nunca se dan a callers ni closers.</p>
           </Seccion>
+        )}
+
+        {tab === "comisiones" && (
+          <div className="space-y-5">
+            <p className="text-sm text-texto-2">Cada mes se suma la facturación de las ventas de cada persona (caller: las ventas de los leads que agendó y cerró un closer, más lo que vende él; closer: lo que vende). El % del tramo alcanzado vale para <b>toda</b> esa facturación; se reinicia cada mes y se paga sobre lo cobrado. Lo cobrado después (cuotas) va con el % del mes de la venta. Los programas sin «Cuenta para comisión» (en Programas) no pagan ni suman. Quién va por tramos y quién con su % propio se elige en Empresa → Equipo, en la ficha de cada persona.</p>
+            <div className="grid gap-5 xl:grid-cols-2">
+              <Seccion titulo={`Tramos de los callers (${proyecto.moneda})`}><EditorTramos rol="caller" inicial={tramosDe(proyecto.tramos_comision).caller} moneda={proyecto.moneda} /></Seccion>
+              <Seccion titulo={`Tramos de los closers (${proyecto.moneda})`}><EditorTramos rol="closer" inicial={tramosDe(proyecto.tramos_comision).closer} moneda={proyecto.moneda} /></Seccion>
+            </div>
+          </div>
         )}
 
         {tab === "productos" && (

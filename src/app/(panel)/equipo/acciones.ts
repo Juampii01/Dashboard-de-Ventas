@@ -120,6 +120,21 @@ export async function actualizarMiembroEquipo(id: string, c: { nombre: string; a
   });
 }
 
+// Bloque 4 de 1.0: el interruptor de cada persona, «mandan los tramos» o «manda su % propio» (solo callers y closers)
+export async function cambiarModoComision(id: string, modo: "tramos" | "propio") {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigirSeccion("equipo");
+    if (modo !== "tramos" && modo !== "propio") throw new ErrorUsuario("Elige tramos o % propio.");
+    const { data: m } = await db().from("miembros_equipo").select("perfil_id, perfiles(rol)").eq("id", id).eq("proyecto_id", proyecto.id).maybeSingle();
+    if (!m) throw new ErrorUsuario("Ese dato no es de este proyecto.");
+    const rol = (m.perfiles as unknown as { rol: Rol } | null)?.rol;
+    if (rol !== "caller" && rol !== "closer") throw new ErrorUsuario("Los tramos son para callers y closers.");
+    exigirCambiarComisionPersona(perfil, m.perfil_id);
+    await escribir(db().from("miembros_equipo").update({ comision_modo: modo }).eq("id", id), "miembros_equipo");
+    refrescar();
+  });
+}
+
 // A quien estaba «solo en el organigrama», darle acceso más tarde
 export async function darAccesoMiembro(id: string, emailTxt: string, password: string, rol: Rol) {
   return seguro(async () => {

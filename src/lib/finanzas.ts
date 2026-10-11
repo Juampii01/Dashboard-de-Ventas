@@ -8,7 +8,7 @@
 // · Comisiones: se pagan sobre lo cobrado en el mes; se enseña también sobre lo facturado. Las devoluciones no restan (la empresa las asume).
 import { enRango } from "@/lib/periodos";
 import { diaEnZona } from "@/lib/llamadas";
-import { porcentajeComision, redondear, type ComisionPersona, type ComisionProducto, type ComisionRol } from "@/lib/comisiones";
+import { pctDeTramo, porcentajeComision, redondear, TRAMOS_DEFECTO, type ComisionPersona, type ComisionProducto, type ComisionRol, type ModoComision, type TramosComision } from "@/lib/comisiones";
 
 type R = { desde: Date | null; hasta: Date | null };
 export type VentaF = { id: string; lead_id: string; producto_id: string | null; vendedor_id: string | null; facturacion: number; cash_collected: number; fecha: string; metodo: string; tipo_pago: string; devuelto: number | null; devuelto_en: string | null };
@@ -187,9 +187,12 @@ export function plazosMensualesQueFaltan(ventas: { id: string; lead_id: string; 
 }
 
 // ---------- Liquidaciones del mes ----------
-export type PersonaL = { perfil_id: string; nombre: string; rol: "ceo" | "director" | "closer" | "caller"; comision: ComisionPersona };
+// Bloque 4 de 1.0: quien va por tramos cobra el % del tramo que alcanzó en el mes de cada venta (con la facturación
+// de todas sus ventas de ese mes); quien va con «su % propio», el de siempre. Los productos que no cuentan para
+// comisión (la Membresía, de momento) no pagan comisión a nadie ni suman para el tramo.
+export type PersonaL = { perfil_id: string; nombre: string; rol: "ceo" | "director" | "closer" | "caller"; comision: ComisionPersona; modo?: ModoComision };
 export type CitaL = { lead_id: string; closer_id: string | null; agendada_por: string | null; estado: string; fecha: string };
-export type LineaL = { venta_id: string; lead_id: string; producto_id: string | null; tipo: "venta" | "agenda"; pct: number; facturado: number; cobrado: number; com_facturado: number; com_cobrado: number };
+export type LineaL = { venta_id: string; lead_id: string; producto_id: string | null; tipo: "venta" | "agenda"; pct: number; facturado: number; cobrado: number; com_facturado: number; com_cobrado: number; tramo?: boolean };
 
 export function liquidacionesMes(d: {
   ventas: VentaF[];
@@ -199,41 +202,78 @@ export function liquidacionesMes(d: {
   comisionesRol: Partial<Record<string, ComisionRol>>;
   productos: Map<string, ComisionProducto>;
   mes: R; // rango del mes
+  tramos?: TramosComision;
+  sinComision?: Set<string>; // productos que no cuentan para comisión
+  zona?: string;
 }) {
   const persona = new Map(d.personas.map((p) => [p.perfil_id, p]));
+  const tramos = d.tramos ?? TRAMOS_DEFECTO;
+  const zona = d.zona ?? "America/New_York";
+  const mesDe = (iso: string) => diaEnZona(iso, zona).slice(0, 7);
+  const porTramos = (p: PersonaL | undefined): p is PersonaL & { rol: "caller" | "closer" } => !!p && p.modo === "tramos" && (p.rol === "caller" || p.rol === "closer");
+  const cuenta = (v: VentaF) => !(v.producto_id && d.sinComision?.has(v.producto_id));
+  // El caller que agendó la cita que cerró el closer
+  const callerDe = (v: VentaF, vendedor: PersonaL | undefined) => {
+    if (vendedor?.rol !== "closer") return undefined;
+    const cita = d.citas
+      .filter((c) => c.lead_id === v.lead_id && c.estado === "cerrada" && c.closer_id === vendedor.perfil_id && c.agendada_por)
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+    const caller = cita?.agendada_por ? persona.get(cita.agendada_por) : undefined;
+    return caller?.rol === "caller" ? caller : undefined;
+  };
+
+  // Facturación de cada persona por tramos en cada mes (todas las ventas, para las cuotas de meses anteriores)
+  const base = new Map<string, number>(); // «perfil|AAAA-MM»
+  const sumar = (p: PersonaL | undefined, v: VentaF) => {
+    if (!porTramos(p)) return;
+    const k = `${p.perfil_id}|${mesDe(v.fecha)}`;
+    base.set(k, (base.get(k) ?? 0) + n(v.facturacion));
+  };
+  for (const v of d.ventas) {
+    if (!cuenta(v)) continue;
+    const vendedor = v.vendedor_id ? persona.get(v.vendedor_id) : undefined;
+    sumar(vendedor, v);
+    sumar(callerDe(v, vendedor), v);
+  }
+  const pctTramo = (p: PersonaL & { rol: "caller" | "closer" }, v: VentaF) => pctDeTramo(tramos[p.rol], base.get(`${p.perfil_id}|${mesDe(v.fecha)}`) ?? 0);
+
   const lineas = new Map<string, LineaL[]>();
   const anadir = (perfilId: string, l: LineaL) => {
     if (l.com_cobrado <= 0 && l.com_facturado <= 0) return;
     lineas.set(perfilId, [...(lineas.get(perfilId) ?? []), l]);
   };
   for (const v of d.ventas) {
+    if (!cuenta(v)) continue;
     const facturado = enRango(v.fecha, d.mes) ? n(v.facturacion) : 0;
     const cobrado = (enRango(v.fecha, d.mes) ? n(v.cash_collected) : 0) + d.pagos.filter((p) => p.venta_id === v.id && enRango(p.fecha, d.mes)).reduce((s, p) => s + n(p.importe), 0);
     if (!facturado && !cobrado) continue;
     const prod = v.producto_id ? d.productos.get(v.producto_id) ?? null : null;
     const vendedor = v.vendedor_id ? persona.get(v.vendedor_id) : undefined;
     if (vendedor) {
-      const { pct } = porcentajeComision({ tipo: "venta", rol: vendedor.rol, persona: vendedor.comision, producto: prod, productoId: v.producto_id, deRol: d.comisionesRol[vendedor.rol] });
-      anadir(vendedor.perfil_id, { venta_id: v.id, lead_id: v.lead_id, producto_id: v.producto_id, tipo: "venta", pct, facturado, cobrado, com_facturado: redondear((facturado * pct) / 100), com_cobrado: redondear((cobrado * pct) / 100) });
+      const pct = porTramos(vendedor) ? pctTramo(vendedor, v) : porcentajeComision({ tipo: "venta", rol: vendedor.rol, persona: vendedor.comision, producto: prod, productoId: v.producto_id, deRol: d.comisionesRol[vendedor.rol] }).pct;
+      anadir(vendedor.perfil_id, { venta_id: v.id, lead_id: v.lead_id, producto_id: v.producto_id, tipo: "venta", pct, facturado, cobrado, com_facturado: redondear((facturado * pct) / 100), com_cobrado: redondear((cobrado * pct) / 100), ...(porTramos(vendedor) ? { tramo: true } : {}) });
     }
-    // El caller que agendó la cita que cerró el closer
-    if (vendedor?.rol === "closer") {
-      const cita = d.citas
-        .filter((c) => c.lead_id === v.lead_id && c.estado === "cerrada" && c.closer_id === vendedor.perfil_id && c.agendada_por)
-        .sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
-      const caller = cita?.agendada_por ? persona.get(cita.agendada_por) : undefined;
-      if (caller?.rol === "caller") {
-        const { pct } = porcentajeComision({ tipo: "agenda", rol: "caller", persona: caller.comision, producto: prod, productoId: v.producto_id, deRol: d.comisionesRol.caller });
-        anadir(caller.perfil_id, { venta_id: v.id, lead_id: v.lead_id, producto_id: v.producto_id, tipo: "agenda", pct, facturado, cobrado, com_facturado: redondear((facturado * pct) / 100), com_cobrado: redondear((cobrado * pct) / 100) });
-      }
+    const caller = callerDe(v, vendedor);
+    if (caller) {
+      const pct = porTramos(caller) ? pctTramo(caller, v) : porcentajeComision({ tipo: "agenda", rol: "caller", persona: caller.comision, producto: prod, productoId: v.producto_id, deRol: d.comisionesRol.caller }).pct;
+      anadir(caller.perfil_id, { venta_id: v.id, lead_id: v.lead_id, producto_id: v.producto_id, tipo: "agenda", pct, facturado, cobrado, com_facturado: redondear((facturado * pct) / 100), com_cobrado: redondear((cobrado * pct) / 100), ...(porTramos(caller) ? { tramo: true } : {}) });
     }
   }
+  // El tramo alcanzado en el mes que se liquida (a la vista en Liquidaciones)
+  const mesLiquidado = d.mes.desde ? mesDe(d.mes.desde.toISOString()) : null;
+  const tramoDe = (perfilId: string) => {
+    const p = persona.get(perfilId);
+    if (!porTramos(p) || !mesLiquidado) return null;
+    const b = redondear(base.get(`${perfilId}|${mesLiquidado}`) ?? 0);
+    return { base: b, pct: pctDeTramo(tramos[p.rol], b) };
+  };
   return [...lineas.entries()].map(([perfil_id, ls]) => ({
     perfil_id,
     base_facturado: redondear(ls.reduce((s, l) => s + l.facturado, 0)),
     base_cobrado: redondear(ls.reduce((s, l) => s + l.cobrado, 0)),
     comision_facturado: redondear(ls.reduce((s, l) => s + l.com_facturado, 0)),
     comision_cobrado: redondear(ls.reduce((s, l) => s + l.com_cobrado, 0)),
+    tramo: tramoDe(perfil_id),
     detalle: ls,
   }));
 }

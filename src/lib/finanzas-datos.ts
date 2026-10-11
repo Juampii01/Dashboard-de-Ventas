@@ -33,7 +33,7 @@ export async function cargarFinanzas(proyectoId: string) {
     db().from("categorias_finanzas").select("id, tipo, nombre, en_profit").eq("proyecto_id", proyectoId).order("nombre"),
     db().from("cuentas").select("id, nombre, metodos, por_defecto").eq("proyecto_id", proyectoId).order("creado_en"),
     todas<VencF & { lead_id: string | null; nombre: string | null; numero: number; pagado_en: string | null }>((a, b) => db().from("vencimientos").select("*").eq("proyecto_id", proyectoId).order("vence_el").order("id").range(a, b)),
-    db().from("productos").select("id, nombre, backend_offer, comisiones").eq("proyecto_id", proyectoId),
+    db().from("productos").select("id, nombre, backend_offer, comisiones, cuenta_comision").eq("proyecto_id", proyectoId),
     idsDePrueba(),
   ]);
   // 1.0: las ventas de los perfiles de prueba (y sus cobros y plazos) no cuentan en Finanzas

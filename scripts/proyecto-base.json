@@ -67,6 +67,7 @@
       "nombre": "Membresía",
       "precio": 47,
       "modo_pago": "mensual",
+      "cuenta_comision": false,
       "vende_caller": true,
       "orden": 0,
       "descripcion": "Sin fin · algunos sistemas"

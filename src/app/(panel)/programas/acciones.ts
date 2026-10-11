@@ -17,6 +17,7 @@ export type DatosPrograma = {
   activo: boolean;
   backend_offer: boolean;
   vende_caller: boolean;
+  cuenta_comision?: boolean; // bloque 4: si no cuenta, no paga comisión a nadie ni suma para el tramo
   modo_pago: "unico" | "cuotas" | "mensual"; // bloque A: mensual = membresía sin fin
   num_cuotas: number | null;
   precio: string; // vacío = precio personalizado
@@ -62,6 +63,7 @@ export async function guardarPrograma(d: DatosPrograma) {
       activo: d.activo,
       backend_offer: d.backend_offer,
       vende_caller: d.vende_caller,
+      cuenta_comision: d.cuenta_comision !== false,
       modo_pago: d.modo_pago,
       num_cuotas: d.modo_pago === "cuotas" ? d.num_cuotas : null,
       precio,
@@ -70,8 +72,10 @@ export async function guardarPrograma(d: DatosPrograma) {
       link_pago: link || null,
     };
     // Comisiones: solo el CEO o el director, y el director no la de su propio rol (arreglo 2)
-    const antes = d.id ? (await db().from("productos").select("comisiones").eq("id", d.id).eq("proyecto_id", proyecto.id).maybeSingle()).data : null;
+    const antes = d.id ? (await db().from("productos").select("comisiones, cuenta_comision").eq("id", d.id).eq("proyecto_id", proyecto.id).maybeSingle()).data : null;
     if (d.id && !antes) throw new ErrorUsuario("Programa no encontrado.");
+    // Bloque 4: la casilla «Cuenta para comisión» es cambiar comisiones (solo el CEO o un director)
+    if ((antes?.cuenta_comision ?? true) !== fila.cuenta_comision) exigirCambiarComisionRol(perfil, "caller");
     const previas = (antes?.comisiones ?? {}) as Record<string, number>;
     for (const k of new Set([...Object.keys(previas), ...Object.keys(comisiones)])) {
       if ((previas[k] ?? 0) !== (comisiones[k] ?? 0)) exigirCambiarComisionRol(perfil, (k === "caller_agenda" ? "caller" : k) as Rol);

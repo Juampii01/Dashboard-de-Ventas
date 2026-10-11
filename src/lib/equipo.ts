@@ -15,6 +15,7 @@ export type MiembroEquipo = {
   lider: boolean;
   activo: boolean;
   comision: ComisionPersona;
+  comision_modo?: "tramos" | "propio" | null; // 1.0 bloque 4: null = lo de su rol
   rol: Rol | null; // el de su cuenta, si tiene acceso
 };
 

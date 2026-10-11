@@ -9,6 +9,7 @@ import { SelectorEstrellas } from "@/components/estrellas";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import type { Producto } from "@/lib/tipos";
+import { CamposCita } from "@/components/campos-cita";
 
 type Persona = { id: string; nombre: string };
 
@@ -153,13 +154,7 @@ export function AccionesLead({
               setModal(null);
             }}
           >
-            <div>
-              <label className="etiqueta-campo" htmlFor="acciones-lead-closer">Closer</label>
-              <select id="acciones-lead-closer" name="closer" required className="campo">
-                {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-            </div>
-            <label className="block"><span className="etiqueta-campo">Fecha y hora (hora del proyecto)</span><input type="datetime-local" name="fecha" required className="campo" /></label>
+            <CamposCita closers={closers} id="acciones-lead-closer" />
             <label className="block"><span className="etiqueta-campo">Nota para el closer</span><textarea name="nota" rows={3} className="campo" placeholder="Situación, dolor, cifra…" /></label>
             <SelectorEstrellas quien="caller" opcional={rol !== "caller"} />
             <button className="btn-primario w-full">Agendar</button>

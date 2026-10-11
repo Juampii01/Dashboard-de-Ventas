@@ -5,6 +5,7 @@ import { FormVenta } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 import { SelectorEstrellas } from "@/components/estrellas";
 import type { Producto } from "@/lib/tipos";
+import { CamposCita } from "@/components/campos-cita";
 
 // Ventanas que se abren al soltar un lead en una columna unida a un estado (Paso H7). Son las mismas que
 // tenía el CRM del caller: cada una hace lo mismo que su botón (y el servidor mueve la tarjeta a esa columna).
@@ -56,11 +57,7 @@ export function VentanaEstado({
             guardar(() => agendarCita(lead.id, String(fd.get("closer")), String(fd.get("fecha")), String(fd.get("nota") ?? ""), fd.get("estrellas") ? Number(fd.get("estrellas")) : undefined), `${lead.nombre} → Agendado`)
           }
         >
-          <div>
-            <label className="etiqueta-campo" htmlFor="ventana-estado-closer">Closer</label>
-            <select id="ventana-estado-closer" name="closer" required className="campo">{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
-          </div>
-          <label className="block"><span className="etiqueta-campo">Fecha y hora (hora del proyecto)</span><input type="datetime-local" name="fecha" required className="campo" /></label>
+          <CamposCita closers={closers} id="ventana-estado-closer" />
           <label className="block"><span className="etiqueta-campo">Nota para el closer</span><textarea name="nota" rows={3} className="campo" /></label>
           <SelectorEstrellas quien="caller" opcional={estrellasOpcionales} />
           <button className="btn-primario w-full">Agendar</button>
