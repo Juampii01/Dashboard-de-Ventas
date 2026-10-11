@@ -35,7 +35,7 @@
 | 1 | Pasada de punta a punta (Proyecto Prueba, 1.005 leads) | Cristian, Claude guió | ✅ Hecha (11 oct) |
 | 2 | Mejoras de la 4.4 antes de publicar (los 4 puntos de la pasada y agendar por link de GHL) | Claude | ✅ Hechas (11 oct) |
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
-| 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado y probado en la nube (11 oct). Queda sacar a caller-test del proyecto «Test» |
+| 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado, probado en la nube y con el diseño glass (11 oct) |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
 | 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente** (Cristian ya está dentro de GHL) |
 | 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
@@ -58,12 +58,12 @@
 - [x] `APP_URL` puesta en Vercel. `.env.example`, `GUIA-PUBLICAR.md` (paso 4 bis) y `GUIA-GHL.md` (el email ya no hace falta en GHL) al día.
 - [x] **`RESEND_API_KEY` en Vercel** (la creó y la pegó Cristian) y publicado otra vez (`ed40af6`). Comprobado en la nube que `/auth/confirm` responde.
 - [x] Probado de verdad (11 oct): enlace mágico a `info@eternity.llc` desde la ficha → «Delivered» en Resend, llega a Recibidos, Cristian entra (Supabase: `login` 16:47) y al reutilizarlo da 403 «One-time token not found». Reporte de caller-test en el proyecto «Test» (allí no hay directores, así que solo avisa al CEO) → email «Test · Reporte de Caller Test» con todas las respuestas, en Recibidos.
-- [ ] **Sacar a caller-test del proyecto «Test»** (se añadió solo para la prueba; lo hace el CEO en Administración → Equipo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
-- [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, visto solo en Chrome (falta verlo en Gmail: hace falta la sesión de CEO).
+- [x] **Caller-test fuera del proyecto «Test»** (lo quitó Cristian el 11 oct; comprobado en la base: en «Test» solo queda el CEO y caller-test sigue activo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
+- [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, también visto en Gmail.
 - [ ] Mejora pequeña (sin decidir): al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
 - [x] **Nombre «—» en las tarjetas de Reportes** · `850a8c9`: la página buscaba los nombres en `equipo()`, que deja fuera los perfiles de prueba (`es_prueba`) y a quien ya no está; ahora busca también ahí (con `conBajas`). Publicado y **visto en pantalla** (11 oct, como caller-test: «Caller Test» en las dos tarjetas).
-- [x] **Primer clic en «Crear nuevo reporte» que no abre** (visto 2 veces el 11 oct): **no reproducido**. Después se abrió al primer clic 4 de 4 veces (clic real a 1, 3 y 5 s de cargar, y uno con JavaScript a 4 s). Hipótesis sin comprobar: aquel primer clic solo dio el foco a la ventana de Chrome que manejaba Claude. Cerrado sin tocar código; si alguien del equipo lo ve, se vuelve a abrir.
-- [ ] Ver en Gmail el email del enlace mágico con el diseño nuevo (hace falta la sesión de CEO).
+- [x] **Primer clic que no abre** (Reportes, y luego la ficha en Equipo y en Administración): **no es de la app, es de la herramienta de Claude**. Comprobado el 11 oct con un registro de eventos en la página: al pulsar por referencia, a la página no le llegó ningún evento (0); al pulsar por coordenadas le llegó el clic completo y la ficha se abrió. Sin cambios en el código.
+- [x] Email del enlace mágico con el diseño nuevo **visto en Gmail** (11 oct, «Tu enlace para entrar en Test»).
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
