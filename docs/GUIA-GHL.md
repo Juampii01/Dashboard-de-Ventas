@@ -1,6 +1,6 @@
 # Guía · Conectar GoHighLevel con Eternity
 
-> Escrita el 9 oct 2026 (actualizada con la v2 el mismo día) a partir de la documentación oficial de GHL ([Workflow Action - Custom webhook](https://help.gohighlevel.com/support/solutions/articles/155000003305-workflow-action-webhook)).
+> Escrita el 9 oct 2026 y puesta al día el 11 oct 2026 (reparto con %, rotación de closers, reporte editable, ficha de cada persona) a partir de la documentación oficial de GHL ([Workflow Action - Custom webhook](https://help.gohighlevel.com/support/solutions/articles/155000003305-workflow-action-webhook)).
 > **⚠ comprobar** = cosas que la documentación de GHL no detalla (nombres exactos de algunas variables y disparadores); se eligen en GHL con el selector y se prueban con un lead de prueba.
 > Solo funciona **con la app publicada**: GHL no puede llegar a tu ordenador.
 
@@ -101,7 +101,7 @@ La app es el CRM principal, así que **normalmente no hace falta**. Úsalo solo 
 | `tipo` | `reporte_fin_de_dia` |
 | `texto` | El reporte completo en texto (lo más fácil de usar) |
 | `persona`, `rol`, `fecha` | Quién, si es caller o closer, y de qué día |
-| `respuestas` | Lista de preguntas y respuestas |
+| `respuestas` | Lista de preguntas y respuestas (las preguntas de ahora: se cambian en Administración → Reportes) |
 | `tasa_agendamiento`, `tasa_cierre` | Solo en reportes de closer |
 | `destinatarios` | Nombre, email y WhatsApp de los directores del proyecto y del CEO (al CEO le llega siempre, aunque no esté añadido al proyecto) |
 | `proyecto`, `enviado_en` | Proyecto y hora de envío |
@@ -137,13 +137,13 @@ Administración → Integraciones → «Nueva clave». Después hay que poner la
 
 ### Calendario de cada closer
 
-En la misma pantalla, para cada closer: el **id de su calendario** de GHL o su **id de usuario** de GHL. En **Agendas → Llamadas** el botón «Sincronizar GHL» trae sus citas (de hace 30 días a dentro de 60), y también lo hace sola al abrir Agendas si han pasado más de 10 minutos. Las citas que no encuentran su lead salen en «Hay N sin unir → Revisar».
+En la misma pantalla (o en la ficha de cada closer → «GHL y Fathom»), para cada closer: el **id de su calendario** de GHL o su **id de usuario** de GHL. En **Agendas → Llamadas** el botón «Sincronizar GHL» trae sus citas (de hace 30 días a dentro de 60), y también lo hace sola al abrir Agendas si han pasado más de 10 minutos. Las citas que no encuentran su lead salen en «Hay N sin unir → Revisar».
 
 **Citas borradas en GHL:** si una cita de un closer desaparece de su calendario de GHL (se borró), al sincronizar pasa a **«cancelada»** en la app. Solo se hace con las citas que siguen abiertas (lo que ya registró el closer no se toca), dentro del rango que se consulta y si GHL respondió bien. Cada cancelación queda en el historial del lead y sale en el aviso de la sincronización. ⚠ comprobar con GHL real: según la especificación oficial, la lista de citas no se reparte en páginas; si con GHL real llegara incompleta, se cancelarían citas buenas.
 
 ### Llamadas grabadas
 
-1. En **Integraciones → Llamadas de GHL: quién es quién**, pon el **id de usuario de GHL** de cada caller (y de cada director que llame). Los closers lo tienen arriba si usan usuario.
+1. En **Integraciones → Llamadas de GHL: quién es quién** (o en la ficha de cada persona: pestaña «GHL y Fathom» para callers y closers, «GHL» para directores), pon el **id de usuario de GHL** de cada caller (y de cada director que llame). Los closers lo tienen arriba si usan usuario.
 2. En **Ventas → Llamadas de GHL** (desde el 11 oct la ven el CEO, los directores y los 2 perfiles de prueba, closer-test y caller-test; a callers y closers se les abre en Administración → Permisos cuando esté listo), pulsa **«Traer llamadas de GHL»**: trae todas las llamadas **contestadas de más de 1 minuto** (decisión de Cristian), las transcribe (con la transcripción de GHL si la hay; si no, con Deepgram) y Claude las analiza.
 3. **Limitación:** la API de GHL **no deja lanzar llamadas** desde la app; se sigue llamando desde GHL.
 4. ⚠ comprobar con la primera llamada real que la transcripción de GHL llega bien (la especificación describe cada frase, pero no del todo cómo vienen juntas; la app acepta las dos formas posibles).

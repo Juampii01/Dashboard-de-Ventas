@@ -6,29 +6,39 @@
 
 ## 1. Dónde estamos
 
-- **La app está hecha y probada en local, sin publicar.** Incluye v1, v2, la auditoría, el Paso H, el Paso 0 y el 1.0 menos el bloque 6. Lo hecho y su commit, en la sección 6.
-- **Comprobado el 11 oct:** 424 tests automáticos pasan, la app compila sin errores, 0 fallos de seguridad conocidos en las librerías, 29 cambios de base de datos y 43 tablas protegidas. Todo guardado en git; nada subido a la nube.
+- **La app está hecha y probada en local, sin publicar.** Incluye v1, v2, la auditoría, el Paso H, el Paso 0 y el 1.0 menos el bloque 6. Lo hecho y su commit, en la sección 7.
+- **Comprobado el 11 oct:** 424 tests automáticos pasan, la app compila sin errores, 0 fallos de seguridad conocidos en las librerías, 29 cambios de base de datos (todos aplicados en local) y 43 tablas protegidas. Todo guardado en git; nada subido a la nube.
+- **Revisión cruzada del 11 oct** (app, guías y plan): las 31 pantallas cargan sin errores en Proyecto Prueba y las 29 de Maestria, en menos de 0,7 s; `preparar-proyecto` y `crear-usuarios` funcionan en simulación y los campos de `proyecto-base.json` existen en la base; no quedan restos de lo que se quitó; las cifras de la Biblioteca de la guía cuadran con la base; los textos de pantalla que citan las guías existen. Puestas al día las 2 guías (fecha, onboarding con horario, la ficha de cada persona, preguntas editables).
 - **No se publica hasta que esté todo** (Cristian, 11 oct).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
-## 2. Lo siguiente, en orden
+## 2. Pendiente de que decidas tú
+
+| Qué | Mi propuesta |
+|---|---|
+| ¿Preparo la pasada de punta a punta (paso 1 de abajo)? | Sí, antes del bloque 6. |
+| Qué es imprescindible para publicar y qué puede esperar (sección 4.2) | Lo que puse; muévelo si quieres. |
+| Cuándo hacer las mejoras de la sección 4.4 y cómo cambiar la zona horaria | Después de tu revisión. |
+| Mis criterios (sección 6.2) | Revisarlos en tu revisión. |
+
+## 3. Lo siguiente, en orden
 
 | # | Qué | Quién | Estado |
 |---|---|---|---|
 | 1 | **Pasada de punta a punta contigo**: CSV → caller → agenda → venta → Funnel, con datos reales de la Biblioteca, en Proyecto Prueba. Es tu regla («hasta que la ves, no construyo lo siguiente») y aún no la has visto. | Claude la prepara, Cristian la mira | Lista para hacer |
-| 2 | **Bloque 6 · Emails con Resend** (sección 3.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (4.1) |
-| 3 | **Tu revisión completa** (4.2) y arreglar lo que salga | Cristian, luego Claude | Se puede hacer ya, a la vez que el 2 |
-| 4 | **Publicar** (sección 3.2) | Los dos | Después de 1, 2 y 3 |
-| 5 | **Conectar GHL** (sección 3.3) | Los dos | Después de publicar |
+| 2 | **Bloque 6 · Emails con Resend** (sección 4.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (5.1) |
+| 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Se puede hacer ya, a la vez que el 2 |
+| 4 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2 y 3 |
+| 5 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
 | 6 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
 
 ---
 
-## 3. Lo que me falta a mí (Claude)
+## 4. Lo que me falta a mí (Claude)
 
 **Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit.
 
-### 3.1 Bloque 6 · Emails con Resend (commit propio)
+### 4.1 Bloque 6 · Emails con Resend (commit propio)
 - [ ] Envío de emails desde la app con la clave de Resend: los avisos de los reportes por email (el WhatsApp sigue por el workflow de GHL).
 - [ ] Supabase manda sus emails (enlaces mágicos y cambios de email) por Resend, desde @eternity.llc. Sin email de bienvenida: los accesos los mandas tú por WhatsApp.
 - [ ] Activar «Enviar enlace mágico» en la ficha de cada persona (hoy está desactivado esperando este bloque).
@@ -36,7 +46,7 @@
 - En local no se pueden mandar emails reales: se prueba con un envío falso en los tests y de verdad al publicar.
 - Datos de Resend ([su guía](https://resend.com/docs/send-with-supabase-smtp)): servidor `smtp.resend.com`, puerto 465, usuario `resend`, la clave como contraseña y el dominio verificado.
 
-### 3.2 Publicar (sigo `GUIA-PUBLICAR.md`)
+### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 **Imprescindible** (sin esto no se publica):
 - [ ] Subir el código a GitHub (repositorio privado).
 - [ ] Crear la base en Supabase con los 29 cambios (más el del bloque 6, si lo hay), con el registro libre cerrado.
@@ -53,7 +63,7 @@
 - [ ] Dejar la app lista con tus datos: reparto y rotación, horarios, comisiones, permisos, IA, onboarding, Finanzas, links y recursos.
 - [ ] Actualizar la herramienta de Supabase de mi Mac (de la 2.90 a la 2.120) cuando ejecutes `brew trust supabase/tap`. Hoy funciona con la 2.90.
 
-### 3.3 Conectar GHL (sigo `GUIA-GHL.md`)
+### 4.3 Conectar GHL (sigo `GUIA-GHL.md`)
 - [ ] **Antes de nada, comprobar que GHL manda todas las citas** (su lista no va por páginas): si llegara incompleta, la app cancelaría citas buenas. Se prueba con un closer con muchas citas antes de activar la sincronización para todos.
 - [ ] Guiarte en los workflows («Lead nuevo», «Cita agendada», «Cambio de etapa» si hace falta y avisos de reportes) y comprobarlo en Administración → Integraciones → «Últimos eventos».
 - [ ] Ajustar las 16 marcas «⚠ comprobar» de las guías con tus pantallas de GHL, Supabase y Vercel.
@@ -62,33 +72,33 @@
 - [ ] Probar con las claves reales: calendario de GHL, llamadas de GHL con Deepgram, Fathom y la IA (análisis, coach y puntuación).
 - [ ] Medir el gasto real de Claude y Deepgram los primeros días (calculado ~0,05-0,08 $ por llamada de 1 hora, sin medir).
 
-### 3.4 Mejoras apuntadas (decides tú cuándo; ninguna bloquea publicar)
+### 4.4 Mejoras apuntadas (decides tú cuándo; ninguna bloquea publicar)
 - [ ] Que dos agendas a la vez no puedan dar el mismo closer a la misma hora (hoy es posible, aunque poco probable).
 - [ ] Que la ventana de agendar sugiera las horas libres del closer, en vez de solo avisar.
 - [ ] Que un administrador pueda cambiar la zona horaria del proyecto (Cristian, 11 oct). Mueve todas las fechas: hay que decidir cómo antes de hacerlo.
 
 ---
 
-## 4. Lo que te toca a ti (Cristian), en orden
+## 5. Lo que te toca a ti (Cristian), en orden
 
-### 4.1 Ya, porque bloquea el bloque 6
+### 5.1 Ya, porque bloquea el bloque 6
 - [ ] Crear la cuenta de Resend y pasarme su clave.
 - [ ] Conseguir a alguien que añada los registros DNS de eternity.llc (puede tardar en activarse: cuanto antes, mejor).
 
-### 4.2 Tu revisión (se puede hacer ya)
-- [ ] Ver conmigo la pasada de punta a punta (paso 1 de la sección 2).
-- [ ] Recorrer la app con los usuarios de prueba (sección 8). Lo nuevo del 1.0: Biblioteca (KPIs), «Mi perfil», horarios, reparto y rotación (Administración → Proyecto y reparto), Comisiones y Reportes (Administración), la ficha de cada persona (Equipo), «Onboarding» de los closers y Links y recursos.
+### 5.2 Tu revisión (se puede hacer ya)
+- [ ] Ver conmigo la pasada de punta a punta (paso 1 de la sección 3).
+- [ ] Recorrer la app con los usuarios de prueba (sección 9). Lo nuevo del 1.0: Biblioteca (KPIs), «Mi perfil», horarios, reparto y rotación (Administración → Proyecto y reparto), Comisiones y Reportes (Administración), la ficha de cada persona (Equipo), «Onboarding» de los closers y Links y recursos.
 - [ ] Arrastrar tarjetas **con tu ratón** en el CRM («Callers» y «Closers» también), en Agendas → Pre-call y en Post-call. Yo solo pude simularlo.
 - [ ] Mirar el diseño en tu móvil (misma wifi, la IP del Mac en vez de `localhost`).
-- [ ] Revisar mis criterios (sección 5.2) y decirme cuáles cambio.
+- [ ] Revisar mis criterios (sección 6.2) y decirme cuáles cambio.
 
-### 4.3 Para publicar
+### 5.3 Para publicar
 - [ ] Crear las cuentas de GitHub, Supabase y Vercel (te guío paso a paso).
 - [ ] Guardar la clave de cifrado en tu gestor de contraseñas cuando la generemos (si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom).
 - [ ] Mandar a cada persona del equipo su contraseña por WhatsApp.
 - [ ] Ejecutar `brew trust supabase/tap` en tu terminal (no es urgente).
 
-### 4.4 Al final
+### 5.4 Al final
 - [ ] El CSV de contactos exportado de GHL.
 - [ ] Las claves de GHL, Fathom, Claude y Deepgram (las pones tú a mano).
 - [ ] Crear en GHL los workflows que te indique.
@@ -97,9 +107,9 @@
 
 ---
 
-## 5. Decisiones vigentes
+## 6. Decisiones vigentes
 
-### 5.1 Tuyas
+### 6.1 Tuyas
 | Tema | Decisión |
 |---|---|
 | Base | Sin Stripe ni pasarelas: cada venta la apunta quien la hace. La app es el CRM; GHL solo envía datos (webhooks, landings, calendarios y llamadas). |
@@ -130,7 +140,7 @@
 | Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, y los links y recursos. |
 | Commits | Por bloques; el 6, solo, cuando esté Resend. |
 
-### 5.2 Mis criterios (puedes cambiarlos)
+### 6.2 Mis criterios (puedes cambiarlos)
 - Agendado → Venta cuenta personas, compras desde el día de la agenda, aunque cierre el closer.
 - KPIs: los agendados del caller cuentan aunque se reagenden; el % de cierre sobre asistencia, solo con los que asistieron.
 - Racha: hoy solo suma si ya está cumplido; cada día usa su objetivo; hasta 60 días; celebración una vez al día.
@@ -153,7 +163,7 @@
 
 ---
 
-## 6. Lo que está hecho
+## 7. Lo que está hecho
 
 | Qué | Commit |
 |---|---|
@@ -170,12 +180,12 @@
 
 ---
 
-## 7. Riesgos y avisos
+## 8. Riesgos y avisos
 
-**Pueden hacer daño el primer día** (tienen su paso en la sección 3):
-- **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (3.3).
-- **Velocidad en la nube:** sin medir (3.2).
-- **Emails:** sin Resend no llegan los enlaces mágicos ni el cambio de email (3.1).
+**Pueden hacer daño el primer día** (tienen su paso en la sección 4):
+- **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (4.3).
+- **Velocidad en la nube:** sin medir (4.2).
+- **Emails:** sin Resend no llegan los enlaces mágicos ni el cambio de email (4.1).
 
 **A tener en cuenta:**
 - **Supabase gratuito** (tu decisión): sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
@@ -183,14 +193,14 @@
 - **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas.
 - **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil).
 - **Post-call:** mover una cita «reagendada» puede contar la misma reunión dos veces; sacar una venta de su columna la borra con sus cobros y comisiones (pide confirmación).
-- **Citas:** un lead puede tener dos citas a horas distintas, y dos agendas a la vez podrían dar el mismo closer (mejora en 3.4).
+- **Citas:** un lead puede tener dos citas a horas distintas, y dos agendas a la vez podrían dar el mismo closer (mejora en 4.4).
 - **Onboarding de closers:** si dos closers le venden al mismo cliente, comparten la checklist.
 - **Clave del webhook en la dirección** (tu decisión): puede quedar en registros intermedios; la guía recomienda mandarla en la cabecera.
 - Riesgos bajos: los estilos admiten código en línea; el diseño glass puede ir algo más lento en equipos viejos.
 
 ---
 
-## 8. Cómo entrar y dónde está cada cosa
+## 9. Cómo entrar y dónde está cada cosa
 
 - **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.
 - **Usuarios de prueba** (`@eternity.test`, con la contraseña que pusiste el 10 oct): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@. En Maestria, también closer-test@ y caller-test@eternity.llc (contraseña en `scripts/salida/`).

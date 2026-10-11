@@ -1,7 +1,7 @@
 # Guía · Publicar Eternity
 
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
-> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 (equipo real, pipelines del equipo, permisos). Lo nuevo de 1.0 (Resend, Biblioteca, reparto…) se añade aquí cuando esté hecho. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
+> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto y rotación, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Falta el paso de Resend (emails), que se añade con el bloque 6. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
 
 ---
 
@@ -102,7 +102,7 @@ node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/equipo
 ```
 
 3. Cada uno recibe una contraseña **«Maestria-» + 8 caracteres al azar**, guardada solo en `app/scripts/salida/usuarios-creados-….csv` (excluido de GitHub). **Cristian se las manda por WhatsApp** y después se borra ese archivo.
-4. La primera vez que cada uno entra, hace el onboarding (nombre, teléfono, WhatsApp).
+4. La primera vez que cada uno entra, hace el onboarding: nombre, teléfono y WhatsApp, y los callers y closers, también su horario (es obligatorio).
 5. Juan y Junior quedan como directores **con Administración** (columna `admin`).
 6. Los 2 perfiles de prueba (closer-test y caller-test) se crean igual con `scripts/salida/prueba.csv` (columnas `password` y `prueba`): no cuentan en cifras, reparto ni liquidaciones, no salen en Equipo y son los únicos callers y closers que ven «Llamadas de GHL».
 
@@ -118,7 +118,7 @@ Sigue **GUIA-GHL.md**: los webhooks de entrada (lead, cita, etapa), las entradas
 
 ## Paso 8 bis · (v2) Fathom de cada closer
 
-Cada closer, en **Agendas → Llamadas → 04 Grabaciones → Cuentas → Añadir cuenta**: un nombre, su **API key de Fathom** (en Fathom: Settings → API Access) y el formato de título de sus reuniones (por ejemplo `{nombre cliente}: Sesión…`). Pulsa **Probar** y después **Sincronizar Fathom**.
+Cada closer, en **Agendas → Llamadas → 04 Grabaciones → Cuentas → Añadir cuenta** (o un administrador, en la ficha del closer → «GHL y Fathom»): un nombre, su **API key de Fathom** (en Fathom: Settings → API Access) y el formato de título de sus reuniones (por ejemplo `{nombre cliente}: Sesión…`). Pulsa **Probar** y después **Sincronizar Fathom**.
 
 ## Paso 8 ter · (v2) Configurar la IA
 
@@ -157,7 +157,7 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 **Depende de ti:**
 - Desactivar «Allow new users to sign up» en Supabase (paso 2).
 - No compartir nunca la **Secret key** ni la clave del webhook.
-- Dar de baja a quien deje el equipo: **solo el CEO** puede desactivar (Administración → Desactivar), porque afecta a todos los proyectos; un director puede quitarlo de su proyecto (sus leads quedan sin asignar).
+- Dar de baja a quien deje el equipo: **solo el CEO** puede desactivar (en su ficha → «Acceso» → Desactivar), porque afecta a todos los proyectos; un director puede quitarlo de su proyecto (sus leads quedan sin asignar).
 - Guardar `CLAVE_CIFRADO` en el gestor de contraseñas (paso 4).
 - ⚠ comprobar en tu plan de Supabase cómo funcionan las **copias de seguridad** y si el proyecto gratuito se pausa por inactividad; con uso diario no debería pasar, pero no lo he verificado.
 
@@ -170,7 +170,7 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 | Síntoma | Qué mirar |
 |---|---|
 | La web da error al entrar | Vercel → Deployments → Logs. Suele ser una variable mal copiada. |
-| «Email o contraseña incorrectos» con la contraseña buena | Que el usuario exista (paso 6). Un admin puede poner otra contraseña en Administración → Equipo. |
+| «Email o contraseña incorrectos» con la contraseña buena | Que el usuario exista (paso 6). Un administrador puede ponerle otra contraseña en su ficha (Administración → Equipo → «Ficha» → «Acceso»). |
 | GHL no crea leads | Administración → Integraciones → «Últimos eventos». Si sale error, el mensaje dice qué falta. |
 | No llegan avisos de reportes | Administración → Proyecto → «Webhook de avisos» y el workflow de GHL (GUIA-GHL.md). |
 | (v2) Llamadas «En cola» que no avanzan | Que estén `ANTHROPIC_API_KEY` (y `DEEPGRAM_API_KEY`) en Vercel; después «Analizar pendientes» o «Reintentar». El motivo sale en cada llamada. |
