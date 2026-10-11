@@ -74,7 +74,7 @@ export async function enviarReporte(_prev: unknown, formData: FormData) {
     revalidatePath("/reportes");
     return {
       ok: aviso.enviado
-        ? "Reporte enviado. Tu director ya tiene el aviso."
+        ? "Reporte enviado. Tu equipo ya tiene el aviso."
         : `Reporte guardado. (Aviso no enviado: ${aviso.motivo}.)`,
     };
   });

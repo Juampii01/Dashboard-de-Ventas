@@ -28,10 +28,8 @@
 | Pasar Vercel a Pro (el plan gratis es para uso no comercial, según sus condiciones; sin volver a comprobar hoy) | Cuando tengas una tarjeta que funcione: se mueve el proyecto o se conecta la otra cuenta. |
 | `calcularVendedores` quedó sin uso en la app (solo lo usan 3 tests) | Quitarlo con sus tests cuando haya un rato. |
 | En Proyecto Prueba (local) queda una venta antigua de prueba (9 oct) a nombre del CEO (Ana sale con «1 cerrada · 0 €») | Borrarla o pasarla a Ana; solo afecta a las pruebas en local. |
-| Al enviar el reporte, al caller le sale «Tu director ya tiene el aviso» aunque solo lo reciba el CEO (o nadie más) | Cambiarlo a «Reporte enviado. Tu equipo ya tiene el aviso.» (2 minutos). |
 | Los 2 reportes de prueba en «Test» (10 y 11 oct) | Dejarlos: solo se ven en «Test» y el perfil no cuenta en cifras. |
 | El CSV `usuarios-creados-2026-10-10-22-30.csv` (los mismos 2 perfiles de prueba, del 10 oct) | Borrarlo tú junto con los otros cuando mandes los accesos. |
-| Archivos que dejé en `PROYECTOS/GENERAL/.playwright-mcp/` para las capturas (`captura.js`, `ver-enlace.js`, `ver-reporte.js`: solo las muestras de email, sin claves) | Borrarlos (con tu permiso). |
 
 ## 3. Lo siguiente, en orden
 
@@ -65,7 +63,8 @@
 - [x] Probado de verdad (11 oct): enlace mágico a `info@eternity.llc` desde la ficha → «Delivered» en Resend, llega a Recibidos, Cristian entra (Supabase: `login` 16:47) y al reutilizarlo da 403 «One-time token not found». Reporte de caller-test en el proyecto «Test» (allí no hay directores, así que solo avisa al CEO) → email «Test · Reporte de Caller Test» con todas las respuestas, en Recibidos.
 - [x] **Caller-test fuera del proyecto «Test»** (lo quitó Cristian el 11 oct; comprobado en la base: en «Test» solo queda el CEO y caller-test sigue activo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
 - [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, también visto en Gmail («Tu enlace para entrar en Test»).
-- La frase «Tu director ya tiene el aviso» está en la sección 2 (sin decidir).
+- [x] Al enviar el reporte ahora dice «Reporte enviado. Tu equipo ya tiene el aviso.» (antes «Tu director…», aunque solo lo recibiera el CEO; Cristian, 11 oct).
+- [x] Borrados con permiso los 3 archivos de las capturas (`captura.js`, `ver-enlace.js`, `ver-reporte.js` en `PROYECTOS/GENERAL/.playwright-mcp/`).
 - [x] **Nombre «—» en las tarjetas de Reportes** · `850a8c9`: la página buscaba los nombres en `equipo()`, que deja fuera los perfiles de prueba (`es_prueba`) y a quien ya no está; ahora busca también ahí (con `conBajas`). Publicado y **visto en pantalla** (11 oct, como caller-test: «Caller Test» en las dos tarjetas).
 - [x] **Primer clic que no abre** (Reportes, y luego la ficha en Equipo y en Administración): **no es de la app, es de la herramienta de Claude**. Comprobado el 11 oct con un registro de eventos en la página: al pulsar por referencia, a la página no le llegó ningún evento (0); al pulsar por coordenadas le llegó el clic completo y la ficha se abrió. Sin cambios en el código.
 
