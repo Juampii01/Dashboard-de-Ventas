@@ -8,7 +8,7 @@
 
 La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 a 4), **sin publicar**. Bloques 3 + 4 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** que Cristian vea los bloques 3 y 4. Después, los bloques 5 y 6, juntos en el siguiente commit. Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente:** que Cristian vea los bloques 3 y 4. Después, los bloques 5 y 6, juntos en el siguiente commit. El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -146,6 +146,8 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - [ ] `preparar-proyecto` sobre una base vacía (que crea Maestria con «Callers» y «Closers»).
 - [ ] Ver la pantalla «Algo ha fallado» con un error de verdad.
 - [ ] Detalle: al crear una entrada de landing, el formulario se queda con el nombre escrito (se podría crear dos veces).
+- [ ] Mejora (bloque 3, propuesta de Claude): bloquear en la base la elección de la rotación, como ya se hace en el reparto de leads. Hoy, si dos personas agendan justo a la vez, podrían dar el mismo closer a la misma hora (poco probable con este volumen).
+- [ ] Mejora (bloque 3, propuesta de Claude): que la ventana de agendar sugiera las horas libres del closer en vez de solo avisar.
 - [ ] **Pendiente (Cristian, 11 oct):** que un administrador pueda **cambiar la zona horaria del proyecto** (hoy solo se elige al crearlo). Cuidado: mueve todas las fechas (ventas, KPIs, objetivos, horarios); decidir cómo antes de hacerlo.
 
 ### 1.2 Después de tu revisión
