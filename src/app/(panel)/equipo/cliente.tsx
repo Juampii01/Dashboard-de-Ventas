@@ -1,22 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Save, Trash2, KeyRound, Plus } from "lucide-react";
-import { Modal } from "@/components/modal";
+import { Save, Trash2, KeyRound, Plus } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
 import { actualizarMiembroEquipo, borrarArea, cambiarModoComision, darAccesoMiembro, guardarArea, guardarComisionRol } from "./acciones";
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 
-type Area = { id: string; nombre: string; color: string };
-type Puesto = { id: string; area_id: string | null; nombre: string };
+export type Area = { id: string; nombre: string; color: string };
+export type Puesto = { id: string; area_id: string | null; nombre: string };
 type Producto = { id: string; nombre: string };
-type Miembro = { id: string; nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona; comision_modo?: "tramos" | "propio" | null; perfil_id: string | null; rol: Rol | null };
+export type Miembro = { id: string; nombre: string; area_id: string | null; puesto_id: string | null; lider: boolean; activo: boolean; comision: ComisionPersona; comision_modo?: "tramos" | "propio" | null; perfil_id: string | null; rol: Rol | null };
 const ROL_TXT: Record<string, string> = { ceo: "CEO", director: "Director de ventas", closer: "Closer", caller: "Caller" };
 
-export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, puedeComision }: { m: Miembro; areas: Area[]; puestos: Puesto[]; productos: Producto[]; rolesQuePuedoDar: Rol[]; puedeComision: boolean }) {
-  const [abierto, setAbierto] = useState(false);
+// Datos y comisión de una persona (organigrama). Es la primera pestaña de su ficha (bloque 5 de 1.0).
+export function DatosYComision({ m, areas, puestos, productos, rolesQuePuedoDar, puedeComision }: { m: Miembro; areas: Area[]; puestos: Puesto[]; productos: Producto[]; rolesQuePuedoDar: Rol[]; puedeComision: boolean }) {
   const { pendiente, error, ejecutar } = useAccion();
   const [nombre, setNombre] = useState(m.nombre);
   const [area, setArea] = useState(m.area_id ?? "");
@@ -32,80 +31,73 @@ export function EditarMiembro({ m, areas, puestos, productos, rolesQuePuedoDar, 
   const conTramos = m.rol === "caller" || m.rol === "closer";
   const [modo, setModo] = useState<"tramos" | "propio">(conTramos ? (m.comision_modo ?? "tramos") : "propio");
   return (
-    <>
-      <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-texto" onClick={() => setAbierto(true)} title="Editar" aria-label={`Editar a ${m.nombre}`}><Pencil className="h-3.5 w-3.5" /></button>
-      {abierto && (
-        <Modal titulo={`Editar · ${m.nombre}`} onCerrar={() => setAbierto(false)} ancho="max-w-lg">
-          <div className="space-y-3 text-sm">
-            <label className="block"><span className="etiqueta-campo">Nombre</span><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="etiqueta-campo">Área</span><select className="campo" value={area} onChange={(e) => setArea(e.target.value)}><option value="">Sin área</option>{areas.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></label>
-              <label className="block"><span className="etiqueta-campo">Puesto</span><select className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
-            </div>
-            <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
-            {conTramos && (
-              <fieldset className="rounded-lg border border-borde p-3" disabled={!puedeComision || pendiente}>
-                <legend className="px-1 text-xs font-medium text-texto-2">¿Qué manda en su comisión?</legend>
-                <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={modo === "tramos"} onChange={() => { setModo("tramos"); ejecutar(() => cambiarModoComision(m.id, "tramos"), "Mandan los tramos"); }} /> Los tramos</label>
-                <label className="inline-flex items-center gap-2"><input type="radio" checked={modo === "propio"} onChange={() => { setModo("propio"); ejecutar(() => cambiarModoComision(m.id, "propio"), "Manda su % propio"); }} /> Su % propio</label>
-                <p className="mt-1 text-xs text-texto-3">{modo === "tramos" ? "Cobra el % del tramo que alcance cada mes (Administración → Comisiones). Lo de abajo no se usa." : "Cobra su % de abajo (o el de su rol)."}</p>
-              </fieldset>
-            )}
-            {!puedeComision ? (
-              <div className="rounded-lg border border-borde p-3">
-                <div className="text-xs font-medium text-texto-2">Comisión</div>
-                <p className="mt-1">{m.comision ? `Propia: ${m.comision.pct_venta ?? 0} % por venta${m.comision.pct_agenda ? ` · ${m.comision.pct_agenda} % por agenda` : ""}${m.comision.por_producto ? " · distinta por producto" : ""}` : "La de su rol"}</p>
-                <p className="mt-1 text-xs text-texto-3">Solo el CEO o el director pueden cambiar comisiones, y nadie la suya (salvo el CEO).</p>
-              </div>
-            ) : (
-            <fieldset className="rounded-lg border border-borde p-3">
-              <legend className="px-1 text-xs font-medium text-texto-2">Comisión</legend>
-              <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={!propia} onChange={() => setPropia(false)} /> La de su rol</label>
-              <label className="inline-flex items-center gap-2"><input type="radio" checked={propia} onChange={() => setPropia(true)} /> Una propia</label>
-              {propia && (
-                <div className="mt-3 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="block"><span className="etiqueta-campo">% por venta</span><input className="campo" inputMode="decimal" value={venta} onChange={(e) => setVenta(e.target.value)} /></label>
-                    {m.rol === "caller" && <label className="block"><span className="etiqueta-campo">% por agenda cerrada</span><input className="campo" inputMode="decimal" value={agenda} onChange={(e) => setAgenda(e.target.value)} /></label>}
-                  </div>
-                  <details><summary className="cursor-pointer text-xs text-primario">Distinta por producto</summary>
-                    <div className="mt-2 space-y-1">{productos.map((p) => <div key={p.id} className="flex items-center gap-2"><span className="flex-1">{p.nombre}</span><input className="campo w-20 py-1" inputMode="decimal" value={pp[p.id] ?? ""} onChange={(e) => setPp({ ...pp, [p.id]: e.target.value })} placeholder="0" aria-label={`% para ${p.nombre}`} />%</div>)}<p className="text-xs text-texto-3">En 0 % usa el porcentaje general.</p></div>
-                  </details>
-                </div>
-              )}
-            </fieldset>
-            )}
-            {error && <p className="text-mal">{error}</p>}
-            <button
-              className="btn-primario w-full"
-              disabled={pendiente}
-              onClick={() =>
-                ejecutar(
-                  () => actualizarMiembroEquipo(m.id, { nombre, area_id: area || null, puesto_id: puesto || null, lider, activo, comision: !puedeComision ? m.comision : propia ? { pct_venta: leerNumero(venta) || null, pct_agenda: leerNumero(agenda) || null, por_producto: Object.fromEntries(Object.entries(pp).filter(([, v]) => leerNumero(v) > 0).map(([k, v]) => [k, leerNumero(v)])) } : null }),
-                  "Guardado"
-                )
-              }
-            >
-              <Save className="h-4 w-4" /> Guardar
-            </button>
-            {!m.perfil_id && (
-              <div className="border-t border-borde pt-3">
-                {!acceso ? (
-                  <button className="btn-secundario w-full" onClick={() => setAcceso(true)}><KeyRound className="h-4 w-4" /> Darle acceso a la app</button>
-                ) : (
-                  <form className="space-y-2" action={(fd) => ejecutar(() => darAccesoMiembro(m.id, String(fd.get("email")), String(fd.get("password")), String(fd.get("rol")) as Rol), "Acceso creado")}>
-                    <input name="email" type="email" required className="campo" placeholder="Email de acceso" />
-                    <input name="password" type="text" minLength={8} required className="campo" placeholder="Contraseña temporal (mín. 8)" autoComplete="off" />
-                    <select name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</select>
-                    <button className="btn-primario w-full" disabled={pendiente}>Crear acceso</button>
-                  </form>
-                )}
-              </div>
-            )}
-          </div>
-        </Modal>
+    <div className="space-y-3 text-sm">
+      <label className="block"><span className="etiqueta-campo">Nombre</span><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block"><span className="etiqueta-campo">Área</span><select className="campo" value={area} onChange={(e) => setArea(e.target.value)}><option value="">Sin área</option>{areas.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></label>
+        <label className="block"><span className="etiqueta-campo">Puesto</span><select className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
+      </div>
+      <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
+      {conTramos && (
+        <fieldset className="rounded-lg border border-borde p-3" disabled={!puedeComision || pendiente}>
+          <legend className="px-1 text-xs font-medium text-texto-2">¿Qué manda en su comisión?</legend>
+          <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={modo === "tramos"} onChange={() => { setModo("tramos"); ejecutar(() => cambiarModoComision(m.id, "tramos"), "Mandan los tramos"); }} /> Los tramos</label>
+          <label className="inline-flex items-center gap-2"><input type="radio" checked={modo === "propio"} onChange={() => { setModo("propio"); ejecutar(() => cambiarModoComision(m.id, "propio"), "Manda su % propio"); }} /> Su % propio</label>
+          <p className="mt-1 text-xs text-texto-3">{modo === "tramos" ? "Cobra el % del tramo que alcance cada mes (Administración → Comisiones). Lo de abajo no se usa." : "Cobra su % de abajo (o el de su rol)."}</p>
+        </fieldset>
       )}
-    </>
+      {!puedeComision ? (
+        <div className="rounded-lg border border-borde p-3">
+          <div className="text-xs font-medium text-texto-2">Comisión</div>
+          <p className="mt-1">{m.comision ? `Propia: ${m.comision.pct_venta ?? 0} % por venta${m.comision.pct_agenda ? ` · ${m.comision.pct_agenda} % por agenda` : ""}${m.comision.por_producto ? " · distinta por producto" : ""}` : "La de su rol"}</p>
+          <p className="mt-1 text-xs text-texto-3">Solo el CEO o el director pueden cambiar comisiones, y nadie la suya (salvo el CEO).</p>
+        </div>
+      ) : (
+      <fieldset className="rounded-lg border border-borde p-3">
+        <legend className="px-1 text-xs font-medium text-texto-2">Comisión</legend>
+        <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={!propia} onChange={() => setPropia(false)} /> La de su rol</label>
+        <label className="inline-flex items-center gap-2"><input type="radio" checked={propia} onChange={() => setPropia(true)} /> Una propia</label>
+        {propia && (
+          <div className="mt-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block"><span className="etiqueta-campo">% por venta</span><input className="campo" inputMode="decimal" value={venta} onChange={(e) => setVenta(e.target.value)} /></label>
+              {m.rol === "caller" && <label className="block"><span className="etiqueta-campo">% por agenda cerrada</span><input className="campo" inputMode="decimal" value={agenda} onChange={(e) => setAgenda(e.target.value)} /></label>}
+            </div>
+            <details><summary className="cursor-pointer text-xs text-primario">Distinta por producto</summary>
+              <div className="mt-2 space-y-1">{productos.map((p) => <div key={p.id} className="flex items-center gap-2"><span className="flex-1">{p.nombre}</span><input className="campo w-20 py-1" inputMode="decimal" value={pp[p.id] ?? ""} onChange={(e) => setPp({ ...pp, [p.id]: e.target.value })} placeholder="0" aria-label={`% para ${p.nombre}`} />%</div>)}<p className="text-xs text-texto-3">En 0 % usa el porcentaje general.</p></div>
+            </details>
+          </div>
+        )}
+      </fieldset>
+      )}
+      {error && <p className="text-mal">{error}</p>}
+      <button
+        className="btn-primario w-full"
+        disabled={pendiente}
+        onClick={() =>
+          ejecutar(
+            () => actualizarMiembroEquipo(m.id, { nombre, area_id: area || null, puesto_id: puesto || null, lider, activo, comision: !puedeComision ? m.comision : propia ? { pct_venta: leerNumero(venta) || null, pct_agenda: leerNumero(agenda) || null, por_producto: Object.fromEntries(Object.entries(pp).filter(([, v]) => leerNumero(v) > 0).map(([k, v]) => [k, leerNumero(v)])) } : null }),
+            "Guardado"
+          )
+        }
+      >
+        <Save className="h-4 w-4" /> Guardar
+      </button>
+      {!m.perfil_id && (
+        <div className="border-t border-borde pt-3">
+          {!acceso ? (
+            <button className="btn-secundario w-full" onClick={() => setAcceso(true)}><KeyRound className="h-4 w-4" /> Darle acceso a la app</button>
+          ) : (
+            <form className="space-y-2" action={(fd) => ejecutar(() => darAccesoMiembro(m.id, String(fd.get("email")), String(fd.get("password")), String(fd.get("rol")) as Rol), "Acceso creado")}>
+              <input name="email" type="email" required className="campo" placeholder="Email de acceso" />
+              <input name="password" type="text" minLength={8} required className="campo" placeholder="Contraseña temporal (mín. 8)" autoComplete="off" />
+              <select name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</select>
+              <button className="btn-primario w-full" disabled={pendiente}>Crear acceso</button>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

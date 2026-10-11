@@ -8,7 +8,7 @@
 
 La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 a 4), **sin publicar**. Bloques 3 + 4 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** 1.1 hecho (11 oct). Que Cristian vea los bloques 3 y 4 y lo de 1.1 (incluidos 3 detalles para decidir). Después, los bloques 5 y 6, juntos en el siguiente commit. El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente:** bloques 5 y 7 hechos, con su commit (Cristian, 11 oct). Falta el bloque 6 (Resend): necesita de Cristian la cuenta de Resend y quien añada los DNS de eternity.llc. Después, 1.1 está hecho → su revisión (2.1) y publicar (1.3). El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -17,7 +17,7 @@ La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la aud
 ## 1. Lo que me falta a mí (Claude), en orden
 
 ### 1.0 Nuevo antes de publicar (pedido por Cristian el 10 oct 2026, noche)
-**Cómo se trabaja:** un bloque cada vez y en este orden (cada uno se apoya en el anterior). Cada bloque termina con: tests (que fallen si se rompe la regla), `next build`, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, y **te lo enseño antes de pasar al siguiente**. **Commit cada 2 bloques** (Cristian, 11 oct): «Antes de todo» + A · 1 + 2 · 3 + 4 · 5 + 6 · 7.
+**Cómo se trabaja:** un bloque cada vez y en este orden (cada uno se apoya en el anterior). Cada bloque termina con: tests (que fallen si se rompe la regla), `next build`, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, y **te lo enseño antes de pasar al siguiente**. **Commit cada 2 bloques** (Cristian, 11 oct): «Antes de todo» + A · 1 + 2 · 3 + 4 · 5 + 7 (Cristian, 11 oct: el 6 espera a Resend) · 6.
 
 **Lo que ya existe (comprobado en el código el 10 oct):** horario de los callers con un solo tramo por día (`miembros_proyecto.horario`, V2-11) · reparto al entrar «a mano / rotativo / por horarios» (`proyectos.modo_reparto`) · comisión por persona, producto y rol, de venta y de agenda (`lib/comisiones.ts`), y liquidaciones del mes sobre lo cobrado (`lib/finanzas.ts`) · cambiar contraseña desde Administración · usuario y calendario de GHL de cada persona (`miembros_proyecto.ghl_user_id` / `ghl_calendar_id`, en Integraciones) · cuentas de Fathom por closer · pasos de onboarding de clientes (los edita el CEO) · avisos de reportes por el workflow de GHL · link de pago por producto · la cola ordena por prioridad A/B/C. **No existe:** una página «Mi perfil» · envío de emails propio (sin servidor de correo, Supabase solo manda emails a las direcciones del equipo de Supabase, según su documentación).
 
@@ -108,20 +108,33 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - **Navegador (11 oct, CEO, Maestria; sin cambiar nada):** pestaña Comisiones con los 6 tramos de callers y el 7 % de closers en USD; la Membresía con la casilla quitada; en Equipo, Ana sale con «Los tramos» marcado y todas las tarjetas de callers y closers dicen «Tramos».
 - ⚠ No probado en pantalla: Liquidaciones con el tramo (en Maestria no hay ventas; sí en tests) y guardar tramos desde la pantalla (sí en tests).
 
-#### Bloque 5 · Ficha completa de cada persona (Empresa → Equipo)
-- [ ] Clic en una persona → ventana con todo: la marca «perfil de prueba» · datos (nombre, email, teléfono, WhatsApp, área, puesto) · rol, Administración y permisos de secciones y de pipelines · **comisiones** (su %, el interruptor del bloque 4, por producto) · **reparto y rotación** (su %) · **horario y ajustes de calendario** (bloque 1) · **calendario y usuario de GHL** y **cuenta de Fathom** · **cambiar contraseña** · **cambiar email** (lo cambia el administrador directamente) · **enviar enlace mágico** (bloque 6). La usan **el CEO y los directores con Administración**. Las personas sin acceso a la app (solo en el organigrama) tienen la parte de datos y comisión.
+#### Bloque 5 · Ficha completa de cada persona (Empresa → Equipo) ✅ (11 oct, commit con el bloque 7)
+- **Decisiones de Cristian (11 oct):** Administración → Equipo abre **la misma ficha** (se quitan de esa tabla los botones sueltos) · un director **sin** Administración sigue viendo solo lo de hoy (datos y comisión); el resto, solo CEO y directores con Administración · el **% de reparto y de rotación se ve** en la ficha con un enlace a «Proyecto y reparto» (allí se ve la suma de 100) · «Enviar enlace mágico» **desactivado** hasta el bloque 6 · la marca «perfil de prueba» **solo el CEO** · el commit, con el bloque 6.
+- [x] Clic en una persona → ventana con todo: la marca «perfil de prueba» · datos (nombre, email, teléfono, WhatsApp, área, puesto) · rol, Administración y permisos de secciones y de pipelines · **comisiones** (su %, el interruptor del bloque 4, por producto) · **reparto y rotación** (su %) · **horario y ajustes de calendario** (bloque 1) · **calendario y usuario de GHL** y **cuenta de Fathom** · **cambiar contraseña** · **cambiar email** (lo cambia el administrador directamente) · **enviar enlace mágico** (bloque 6). La usan **el CEO y los directores con Administración**. Las personas sin acceso a la app (solo en el organigrama) tienen la parte de datos y comisión.
+- **Hecho y comprobado (11 oct):** `equipo/ficha.tsx` (ventana con pestañas: Datos y comisión · Acceso · Permisos · Horario y reparto · GHL y Fathom) y `equipo/ficha-partes.tsx` · acciones `equipo/ficha-acciones.ts` (`cargarFicha`, contacto, **cambiar email** sin confirmación, marca de prueba solo el CEO) · `lib/permisos-datos.ts` (los datos de permisos, compartidos con Administración) · `ListaPermisosPersona` y `DatosYComision` sacados de sus ventanas para usarlos dentro de la ficha · Administración → Equipo: un botón «Ficha» por persona (la misma ficha; quitados los botones sueltos y `FilaMiembro`) · la contraseña, en un campo normal · «Enviar enlace mágico» desactivado hasta el bloque 6.
+- **Tests:** `ficha.test.ts` (4: quién la abre, contacto, email —y luego entra con el nuevo—, marca de prueba). Rotas a propósito «solo con Administración» y «la marca, solo el CEO»: falla 1 cada vez. **415 tests pasan.**
+- **Navegador (11 oct, CEO, Proyecto Prueba; todo devuelto como estaba):** ficha de Carla con las 5 pestañas; desde «Permisos» le di KPIs, Programas y «Editar» en Principal (guardado en la base y la ficha se pone al día); contacto guardado (sale en la tabla de Administración); desde Administración, la ficha de Ana (rotación, horario, calendario de GHL) y añadir/quitar una cuenta de Fathom. Como Carla: «Aquí solo ves lo tuyo» en KPIs y «Tus clientes: 0» en Programas (los 2 detalles de 1.1).
+- ⚠ No probado en pantalla: cambiar email y contraseña desde la ficha (sí en tests; no lo hice para no cambiar los accesos de los usuarios de prueba), y la ficha de un director **sin** Administración (sí en tests: no puede abrir más que «Datos y comisión»).
 
 #### Bloque 6 · Emails con Resend
 - [ ] Clave `RESEND_API_KEY` en el servidor y envío de emails de la app (avisos de los reportes por email; el WhatsApp sigue por el workflow de GHL).
 - [ ] Supabase con Resend como servidor de correo (enlaces mágicos y cambios de email), remitente @eternity.llc. Sin email de bienvenida: los accesos se los manda Cristian por WhatsApp.
 - [ ] Guía paso a paso en `GUIA-PUBLICAR.md` (crear la cuenta, verificar eternity.llc con sus registros DNS, poner la clave en Vercel y en Supabase). En local no se pueden enviar emails reales: se prueba con un envío falso en los tests y con la cuenta real al publicar. **Necesita de Cris:** la cuenta de Resend, su clave y quien añada los registros DNS de eternity.llc.
 
-#### Bloque 7 · Reporte, onboarding de closers, recursos y cola
-- [ ] **Preguntas del reporte editables** en Administración (por defecto, las de hoy). Las 3 que usan las tasas del closer (llamadas realizadas, agendadas y ventas) se pueden renombrar pero no borrar. Los reportes ya enviados guardan sus preguntas tal cual.
-- [ ] **Onboarding de los closers:** en el menú del closer, «Onboarding» con **sus clientes cerrados** y una checklist por cliente (Onboarding enviado · Acceso dado · Seguimiento hecho · Llamada de bienvenida), que marca él; los puntos los edita el equipo. Director y CEO ven los de todos. Aparte del onboarding de clientes que ya existe (100 % configurable).
-- [ ] **Links y recursos con diseño nuevo** (hoy «se ve muy Windows XP») y un **link de dossier** encima del link de pago en cada producto (los pone el equipo).
-- [ ] **Cola del caller sin prioridad:** los más nuevos primero (la A/B/C se sigue calculando pero no ordena).
-- [ ] «DFY» (antes «Servicios para empresas») con precio personalizado y editable en Programas: comprobar que ya va (y que se pueden añadir más productos así).
+#### Bloque 7 · Reporte, onboarding de closers, recursos y cola ✅ (11 oct)
+- **Decisiones de Cristian (11 oct):** preguntas del reporte editables por el CEO y los directores con Administración; del caller **ninguna fija**, del closer las 3 de las tasas · «sus clientes cerrados» = a quienes **ese closer les registró una venta** (también la Membresía) · los puntos del onboarding de closers los editan **el CEO y los directores** · Links y recursos: **cuadrícula de tarjetas** (3 por fila en ordenador), buscador, «Abrir» y «Copiar link», y en cada producto su link de dossier encima del de pago · el **link de dossier se pone en Programas** · cola del caller: se quita solo la prioridad (del más nuevo al más viejo) y **se quedan los grupos** («llamar luego» que ya tocan, después nuevos, después «no contesta»).
+- [x] **Preguntas del reporte editables** en Administración (por defecto, las de hoy). Las 3 que usan las tasas del closer (llamadas realizadas, agendadas y ventas) se pueden renombrar pero no borrar. Los reportes ya enviados guardan sus preguntas tal cual.
+- [x] **Onboarding de los closers:** en el menú del closer, «Onboarding» con **sus clientes cerrados** y una checklist por cliente (Onboarding enviado · Acceso dado · Seguimiento hecho · Llamada de bienvenida), que marca él; los puntos los edita el equipo. Director y CEO ven los de todos. Aparte del onboarding de clientes que ya existe (100 % configurable).
+- [x] **Links y recursos con diseño nuevo** (hoy «se ve muy Windows XP») y un **link de dossier** encima del link de pago en cada producto (los pone el equipo).
+- [x] **Cola del caller sin prioridad:** los más nuevos primero (la A/B/C se sigue calculando pero no ordena).
+- [x] «DFY» (antes «Servicios para empresas») con precio personalizado y editable en Programas: comprobar que ya va (y que se pueden añadir más productos así).
+- **Hecho y comprobado (11 oct):** migración `20261014130000_bloque7.sql` (`proyectos.preguntas_reporte`, `reportes.preguntas`, tabla `pasos_onboarding_closer`, `clientes.onboarding_closer`, `productos.link_dossier`) · preguntas: `preguntasValidas`/`preguntasDe` en `lib/reportes.ts`, pestaña **Administración → Reportes** (texto, número o texto, ayuda, orden, añadir, quitar —las fijas con candado—, «Volver a las de siempre»); el formulario y el aviso a GHL usan las de ahora y cada reporte guarda las suyas · onboarding de closers: página `/onboarding-closers` («Onboarding» en el menú del closer, «Onboarding closers» para CEO y directores, con filtro por closer y editor de puntos), `lib/onboarding-closer.ts` · Links y recursos: tarjeta por producto con **Dossier** encima de **Link de pago** (Abrir, Copiar link, lápiz para editarlos), recursos en cuadrícula con buscador (sin tildes) y «Abrir» / «Copiar link» (el PDF no se copia: su enlace caduca en 1 hora) · link del dossier también en Programas · cola: sin prioridad dentro de cada grupo · DFY: Programas acepta precio vacío (comprobado en test).
+- **Arreglado de paso:** el link de pago desde Links y recursos aceptaba `http://` (en Programas solo `https://`, arreglo 35); ahora los dos links de producto piden `https://`.
+- **Tests:** `bloque7.test.ts` unitario (4) y de integración (5). Rotas a propósito «las fijas del closer» y «solo el closer de ese cliente marca»: fallan 4 y 1. **424 tests pasan.**
+- **Navegador (11 oct, Proyecto Prueba; todo devuelto como estaba):** como Ana, «Onboarding» en su menú con su cliente de prueba y marcar un punto (fecha y barra al 25 %); el nuevo Links y recursos con links de prueba y el buscador; como CEO, cambiar una pregunta del caller y «Volver a las de siempre»; el onboarding de todos con su filtro y el editor de puntos.
+- **Fallo mío encontrado en pantalla y arreglado:** la primera vez que se abría el onboarding, los 4 puntos por defecto se creaban pero no salían (Next reutilizaba la primera lectura, vacía) y ponía «1 con todo hecho». Ahora salen a la primera; y con 0 puntos no cuenta como «todo hecho». También «1 clientes» → «1 cliente».
+- ⚠ No probado en pantalla: un reporte enviado con preguntas personalizadas (sí en test) y el orden nuevo de la cola (sí en test).
+- Nota: si dos closers le venden al mismo cliente, comparten su checklist (va por cliente).
 
 **Documentos que hay que poner al día con cada bloque** (para que no se queden viejos):
 - «Antes de todo»: `GUIA-GHL.md` Parte 4 (la sección «Llamadas de GHL» solo la ven jefes y los 2 perfiles de prueba) · `GUIA-PUBLICAR.md` paso 6 (los 2 perfiles de prueba y las columnas `password` y `prueba`).
@@ -148,10 +161,10 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 - [x] «Algo ha fallado» con un error de verdad: sale «Esta sección no ha cargado», sin detalles técnicos, con un código para el director, «Reintentar» e «Ir al inicio», y el menú sigue. La página de prueba se borró al momento.
 - [x] **Arreglado:** al crear una entrada de landing, el formulario se vacía (antes se quedaba el nombre y se podía crear dos veces). Si falla, lo escrito se queda (no probado en pantalla: habría que forzar un error del servidor).
 - **Cristian (11 oct):** sí a todo: se hace en Proyecto Prueba con datos «PRUEBA» (borrados al terminar), Carla y un closer de prueba un rato en Proyecto Prueba, el director sin Administración un rato, una página de prueba que falla (borrada al momento) y se arregla el detalle de la landing.
-- **Detalles encontrados (para que decidas; no arreglados):**
-  - Al agendar con un closer **sin horario puesto**, el aviso dice «está fuera de su horario (o es su día libre)»; sería más claro «no tiene horario puesto».
-  - En «Mis KPIs» de un caller, la tabla de closers dice «No hay closers en este proyecto» aunque los hay (es que solo ve lo suyo); mejor «Aquí solo ves lo tuyo».
-  - Un caller con Programas ve cuántos clientes tiene cada programa en todo el proyecto (no solo los suyos). Es un número, sin nombres; decide si te vale.
+- **Detalles encontrados — arreglados el 11 oct (Cristian):**
+  - Closer **sin horario puesto**: el aviso al agendar ahora dice «no tiene horario puesto» (con test en `rotacion.test.ts`).
+  - «Mis KPIs» de un caller o closer: donde no hay filas suyas pone «Aquí solo ves lo tuyo» (comprobado en pantalla).
+  - Programas para un caller o closer: la columna es «Tus clientes» y cuenta solo los suyos, los mismos que ve en Clientes (criterio de Claude; comprobado en pantalla).
 
 ### 1.2 Después de tu revisión
 - [ ] Mejora (bloque 3, propuesta de Claude): bloquear en la base la elección de la rotación, como ya se hace en el reparto de leads. Hoy, si dos personas agendan justo a la vez, podrían dar el mismo closer a la misma hora (poco probable con este volumen).
@@ -245,8 +258,10 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 | 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
 | 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | `f102dce` |
 | 1.0 Bloques 3 y 4 (rotación de closers, comisiones por tramos, «Cuenta para comisión») | `0f6c688` |
+| 1.0 1.1 (pasada en pantalla y arreglo de la landing) | `ed4bcce` |
+| 1.0 Bloques 5 y 7 (ficha de cada persona, reporte editable, onboarding de closers, Links y recursos, cola sin prioridad) | (commit de hoy) |
 
-**Comprobado el 11 oct (tras los bloques 3 y 4):** 411 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 28 migraciones (11 oct: `rotacion_closers` y `comisiones_tramos`) · 42 tablas, todas con RLS · nada subido a la nube.
+**Comprobado el 11 oct (tras los bloques 5 y 7):** 424 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 29 migraciones (11 oct: `rotacion_closers`, `comisiones_tramos` y `bloque7`) · 43 tablas, todas con RLS · nada subido a la nube.
 
 ---
 
@@ -277,7 +292,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 - **Cola del caller:** los leads más nuevos primero; la prioridad A/B/C no ordena.
 - **Biblioteca (11 oct):** primera pestaña de KPIs, para director y CEO; datos de los leads de la app (también por CSV y, con GHL, sola); se reparte desde ella; su clasificación es un dato propio de cada lead («Oferta»), calculado para todos y recalculado solo; se ve en la ficha y en el CRM junto a la etiqueta de siempre; cada CSV nuevo pone al día todos los datos.
 - **Productos (11 oct):** se llaman Membresía (47 $/mes, mensual sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (personalizado).
-- **Commits:** cada 2 bloques de 1.0.
+- **Commits:** cada 2 bloques de 1.0 (el 5 va con el 7; el 6, solo, cuando esté Resend).
 - **Plan de la nube:** gratuito para empezar · dirección de Vercel (sin dominio propio) · tests de pantallas completas después de publicar.
 - **Landings:** las reglas «qué `source` va a qué pipeline» las configura el equipo en Administración → Entradas (confirmado por Cristian).
 

@@ -25,3 +25,9 @@ export async function closerLibreA(proyecto: Pick<Proyecto, "id" | "zona_horaria
   return libreA({ horario, ajustes, citas: (citas ?? []).map((c) => c.fecha as string), inicio, ahora, zona: proyecto.zona_horaria });
 }
 
+
+// ¿Tiene horario puesto en este proyecto? (para avisar «no tiene horario puesto» en vez de «fuera de su horario»)
+export async function tieneHorario(proyectoId: string, perfilId: string) {
+  const { data } = await db().from("miembros_proyecto").select("horario").eq("proyecto_id", proyectoId).eq("perfil_id", perfilId).maybeSingle();
+  return !!horarioValido(data?.horario);
+}

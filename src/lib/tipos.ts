@@ -23,6 +23,7 @@ export type Proyecto = {
   reparto_auto: boolean; // 1.0 bloque 2: reparto automático al entrar, con % por caller
   reparto_solo_horario: boolean;
   rotacion_modo?: "elige" | "propone" | "decide"; // 1.0 bloque 3: cómo se elige el closer al agendar
+  preguntas_reporte?: unknown; // 1.0 bloque 7: preguntas del reporte por rol (lib/reportes)
   tramos_comision?: unknown; // 1.0 bloque 4: tramos de comisión de callers y closers (lib/comisiones)
   calendario?: unknown; // 1.0 bloque 1: ajustes de las llamadas de los closers (lib/disponibilidad)
   webhook_secreto: string;
@@ -102,6 +103,7 @@ export type Producto = {
   nombre: string;
   precio: number | null;
   link_pago: string | null;
+  link_dossier?: string | null; // 1.0 bloque 7: va encima del link de pago
   vende_caller: boolean;
   cuenta_comision?: boolean; // 1.0 bloque 4: si no, no paga comisión ni suma para el tramo
   activo: boolean;
@@ -164,5 +166,6 @@ export type Reporte = {
   rol: string;
   fecha: string;
   respuestas: Record<string, string | number>;
+  preguntas?: unknown; // 1.0 bloque 7: las preguntas que tenía al enviarse
   creado_en: string;
 };

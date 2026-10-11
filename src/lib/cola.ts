@@ -6,6 +6,8 @@ export type PestanaCola = "llamar" | "luego" | "agendados" | "todos";
 
 // Cola del caller: qué leads salen en cada pestaña y en qué orden.
 // «Por llamar»: nuevos, no contesta y «llamar luego» cuya hora ya llegó.
+// Bloque 7 de 1.0 (Cristian, 11 oct 2026): la prioridad A/B/C se sigue calculando (puntos) pero ya no ordena; se quedan
+// los grupos (primero los «llamar luego» que ya tocan, luego los nuevos, luego «no contesta») y dentro, del más nuevo al más viejo.
 export function colaCaller<T extends Pick<Lead, "estado_caller" | "llamar_en" | "respuestas" | "creado_en">>(leads: T[], pestana: string, ahora: number, pesos: Pesos | null = null) {
   return leads
     .map((l) => ({ ...l, puntos: puntosLead(l.respuestas, pesos) }))
@@ -24,6 +26,6 @@ export function colaCaller<T extends Pick<Lead, "estado_caller" | "llamar_en" | 
       const nuevoA = a.estado_caller === "nuevo" ? 1 : 0;
       const nuevoB = b.estado_caller === "nuevo" ? 1 : 0;
       if (nuevoA !== nuevoB) return nuevoB - nuevoA;
-      return b.puntos - a.puntos || b.creado_en.localeCompare(a.creado_en);
+      return b.creado_en.localeCompare(a.creado_en);
     });
 }

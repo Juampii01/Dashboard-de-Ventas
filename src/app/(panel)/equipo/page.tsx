@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Crown, KeyRound } from "lucide-react";
-import { getSesion } from "@/lib/auth";
+import { getSesion, puedeAdmin } from "@/lib/auth";
 import { db } from "@/lib/datos";
 import { puedeSeccion } from "@/lib/permisos";
 import { cargarEquipo } from "@/lib/equipo";
 import { Cabecera, Contenido, Seccion, Insignia } from "@/components/ui";
 import { AltaMiembro } from "./alta";
-import { ComisionRolForm, EditarMiembro, EditorAreas } from "./cliente";
+import { ComisionRolForm, EditorAreas } from "./cliente";
+import { FichaPersona } from "./ficha";
 import type { Rol } from "@/lib/tipos";
 import { pct } from "@/lib/formato";
 
@@ -49,7 +50,15 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
           {resumenComision(m) && <span className="text-oro">{resumenComision(m)}</span>}
         </div>
       </div>
-      <EditarMiembro m={m} areas={eq.areas} puestos={eq.puestos} productos={(productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre }))} rolesQuePuedoDar={rolesQuePuedoDar} puedeComision={puedeComisionDe(m.perfil_id)} />
+      {/* Bloque 5 de 1.0: la ficha completa (lo de más allá de datos y comisión, solo con Administración) */}
+      <FichaPersona
+        titulo={m.nombre}
+        m={m}
+        perfilId={m.perfil_id}
+        admin={puedeAdmin(perfil)}
+        abiertaAlInicio={!!m.perfil_id && sp.ficha === m.perfil_id}
+        datos={{ areas: eq.areas, puestos: eq.puestos, productos: (productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre })), rolesQuePuedoDar, puedeComision: puedeComisionDe(m.perfil_id) }}
+      />
     </li>
   );
 

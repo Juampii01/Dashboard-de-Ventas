@@ -104,7 +104,7 @@ export function TablasKpis({ kpis, dinero, sinTotales }: { kpis: Kpis; dinero: (
           <Phone className="h-4 w-4 text-primario" /> Callers
         </div>
         {kpis.callers.length === 0 ? (
-          <Vacio icono={Users} texto="No hay callers en este proyecto." />
+          <Vacio icono={Users} texto={sinTotales ? "Aquí solo ves lo tuyo." : "No hay callers en este proyecto."} />
         ) : (
           <table className="tabla">
             <Cabeceras primera="Caller" cols={COL_CALLER} />
@@ -128,7 +128,7 @@ export function TablasKpis({ kpis, dinero, sinTotales }: { kpis: Kpis; dinero: (
           <TrendingUp className="h-4 w-4 text-primario" /> Closers
         </div>
         {kpis.closers.length === 0 ? (
-          <Vacio icono={Users} texto="No hay closers en este proyecto." />
+          <Vacio icono={Users} texto={sinTotales ? "Aquí solo ves lo tuyo." : "No hay closers en este proyecto."} />
         ) : (
           <table className="tabla">
             <Cabeceras primera="Closer" cols={COL_CLOSER} />

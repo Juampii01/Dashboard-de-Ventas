@@ -42,6 +42,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
         ...(tiene("crm") ? [{ href: "/crm", texto: jefe ? "CRM" : "Mi CRM", icono: "crm" as const }] : []),
         ...(tiene("cola") ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),
         ...(tiene("agendas") ? [{ href: "/closer", texto: jefe ? "Agendas" : "Mis agendas", icono: "closer" as const }] : []),
+        // Bloque 7 de 1.0: onboarding de los clientes de cada closer (aparte del onboarding de Clientes)
+        ...(tiene("agendas") && (jefe || perfil.rol === "closer") ? [{ href: "/onboarding-closers", texto: jefe ? "Onboarding closers" : "Onboarding", icono: "onboarding" as const }] : []),
         ...(tiene("grabadas") ? [{ href: "/caller/grabadas", texto: jefe ? "Llamadas de GHL" : "Mis llamadas grabadas", icono: "grabadas" as const }] : []),
         ...(tiene("ventas") ? [{ href: "/ventas", texto: jefe ? "Ventas" : "Mis ventas", icono: "ventas" as const }] : []),
         ...(tiene("ranking") ? [{ href: "/ranking", texto: "Ranking del equipo", icono: "ranking" as const }] : []),

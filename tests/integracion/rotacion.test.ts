@@ -114,5 +114,8 @@ describe("Reagendar", () => {
     const { data: cita } = await db.from("citas").select("id").eq("lead_id", e.leads.LeadB).eq("fecha", new Date("2027-01-04T20:00:00-05:00").toISOString()).single();
     await falla(reagendarCita(cita!.id, "2027-01-04T11:15"), /No está libre/); // A tiene la de las 11:00 (30 min)
     await ok(reagendarCita(cita!.id, "2027-01-05T22:00"));
+    // 1.1: al agendar con un closer sin horario, el aviso lo dice claro
+    expect((await consultarAgenda("2027-01-06T10:00", e.p.closerA.id)) as { aviso: string }).toMatchObject({ aviso: expect.stringMatching(/no tiene horario puesto/) });
+    expect((await consultarAgenda("2027-01-06T10:00", e.p.closerB.id)) as { aviso: string }).toMatchObject({ aviso: expect.stringMatching(/fuera de su horario/) }); // miércoles: B no trabaja
   });
 });

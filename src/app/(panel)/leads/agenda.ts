@@ -4,7 +4,7 @@ import { exigirSeccion } from "@/lib/permisos";
 import { getSesion } from "@/lib/auth";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { localAIso } from "@/lib/formato";
-import { closerLibreA } from "@/lib/agenda-libre";
+import { closerLibreA, tieneHorario } from "@/lib/agenda-libre";
 import { closerDeRotacion, estadoRotacion } from "@/lib/rotacion";
 import { TEXTO_MOTIVO } from "@/lib/disponibilidad";
 
@@ -23,7 +23,10 @@ export async function consultarAgenda(fechaLocal: string, closerId: string | nul
     let aviso: string | null = null;
     if (efectivo) {
       const libre = await closerLibreA(proyecto, efectivo, inicio);
-      if (!libre.libre) aviso = `${base.nombres.get(efectivo) ?? "Ese closer"}: ${TEXTO_MOTIVO[libre.motivo].toLowerCase()}.`;
+      if (!libre.libre) {
+        const sinHorario = libre.motivo === "fuera_horario" && !(await tieneHorario(proyecto.id, efectivo));
+        aviso = `${base.nombres.get(efectivo) ?? "Ese closer"}: ${sinHorario ? "no tiene horario puesto" : TEXTO_MOTIVO[libre.motivo].toLowerCase()}.`;
+      }
     }
     return {
       modo: base.encendida ? base.modo : ("elige" as const),

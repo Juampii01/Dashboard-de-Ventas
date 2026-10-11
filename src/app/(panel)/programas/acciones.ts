@@ -24,6 +24,7 @@ export type DatosPrograma = {
   precios_divisa: Record<string, string>;
   comisiones: Record<string, string>; // closer, caller, director, ceo, caller_agenda
   link_pago: string;
+  link_dossier?: string; // bloque 7
 };
 
 const num = (v: string, campo: string, max = 1e9) => {
@@ -55,6 +56,8 @@ export async function guardarPrograma(d: DatosPrograma) {
     }
     const link = d.link_pago.trim();
     if (link && !/^https:\/\//i.test(link)) throw new ErrorUsuario("El link de pago tiene que empezar por https://"); // arreglo 35: solo https
+    const dossier = (d.link_dossier ?? "").trim();
+    if (dossier && !/^https:\/\/[^\s]+$/i.test(dossier)) throw new ErrorUsuario("El link del dossier tiene que empezar por https://");
     const fila = {
       nombre: d.nombre.trim(),
       descripcion: d.descripcion.trim() || null,
@@ -70,6 +73,7 @@ export async function guardarPrograma(d: DatosPrograma) {
       precios_divisa: Object.keys(divisas).length ? divisas : null,
       comisiones: Object.keys(comisiones).length ? comisiones : null,
       link_pago: link || null,
+      link_dossier: dossier || null,
     };
     // Comisiones: solo el CEO o el director, y el director no la de su propio rol (arreglo 2)
     const antes = d.id ? (await db().from("productos").select("comisiones, cuenta_comision").eq("id", d.id).eq("proyecto_id", proyecto.id).maybeSingle()).data : null;

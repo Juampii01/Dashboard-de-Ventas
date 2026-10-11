@@ -11,6 +11,7 @@ import { Cabecera, Contenido, Insignia } from "@/components/ui";
 import { BuscadorUrl } from "@/app/(panel)/closer/llamadas/cliente";
 import { EditorPrograma, InterruptorActivo } from "./cliente";
 import type { Producto } from "@/lib/tipos";
+import { clientesSuyos } from "@/app/(panel)/clientes/cargar";
 
 export default async function ProgramasPage({ searchParams }: PageProps<"/programas">) {
   const { perfil, proyecto } = await getSesion();
@@ -30,7 +31,9 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
   ]);
   const todos = (data ?? []) as Producto[];
   const programas = todos.filter((p) => (!estado || (estado === "activos" ? p.activo : !p.activo)) && coincide(q, p.nombre, p.categoria));
-  const clientes = (id: string) => new Set(ventas.filter((v) => v.producto_id === id).map((v) => v.lead_id)).size;
+  // 1.1 (11 oct 2026): a un caller o closer, solo sus clientes (los mismos que ve en Clientes)
+  const suyos = mirar ? await clientesSuyos(proyecto.id, perfil.id) : null;
+  const clientes = (id: string) => new Set(ventas.filter((v) => v.producto_id === id && (!suyos || suyos.has(v.lead_id))).map((v) => v.lead_id)).size;
   const conPrecio = todos.filter((p) => p.precio !== null);
   const precioMedio = conPrecio.length ? conPrecio.reduce((s, p) => s + Number(p.precio), 0) / conPrecio.length : 0;
   const url = (c: Record<string, string | null>) => {
@@ -69,7 +72,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
           programas.length > 0 && (
             <div className="tarjeta -mx-0 overflow-x-auto">
               <table className="tabla">
-                <thead><tr><th>Programa</th><th>Categoría</th><th>Pago</th><th className="text-right">Precio</th><th className="text-right">Clientes</th><th>Activo</th><th></th></tr></thead>
+                <thead><tr><th>Programa</th><th>Categoría</th><th>Pago</th><th className="text-right">Precio</th><th className="text-right">{mirar ? "Tus clientes" : "Clientes"}</th><th>Activo</th><th></th></tr></thead>
                 <tbody>
                   {programas.map((p) => (
                     <tr key={p.id}>
@@ -102,7 +105,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                       <Insignia>{pago(p)}</Insignia>
                       {p.backend_offer && <Insignia tono="morado">Back-end</Insignia>}
                       {p.vende_caller && <Insignia tono="primario">Lo vende el caller</Insignia>}
-                      <span className="inline-flex items-center gap-1 text-texto-3"><Users className="h-4 w-4" />{clientes(p.id)} {clientes(p.id) === 1 ? "cliente" : "clientes"}</span>
+                      <span className="inline-flex items-center gap-1 text-texto-3"><Users className="h-4 w-4" />{clientes(p.id)} {clientes(p.id) === 1 ? "cliente" : "clientes"}{mirar ? " tuyos" : ""}</span>
                     </div>
                     {!mirar && <div className="border-t border-borde pt-4"><EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} /></div>}
                   </article>

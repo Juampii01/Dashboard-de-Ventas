@@ -35,6 +35,7 @@ function aDatos(p: Producto | null): DatosPrograma {
     precios_divisa: Object.fromEntries(Object.entries(p?.precios_divisa ?? {}).map(([k, v]) => [k, String(v)])),
     comisiones: Object.fromEntries(Object.entries(p?.comisiones ?? {}).map(([k, v]) => [k, String(v)])),
     link_pago: p?.link_pago ?? "",
+    link_dossier: p?.link_dossier ?? "",
   };
 }
 
@@ -111,6 +112,7 @@ function Ventana({ programa, moneda, comisionesRol, editables, onCerrar }: { pro
                   <div><label className="etiqueta-campo" htmlFor="prog-precio">Precio ({moneda})</label><input id="prog-precio" className="campo" inputMode="decimal" value={d.precio} onChange={(e) => poner({ precio: e.target.value })} placeholder="Vacío = precio personalizado" /><p className="mt-1 text-xs text-texto-3">Lo que cobra un closer al cerrar la venta.</p></div>
                   <label className="block"><span className="etiqueta-campo">Precio en {otra} (opcional)</span><input className="campo" inputMode="decimal" value={d.precios_divisa[otra] ?? ""} onChange={(e) => poner({ precios_divisa: { ...d.precios_divisa, [otra]: e.target.value } })} placeholder="Solo si cambia según la moneda" /></label>
                 </div>
+                <label className="block"><span className="etiqueta-campo">Link del dossier (opcional)</span><input className="campo" value={d.link_dossier ?? ""} onChange={(e) => poner({ link_dossier: e.target.value })} placeholder="https://…" /><span className="mt-1 block text-xs text-texto-3">Sale en Links y recursos, encima del link de pago.</span></label>
                 <label className="block"><span className="etiqueta-campo">Link de pago (opcional)</span><input className="campo" value={d.link_pago} onChange={(e) => poner({ link_pago: e.target.value })} placeholder="https://…" /></label>
               </>
             )}

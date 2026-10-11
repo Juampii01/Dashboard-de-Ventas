@@ -5,17 +5,21 @@ import { getSesion, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { db } from "@/lib/datos";
 import { dinero, fechaHora, ETIQUETA_ROL } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Avatar } from "@/components/ui";
-import { Plantilla, AnadirExistente, FormUsuario, FilaMiembro, FormProyecto, FormNuevoProyecto, Secreto } from "./cliente";
-import type { Perfil, Producto } from "@/lib/tipos";
+import { Plantilla, AnadirExistente, FormUsuario, FormProyecto, FormNuevoProyecto, Secreto } from "./cliente";
+import type { Perfil, Producto, Rol } from "@/lib/tipos";
 import { PLANTILLAS_GHL, CABECERA_SECRETO } from "@/lib/plantillas-ghl";
 import { NuevaEntrada, EditorEntrada } from "./entradas";
 import { ConexionGhl, CalendarioCloser, UsuarioGhl } from "./ghl";
 import { reglasValidas } from "@/lib/entrada";
-import { SECCIONES_TODAS, DEFECTO, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/lib/permisos";
-import { TablaPermisos, FichaPermisos, type DatosPermisos } from "./permisos";
+import { cargarDatosPermisos } from "@/lib/permisos-datos";
+import { TablaPermisos, type DatosPermisos } from "./permisos";
+import { FichaPersona } from "@/app/(panel)/equipo/ficha";
+import { cargarEquipo } from "@/lib/equipo";
 import { HorariosEquipo, FormAjustes } from "./horarios";
 import { RepartoPorcentaje, RotacionClosers } from "./reparto-pct";
 import { EditorTramos } from "./tramos";
+import { EditorPreguntas } from "./preguntas-reporte";
+import { FIJAS, preguntasDe } from "@/lib/reportes";
 import { tramosDe } from "@/lib/comisiones";
 import { horarioValido } from "@/lib/horarios";
 import { ajustesValidos } from "@/lib/disponibilidad";
@@ -25,6 +29,7 @@ const PESTANAS = [
   { v: "proyecto", t: "Proyecto y reparto" },
   { v: "productos", t: "Productos" },
   { v: "comisiones", t: "Comisiones" }, // 1.0 bloque 4: tramos
+  { v: "reportes", t: "Reportes" }, // 1.0 bloque 7: preguntas del reporte
   { v: "entradas", t: "Entradas (landings)" },
   { v: "integraciones", t: "Integraciones GHL" },
   { v: "permisos", t: "Permisos" }, // H5: también el director con Administración
@@ -51,23 +56,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const tab = typeof sp.tab === "string" ? sp.tab : "equipo";
   // Permisos por rol y por persona (V2-8 y Paso H5): CEO y director con Administración
   let permisos: DatosPermisos | null = null;
-  if (tab === "permisos" || tab === "equipo") {
-    const [{ data: deRol }, { data: dePersona }, mias] = await Promise.all([
-      db().from("permisos_seccion").select("rol, seccion, permitido").eq("proyecto_id", proyecto.id),
-      db().from("permisos_persona").select("perfil_id, seccion, permitido").eq("proyecto_id", proyecto.id),
-      seccionesPermitidas(perfil, proyecto.id),
-    ]);
-    const lista = (m: Record<string, Set<string>>) => Object.fromEntries(ROLES_PERMISO.map((r) => [r, [...m[r]]])) as DatosPermisos["defecto"];
-    permisos = {
-      secciones: SECCIONES_TODAS.map((x) => ({ v: x.v, t: x.t, d: x.d, grupo: x.grupo })),
-      defecto: lista(DEFECTO),
-      nunca: lista(NUNCA),
-      deRol: Object.fromEntries((deRol ?? []).map((x) => [`${x.rol}:${x.seccion}`, x.permitido])),
-      dePersona: Object.fromEntries((dePersona ?? []).map((x) => [`${x.perfil_id}:${x.seccion}`, x.permitido])),
-      puedoDar: [...mias],
-      soyCeo: perfil.rol === "ceo",
-    };
-  }
+  if (tab === "permisos" || tab === "equipo") permisos = await cargarDatosPermisos(perfil, proyecto.id);
 
   const [{ data: miembros }, { data: productos }, { data: eventos }] = await Promise.all([
     db().from("miembros_proyecto").select("orden, horario, calendario, reparto_pct, rotacion_pct, perfiles(*)").eq("proyecto_id", proyecto.id).order("orden"),
@@ -75,6 +64,11 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
     db().from("webhook_eventos").select("id, tipo, procesado, error, recibido_en").eq("proyecto_id", proyecto.id).order("recibido_en", { ascending: false }).limit(15),
   ]);
   const gente = ((miembros ?? []) as unknown as { orden: number; perfiles: Perfil }[]).map((m) => m.perfiles);
+  // Bloque 5: para la ficha de cada persona (su fila del organigrama y lo que puedes darle)
+  const eq = await cargarEquipo(proyecto.id);
+  const miembroDe = new Map(eq.miembros.filter((x) => x.perfil_id).map((x) => [x.perfil_id as string, x]));
+  const rango: Record<Rol, number> = { caller: 1, closer: 2, director: 3, ceo: 4 };
+  const rolesQuePuedoDar = (["closer", "caller", "director", "ceo"] as Rol[]).filter((r) => rango[r] <= rango[perfil.rol]);
   const filaDe = new Map(((miembros ?? []) as unknown as { horario: unknown; calendario: unknown; reparto_pct: number; rotacion_pct: number; perfiles: Perfil }[]).map((m) => [m.perfiles.id, m]));
   const calendarioGeneral = ajustesValidos(proyecto.calendario);
   // Personas de otros proyectos que se pueden añadir a este (solo el CEO)
@@ -147,9 +141,15 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                         <td>{g.activo ? <Insignia tono="ok">Activo</Insignia> : <Insignia tono="mal">Desactivado</Insignia>}</td>
                         <td>
                           <div className="flex flex-wrap items-center justify-end gap-1.5">
-                            {/* H5: permisos de cada persona (el CEO lo tiene todo; tus propios permisos te los cambia el CEO) */}
-                            {permisos && g.rol !== "ceo" && g.id !== perfil.id && <FichaPermisos persona={{ id: g.id, nombre: g.nombre, rol: g.rol }} datos={permisos} />}
-                            <FilaMiembro persona={{ id: g.id, rol: g.rol, activo: g.activo, admin_activo: g.admin_activo }} soyCeo={perfil.rol === "ceo"} soyYo={g.id === perfil.id} />
+                            {/* Bloque 5 de 1.0: todo lo de cada persona, en su ficha (la misma que en Empresa → Equipo) */}
+                            <FichaPersona
+                              titulo={g.nombre}
+                              m={miembroDe.get(g.id) ?? null}
+                              perfilId={g.id}
+                              admin
+                              boton="texto"
+                              datos={{ areas: eq.areas, puestos: eq.puestos, productos: (productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre })), rolesQuePuedoDar, puedeComision: perfil.rol === "ceo" || g.id !== perfil.id }}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -223,6 +223,23 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
             <TablaPermisos datos={permisos} />
             <p className="mt-3 text-xs text-texto-3">Ojo: quien tenga Finanzas ve todo el dinero del negocio, y quien tenga Equipo puede dar de alta personas y cambiar comisiones. Equipo y Finanzas nunca se dan a callers ni closers.</p>
           </Seccion>
+        )}
+
+        {tab === "reportes" && (
+          <div className="space-y-5">
+            <p className="text-sm text-texto-2">Las preguntas del reporte de fin de día. Cambiarlas solo afecta a los reportes nuevos: los ya enviados se quedan con las suyas. Del closer, las 3 marcadas como «fija» se usan para las tasas de agendamiento y de cierre: se pueden renombrar, no quitar.</p>
+            {(["caller", "closer"] as const).map((r) => (
+              <Seccion key={r} titulo={r === "caller" ? "Reporte de los callers" : "Reporte de los closers"}>
+                <EditorPreguntas
+                  key={JSON.stringify(preguntasDe(proyecto.preguntas_reporte, r))}
+                  rol={r}
+                  inicial={preguntasDe(proyecto.preguntas_reporte, r)}
+                  fijas={FIJAS[r]}
+                  personalizadas={!!(proyecto.preguntas_reporte as Record<string, unknown> | null)?.[r]}
+                />
+              </Seccion>
+            ))}
+          </div>
         )}
 
         {tab === "comisiones" && (

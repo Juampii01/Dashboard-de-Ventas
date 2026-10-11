@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useState, type FormEvent } from "react";
-import { Plus, Trash2, Copy, Check, Pencil } from "lucide-react";
+import { Plus, Trash2, Copy, Check, Pencil, ExternalLink } from "lucide-react";
 import { borrarRecurso, crearRecurso, guardarLinkPago, prepararSubidaPdf } from "./acciones";
 import { subirDelFormulario } from "@/lib/subir-cliente";
 import { useAccion } from "@/components/acciones-lead";
@@ -71,42 +71,57 @@ export function BorrarRecurso({ id }: { id: string }) {
   );
 }
 
-export function CopiarLink({ url }: { url: string }) {
+// Bloque 7 de 1.0: botón «Copiar link» (se queda en «Copiado» un momento)
+export function CopiarLink({ url, etiqueta = "Copiar link" }: { url: string; etiqueta?: string }) {
   const [copiado, setCopiado] = useState(false);
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1">
-      <a href={url} target="_blank" rel="noreferrer" className="truncate text-xs text-primario hover:underline">{url}</a>
-      <button
-        className="btn-secundario shrink-0 px-2 py-1 text-xs"
-        onClick={async () => {
-          await navigator.clipboard.writeText(url);
-          setCopiado(true);
-          setTimeout(() => setCopiado(false), 1500);
-        }}
-      >
-        {copiado ? <Check className="h-3.5 w-3.5 text-ok" /> : <Copy className="h-3.5 w-3.5" />}{copiado ? "Copiado" : "Copiar"}
-      </button>
-    </div>
+    <button
+      type="button"
+      className="btn-secundario px-2.5 py-1.5 text-xs"
+      onClick={async () => {
+        await navigator.clipboard.writeText(url);
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 1500);
+      }}
+    >
+      {copiado ? <Check className="h-3.5 w-3.5 text-ok" /> : <Copy className="h-3.5 w-3.5" />}
+      {copiado ? "Copiado" : etiqueta}
+    </button>
   );
 }
 
-export function EditarLink({ productoId, actual }: { productoId: string; actual: string }) {
+// Un link de un producto (dossier o pago): Abrir y Copiar; quien edita recursos lo cambia con el lápiz
+export function LinkProducto({ etiqueta, url, productoId, campo, editor }: { etiqueta: string; url: string | null; productoId: string; campo: "link_pago" | "link_dossier"; editor: boolean }) {
   const { pendiente, error, ejecutar } = useAccion();
   return (
-    <>
-      <button
-        className="rounded-md p-1 text-texto-3 hover:bg-panel hover:text-texto"
-        disabled={pendiente}
-        title="Editar link de pago"
-        onClick={() => {
-          const url = prompt("Link de pago (Stripe u otro). Déjalo vacío para quitarlo.", actual);
-          if (url !== null) ejecutar(() => guardarLinkPago(productoId, url));
-        }}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-      {error && <span className="text-xs text-mal">{error}</span>}
-    </>
+    <div className="rounded-lg bg-panel px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-texto-2">{etiqueta}</span>
+        {editor && (
+          <button
+            type="button"
+            className="rounded-md p-1 text-texto-3 hover:bg-panel-2 hover:text-texto"
+            disabled={pendiente}
+            aria-label={`Editar ${etiqueta.toLowerCase()}`}
+            onClick={() => {
+              const nuevo = prompt(`${etiqueta} (https://…). Déjalo vacío para quitarlo.`, url ?? "");
+              if (nuevo !== null) ejecutar(() => guardarLinkPago(productoId, nuevo, campo), `${etiqueta} guardado`);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {url ? (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <a href={url} target="_blank" rel="noreferrer" className="btn-primario px-2.5 py-1.5 text-xs"><ExternalLink className="h-3.5 w-3.5" /> Abrir</a>
+          <CopiarLink url={url} />
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-texto-3">Sin link todavía</p>
+      )}
+      {error && <p className="mt-1 text-xs text-mal">{error}</p>}
+    </div>
   );
 }
 

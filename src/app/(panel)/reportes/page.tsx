@@ -4,7 +4,7 @@ import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, equipo } from "@/lib/datos";
 import { rangoDe, fecha as fmtFecha, ETIQUETA_ROL } from "@/lib/formato";
-import { PREGUNTAS, rolDeReporte, tasasCloser } from "@/lib/reportes";
+import { PREGUNTAS, preguntasDe, preguntasValidas, rolDeReporte, tasasCloser, type Pregunta } from "@/lib/reportes";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio, Avatar } from "@/components/ui";
 import { NuevoReporte } from "./formulario";
 import type { Reporte } from "@/lib/tipos";
@@ -59,7 +59,7 @@ export default async function ReportesPage({ searchParams }: PageProps<"/reporte
       <Cabecera
         titulo="Reportes de fin de día"
         subtitulo={jefe ? "Los reportes de todo el equipo" : "Tus números de hoy en menos de dos minutos"}
-        acciones={rol ? <NuevoReporte rol={rol} sugeridos={sugeridos} /> : undefined}
+        acciones={rol ? <NuevoReporte rol={rol} sugeridos={sugeridos} preguntas={preguntasDe(proyecto.preguntas_reporte, rol)} /> : undefined}
       />
       <Contenido>
         {jefe && (
@@ -75,7 +75,10 @@ export default async function ReportesPage({ searchParams }: PageProps<"/reporte
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {reportes.map((r) => {
-              const preguntas = PREGUNTAS[r.rol as "caller" | "closer"] ?? [];
+              // Bloque 7: cada reporte con las preguntas que tenía al enviarse (los de antes, con las de siempre)
+              const rolR = r.rol as "caller" | "closer";
+              const guardadas = r.preguntas ? preguntasValidas(rolR, r.preguntas) : null;
+              const preguntas: Pregunta[] = guardadas && "ok" in guardadas ? guardadas.ok : (PREGUNTAS[rolR] ?? []);
               return (
                 <Seccion key={r.id}>
                   <div className="mb-3 flex items-center gap-3">

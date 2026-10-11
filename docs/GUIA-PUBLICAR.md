@@ -139,6 +139,9 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 - [ ] KPIs → Biblioteca: salen las 1.005 personas y la escalera (Membresía 627, Grupal 242, VIP 96, DFY 65).
 - [ ] Una venta de Membresía deja en «Pagos pendientes» el cobro del mes siguiente; «Dar de baja» (en Ventas) lo quita.
 - [ ] Administración → Proyecto y reparto: la rotación de closers con su modo y sus % (o todo al 0 % = apagada); al agendar desde la app sale el closer que propone o decide.
+- [ ] La ficha de cada persona (Empresa → Equipo o Administración → Equipo → «Ficha»): datos y comisión, acceso (email, contraseña, rol), permisos de secciones y pipelines, horario y su % de reparto o rotación, GHL y Fathom.
+- [ ] Administración → Reportes: las preguntas del reporte de callers y closers (o las de siempre). Un closer ve «Onboarding» en su menú con sus clientes; los puntos se cambian en «Onboarding closers».
+- [ ] Links y recursos: cada producto con su link de dossier (se pone en Programas) encima del link de pago.
 - [ ] Administración → Comisiones: los tramos de callers y closers (en dólares); en Equipo, quién va por tramos y quién con su % propio; en Programas, la Membresía sin «Cuenta para comisión»; Finanzas → Liquidaciones enseña el tramo de cada persona.
 
 ## Paso 10 · (Opcional) Dominio propio
@@ -149,7 +152,7 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 
 ## Seguridad: lo que ya está hecho y lo que depende de ti
 
-**Ya hecho en la app:** la base de datos no se puede leer con la clave pública (las 42 tablas con RLS); cada acción comprueba el rol o el permiso de la sección; límite de intentos en el login y en el webhook, contado en la base de datos (exacto aunque Vercel use varias copias del servidor); cabeceras de seguridad, con nonce por petición para los scripts; el token de GHL y las API keys de Fathom se guardan cifrados (`CLAVE_CIFRADO`); los PDF y CSV se suben directos a Supabase (Vercel no deja pasar más de 4,5 MB); los PDF solo se abren con enlace temporal; las claves de GHL, Fathom, Claude y Deepgram nunca llegan al navegador; a Claude no se le mandan emails ni teléfonos de los leads; los CSV que se exportan están protegidos contra fórmulas de Excel; permisos de cada sección por rol y por persona (Administración → Permisos); permisos de cada pipeline del CRM (como GHL); 410+ tests automáticos.
+**Ya hecho en la app:** la base de datos no se puede leer con la clave pública (las 43 tablas con RLS); cada acción comprueba el rol o el permiso de la sección; límite de intentos en el login y en el webhook, contado en la base de datos (exacto aunque Vercel use varias copias del servidor); cabeceras de seguridad, con nonce por petición para los scripts; el token de GHL y las API keys de Fathom se guardan cifrados (`CLAVE_CIFRADO`); los PDF y CSV se suben directos a Supabase (Vercel no deja pasar más de 4,5 MB); los PDF solo se abren con enlace temporal; las claves de GHL, Fathom, Claude y Deepgram nunca llegan al navegador; a Claude no se le mandan emails ni teléfonos de los leads; los CSV que se exportan están protegidos contra fórmulas de Excel; permisos de cada sección por rol y por persona (Administración → Permisos); permisos de cada pipeline del CRM (como GHL); 420+ tests automáticos.
 
 **Depende de ti:**
 - Desactivar «Allow new users to sign up» en Supabase (paso 2).

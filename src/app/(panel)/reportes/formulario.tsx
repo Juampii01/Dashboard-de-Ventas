@@ -4,15 +4,14 @@ import { sinVaciar } from "@/components/sin-vaciar";
 import { useActionState, useState } from "react";
 import { Plus } from "lucide-react";
 import { enviarReporte } from "./acciones";
-import { PREGUNTAS, tasasCloser } from "@/lib/reportes";
+import { tasasCloser, type Pregunta } from "@/lib/reportes";
 import { Modal } from "@/components/modal";
 
-export function NuevoReporte({ rol, sugeridos }: { rol: "caller" | "closer"; sugeridos: Record<string, number> }) {
+export function NuevoReporte({ rol, sugeridos, preguntas }: { rol: "caller" | "closer"; sugeridos: Record<string, number>; preguntas: Pregunta[] }) {
   const [abierto, setAbierto] = useState(false);
   const [paso, setPaso] = useState(0);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [estado, accion, enviando] = useActionState(enviarReporte, null as null | { ok?: string; error?: string });
-  const preguntas = PREGUNTAS[rol];
   const numeros = preguntas.filter((p) => p.tipo === "numero");
   const textos = preguntas.filter((p) => p.tipo === "texto");
   const hoy = new Date().toLocaleDateString("en-CA");

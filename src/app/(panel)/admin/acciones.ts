@@ -4,6 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { exigir, exigirCambiarComisionRol, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { tramosDe, tramosValidos } from "@/lib/comisiones";
+import { preguntasValidas } from "@/lib/reportes";
 import { db, equipo, escribir } from "@/lib/datos";
 import { cifrar, descifrar } from "@/lib/cifrado";
 import { reglasValidas } from "@/lib/entrada";
@@ -139,6 +140,26 @@ export async function guardarTramos(rol: "caller" | "closer", tramos: { desde: n
     if (!t) throw new ErrorUsuario("Revisa los tramos: el primero empieza en 0, cada uno en un importe distinto, y el % va de 0 a 100.");
     const actuales = tramosDe(proyecto.tramos_comision);
     await escribir(db().from("proyectos").update({ tramos_comision: { ...actuales, [rol]: t } }).eq("id", proyecto.id), "proyectos");
+    refrescar();
+  });
+}
+
+// ---------- Preguntas del reporte de fin de día (bloque 7 de 1.0, Cristian 10 y 11 oct 2026) ----------
+// lista null = volver a las de siempre. Los reportes ya enviados se quedan con las suyas.
+export async function guardarPreguntasReporte(rol: "caller" | "closer", lista: unknown[] | null) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeAdmin);
+    if (rol !== "caller" && rol !== "closer") throw new ErrorUsuario("Rol no válido.");
+    const actuales = (proyecto.preguntas_reporte && typeof proyecto.preguntas_reporte === "object" ? proyecto.preguntas_reporte : {}) as Record<string, unknown>;
+    let nuevas: Record<string, unknown>;
+    if (lista === null) {
+      nuevas = Object.fromEntries(Object.entries(actuales).filter(([k]) => k !== rol));
+    } else {
+      const r = preguntasValidas(rol, lista);
+      if ("error" in r) throw new ErrorUsuario(r.error);
+      nuevas = { ...actuales, [rol]: r.ok };
+    }
+    await escribir(db().from("proyectos").update({ preguntas_reporte: Object.keys(nuevas).length ? nuevas : null }).eq("id", proyecto.id), "proyectos");
     refrescar();
   });
 }

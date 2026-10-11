@@ -52,7 +52,7 @@ export function EditorHorario({ inicial, zona, perfilId, campo, plantillas = fal
     <div className="space-y-4">
       <p className="text-xs text-texto-3">
         Horas de <b className="text-texto-2">{NOMBRE_ZONA[zona] ?? zona}</b> (la hora del proyecto)
-        {zonaLocal && zonaLocal !== zona && local("12:00") && <> · al lado, en gris, <b className="text-texto-2">tu hora</b> ({zonaLocal})</>}. Los huecos entre tramos son tus descansos.
+        {zonaLocal && zonaLocal !== zona && local("12:00") && <> · al lado, en gris, <b className="text-texto-2">tu hora</b> ({zonaLocal})</>}. Los huecos entre tramos son los descansos.
       </p>
 
       {plantillas && (

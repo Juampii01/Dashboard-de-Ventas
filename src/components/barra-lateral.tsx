@@ -18,6 +18,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  ListChecks,
   ChevronDown,
   Menu,
   X,
@@ -48,6 +49,7 @@ const ICONOS = {
   programas: Package,
   finanzas: Landmark,
   clientes: UserCheck,
+  onboarding: ListChecks,
 };
 
 export type ItemMenu = { href: string; texto: string; icono: keyof typeof ICONOS; exacto?: boolean; insignia?: number };
