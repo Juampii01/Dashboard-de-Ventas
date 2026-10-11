@@ -1,14 +1,17 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras los bloques 3 y 4). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
+> Creado: 9 oct 2026 · Limpiado y reordenado: 10 oct 2026, noche · Al día: 11 oct 2026 (tras los bloques 5 y 7). El detalle de todo lo hecho hasta el 10 oct (pruebas, fórmulas, respuestas de cada ronda) está en `plan-historial-10oct.md`; la auditoría, en `Arreglar-dashboard.md`; lo hecho después, en el historial de git.
 
 ---
 
 ## 0. Dónde estamos (léelo primero al retomar)
 
-La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 a 4), **sin publicar**. Bloques 3 + 4 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
+La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A, los bloques 1 a 5 y el 7, más la pasada en pantalla de 1.1), **sin publicar**. Último commit: bloques 5 + 7 (`c3bf914`, 11 oct); nada sin guardar. **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** bloques 5 y 7 hechos, con su commit (Cristian, 11 oct). Falta el bloque 6 (Resend): necesita de Cristian la cuenta de Resend y quien añada los DNS de eternity.llc. Después, 1.1 está hecho → su revisión (2.1) y publicar (1.3). El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente, en orden:**
+1. **Bloque 6 (emails con Resend)**, con su propio commit. **Bloqueado hasta que Cristian tenga** la cuenta de Resend (y su clave) y a alguien que añada los registros DNS de eternity.llc (2.2).
+2. **Tu revisión completa (2.1)**: se puede hacer ya, mientras llega lo de Resend.
+3. Lo que salga de tu revisión y las mejoras apuntadas (1.2), y después **publicar (1.3)** y **conectar GHL (1.4)**.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -23,7 +26,7 @@ La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la aud
 
 **Investigado:** Salesforce no trae reparto por turnos de serie (se hace con reglas o herramientas aparte: por turno, con peso y con tope por persona). GHL ([ayuda oficial](https://help.gohighlevel.com/support/solutions/articles/155000001716)): horario semanal con varios tramos por día, horarios por fecha que mandan sobre el semanal, duración de la cita, intervalo, descanso tras cada cita, aviso mínimo y máximo de citas por día; en sus calendarios con rotación se elige si la persona la elige quien reserva o la asigna la rotación. **No confirmado** que GHL reparta con % por persona: se hace con % como pidió Cristian. Resend con Supabase ([guía de Resend](https://resend.com/docs/send-with-supabase-smtp)): servidor `smtp.resend.com`, puerto 465, usuario `resend`, la clave de Resend como contraseña y un dominio verificado.
 
-#### Antes de todo · «Llamadas de GHL» oculta y 2 perfiles de prueba ✅ (11 oct, sin commit: va con el bloque A)
+#### Antes de todo · «Llamadas de GHL» oculta y 2 perfiles de prueba ✅ (11 oct, commit con el bloque A)
 Motivo: las llamadas de GHL aún no están configuradas; esos 2 perfiles sirven para probarlas sin que el equipo las vea.
 - [x] Ocultar la sección **«Llamadas de GHL»** (sección `grabadas` de Permisos) a **todos los callers y closers**: se quita de lo que callers y closers tienen **por defecto** en el código (`DEFECTO` en `lib/permisos-constantes.ts`), así vale también en la nube; el CEO o un director con Administración puede volver a abrirla en Permisos.
 - [x] Crear 2 perfiles de prueba que **sí** la ven (permiso por persona): **closer-test@eternity.llc** (closer) y **caller-test@eternity.llc** (caller), con la contraseña que dio Cristian (guardada solo en `scripts/salida/`, fuera de git; no se escribe en el plan). `crear-usuarios` aprende 2 columnas más: `password` (contraseña fija) y `prueba` (si). Se crean en local para probar y en la nube al publicar, junto al equipo.
@@ -176,7 +179,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 ### 1.3 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [ ] Actualizar la Supabase CLI de la 2.90 a la 2.120. **Necesita de Cris:** ejecutar `brew trust supabase/tap` (ajuste de seguridad del Mac).
 - [ ] Subir el código a GitHub (repositorio privado). **Necesita de Cris:** la cuenta de GitHub creada.
-- [ ] Crear las tablas en la nube (`supabase db push`: las 22 migraciones de hoy + las de 1.0). **Necesita de Cris:** el proyecto de Supabase creado, con «Allow new users to sign up» desactivado.
+- [ ] Crear las tablas en la nube (`supabase db push`: las 29 migraciones de hoy, más la del bloque 6 si la hay). **Necesita de Cris:** el proyecto de Supabase creado, con «Allow new users to sign up» desactivado.
 - [ ] Configurar Vercel: carpeta `app`, `NEXT_PUBLIC_SUPABASE_URL` **antes** del primer despliegue, las 3 variables de Supabase, `CLAVE_CIFRADO`, las 2 de IA y `RESEND_API_KEY`. **Necesita de Cris:** la cuenta de Vercel y guardar `CLAVE_CIFRADO` en su gestor de contraseñas.
 - [ ] Resend: verificar eternity.llc (los registros DNS pueden tardar en propagarse: hacerlo al principio), poner Resend como servidor de correo de Supabase y probar un enlace mágico y un aviso de reporte reales. **Necesita de Cris:** cuenta de Resend y quien añada los DNS.
 - [ ] `preparar-proyecto --confirmar` (Maestria con sus pipelines y productos). **Antes**, sin `--confirmar` (simula) y comprobar que crea Maestria con «Callers» y «Closers» (la prueba que salía en 1.1).
@@ -198,7 +201,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 ### 1.5 Día real y cierre
 - [ ] Revisar contigo el día real: Funnel, KPIs, objetivos, reportes y avisos; ajustes finales.
 - [x] «Pepi» y «Test» (personas de prueba sin acceso del organigrama de Maestria): **borradas** con permiso de Cristian (10 oct).
-- [ ] (Opcional) Limpiar la copia local: en Maestria quedan **100 leads asignados a callers de prueba, 10 con estado de prueba y 121 líneas de historial** de las pruebas del 9-10 oct (sin ventas ni citas). Con `limpiar-pruebas --confirmar`, añadiéndole antes una copia de seguridad. No hace falta para publicar (la nube empieza limpia). (Permiso dado por Cristian el 10 oct: se hace.)
+- [x] Limpiar la copia local de Maestria (restos de las pruebas del 9-10 oct): **hecho el 11 oct** con el Bloque A (121 líneas de historial y 100 callers de prueba quitados; ver Bloque A).
 
 ---
 
@@ -206,15 +209,15 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 
 ### 2.1 Ahora
 - [x] Permisos de 1.1 y limpiar Maestria local: **dados** (10 oct, noche).
-- [ ] **Revisión completa de la app** (v1 + v2 + arreglos + Paso H + Paso 0), empezando por la pasada de punta a punta (CSV → caller → agenda → venta → Funnel), que aún no has visto. Usuarios de prueba en la sección 6.
+- [ ] **Revisión completa de la app** (v1 + v2 + arreglos + Paso H + Paso 0 + 1.0), empezando por la pasada de punta a punta (CSV → caller → agenda → venta → Funnel), que aún no has visto. Lo nuevo de 1.0 para mirar: Biblioteca (KPIs), «Mi perfil», horarios, reparto y rotación (Administración → Proyecto y reparto), Comisiones y Reportes (Administración), la ficha de cada persona (Equipo), Onboarding de closers y Links y recursos. Usuarios de prueba en la sección 6.
 - [x] Preguntas del reporte: **se quedan las de hoy**, pero editables en Administración (1.0).
-- [ ] Con tu ratón: arrastrar en el CRM (también «Callers» y «Closers»), en Agendas → Pre-call y en Post-call (yo solo puedo simularlo).
+- [ ] Con tu ratón: arrastrar en el CRM (también «Callers» y «Closers»), en Agendas → Pre-call y en Post-call. En 1.1 solo «Llamar luego» funcionó con el ratón simulado; las demás columnas las probé lanzando los eventos desde la página.
 - [ ] Mirar el diseño en tu móvil (misma wifi, la IP del Mac en vez de `localhost`).
 - [ ] Revisar mis criterios (sección 4) y decirme cuáles cambio.
 - [x] Tests de pantallas completas: **después de publicar** (10 oct).
 
 ### 2.2 Para publicar
-- [ ] Crear la cuenta de Resend y conseguir a alguien con acceso al DNS de eternity.llc (cuanto antes: la verificación puede tardar).
+- [ ] **Lo primero (bloquea el bloque 6):** crear la cuenta de Resend, pasarme su clave y conseguir a alguien con acceso al DNS de eternity.llc (la verificación puede tardar en propagarse).
 - [ ] Ejecutar `brew trust supabase/tap` en tu terminal.
 - [ ] Crear las cuentas de GitHub, Supabase y Vercel (te guío paso a paso).
 - [ ] Guardar `CLAVE_CIFRADO` en tu gestor de contraseñas cuando la generemos.
@@ -288,8 +291,12 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 - **Rotación de closers (1.0):** % por closer y modo de elección configurables (como GHL); salta al siguiente si no está libre; disponibilidad como los calendarios de GHL (duración por defecto 30 min, descansos, días libres).
 - **Comisiones (1.0):** tramos mensuales sobre toda la facturación del mes; cuotas posteriores con el % del mes de la venta; interruptor por persona para que mande su % propio o los tramos; callers y closers por tramos por defecto, CEO y directores con su % propio; en dólares, editables en Administración; una venta devuelta sigue contando para su tramo; la Membresía no paga comisión ni suma para el tramo (casilla por programa).
 - **Rotación de closers (bloque 3):** reagendar = mismo closer y tiene que estar libre; «decide» sin nadie libre = no deja agendar; «elige» con el closer no libre = avisa y deja; las citas de GHL no las toca ni las cuenta.
+- **Ficha de cada persona (bloque 5):** en Equipo y en Administración → Equipo, la misma; datos y comisión para quien tiene Equipo, el resto (acceso, permisos, horario, GHL y Fathom) solo CEO y directores con Administración; el % de reparto y rotación se ve y se cambia en «Proyecto y reparto»; la marca de prueba, solo el CEO; el email lo cambia el administrador directamente.
+- **Reporte (bloque 7):** preguntas editables en Administración → Reportes; del closer, las 3 de las tasas fijas; del caller ninguna; cada reporte guarda las suyas.
+- **Onboarding de closers (bloque 7):** sus clientes = a quienes les registró una venta (también la Membresía); los puntos los editan CEO y directores.
+- **Links y recursos (bloque 7):** cuadrícula con buscador; en cada producto, dossier encima del link de pago (el dossier se pone también en Programas).
 - **Emails (1.0):** Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos de reportes; sin email de bienvenida.
-- **Cola del caller:** los leads más nuevos primero; la prioridad A/B/C no ordena.
+- **Cola del caller (bloque 7):** la prioridad A/B/C no ordena; se quedan los grupos («llamar luego» que ya tocan, nuevos, «no contesta») y dentro, del más nuevo al más viejo.
 - **Biblioteca (11 oct):** primera pestaña de KPIs, para director y CEO; datos de los leads de la app (también por CSV y, con GHL, sola); se reparte desde ella; su clasificación es un dato propio de cada lead («Oferta»), calculado para todos y recalculado solo; se ve en la ficha y en el CRM junto a la etiqueta de siempre; cada CSV nuevo pone al día todos los datos.
 - **Productos (11 oct):** se llaman Membresía (47 $/mes, mensual sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (personalizado).
 - **Commits:** cada 2 bloques de 1.0 (el 5 va con el 7; el 6, solo, cuando esté Resend).
@@ -308,6 +315,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 - Permisos por pipeline por defecto: origen, Ver para todos · «Callers», Ver para callers y directores · «Closers», Ver para closers y directores.
 - Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas · sin email se le reconoce por el teléfono (últimas 9 cifras) · en Agendas solo cuentan las ventas de closers · un gasto sin categoría cuenta en el profit · Fathom se sincroniza con el botón.
 - Paso G: en vez de pasar los cálculos a la base, se aceleró la carga (era lo lento); las cifras no cambian.
+- **1.0:** reparto y rotación reparten por «menos leads o citas para su %» y empiezan de cero al cambiar los % · la rotación cuenta todas las citas agendadas en la app con ella encendida · un closer sin horario no entra en la rotación · al reagendar, si el closer no tiene horario, solo se mira que no choque con otra cita · el tope del reparto cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego · la casilla «Cuenta para comisión» la cambian CEO o director · en la Membresía, la facturación es la del primer mes · a un caller o closer, Programas le enseña «Tus clientes» · los links de producto (pago y dossier) solo https.
 
 ---
 
@@ -317,6 +325,8 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 - **Llamadas de callers:** solo cuentan las hechas desde GHL (no WhatsApp ni el móvil propio).
 - **Post-call «mover todo»:** mover una cita «reagendada» puede contar la misma reunión dos veces en KPIs, Funnel y objetivos; sacar una venta de su columna la borra con cobros, plazos y comisiones (hay confirmación).
 - **Citas:** un lead puede tener dos citas vivas a horas distintas (solo se impide la misma hora con el mismo closer).
+- **Rotación de closers:** si dos personas agendan justo a la vez, podrían dar el mismo closer a la misma hora (mejora apuntada en 1.2).
+- **Onboarding de closers:** si dos closers le venden al mismo cliente, comparten su checklist (va por cliente).
 - **`CLAVE_CIFRADO`:** si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 - **Clave del webhook en la URL** (tu decisión): puede quedar en registros intermedios; la guía recomienda la cabecera `x-eternity-secreto`.
 - **Supabase gratuito** (tu decisión): sin copias de seguridad garantizadas y puede pausarse sin uso (sin verificar los límites exactos).
@@ -330,7 +340,7 @@ Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un
 ## 6. Cómo entrar y dónde está cada cosa
 
 **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `npm run build` en `app/` + `eternity-produccion` → http://localhost:3200; ambos en `PROYECTOS/GENERAL/.claude/launch.json`).
-**Usuarios de prueba** (todos `@eternity.test`, con la contraseña que pusiste el 10 oct): ceo@, director@ (con Administración), closer1@, closer2@, caller1@, caller2@, caller3@, caller4@.
+**Usuarios de prueba** (todos `@eternity.test`, con la contraseña que pusiste el 10 oct): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@. Además, en Maestria, los perfiles de prueba closer-test@ y caller-test@eternity.llc (contraseña en `scripts/salida/`).
 **Datos locales:** Maestria = 1.005 leads reales de la biblioteca (limpios de pruebas el 11 oct, con su oferta), sin ventas, citas ni objetivos · Proyecto Prueba = donde pruebo (3 leads, 1 venta de prueba, cuenta «Todo», categorías y 3 pasos de onboarding de ejemplo).
 
 | Dónde | Qué |
