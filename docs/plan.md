@@ -1,129 +1,127 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 11 oct 2026. Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan solo tiene lo que falta, las decisiones vigentes y los riesgos.
+> Al día: 11 oct 2026 (noche). Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan tiene dónde estamos, lo que falta, las decisiones vigentes y los riesgos.
 
 ---
 
 ## 1. Dónde estamos
 
-- **PUBLICADA el 11 oct (noche): https://dashboard-de-ventas-iota.vercel.app** · Vercel gratis (Hobby, cuenta cristianortizmaestria-9940, unida al GitHub eternitydevzz; repo privado eternitydevzz/Dashboard-de-ventas) · Supabase «eternity» (ref crbwqaxpeexeonffuiyo, East US, gratis) con las 30 migraciones · Maestria preparada (4 pipelines, Callers, Closers y 4 productos) · 10 usuarios del equipo + 2 de prueba creados. Sin Resend (sin enlaces mágicos). Pendiente: Cristian entra y hace su onboarding, subir los leads, link de agenda y conectar GHL. Ojo: Hobby es de uso no comercial → pasar a Pro cuando se pueda; los commits de este repo van firmados por eternitydevzz (si no, Vercel Hobby bloquea la publicación).
-- **Antes de publicar:** la app estaba hecha y probada en local. Incluye v1, v2, la auditoría, el Paso H, el Paso 0 y el 1.0 menos el bloque 6. Lo hecho y su commit, en la sección 7.
-- **11 oct (tarde):** pasada de punta a punta hecha y 3 de los 4 puntos que salieron de ella arreglados (reparto, venta adelantada, Ventas vs Cerradas + Ranking). Ahora **431 tests** pasan y la app compila.
-- **Comprobado el 11 oct (mañana):** 424 tests automáticos pasan, la app compila sin errores, 0 fallos de seguridad conocidos en las librerías, 29 cambios de base de datos (todos aplicados en local) y 43 tablas protegidas. Todo guardado en git; nada subido a la nube.
-- **Revisión cruzada del 11 oct** (app, guías y plan): las 31 pantallas cargan sin errores en Proyecto Prueba y las 29 de Maestria, en menos de 0,7 s; `preparar-proyecto` y `crear-usuarios` funcionan en simulación y los campos de `proyecto-base.json` existen en la base; no quedan restos de lo que se quitó; las cifras de la Biblioteca de la guía cuadran con la base; los textos de pantalla que citan las guías existen. Puestas al día las 2 guías (fecha, onboarding con horario, la ficha de cada persona, preguntas editables).
-- **No se publica hasta que esté todo** (Cristian, 11 oct).
+- **LA APP ESTÁ PUBLICADA (11 oct): https://dashboard-de-ventas-iota.vercel.app** y Cristian ya ha entrado como CEO.
+- **Lo que hay en la nube:**
+  - **GitHub:** repositorio privado `eternitydevzz/Dashboard-de-ventas` (rama `main`).
+  - **Supabase:** proyecto «eternity» (ref `crbwqaxpeexeonffuiyo`, East US, plan gratis), con los 30 cambios de base de datos, el registro libre cerrado y «Confirm email» activado (los usuarios se crean ya confirmados).
+  - **Vercel:** proyecto `dashboard-de-ventas` en la cuenta gratis (Hobby) `cristianortizmaestria-9940`, unida al GitHub `eternitydevzz`. 4 variables: dirección y publishable de Supabase (Config), secret de Supabase y `CLAVE_CIFRADO` (Secret). Cada cambio que se sube a `main` se publica solo.
+  - **Maestria preparada:** 4 pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY AI Services), «Callers» (7 columnas, con «Link enviado») y «Closers» (13), y 4 productos (Membresía 47 $, Grupal 1.997 $, VIP 4.997 $, DFY a medida).
+  - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub).
+- **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
+- **En local:** 431 tests pasan, la app compila, 30 cambios de base de datos.
+- **Sin Resend** (decisión de Cristian, 11 oct): no hay enlaces mágicos ni cambio de email por correo; el equipo entra con email y contraseña.
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ## 2. Pendiente de que decidas tú
 
 | Qué | Mi propuesta |
 |---|---|
-| Mis criterios (sección 6.2) | Revisarlos en tu revisión (paso 3). |
-
-**Decidido el 11 oct (noche): se publica YA, sin Resend** (el equipo entra con email y contraseña; sin enlaces mágicos ni cambio de email hasta tener Resend); «cerrar moviendo a Cerrados» y la zona horaria, **después de publicar**. Cristian ya tiene cuentas de GitHub, Supabase y Vercel.
-
-Decidido el 11 oct: la lista de «imprescindible para publicar» (4.2) se queda tal cual; todas las mejoras de la 4.4 van **antes de publicar**; la zona horaria, como dice la 6.1. Resend sigue sin cuenta ni DNS.
-
-Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba (9 oct) a nombre del CEO, por eso Ana sale con «1 cerrada · 0 €»; y `calcularVendedores` quedó sin uso en la app (¿quitarlo con sus 3 tests?).
+| Mis criterios (sección 6.2) | Revisarlos cuando recorras la app. |
+| Pasar Vercel a Pro (el plan gratis es para uso no comercial, según sus condiciones; sin volver a comprobar hoy) | Cuando tengas una tarjeta que funcione: se mueve el proyecto o se conecta la otra cuenta. |
+| `calcularVendedores` quedó sin uso en la app (solo lo usan 3 tests) | Quitarlo con sus tests cuando haya un rato. |
+| En Proyecto Prueba (local) queda una venta antigua de prueba (9 oct) a nombre del CEO (Ana sale con «1 cerrada · 0 €») | Borrarla o pasarla a Ana; solo afecta a las pruebas en local. |
 
 ## 3. Lo siguiente, en orden
 
 | # | Qué | Quién | Estado |
 |---|---|---|---|
-| 1 | **Pasada de punta a punta contigo**: CSV → reparto → caller → agenda → venta → Funnel, con los 1.005 leads de la Biblioteca, en Proyecto Prueba. | Cristian la hizo, Claude guió y comprobó en la base | **Hecha (11 oct)**: funciona y los números cuadran; salieron 6 mejoras (4.4) y el cambio de agendar por link de GHL. Datos de la pasada borrados con permiso (las 37 tablas como antes). |
-| 2 | **Bloque 6 · Emails con Resend** (sección 4.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (5.1) |
-| 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Después de la pasada, a la vez que el 2 |
-| 4 | **Las mejoras de la 4.4**, en su orden (primero los 4 puntos de la pasada, luego agendar por link de GHL, luego el resto), una a una, con su commit | Claude | **En marcha**: 3 de los 4 puntos hechos (11 oct); sigue «Stripe por defecto» |
-| 5 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2, 3 y 4 |
-| 6 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
-| 7 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
+| 1 | Pasada de punta a punta (Proyecto Prueba, 1.005 leads) | Cristian, Claude guió | ✅ Hecha (11 oct) |
+| 2 | Mejoras de la 4.4 antes de publicar (los 4 puntos de la pasada y agendar por link de GHL) | Claude | ✅ Hechas (11 oct) |
+| 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
+| 4 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | **Ahora** |
+| 5 | **Link de agenda** en Administración → Proyecto y reparto | Cristian me pasa el link | Pendiente |
+| 6 | **Mandar los accesos al equipo** por WhatsApp y borrar los 2 archivos de contraseñas | Cristian | Pendiente |
+| 7 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | Pendiente |
+| 8 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
+| 9 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
+| 10 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
+| — | Bloque 6 · Resend (4.1) | Claude | Aplazado: falta la cuenta de Resend y los DNS (5) |
 
 ---
 
 ## 4. Lo que me falta a mí (Claude)
 
-**Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit.
+**Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado).
 
-### 4.1 Bloque 6 · Emails con Resend (commit propio)
+### 4.1 Bloque 6 · Emails con Resend (aplazado; commit propio)
 - [ ] Envío de emails desde la app con la clave de Resend: los avisos de los reportes por email (el WhatsApp sigue por el workflow de GHL).
-- [ ] Supabase manda sus emails (enlaces mágicos y cambios de email) por Resend, desde @eternity.llc. Sin email de bienvenida: los accesos los mandas tú por WhatsApp.
+- [ ] Supabase manda sus emails (enlaces mágicos y cambios de email) por Resend, desde @eternity.llc. Sin email de bienvenida.
 - [ ] Activar «Enviar enlace mágico» en la ficha de cada persona (hoy está desactivado esperando este bloque).
-- [ ] Poner al día `.env.example`, `GUIA-PUBLICAR.md` (crear la cuenta, verificar eternity.llc, la clave en Vercel y en Supabase, «Si algo falla») y `GUIA-GHL.md` Parte 2.
-- En local no se pueden mandar emails reales: se prueba con un envío falso en los tests y de verdad al publicar.
+- [ ] Poner al día `.env.example`, `GUIA-PUBLICAR.md` y `GUIA-GHL.md` Parte 2.
 - Datos de Resend ([su guía](https://resend.com/docs/send-with-supabase-smtp)): servidor `smtp.resend.com`, puerto 465, usuario `resend`, la clave como contraseña y el dominio verificado.
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
-**Imprescindible** (sin esto no se publica):
-- [ ] Subir el código a GitHub (repositorio privado).
-- [ ] Crear la base en Supabase con los 29 cambios (más el del bloque 6, si lo hay), con el registro libre cerrado.
-- [ ] Configurar Vercel con sus variables (incluida la de Resend) y desplegar.
-- [ ] Resend: verificar eternity.llc y probar un enlace mágico y un aviso de reporte de verdad.
-- [ ] Preparar Maestria: primero simulando, comprobar que crea los pipelines «Callers» y «Closers», y luego de verdad.
-- [ ] Crear el equipo real con `scripts/salida/equipo.csv` (ya hecho y simulado; las contraseñas, solo en esa carpeta) y los 2 perfiles de prueba.
-- [ ] **Medir la velocidad en la nube** (en local, el Funnel con 30.000 leads carga en ~1 s). Si va lenta, se arregla antes de seguir.
-- [ ] Comprobar en Vercel lo que en local no se puede: subir PDF y CSV, límite de intentos, HTTPS y que la consola no da errores.
+- [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
+- [x] Base en Supabase con los 30 cambios y el registro libre cerrado. Al subirlos falló uno (`gen_random_bytes` necesita `extensions.` en la nube); arreglado en `cc562d0`.
+- [x] Vercel con sus 4 variables y publicado. Sin la de Resend (aplazado).
+- [ ] ~~Resend: verificar eternity.llc~~ → aplazado (4.1).
+- [x] Maestria preparada (simulación y de verdad); la base creó sola «Callers» y «Closers».
+- [x] Equipo real (10) y los 2 perfiles de prueba creados (los lanzó Cristian).
+- [x] Cristian entra como CEO en la app publicada.
+- [ ] **Medir la velocidad en la nube** con los leads ya subidos (en local, el Funnel con 30.000 leads carga en ~1 s). Si va lenta, se arregla.
+- [ ] Comprobar en la nube: subir PDF y CSV, límite de intentos de login y que la consola del navegador no da errores. (HTTPS y cabeceras: ✅ comprobado.)
+- [ ] Ajustes de Vercel: región de las funciones junto a Supabase (Washington, iad1) ⚠ comprobar en Settings → Functions.
 - [ ] Repasar contigo la lista «Comprobar al terminar» de la guía.
-
-**Después de publicar** (no la bloquea):
-- [ ] Subir los contactos de GHL (con el CSV nuevo que me pases).
-- [ ] Dejar la app lista con tus datos: reparto y rotación, horarios, comisiones, permisos, IA, onboarding, Finanzas, links y recursos.
+- [ ] Dejar la app lista con tus datos: link de agenda, reparto, horarios, comisiones, permisos, IA, onboarding, Finanzas, links y recursos.
 - [ ] Actualizar la herramienta de Supabase de mi Mac (de la 2.90 a la 2.120) cuando ejecutes `brew trust supabase/tap`. Hoy funciona con la 2.90.
 
 ### 4.3 Conectar GHL (sigo `GUIA-GHL.md`)
 - [ ] **Antes de nada, comprobar que GHL manda todas las citas** (su lista no va por páginas): si llegara incompleta, la app cancelaría citas buenas. Se prueba con un closer con muchas citas antes de activar la sincronización para todos.
-- [ ] Guiarte en los workflows («Lead nuevo», «Cita agendada», «Cambio de etapa» si hace falta y avisos de reportes) y comprobarlo en Administración → Integraciones → «Últimos eventos».
-- [ ] Ajustar las 16 marcas «⚠ comprobar» de las guías con tus pantallas de GHL, Supabase y Vercel.
+- [ ] Workflows: «Lead nuevo» y **«Cita agendada» (imprescindible: es el que da la agenda a los callers con el sistema del link)**; «Cambio de etapa» si hace falta; avisos de reportes. Comprobar en Administración → Integraciones → «Últimos eventos».
+- [ ] Token de GHL y calendarios de cada closer (Administración → Integraciones y ficha de cada closer). El token lo pegas tú.
+- [ ] Ajustar las marcas «⚠ comprobar» de las guías con tus pantallas de GHL, Supabase y Vercel.
 - [ ] Landings directas: una entrada por landing en Administración → Entradas.
-- [ ] Probar con GHL real lo que solo se ha simulado: lead por teléfono, cita sin id sin duplicar, closer que no es del proyecto, cita borrada en GHL → «cancelada», avisos al CEO aunque no sea miembro y que un segundo reporte del día no repita el aviso.
+- [ ] Probar con GHL real lo que solo se ha simulado: «Link enviado» → reserva → la cita llega a nombre del caller con sus estrellas; lead por teléfono; cita sin id sin duplicar; closer que no es del proyecto; cita borrada en GHL → «cancelada»; reagendar en la app una cita de GHL; avisos al CEO aunque no sea miembro; un segundo reporte del día no repite el aviso.
 - [ ] Probar con las claves reales: calendario de GHL, llamadas de GHL con Deepgram, Fathom y la IA (análisis, coach y puntuación).
 - [ ] Medir el gasto real de Claude y Deepgram los primeros días (calculado ~0,05-0,08 $ por llamada de 1 hora, sin medir).
 
-### 4.4 Mejoras (Cristian, 11 oct: antes de publicar; paso 4)
-**Lo primero (salió en la pasada del 11 oct; antes de cada uno, preguntar a Cristian cómo lo quiere):**
-- [x] «Repartir» apagado sin explicación → **hecho (11 oct)**: la vista previa sale sola al abrir y se recalcula con cada cambio; sin botón «Ver reparto». Sin filtro con leads, el botón dice «No hay leads que repartir con esos filtros»; con número no válido, «Pon un número de 1 o más». Probado en pantalla en Proyecto Prueba (con Carla, reparto real de 1 lead, deshecho después).
-- [x] La ficha del lead deja registrar la venta antes de la hora de la cita → **hecho (11 oct)**, decisión de Cristian: la venta se guarda y la cita se cierra con la hora de ahora («Cita adelantada: era el 12 oct, 16:00» en el historial), así cuenta como asistida hoy. La sincronización de GHL ya no cambia hora, closer ni estado de una cita terminada en la app (si no, devolvería la adelantada a su hora). 3 tests nuevos; probado en pantalla con Ana en Proyecto Prueba y borrado después. Detalle: si luego se borra esa venta, la cita vuelve a «seguimiento» con la hora adelantada (la original queda en el historial).
-- [x] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) daban números distintos → **hecho (11 oct)**, decisiones de Cristian: el Funnel deja solo «KPIs por persona» (se quita «Vendedores»), y una venta que un jefe registra desde la ficha sin elegir vendedor va a nombre del closer de la cita (en el selector sale «Ana Closer (closer de la cita)», con «Yo» y el resto para elegir a mano). 3 tests nuevos. «Ranking del equipo» alineado (11 oct): usa el mismo cálculo que «KPIs por persona» (callers por agendados, con cerrados y low ticket aparte; closers por facturación, con cerradas, % cierre/asist., asistidas y no show). `calcularVendedores` queda sin uso en la app (solo en 3 tests).
-- [x] El método de pago sale «Stripe» por defecto → **se queda así** (Cristian, 11 oct).
+### 4.4 Mejoras
 
-**Después: agendar por link de GHL (Cristian, 11 oct, tras hablar con el equipo):**
-- [x] El caller manda al lead el link del calendario de GHL y el lead reserva solo. En la app el caller marca «Link enviado» con sus estrellas (2-5), que pasan a la cita de GHL. **Hecho 11 oct.**
-- [x] Cuenta como **agendado** (Funnel y KPIs del caller) solo cuando llega la cita de GHL; la hora y el closer salen de GHL. **Hecho.**
-- [x] Quitar la rotación de closers: el closer lo pone GHL. **Hecho** (datos en la base sin tocar; la función `sumar_rotacion` de la base queda sin uso).
-- [x] Directores, CEO y closers pueden seguir creando una cita a mano; los callers no. **Hecho.**
-- [x] Reagendar: **todas las citas se reagendan y se mueven en la app**, también las de GHL (Cristian, 11 oct: la app es el CRM, GHL solo trae datos). La cita nueva no lleva el id de GHL, así la sincronización no le cambia la hora. Ojo: los recordatorios de GHL al lead siguen con la hora vieja salvo que se cambie también en GHL.
-- [x] Decisiones del 11 oct (tarde): la agenda (KPIs, Ranking y comisión) es de quien marcó «Link enviado»; si nadie lo marcó, del caller del lead; sin caller, de nadie. Un lead con «Link enviado» sale de la cola y vuelve como «llamar luego» a los 2 días si no ha llegado su cita. Un link por proyecto, guardado en Administración; al pulsar «Link enviado» se abre WhatsApp con el link escrito. Hace falta el estado nuevo «link_enviado» (cambio de base 30) y su columna en «Callers». La rotación se quita de la app, pero sus datos se quedan en la base.
-- Quitadas del plan por este cambio: «calendario real del closer al agendar» y «que dos agendas no den el mismo closer» (los controla el calendario de GHL).
-- Solo se puede probar de verdad al publicar y conectar GHL; en local, con citas de GHL simuladas.
+**Hechas el 11 oct (salieron de la pasada):**
+- [x] Vista previa automática al repartir (sin botón «Ver reparto») · `f64f64a`.
+- [x] Venta antes de la hora de la cita: se guarda y la cita se cierra «ahora» («Cita adelantada: era el…» en el historial); la sincronización de GHL ya no toca citas terminadas · `a094747`.
+- [x] Funnel con una sola tabla por persona («KPIs por persona»); una venta que un jefe registra desde la ficha va al closer de la cita · `b6dbca1`. Ranking con las mismas reglas · `d47c48e`.
+- [x] Método de pago «Stripe» por defecto: se queda así (Cristian).
 
-**Después:**
-- [ ] **(Después de la pasada · Cristian, 11 oct)** Cerrar moviendo la tarjeta: al soltar una tarjeta en «Cerrados» de cualquier CRM se abre «Registrar venta» (producto, facturación, cash); al guardar queda cerrada en todos (estado del lead, Callers, «Cerradas» de Post-call y la cita) y cuenta en Funnel, Ventas y comisiones; si se cancela, la tarjeta vuelve a su sitio. Solo closers, directores y CEO (los callers no pueden soltar en «Cerrados»). Visto en la pasada: hoy mover a «Cerrados» no registra nada y la venta no cuenta.
-- [ ] Que un administrador pueda cambiar la zona horaria del proyecto, como dice la 6.1. Lo comprobado hoy: la zona es `proyectos.zona_horaria` y la base solo acepta Nueva York y Madrid; las citas guardan el momento exacto (no se mueven, solo se ven en otra hora); los horarios guardan la hora del reloj sin zona (estos son los que hay que convertir); los reportes guardan solo el día; 39 archivos usan la zona. **Ojo al hacerlo:** la diferencia entre Nueva York y Madrid no es siempre 6 h (unas semanas de marzo y de octubre-noviembre es 5 h, por los cambios de hora), y un horario puede pasar al día siguiente al convertirlo (20:00-23:00 en Nueva York = 02:00-05:00 del día siguiente en Madrid). Hay que probar los dos casos.
+**Hecho el 11 oct: agendar por link de GHL** · `b8ff0e3` (cambio de base 30)
+- [x] El caller pulsa **«Link enviado»** con sus estrellas (2-5): se abre WhatsApp con el link escrito, el lead pasa a la columna «Link enviado» de «Callers» y sale de la cola; vuelve como «llamar luego» a los 2 días si no ha llegado su cita.
+- [x] Cuenta como **agendado** cuando llega la cita de GHL (webhook, sincronización o «unir»), con su hora, su closer y las estrellas del caller. La agenda (KPIs, Ranking y comisión) es de quien marcó «Link enviado»; si nadie, del caller del lead; sin caller, de nadie.
+- [x] Los callers ya no agendan a mano; directores, CEO y closers sí.
+- [x] Fuera la rotación de closers (sus datos se quedan en la base; la función `sumar_rotacion` queda sin uso).
+- [x] Todas las citas se reagendan y se mueven en la app, también las de GHL; la cita nueva no lleva el id de GHL, así la sincronización no le cambia la hora.
+- [x] Link de agenda del proyecto en Administración → Proyecto y reparto (solo administradores, solo https).
+
+**Después de publicar (Cristian, 11 oct):**
+- [ ] **Cerrar moviendo la tarjeta:** al soltar en «Cerrados» de cualquier CRM se abre «Registrar venta»; al guardar queda cerrada en todos (lead, Callers, «Cerradas» de Post-call y la cita) y cuenta en Funnel, Ventas y comisiones; si se cancela, vuelve a su sitio. Solo closers, directores y CEO.
+- [ ] **Cambiar la zona horaria del proyecto** (6.1). Lo comprobado: la zona es `proyectos.zona_horaria` (solo Nueva York y Madrid); las citas guardan el momento exacto; los horarios guardan la hora del reloj (hay que convertirlos); los reportes, solo el día; 39 archivos usan la zona. **Ojo:** entre Nueva York y Madrid no siempre hay 6 h (unas semanas, 5 h) y un horario puede pasar al día siguiente al convertirlo; probar los dos casos.
 
 ---
 
-## 5. Lo que te toca a ti (Cristian), en orden
+## 5. Lo que te toca a ti (Cristian)
 
-### 5.1 Ya, porque bloquea el bloque 6
-- [ ] Crear la cuenta de Resend y pasarme su clave.
-- [ ] Conseguir a alguien que añada los registros DNS de eternity.llc (puede tardar en activarse: cuanto antes, mejor).
+### Ahora
+- [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
+- [ ] **Pasarme el link del calendario de GHL** (el de reservas que reparte entre closers) para ponerlo en Administración.
+- [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 2 archivos** de contraseñas (lo haces tú).
+- [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
-### 5.2 Tu revisión (se puede hacer ya)
-- [x] Ver conmigo la pasada de punta a punta (hecha el 11 oct).
-- [ ] Recorrer la app con los usuarios de prueba (sección 9). Lo nuevo del 1.0: Biblioteca (KPIs), «Mi perfil», horarios, reparto y rotación (Administración → Proyecto y reparto), Comisiones y Reportes (Administración), la ficha de cada persona (Equipo), «Onboarding» de los closers y Links y recursos.
-- [ ] Arrastrar tarjetas **con tu ratón** en el CRM («Callers» y «Closers» también), en Agendas → Pre-call y en Post-call. Yo solo pude simularlo.
-- [ ] Mirar el diseño en tu móvil (misma wifi, la IP del Mac en vez de `localhost`).
-- [ ] Revisar mis criterios (sección 6.2) y decirme cuáles cambio.
-
-### 5.3 Para publicar
-- [ ] Crear las cuentas de GitHub, Supabase y Vercel (te guío paso a paso).
-- [ ] Guardar la clave de cifrado en tu gestor de contraseñas cuando la generemos (si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom).
-- [ ] Mandar a cada persona del equipo su contraseña por WhatsApp.
-- [ ] Ejecutar `brew trust supabase/tap` en tu terminal (no es urgente).
-
-### 5.4 Al final
-- [ ] El CSV de contactos exportado de GHL.
-- [ ] Las claves de GHL, Fathom, Claude y Deepgram (las pones tú a mano).
+### Para conectar GHL
+- [ ] El token de GHL (Private Integration) y los ids de calendario de cada closer (los pegas tú).
 - [ ] Crear en GHL los workflows que te indique.
+
+### Cuando puedas
+- [ ] Crear la cuenta de Resend y conseguir que alguien añada los DNS de eternity.llc (para el bloque 6).
+- [ ] Pasar Vercel a Pro.
+- [ ] Recorrer la app con calma (lo nuevo del 1.0 y del 11 oct), arrastrar tarjetas con tu ratón y mirarla en el móvil.
+- [ ] Revisar mis criterios (6.2).
+- [ ] Ejecutar `brew trust supabase/tap` en tu terminal (no es urgente).
+- [ ] Las claves de Fathom, Claude y Deepgram (las pones tú en Vercel o en la app).
 - [ ] Que el equipo ponga en la app: objetivos y lanzamientos, contexto del negocio para la IA, links de pago y de dossier, y recursos.
 - [ ] Organizar el día real con un caller y un closer.
 
@@ -134,34 +132,35 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 ### 6.1 Tuyas
 | Tema | Decisión |
 |---|---|
-| Base | Sin Stripe ni pasarelas: cada venta la apunta quien la hace. La app es el CRM; GHL solo envía datos (webhooks, landings, calendarios y llamadas). |
+| Base | Sin Stripe ni pasarelas: cada venta la apunta quien la hace. **La app es el CRM; GHL solo trae datos** (webhooks, landings, calendarios y llamadas). |
 | Aspecto | Diseño glass con granate Eternity y azul Maestria; español de España; dólares y hora de Nueva York por defecto. |
-| Nube | Planes gratuitos para empezar y la dirección gratuita de Vercel (sin dominio propio). Los tests de pantallas completas, después de publicar. |
-| Equipo real | Se crea al publicar con `scripts/salida/equipo.csv`. Una sola cuenta CEO para «Cris y José»; Juan y Junior, directores con Administración. |
+| Nube | Planes gratuitos para empezar (Supabase gratis; Vercel Hobby mientras no funcione la tarjeta) y la dirección gratuita de Vercel (sin dominio propio). Publicada sin Resend. |
+| Equipo real | Creado con `scripts/salida/equipo.csv`. Una sola cuenta CEO para «Cris y José»; Juan y Junior, directores con Administración. Los accesos los manda Cristian por WhatsApp. |
 | Roles | Solo el CEO cambia el rol o desactiva a alguien. Administración, Finanzas y Equipo nunca para callers ni closers. Las comisiones las cambian el CEO y los directores (un director, ni la suya ni la de su rol). |
 | Permisos | Por sección y por pipeline (Editar / Ver / Sin acceso), por rol o por persona; manda la persona. Una sección de otro rol = solo lo suyo. CEO y director con Administración, siempre todo. |
-| CRM | Como GHL: pipelines de origen con sus columnas, «Callers» (por el resultado de la llamada) y «Closers» (Pre-call y Post-call). Las columnas las personaliza el equipo. |
+| CRM | Como GHL: pipelines de origen con sus columnas, «Callers» (por el resultado de la llamada, con «Link enviado») y «Closers» (Pre-call y Post-call). Las columnas las personaliza el equipo. |
 | Clientes | Solo quien ha comprado. |
-| Estrellas | Caller: 1 no responde · 2 no sabe nada · 3 interesado · 4 quiere saber más · 5 quiere comprar. Closer: 5 paga ya · 4 con plazo · 3 sin dinero ahora · 2 poco encaje · 1 no califica. |
+| Estrellas | Caller: 1 no responde · 2 no sabe nada · 3 interesado · 4 quiere saber más · 5 quiere comprar (las pone al marcar «Link enviado»). Closer: 5 paga ya · 4 con plazo · 3 sin dinero ahora · 2 poco encaje · 1 no califica. |
+| Agendar | Por link de GHL: el caller marca «Link enviado» con sus estrellas; cuenta como agendado cuando llega la cita de GHL, con su hora y su closer; la agenda es de quien envió el link (si nadie, del caller del lead). Si en 2 días no reserva, vuelve a la cola. Directores, CEO y closers pueden crear citas a mano. **Todas las citas se reagendan y se mueven en la app**, también las de GHL. Sin rotación de closers. |
+| Venta | Antes de la hora de la cita: se guarda y la cita se cierra «ahora». Desde la ficha, un jefe sin elegir vendedor la deja a nombre del closer de la cita. Método de pago «Stripe» por defecto. |
 | Post-call | Todo se mueve a cualquier columna; sacar una venta de su columna la borra (con confirmación); «Cerradas» = pagadas del todo este mes. |
-| KPIs | Se cuentan personas; contactado = llamada o WhatsApp; agendar cuenta como contestada; el cash es lo que entró en el periodo (igual en Ventas, Finanzas, Funnel y Agendas); de cada closer, su parte del total en facturación y cash y su % cobrado. «Mi Funnel»: cada caller y closer ve sus objetivos, sus KPIs y su Funnel. |
+| KPIs | Se cuentan personas; contactado = llamada o WhatsApp; agendar cuenta como contestada; el cash es lo que entró en el periodo (igual en Ventas, Finanzas, Funnel y Agendas); de cada closer, su parte del total en facturación y cash y su % cobrado. El Funnel tiene una sola tabla por persona («KPIs por persona») y el Ranking usa las mismas reglas. «Mi Funnel»: cada caller y closer ve sus objetivos, sus KPIs y su Funnel. |
 | Objetivos | Por rol o persona (manda la persona); el del director = equipo entero; semana de lunes a domingo; diario de lunes a viernes por defecto; racha = cumplir todos los diarios. |
 | IA | Claude Sonnet 5.5; cada llamada se analiza al unirla a su cita. Llamadas de GHL: las contestadas de más de 1 minuto; si GHL no transcribe, Deepgram. |
 | Biblioteca | Primera pestaña de KPIs (director y CEO). Su clasificación («Oferta») es un dato de cada lead que se recalcula solo; no ordena la cola. Cada CSV nuevo pone al día los datos. |
 | Productos | Membresía (47 $/mes, sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (precio personalizado). Cada uno con link de pago y de dossier. |
-| Reparto de leads | Solo entre callers. A mano, con el botón (4 formas) o automático al entrar con % por caller que suman 100, apagado y al 0 % por defecto. Con «solo en su horario» y nadie en horario, se reparte igual entre los que tienen %. |
-| Zona horaria | La cambia un administrador; solo Nueva York o Madrid. Al cambiarla, los horarios de cada persona se convierten para que sigan a la misma hora real; lo ya guardado por día (reportes, objetivos, rachas) se queda como está (11 oct). |
+| Reparto de leads | Solo entre callers. A mano, con el botón (vista previa automática, 4 formas) o automático al entrar con % por caller que suman 100, apagado y al 0 % por defecto. Con «solo en su horario» y nadie en horario, se reparte igual entre los que tienen %. |
+| Zona horaria | La cambia un administrador; solo Nueva York o Madrid. Al cambiarla, los horarios de cada persona se convierten para que sigan a la misma hora real; lo ya guardado por día se queda como está. (Por hacer: 4.4.) |
 | Horario | En la hora del proyecto, con la del aparato al lado. Obligatorio en el onboarding de callers y closers; cada uno cambia el suyo en «Mi perfil» y un administrador, el de cualquiera. |
-| Llamadas de closers | Duración (30 min por defecto), descanso, aviso mínimo y máximo al día: solo el administrador, generales o por closer. |
-| Agendar | (11 oct) Por link de GHL: el caller marca «Link enviado»; cuenta como agendado cuando llega la cita de GHL, con su hora y su closer. Directores y CEO pueden crear citas a mano. Las citas de GHL se reagendan en GHL; las de a mano, en la app. La rotación de closers se quita (4.4). |
+| Llamadas de closers | Duración (30 min por defecto), descanso, aviso mínimo y máximo al día: solo el administrador, generales o por closer (para las citas a mano). |
 | Comisiones | Tramos mensuales en dólares, editables en Administración, sobre toda la facturación del mes; las cuotas, con el % del mes de la venta; se paga sobre lo cobrado. Callers y closers por tramos; CEO y directores con su % propio; interruptor por persona. Las devoluciones no descuentan lo pagado y siguen contando para su tramo. La Membresía no paga comisión ni suma para el tramo (casilla por producto). |
 | Ficha de cada persona | La misma en Equipo y en Administración. Datos y comisión para quien tiene Equipo; el resto, solo CEO y directores con Administración. La marca de prueba, solo el CEO; el email lo cambia el administrador directamente. |
 | Reporte | Preguntas editables en Administración; del closer, las 3 de las tasas son fijas. Cada reporte guarda sus preguntas. |
 | Onboarding de closers | Sus clientes = a quienes les registró una venta. Los puntos los editan el CEO y los directores. |
-| Cola del caller | La prioridad A/B/C no ordena; primero los «llamar luego» que ya tocan, luego nuevos, luego «no contesta», y dentro, del más nuevo al más viejo. |
-| Emails | Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos; sin email de bienvenida. |
-| Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, y los links y recursos. |
-| Commits | Por bloques; el 6, solo, cuando esté Resend. |
+| Cola del caller | La prioridad A/B/C no ordena; primero los «llamar luego» y «link enviado» que ya tocan, luego nuevos, luego «no contesta», y dentro, del más nuevo al más viejo. |
+| Emails | Resend desde eternity.llc para enlaces mágicos, cambio de email y avisos; sin email de bienvenida. Aplazado hasta tener la cuenta y los DNS. |
+| Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, el link de agenda, y los links y recursos. |
+| Commits | Por bloques. En este repositorio van firmados por `eternitydevzz` (si no, Vercel Hobby bloquea la publicación). |
 
 ### 6.2 Mis criterios (puedes cambiarlos)
 - Agendado → Venta cuenta personas, compras desde el día de la agenda, aunque cierre el closer.
@@ -176,13 +175,14 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 - Pipelines por defecto: los de origen, Ver para todos; «Callers», para callers y directores; «Closers», para closers y directores.
 - Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas; sin email se le reconoce por el teléfono (últimas 9 cifras).
 - En Agendas solo cuentan las ventas de closers; un gasto sin categoría cuenta en el profit; Fathom se sincroniza con el botón.
-- Reparto: vista previa automática antes de repartir (sale sola, sin botón); el tope cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego.
-- Reparto y rotación: le toca a quien tiene menos para su %, y la cuenta empieza de cero al cambiar los %.
-- Rotación: por defecto apagada y «lo elige quien agenda»; cuenta todas las citas agendadas en la app; un closer sin horario no entra.
+- Reparto: el tope cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego; le toca a quien tiene menos para su %, y la cuenta empieza de cero al cambiar los %.
+- «Link enviado» cuenta como contacto (como un WhatsApp).
+- Una cita de GHL que llega para un lead con «Link enviado» le quita la fecha de «insistir».
 - Al reagendar con un closer sin horario, solo se comprueba que no choque con otra cita.
 - A un caller o closer, Programas le enseña solo «Tus clientes».
-- Los links de los productos (pago y dossier), solo https.
+- Los links de los productos y el link de agenda, solo https.
 - Si falla guardar el historial de un lead, se apunta en el registro y la acción sigue.
+- Si se borra una venta «adelantada», la cita vuelve a «seguimiento» con la hora adelantada (la original queda en el historial).
 
 ---
 
@@ -197,7 +197,7 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 | Paso 0 y Paso G: pipelines «Callers» y «Closers» con sus permisos; carga rápida (Funnel con 30.000 leads de ~2,8 s a ~1 s en local) | `6a887c6`, `2e3a407` |
 | 1.0 · «Llamadas de GHL» oculta, perfiles de prueba, Biblioteca, oferta de cada lead, reparto a mano, productos renombrados, Membresía mensual | `fa6c34b` |
 | 1.0 · Horario como GHL, «Mi perfil», disponibilidad de los closers, reparto automático con % | `f102dce` |
-| 1.0 · Rotación de closers, comisiones por tramos, «Cuenta para comisión» | `0f6c688` |
+| 1.0 · Rotación de closers (quitada el 11 oct), comisiones por tramos, «Cuenta para comisión» | `0f6c688` |
 | 1.0 · Pasada en pantalla de lo que solo estaba en tests, y arreglo del formulario de landings | `ed4bcce` |
 | 1.0 · Ficha de cada persona, reporte editable, onboarding de closers, Links y recursos, cola sin prioridad | `c3bf914` |
 | Pasada de punta a punta (11 oct) y su plan | `115a99a` |
@@ -205,23 +205,28 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 | 4.4 · Venta antes de la hora cierra la cita «ahora»; GHL no toca citas terminadas | `a094747` |
 | 4.4 · Funnel con una sola tabla por persona; venta desde la ficha al closer de la cita | `b6dbca1` |
 | 4.4 · Ranking con las mismas reglas que «KPIs por persona» | `d47c48e` |
+| 4.4 · Agendar por link de GHL; fuera la rotación; citas de GHL reagendables en la app | `b8ff0e3` |
+| Publicar: guía corregida (Root Directory vacío), migraciones arregladas para la nube, primera publicación | `46886d9`, `cc562d0`, `959af89`, `119d64a`, `06b4064` |
 
 ---
 
 ## 8. Riesgos y avisos
 
-**Pueden hacer daño el primer día** (tienen su paso en la sección 4):
-- **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (4.3).
-- **Velocidad en la nube:** sin medir (4.2).
-- **Emails:** sin Resend no llegan los enlaces mágicos ni el cambio de email (4.1).
+**Pueden hacer daño el primer día:**
+- **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (4.3). Y con el agendar por link, **sin el workflow «Cita agendada» ningún caller suma agendas**.
+- **Velocidad en la nube:** sin medir con datos (4.2).
+- **Sin Resend:** no hay enlaces mágicos ni cambio de email por correo; si alguien olvida su contraseña, se la cambia un administrador desde su ficha.
 
 **A tener en cuenta:**
-- **Supabase gratuito** (tu decisión): sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
+- **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
+- **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
+- **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
 - **Clave de cifrado:** si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
+- **Recordatorios de GHL:** si se reagenda en la app una cita que vino de GHL, GHL sigue recordando al lead la hora vieja salvo que se cambie también allí.
 - **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas.
 - **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil).
 - **Post-call:** mover una cita «reagendada» puede contar la misma reunión dos veces; sacar una venta de su columna la borra con sus cobros y comisiones (pide confirmación).
-- **Citas:** un lead puede tener dos citas a horas distintas. Con el agendar por link, la app depende aún más de que GHL mande bien las citas (ver «Citas de GHL» arriba).
+- **Citas:** un lead puede tener dos citas a horas distintas.
 - **Onboarding de closers:** si dos closers le venden al mismo cliente, comparten la checklist.
 - **Clave del webhook en la dirección** (tu decisión): puede quedar en registros intermedios; la guía recomienda mandarla en la cabecera.
 - Riesgos bajos: los estilos admiten código en línea; el diseño glass puede ir algo más lento en equipos viejos.
@@ -230,9 +235,12 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 
 ## 9. Cómo entrar y dónde está cada cosa
 
+- **La app publicada:** https://dashboard-de-ventas-iota.vercel.app (tu acceso: `info@eternity.llc`, contraseña en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv`, fila «Cris y José»).
+- **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
+- **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
 - **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.
-- **Usuarios de prueba** (`@eternity.test`, con la contraseña que pusiste el 10 oct): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@. En Maestria, también closer-test@ y caller-test@eternity.llc (contraseña en `scripts/salida/`).
-- **Datos locales:** Maestria = 1.005 leads reales de la Biblioteca, sin ventas, citas ni objetivos (no se toca en las pruebas). Proyecto Prueba = donde pruebo.
+- **Usuarios de prueba en local** (`@eternity.test`, contraseña en `scripts/seed.mjs`): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@.
+- **Datos locales:** Maestria = 1.005 leads reales de la Biblioteca (no se toca en las pruebas). Proyecto Prueba = donde pruebo.
 - **Para programar:** toda ventana nueva va dentro de `<Portal>`.
 
 | Dónde | Qué |
