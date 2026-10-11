@@ -137,7 +137,7 @@ Administración → Integraciones → «Nueva clave». Después hay que poner la
 
 ### Calendario de cada closer
 
-En la misma pantalla (o en la ficha de cada closer → «GHL y Fathom»), para cada closer: el **id de su calendario** de GHL o su **id de usuario** de GHL. En **Agendas → Llamadas** el botón «Sincronizar GHL» trae sus citas (de hace 30 días a dentro de 60), y también lo hace sola al abrir Agendas si han pasado más de 10 minutos. Las citas que no encuentran su lead salen en «Hay N sin unir → Revisar».
+En la misma pantalla (o en la ficha de cada closer → «GHL y Fathom»), para cada closer: el **id de su calendario** de GHL o su **id de usuario** de GHL. En **Agendas → Llamadas** el botón «Sincronizar GHL» trae sus citas (de hace 30 días a dentro de 60), y también lo hace sola al abrir Agendas si han pasado más de 10 minutos. Las citas que no encuentran su lead salen en «Hay N sin unir → Revisar». Mientras una cita está abierta, la hora y el closer de GHL mandan; una vez terminada en la app (cerrada, no show, perdida…), GHL ya no la cambia. Si se registra una venta antes de la hora de la cita, la cita se cierra con la hora de ese momento.
 
 **Citas borradas en GHL:** si una cita de un closer desaparece de su calendario de GHL (se borró), al sincronizar pasa a **«cancelada»** en la app. Solo se hace con las citas que siguen abiertas (lo que ya registró el closer no se toca), dentro del rango que se consulta y si GHL respondió bien. Cada cancelación queda en el historial del lead y sale en el aviso de la sincronización. ⚠ comprobar con GHL real: según la especificación oficial, la lista de citas no se reparte en páginas; si con GHL real llegara incompleta, se cancelarían citas buenas.
 

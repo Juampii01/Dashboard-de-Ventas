@@ -49,6 +49,9 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       // ¿Ya está en la app?
       const { data: existe } = await db().from("citas").select("id, estado, fecha, closer_id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id).maybeSingle();
       if (existe) {
+        // Una cita ya terminada en la app (cerrada, no show, perdida…) no se toca: ni el estado ni la hora ni el
+        // closer (11 oct: una venta adelantada cierra la cita con la hora de ahora y GHL la devolvería a la suya)
+        if (!(ABIERTAS as readonly string[]).includes(existe.estado)) continue;
         const estado = nuevoEstado(existe.estado, deGhl);
         if (estado !== existe.estado || new Date(existe.fecha).getTime() !== new Date(fecha).getTime() || existe.closer_id !== c.perfil_id) {
           await db().from("citas").update({ estado, fecha, closer_id: c.perfil_id }).eq("id", existe.id);

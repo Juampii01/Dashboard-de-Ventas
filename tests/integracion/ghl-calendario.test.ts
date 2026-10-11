@@ -106,6 +106,18 @@ describe("Sincronizar calendarios de GHL", () => {
     expect(p!.ghl_ultimo_resultado).toMatch(/0 nuevas · 1 actualizadas/);
   });
 
+  it("una cita ya terminada en la app no cambia de hora aunque GHL traiga otra (venta adelantada, 11 oct)", async () => {
+    const antes = (await cita(`${e.pref}-e2`))!;
+    expect(antes.estado).toBe("cerrada");
+    eventos = [
+      { id: `${e.pref}-e1`, contactId: `${e.pref}-cA`, startTime: "2026-10-12T12:00:00-04:00", appointmentStatus: "confirmed" },
+      { id: `${e.pref}-e2`, contactId: `${e.pref}-cNuevo`, startTime: "2026-10-20T10:00:00-04:00", appointmentStatus: "confirmed" },
+    ];
+    const r = await sync();
+    expect(r).toMatchObject({ nuevas: 0, actualizadas: 0 });
+    expect(await cita(`${e.pref}-e2`)).toMatchObject({ estado: "cerrada", fecha: antes.fecha, closer_id: antes.closer_id });
+  });
+
   it("si GHL rechaza el token, se explica y no rompe", async () => {
     rechazar = true;
     const r = await sync();

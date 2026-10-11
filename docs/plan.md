@@ -75,7 +75,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 ### 4.4 Mejoras (Cristian, 11 oct: antes de publicar; paso 4)
 **Lo primero (salió en la pasada del 11 oct; antes de cada uno, preguntar a Cristian cómo lo quiere):**
 - [x] «Repartir» apagado sin explicación → **hecho (11 oct)**: la vista previa sale sola al abrir y se recalcula con cada cambio; sin botón «Ver reparto». Sin filtro con leads, el botón dice «No hay leads que repartir con esos filtros»; con número no válido, «Pon un número de 1 o más». Probado en pantalla en Proyecto Prueba (con Carla, reparto real de 1 lead, deshecho después).
-- [ ] La ficha del lead deja registrar la venta antes de la hora de la cita (el botón «Cerrada» de la cita no); la cita cuenta entonces como «asistida» sin haber pasado.
+- [x] La ficha del lead deja registrar la venta antes de la hora de la cita → **hecho (11 oct)**, decisión de Cristian: la venta se guarda y la cita se cierra con la hora de ahora («Cita adelantada: era el 12 oct, 16:00» en el historial), así cuenta como asistida hoy. La sincronización de GHL ya no cambia hora, closer ni estado de una cita terminada en la app (si no, devolvería la adelantada a su hora). 3 tests nuevos; probado en pantalla con Ana en Proyecto Prueba y borrado después. Detalle: si luego se borra esa venta, la cita vuelve a «seguimiento» con la hora adelantada (la original queda en el historial).
 - [ ] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) dan números distintos para la misma persona: una cuenta ventas a su nombre y la otra sus citas que acabaron en venta (pasa cuando un director registra la venta en la cita de un closer). Unificar o renombrar.
 - [ ] El método de pago sale «Stripe» por defecto.
 

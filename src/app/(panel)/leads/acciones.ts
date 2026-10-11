@@ -5,7 +5,7 @@ import { ErrorUsuario, notaValida, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, registrarActividad, escribir } from "@/lib/datos";
-import { localAIso } from "@/lib/formato";
+import { fechaHora, localAIso } from "@/lib/formato";
 import { estrellasEntre } from "@/lib/estrellas";
 import { planDePagos } from "@/lib/finanzas";
 import type { EstadoCaller, Lead, Perfil, Proyecto } from "@/lib/tipos";
@@ -158,10 +158,10 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     // si no viene, la abierta de este lead
     const citaElegida = String(formData.get("cita_id") ?? "");
     const { data: cita } = citaElegida
-      ? await db().from("citas").select("id, closer_id").eq("id", citaElegida).eq("lead_id", leadId).eq("proyecto_id", proyecto.id).neq("estado", "cerrada").maybeSingle()
+      ? await db().from("citas").select("id, closer_id, fecha").eq("id", citaElegida).eq("lead_id", leadId).eq("proyecto_id", proyecto.id).neq("estado", "cerrada").maybeSingle()
       : await db()
           .from("citas")
-          .select("id, closer_id")
+          .select("id, closer_id, fecha")
           .eq("lead_id", leadId)
           .in("estado", [...ABIERTAS, "seguimiento"]) // arreglo 8: también «confirmación pendiente»
           .order("fecha", { ascending: false })
@@ -198,7 +198,14 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     if (plazos.length) await db().from("vencimientos").insert(plazos.map((x) => ({ ...x, proyecto_id: proyecto.id, venta_id: nueva.id, lead_id: leadId })));
   
     await escribir(db().from("leads").update({ estado_caller: "vendido" }).eq("id", leadId), "leads");
-    if (cita) await db().from("citas").update({ estado: "cerrada", ...(estrellasCloser ? { estrellas_closer: estrellasCloser } : {}) }).eq("id", cita.id);
+    if (cita) {
+      // Mejora de la pasada (Cristian, 11 oct): si la cita aún no ha llegado, se cierra con la hora de ahora
+      // (como si se hubiera adelantado), para que cuente como asistida hoy; en el historial queda la que tenía.
+      const ahora = new Date();
+      const adelantada = cita.fecha && new Date(cita.fecha).getTime() > ahora.getTime();
+      await db().from("citas").update({ estado: "cerrada", ...(adelantada ? { fecha: ahora.toISOString() } : {}), ...(estrellasCloser ? { estrellas_closer: estrellasCloser } : {}) }).eq("id", cita.id);
+      if (adelantada) await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", nota: `Cita adelantada: era el ${fechaHora(cita.fecha, proyecto)}` });
+    }
     await registrarActividad({
       proyecto_id: proyecto.id,
       lead_id: leadId,
