@@ -14,7 +14,7 @@
   - **Maestria preparada:** 4 pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY AI Services), «Callers» (7 columnas, con «Link enviado») y «Closers» (13), y 4 productos (Membresía 47 $, Grupal 1.997 $, VIP 4.997 $, DFY a medida).
   - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub).
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
-- **En local:** 436 tests escritos (431 + 5 de emails). **Ojo:** la suite completa se pasó entera por última vez con 431 (antes de Resend). Después de Resend solo se han pasado los 192 rápidos y los 9 de emails y avisos (estos, con Docker encendido). **Falta pasar la suite completa** con Docker encendido. La app compila; 30 cambios de base de datos.
+- **En local:** 445 tests (441 pasan y 4 de velocidad que solo se lanzan a mano). **Suite completa pasada entera el 11 oct** (tras Resend y el diseño de los emails), con Docker encendido unos minutos. La app compila; 30 cambios de base de datos.
 - **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
 - **Resend (emails) funcionando** (4.1, 11 oct): dominio «Verified» y probado en la nube: el enlace mágico entra y no se puede reutilizar, y el aviso de un reporte llega por email (los dos a «Recibidos», no a spam).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
@@ -58,8 +58,10 @@
 - [x] `APP_URL` puesta en Vercel. `.env.example`, `GUIA-PUBLICAR.md` (paso 4 bis) y `GUIA-GHL.md` (el email ya no hace falta en GHL) al día.
 - [x] **`RESEND_API_KEY` en Vercel** (la creó y la pegó Cristian) y publicado otra vez (`ed40af6`). Comprobado en la nube que `/auth/confirm` responde.
 - [x] Probado de verdad (11 oct): enlace mágico a `info@eternity.llc` desde la ficha → «Delivered» en Resend, llega a Recibidos, Cristian entra (Supabase: `login` 16:47) y al reutilizarlo da 403 «One-time token not found». Reporte de caller-test en el proyecto «Test» (allí no hay directores, así que solo avisa al CEO) → email «Test · Reporte de Caller Test» con todas las respuestas, en Recibidos.
-- [ ] **Sacar a caller-test del proyecto «Test»** (se añadió solo para la prueba; lo hace el CEO en Administración → Equipo). El reporte de prueba queda en «Test».
-- [ ] Mejora pequeña (sin decidir): el aviso del reporte va solo en texto, y al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
+- [ ] **Sacar a caller-test del proyecto «Test»** (se añadió solo para la prueba; lo hace el CEO en Administración → Equipo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
+- [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, visto solo en Chrome (falta verlo en Gmail: hace falta la sesión de CEO).
+- [ ] Mejora pequeña (sin decidir): al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
+- [ ] **Fallos vistos el 11 oct en la nube (sin arreglar, sin decidir):** (1) en Reportes, el primer clic en «Crear nuevo reporte» al cargar la página no abre nada (pasó 2 veces; el segundo clic sí); (2) en «Reportes» del caller, la tarjeta de su propio reporte sale con el nombre «—».
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
@@ -219,6 +221,7 @@
 | 4.4 · Agendar por link de GHL; fuera la rotación; citas de GHL reagendables en la app | `b8ff0e3` |
 | Publicar: guía corregida (Root Directory vacío), migraciones arregladas para la nube, primera publicación | `46886d9`, `cc562d0`, `959af89`, `119d64a`, `06b4064` |
 | Bloque 6 · Resend: avisos de reportes por email, enlace mágico, `/auth/confirm`; publicado con la clave | `e2fefba`, `ed40af6` |
+| Emails con el diseño glass de la app | `88229b7` |
 
 ---
 
