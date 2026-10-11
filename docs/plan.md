@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 11 oct 2026 (noche). Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan tiene dónde estamos, lo que falta, las decisiones vigentes y los riesgos.
+> Al día: 11 oct 2026 (noche, tras cerrar Resend). Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan tiene dónde estamos, lo que falta, las decisiones vigentes y los riesgos.
 
 ---
 
@@ -12,11 +12,12 @@
   - **Supabase:** proyecto «eternity» (ref `crbwqaxpeexeonffuiyo`, East US, plan gratis), con los 30 cambios de base de datos, el registro libre cerrado y «Confirm email» activado (los usuarios se crean ya confirmados).
   - **Vercel:** proyecto `dashboard-de-ventas` en la cuenta gratis (Hobby) `cristianortizmaestria-9940`, unida al GitHub `eternitydevzz`. 6 variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `APP_URL` (Config); `SUPABASE_SECRET_KEY`, `CLAVE_CIFRADO` y `RESEND_API_KEY` (Secret). Cada cambio que se sube a `main` se publica solo.
   - **Maestria preparada:** 4 pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY AI Services), «Callers» (7 columnas, con «Link enviado») y «Closers» (13), y 4 productos (Membresía 47 $, Grupal 1.997 $, VIP 4.997 $, DFY a medida).
-  - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub).
+  - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub). Hay un tercero, `…-2026-10-10-22-30.csv`, con los mismos 2 perfiles de prueba (creado el 10 oct por la noche; sin comprobar si sus contraseñas aún valen: la que funciona hoy es la de `…-13-46`).
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
 - **En local:** 445 tests (441 pasan y 4 de velocidad que solo se lanzan a mano). **Suite completa pasada entera el 11 oct** (tras Resend y el diseño de los emails), con Docker encendido unos minutos. La app compila; 30 cambios de base de datos.
 - **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
-- **Resend (emails) funcionando** (4.1, 11 oct): dominio «Verified» y probado en la nube: el enlace mágico entra y no se puede reutilizar, y el aviso de un reporte llega por email (los dos a «Recibidos», no a spam).
+- **Resend (emails) terminado** (4.1, 11 oct): dominio «Verified» y probado en la nube: el enlace mágico entra y no se puede reutilizar, y el aviso de un reporte llega por email (los dos a «Recibidos», no a spam), con el diseño glass de la app.
+- **Proyecto «Test» en la nube** (de Cristian): solo con el CEO; sirve para probar en la nube sin avisar a los directores. Tiene 2 reportes de prueba de caller-test (10 y 11 oct).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ## 2. Pendiente de que decidas tú
@@ -27,6 +28,10 @@
 | Pasar Vercel a Pro (el plan gratis es para uso no comercial, según sus condiciones; sin volver a comprobar hoy) | Cuando tengas una tarjeta que funcione: se mueve el proyecto o se conecta la otra cuenta. |
 | `calcularVendedores` quedó sin uso en la app (solo lo usan 3 tests) | Quitarlo con sus tests cuando haya un rato. |
 | En Proyecto Prueba (local) queda una venta antigua de prueba (9 oct) a nombre del CEO (Ana sale con «1 cerrada · 0 €») | Borrarla o pasarla a Ana; solo afecta a las pruebas en local. |
+| Al enviar el reporte, al caller le sale «Tu director ya tiene el aviso» aunque solo lo reciba el CEO (o nadie más) | Cambiarlo a «Reporte enviado. Tu equipo ya tiene el aviso.» (2 minutos). |
+| Los 2 reportes de prueba en «Test» (10 y 11 oct) | Dejarlos: solo se ven en «Test» y el perfil no cuenta en cifras. |
+| El CSV `usuarios-creados-2026-10-10-22-30.csv` (los mismos 2 perfiles de prueba, del 10 oct) | Borrarlo tú junto con los otros cuando mandes los accesos. |
+| Archivos que dejé en `PROYECTOS/GENERAL/.playwright-mcp/` para las capturas (`captura.js`, `ver-enlace.js`, `ver-reporte.js`: solo las muestras de email, sin claves) | Borrarlos (con tu permiso). |
 
 ## 3. Lo siguiente, en orden
 
@@ -37,9 +42,9 @@
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
 | 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado, probado en la nube y con el diseño glass (11 oct) |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
-| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente** (Cristian ya está dentro de GHL) |
+| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente**: antes, 3 respuestas de Cristian (ver 5 · «Para conectar GHL») |
 | 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
-| 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 2 archivos de contraseñas | Cristian | Pendiente |
+| 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 3 archivos de contraseñas | Cristian | Pendiente |
 | 9 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
 | 10 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
 | 11 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
@@ -50,7 +55,7 @@
 
 **Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado).
 
-### 4.1 Bloque 6 · Emails con Resend (11 oct, en marcha)
+### 4.1 Bloque 6 · Emails con Resend ✅ (11 oct)
 **Decisiones de Cristian (11 oct):** remitente `Eternity <no-reply@eternity.llc>` (dominio raíz, no subdominio); la app manda ella misma los emails con Resend (no se toca el correo de Supabase); se hace todo el bloque.
 - [x] Dominio `eternity.llc` añadido en Resend (región North Virginia); registros en GoDaddy con «Auto configure»: `send` y `rsend` (CNAME) y `resend._domainkey` (TXT). El correo de Google Workspace (MX y SPF de la raíz) no se ha tocado.
 - [x] **Resend: dominio «Verified»** (comprobado en el panel de Resend el 11 oct).
@@ -59,11 +64,10 @@
 - [x] **`RESEND_API_KEY` en Vercel** (la creó y la pegó Cristian) y publicado otra vez (`ed40af6`). Comprobado en la nube que `/auth/confirm` responde.
 - [x] Probado de verdad (11 oct): enlace mágico a `info@eternity.llc` desde la ficha → «Delivered» en Resend, llega a Recibidos, Cristian entra (Supabase: `login` 16:47) y al reutilizarlo da 403 «One-time token not found». Reporte de caller-test en el proyecto «Test» (allí no hay directores, así que solo avisa al CEO) → email «Test · Reporte de Caller Test» con todas las respuestas, en Recibidos.
 - [x] **Caller-test fuera del proyecto «Test»** (lo quitó Cristian el 11 oct; comprobado en la base: en «Test» solo queda el CEO y caller-test sigue activo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
-- [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, también visto en Gmail.
-- [ ] Mejora pequeña (sin decidir): al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
+- [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, también visto en Gmail («Tu enlace para entrar en Test»).
+- La frase «Tu director ya tiene el aviso» está en la sección 2 (sin decidir).
 - [x] **Nombre «—» en las tarjetas de Reportes** · `850a8c9`: la página buscaba los nombres en `equipo()`, que deja fuera los perfiles de prueba (`es_prueba`) y a quien ya no está; ahora busca también ahí (con `conBajas`). Publicado y **visto en pantalla** (11 oct, como caller-test: «Caller Test» en las dos tarjetas).
 - [x] **Primer clic que no abre** (Reportes, y luego la ficha en Equipo y en Administración): **no es de la app, es de la herramienta de Claude**. Comprobado el 11 oct con un registro de eventos en la página: al pulsar por referencia, a la página no le llegó ningún evento (0); al pulsar por coordenadas le llegó el clic completo y la ficha se abrió. Sin cambios en el código.
-- [x] Email del enlace mágico con el diseño nuevo **visto en Gmail** (11 oct, «Tu enlace para entrar en Test»).
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
@@ -81,6 +85,7 @@
 - [ ] Actualizar la herramienta de Supabase de mi Mac (de la 2.90 a la 2.120) cuando ejecutes `brew trust supabase/tap`. Hoy funciona con la 2.90.
 
 ### 4.3 Conectar GHL (sigo `GUIA-GHL.md`)
+- [ ] **Primero, las respuestas de Cristian:** qué calendario (o calendarios) hay detrás de `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo; si empezamos por «Cita agendada»; y si GHL está abierto en su Chrome para mirarlo juntos.
 - [ ] **Antes de nada, comprobar que GHL manda todas las citas** (su lista no va por páginas): si llegara incompleta, la app cancelaría citas buenas. Se prueba con un closer con muchas citas antes de activar la sincronización para todos.
 - [ ] Workflows: «Lead nuevo» y **«Cita agendada» (imprescindible: es el que da la agenda a los callers con el sistema del link)**; «Cambio de etapa» si hace falta; avisos de reportes. Comprobar en Administración → Integraciones → «Últimos eventos».
 - [ ] Token de GHL y calendarios de cada closer (Administración → Integraciones y ficha de cada closer). El token lo pegas tú.
@@ -119,13 +124,14 @@
 - [x] Resend «Verified»: enlace mágico y reporte probados (11 oct).
 - [ ] **Google Workspace:** Gmail avisa de que no puede renovar la suscripción; hay que actualizar el pago **antes del 2 nov 2026** o `info@eternity.llc` deja de recibir correo (y con él los avisos y enlaces de la app).
 - [x] Link de agenda: `https://codigomaestria.com/agenda` (puesto, 11 oct).
-- [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 2 archivos** de contraseñas (lo haces tú).
+- [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 3 archivos** `usuarios-creados-…csv` de contraseñas (lo haces tú).
 - [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
 ### Para conectar GHL (paso 6, el siguiente)
 - [ ] El token de GHL (Private Integration) y los ids de calendario de cada closer (los pegas tú).
 - [ ] Crear en GHL los workflows que te indique.
-- [ ] Decirme qué calendario (o calendarios) de GHL hay detrás de la landing `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo.
+- [ ] Decirme qué calendario (o calendarios) de GHL hay detrás de la landing `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo (¿uno que reparte o uno por closer?).
+- [ ] Decirme si empezamos por el workflow «Cita agendada» y si tienes GHL abierto en tu Chrome.
 
 ### Después de GHL (paso 7)
 - [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
@@ -225,6 +231,7 @@
 | Bloque 6 · Resend: avisos de reportes por email, enlace mágico, `/auth/confirm`; publicado con la clave | `e2fefba`, `ed40af6` |
 | Emails con el diseño glass de la app | `88229b7` |
 | Reportes: nombre de perfiles de prueba y bajas | `850a8c9` |
+| Plan: pruebas de Resend, diseño visto en Gmail, «primer clic» explicado | `1bc14d9` … `da43f49` |
 
 ---
 
@@ -258,7 +265,8 @@
 - **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
 - **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
 - **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.
-- **Perfiles de prueba en la nube:** closer-test@ y caller-test@eternity.llc (contraseñas en `scripts/salida/usuarios-creados-2026-10-11-13-46.csv`; no cuentan en cifras).
+- **Perfiles de prueba en la nube:** closer-test@ y caller-test@eternity.llc (contraseñas en `scripts/salida/usuarios-creados-2026-10-11-13-46.csv`; no cuentan en cifras). Para probar en la nube sin avisar a nadie: añadirlos al proyecto «Test» y quitarlos al acabar.
+- **Para Claude con el navegador:** los clics «por referencia» a veces no llegan a la página (comprobado el 11 oct); pulsar por coordenadas. Las ventanas del navegador (`confirm`) las tiene que aceptar Cristian.
 - **Usuarios de prueba en local** (`@eternity.test`, contraseña en `scripts/seed.mjs`): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@.
 - **Datos locales:** Maestria = 1.005 leads reales de la Biblioteca (no se toca en las pruebas). Proyecto Prueba = donde pruebo.
 - **Para programar:** toda ventana nueva va dentro de `<Portal>`.
