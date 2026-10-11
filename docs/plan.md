@@ -19,6 +19,8 @@
 |---|---|
 | Mis criterios (sección 6.2) | Revisarlos en tu revisión (paso 3). |
 
+**Decidido el 11 oct (noche): se publica YA, sin Resend** (el equipo entra con email y contraseña; sin enlaces mágicos ni cambio de email hasta tener Resend); «cerrar moviendo a Cerrados» y la zona horaria, **después de publicar**. Cristian ya tiene cuentas de GitHub, Supabase y Vercel.
+
 Decidido el 11 oct: la lista de «imprescindible para publicar» (4.2) se queda tal cual; todas las mejoras de la 4.4 van **antes de publicar**; la zona horaria, como dice la 6.1. Resend sigue sin cuenta ni DNS.
 
 Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba (9 oct) a nombre del CEO, por eso Ana sale con «1 cerrada · 0 €»; y `calcularVendedores` quedó sin uso en la app (¿quitarlo con sus 3 tests?).

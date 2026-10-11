@@ -64,7 +64,7 @@ supabase db push
 
 1. Crea una cuenta en vercel.com entrando **con tu cuenta de GitHub**.
 2. «Add New → Project» → elige el repositorio `eternity`.
-3. **Root Directory:** `app` (el código está en esa carpeta).
+3. **Root Directory:** déjalo **vacío** (el repositorio ya empieza en la carpeta `app`; corregido el 11 oct).
 4. **Environment Variables:** añade las 3 del paso 2 (los nombres están en `app/.env.example`):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
