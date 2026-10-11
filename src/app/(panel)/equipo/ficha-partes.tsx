@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
-import { actualizarMiembro, cambiarPassword, quitarDelProyecto } from "@/app/(panel)/admin/acciones";
+import { actualizarMiembro, cambiarPassword, enviarEnlaceMagico, quitarDelProyecto } from "@/app/(panel)/admin/acciones";
 import { guardarPermisoPipeline } from "@/app/(panel)/crm/acciones";
 import { borrarCuentaFathom, guardarCuentaFathom } from "@/app/(panel)/closer/llamadas/acciones-fathom";
 import { cambiarEmailPersona, guardarContactoPersona, marcarPrueba, type cargarFicha } from "./ficha-acciones";
@@ -54,8 +54,8 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
           <button type="button" className="btn-secundario" disabled={pendiente || pass.length < 8} onClick={() => ejecutar(async () => { await exigirOk(cambiarPassword(p.id, pass)); setPass(""); }, "Contraseña cambiada")}>Cambiar contraseña</button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-secundario" disabled title="Necesita Resend (bloque 6)">Enviar enlace mágico</button>
-          <span className="text-xs text-texto-3">Necesita Resend (bloque 6).</span>
+          <button type="button" className="btn-secundario" disabled={pendiente} onClick={() => ejecutar(() => enviarEnlaceMagico(p.id), `Enlace enviado a ${p.email}`)}>Enviar enlace mágico</button>
+          <span className="text-xs text-texto-3">Le llega un email para entrar sin contraseña (caduca en 1 hora).</span>
         </div>
         {!p.onboarding_completo && <p className="text-xs text-aviso">Aún no ha hecho el onboarding.</p>}
       </Bloque>

@@ -14,7 +14,8 @@
   - **Maestria preparada:** 4 pipelines de origen (Webinar 1, Biblioteca Recursos, Orgánico, DFY AI Services), «Callers» (7 columnas, con «Link enviado») y «Closers» (13), y 4 productos (Membresía 47 $, Grupal 1.997 $, VIP 4.997 $, DFY a medida).
   - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub).
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
-- **En local:** 431 tests pasan, la app compila, 30 cambios de base de datos.
+- **En local:** 436 tests (431 + 5 de emails; con Docker apagado solo se pasan los 192 rápidos), la app compila, 30 cambios de base de datos.
+- **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
 - **Sin Resend** (decisión de Cristian, 11 oct): no hay enlaces mágicos ni cambio de email por correo; el equipo entra con email y contraseña.
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
@@ -34,14 +35,14 @@
 | 1 | Pasada de punta a punta (Proyecto Prueba, 1.005 leads) | Cristian, Claude guió | ✅ Hecha (11 oct) |
 | 2 | Mejoras de la 4.4 antes de publicar (los 4 puntos de la pasada y agendar por link de GHL) | Claude | ✅ Hechas (11 oct) |
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
-| 4 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | **Ahora** |
+| 4b | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Después de Resend |
 | 5 | **Link de agenda** en Administración → Proyecto y reparto | Cristian me pasa el link | Pendiente |
 | 6 | **Mandar los accesos al equipo** por WhatsApp y borrar los 2 archivos de contraseñas | Cristian | Pendiente |
 | 7 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | Pendiente |
 | 8 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
 | 9 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
 | 10 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
-| — | Bloque 6 · Resend (4.1) | Claude | Aplazado: falta la cuenta de Resend y los DNS (5) |
+| 4 | **Bloque 6 · Resend** (4.1) | Los dos | **Ahora** (Cristian, 11 oct: antes que los leads y GHL) |
 
 ---
 
@@ -49,12 +50,14 @@
 
 **Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado).
 
-### 4.1 Bloque 6 · Emails con Resend (aplazado; commit propio)
-- [ ] Envío de emails desde la app con la clave de Resend: los avisos de los reportes por email (el WhatsApp sigue por el workflow de GHL).
-- [ ] Supabase manda sus emails (enlaces mágicos y cambios de email) por Resend, desde @eternity.llc. Sin email de bienvenida.
-- [ ] Activar «Enviar enlace mágico» en la ficha de cada persona (hoy está desactivado esperando este bloque).
-- [ ] Poner al día `.env.example`, `GUIA-PUBLICAR.md` y `GUIA-GHL.md` Parte 2.
-- Datos de Resend ([su guía](https://resend.com/docs/send-with-supabase-smtp)): servidor `smtp.resend.com`, puerto 465, usuario `resend`, la clave como contraseña y el dominio verificado.
+### 4.1 Bloque 6 · Emails con Resend (11 oct, en marcha)
+**Decisiones de Cristian (11 oct):** remitente `Eternity <no-reply@eternity.llc>` (dominio raíz, no subdominio); la app manda ella misma los emails con Resend (no se toca el correo de Supabase); se hace todo el bloque.
+- [x] Dominio `eternity.llc` añadido en Resend (región North Virginia); registros en GoDaddy con «Auto configure»: `send` y `rsend` (CNAME) y `resend._domainkey` (TXT). El correo de Google Workspace (MX y SPF de la raíz) no se ha tocado.
+- [ ] **Resend: dominio «Verified»** (los registros tardaban en verse desde fuera; volver a pulsar «Verify DNS Records»).
+- [x] Código: `src/lib/email.ts` (envío con Resend), los avisos de reportes también por email al CEO y a los directores, «Enviar enlace mágico» activo en la ficha (solo administradores), página `/auth/confirm` que recibe el enlace (caduca en 1 h, un solo uso) y aviso en el login si el enlace no vale. 5 tests nuevos (servidor local en lugar de Resend); probado en local que el enlace crea la sesión y no se puede reutilizar.
+- [x] `APP_URL` puesta en Vercel. `.env.example`, `GUIA-PUBLICAR.md` (paso 4 bis) y `GUIA-GHL.md` (el email ya no hace falta en GHL) al día.
+- [ ] **`RESEND_API_KEY` en Vercel** (la crea y la pega Cristian) y volver a publicar.
+- [ ] Probar de verdad: un enlace mágico a Cristian y un reporte de prueba.
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).

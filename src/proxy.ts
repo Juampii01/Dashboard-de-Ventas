@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const ruta = request.nextUrl.pathname;
-  const publica = ruta.startsWith("/login") || ruta.startsWith("/api/webhooks");
+  const publica = ruta.startsWith("/login") || ruta.startsWith("/api/webhooks") || ruta === "/auth/confirm"; // bloque 6: enlace mágico
   if (!user && !publica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

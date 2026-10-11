@@ -4,6 +4,7 @@ import { FormularioLogin } from "./formulario";
 const ERRORES: Record<string, string> = {
   "sin-acceso": "Tu usuario está desactivado. Habla con tu director.",
   "sin-proyecto": "Todavía no tienes ningún proyecto asignado. Habla con tu director.",
+  enlace: "Ese enlace ya se usó o ha caducado (dura 1 hora). Entra con tu contraseña o pide otro enlace.",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {

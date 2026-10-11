@@ -76,6 +76,17 @@ supabase db push
 5. Pulsa **Deploy**. En unos minutos tendrás una dirección tipo `eternity-xxxx.vercel.app`.
 6. Recomendado: en Settings → Functions, región **Washington, D.C. (iad1)** para que esté junto a Supabase. ⚠ comprobar.
 
+## Paso 4 bis · Emails con Resend (bloque 6, 11 oct 2026)
+
+La app manda 2 emails: el **aviso de cada reporte** (al CEO y a los directores) y el **enlace mágico** que un administrador manda desde la ficha de una persona (para entrar sin contraseña; caduca en 1 hora). Los manda la propia app con Resend, desde `Eternity <no-reply@eternity.llc>`; no se toca el correo de Supabase.
+
+1. **Dominio en Resend:** resend.com → Domains → Add domain → `eternity.llc`, región **North Virginia**. «Auto configure» con GoDaddy añade 3 registros: `send` y `rsend` (CNAME) y `resend._domainkey` (TXT, DKIM). El correo de Google Workspace (MX y SPF de la raíz) no se toca. Después, «Verify DNS Records» y esperar a «Verified» (puede tardar de minutos a horas).
+2. **Clave:** Resend → API Keys → Create → permiso «Sending access» y dominio `eternity.llc`. Se copia una sola vez.
+3. **Vercel → Environment Variables:** `RESEND_API_KEY` (tipo Secret, la clave) y `APP_URL` = `https://dashboard-de-ventas-iota.vercel.app` (tipo Config). Después, volver a publicar (Deployments → Redeploy, o subir un cambio).
+4. **Probar:** en la app, Equipo → ficha de alguien → «Enviar enlace mágico»; y mandar un reporte de prueba (le llega el email al CEO y a los directores).
+
+**Si algo falla:** el aviso del botón dice el motivo que da Resend (por ejemplo, dominio sin verificar). En Resend → Logs se ve cada envío.
+
 ## Paso 5 · Preparar el proyecto Maestria
 
 Crea el proyecto con sus 4 pipelines de origen, sus columnas y sus productos (los de `app/scripts/proyecto-base.json`); la base añade sola los pipelines del equipo «Callers» y «Closers»:

@@ -12,6 +12,7 @@ import { SECCIONES_TODAS, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/li
 import type { RolPermiso } from "@/lib/permisos-constantes";
 import { ajustesValidos, type AjustesCalendario } from "@/lib/disponibilidad";
 import type { Rol } from "@/lib/tipos";
+import { enviarEmail, urlApp } from "@/lib/email";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
 type Res = { ok?: string; error?: string } | null;
@@ -76,6 +77,31 @@ export async function cambiarPassword(perfilId: string, password: string) {
     if (error) throw new ErrorUsuario(error.message);
   });
 }
+
+// Bloque 6 (Cristian, 11 oct 2026): un administrador manda a alguien del proyecto un enlace para entrar sin
+// contraseña. La app genera el enlace (Supabase) y lo envía ella misma con Resend; caduca en 1 hora.
+export async function enviarEnlaceMagico(perfilId: string) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigir(puedeAdmin);
+    const { data: miembro } = await db().from("miembros_proyecto").select("perfil_id").eq("proyecto_id", proyecto.id).eq("perfil_id", perfilId).maybeSingle();
+    if (!miembro) throw new ErrorUsuario("Esa persona no está en este proyecto.");
+    const { data: objetivo } = await db().from("perfiles").select("nombre, email, rol, activo").eq("id", perfilId).single();
+    if (!objetivo?.activo) throw new ErrorUsuario("Esa persona está desactivada.");
+    if (perfil.rol !== "ceo" && objetivo.rol === "ceo") throw new ErrorUsuario("Solo el CEO puede tocar a otro CEO.");
+    const { data, error } = await db().auth.admin.generateLink({ type: "magiclink", email: objetivo.email });
+    if (error || !data?.properties?.hashed_token) throw new ErrorUsuario("No se pudo generar el enlace. Prueba otra vez.");
+    const enlace = `${urlApp()}/auth/confirm?token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=magiclink`;
+    const r = await enviarEmail({
+      para: [objetivo.email],
+      asunto: `Tu enlace para entrar en ${proyecto.nombre} · Eternity`,
+      texto: `Hola ${objetivo.nombre}:\n\nPulsa este enlace para entrar en la app de ventas de Eternity (caduca en 1 hora y solo vale una vez):\n\n${enlace}\n\nSi no lo has pedido tú, ignora este email.`,
+      html: `<p>Hola ${escaparHtml(objetivo.nombre)}:</p><p>Pulsa el botón para entrar en la app de ventas de Eternity. Caduca en 1 hora y solo vale una vez.</p><p><a href="${enlace}" style="display:inline-block;padding:12px 20px;background:#7a1f2b;color:#fff;border-radius:8px;text-decoration:none">Entrar en Eternity</a></p><p style="color:#666;font-size:13px">Si no lo has pedido tú, ignora este email.</p>`,
+    });
+    if (!r.enviado) throw new ErrorUsuario(`No se pudo enviar el email (${r.motivo}).`);
+  });
+}
+
+const escaparHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 // ---------- Reparto automático con % (bloque 2 de 1.0, Cristian 11 oct 2026) ----------
 // Encendido: los % de los callers tienen que sumar 100. Apagado: todo al 0 % o que sumen 100 (se guardan para luego).

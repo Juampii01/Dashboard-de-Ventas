@@ -89,7 +89,7 @@ La app es el CRM principal, así que **normalmente no hace falta**. Úsalo solo 
 2. En la app: **Administración → Proyecto y reparto → «Webhook de avisos»** → pega esa URL → Guardar.
 3. Envía un reporte de prueba desde la app (como caller o closer). GHL necesita recibir uno para saber qué campos llegan.
 4. En el workflow de GHL añade las acciones de aviso:
-   - **Email** y **WhatsApp** (o «Internal Notification») al director y al CEO. ⚠ comprobar el nombre de la acción en tu cuenta.
+   - **WhatsApp** (o «Internal Notification») al director y al CEO. ⚠ comprobar el nombre de la acción en tu cuenta. **El email ya lo manda la app con Resend** (bloque 6, 11 oct): no hace falta añadirlo en GHL (si lo añades, les llegará dos veces).
    - En el cuerpo del mensaje usa el campo **`texto`**: es el reporte entero ya redactado, listo para leer.
 5. Envía otro reporte y comprueba que llega el aviso.
 
