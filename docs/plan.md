@@ -40,7 +40,7 @@
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
 | 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado, probado en la nube y con el diseño glass (11 oct) |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
-| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **En marcha**: ✅ lead nuevo de Biblioteca publicado (11 oct). Siguiente: agendas («Cita agendada») |
+| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **En marcha**: ✅ lead nuevo de Biblioteca (entran leads reales) y ✅ workflows de citas publicados (11 oct). Falta probar una cita real y crear los closers Cristian y José |
 | 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
 | 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 3 archivos de contraseñas | Cristian | Pendiente |
 | 9 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
@@ -90,7 +90,11 @@
   - **Sin comprobar todavía:** con el workflow publicado, un lead real que entre por la landing (que llegue solo, con la etiqueta «biblioteca recursos»; en la prueba manual llegó sin etiquetas porque «Test workflow» no la pone). Un lead que repite y ya tiene la etiqueta quizá no vuelva a dispararlo (sin comprobar).
   - Falta borrar en GHL el contacto «PRUEBA Dashboard» (`info+prueba@eternity.llc`): lo hace Cristian. En Administración → Entradas → «GHL · Biblioteca» queda el registro del envío de prueba.
 - [ ] Fallo pequeño visto: en Administración → Entradas sale «En local (localhost) las landings no pueden llegar…» aunque la app está publicada.
-- [ ] Antes de las agendas: qué calendario (o calendarios) hay detrás de `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo.
+- [x] **Leads reales entrando** (11 oct): desde las 17:54 UTC, 6 leads de Biblioteca con la etiqueta «biblioteca recursos». 3 llegaron sin respuestas porque GHL ya las mandó vacías (sin mirar en GHL por qué).
+- [x] **Citas → app** (11 oct, decisión de Cristian: 2 workflows y Wait de 999 días al final). Calendarios de GHL (los dos Round robin, 45 min): **«#2 Callers - Maestria»** (Andrés y Renzo; emails iguales que en la app) y **«#3 Closers - Maestria»** (Cristian `cristianortiz@astraire.com` y José `jose@eternity.llc`). En la carpeta «1. Dashboard ventas», **publicados**: **«1. AP - Cita Callers»** y **«2. AP - Cita Closers»** = «Customer booked appointment» (filtro «In calendar») → **Webhook normal** «Cita (app)» a `/api/webhooks/ghl/<Maestria>` con Custom data `tipo=cita_agendada`, `fecha` = Appointment · Start Date Time, `closer_email` = Appointment · Assigned User · Email, y cabecera `x-eternity-secreto` (clave de Maestria, `704d0dde…`) → Wait 999 días. (El 2 es copia del 1 con el otro calendario.)
+  - **Sin probar:** ninguna cita ha llegado todavía. No se sabe el formato de «Start Date Time» (si llega como texto sin zona, la hora podría quedar mal). Para probar hace falta una reserva real (avisa al closer).
+  - **Decisión de Cristian:** crear en la app **2 closers, Cristian y José**, con sus emails de GHL (las cuentas las crea Cristian). Hasta entonces, las citas de «#3 Closers» llegan sin closer.
+  - Aprendido: la clave de la A (ya borrada) era la del proyecto «Test» (`86b6dd79…`), no la de Maestria.
 - [ ] **Antes de nada, comprobar que GHL manda todas las citas** (su lista no va por páginas): si llegara incompleta, la app cancelaría citas buenas. Se prueba con un closer con muchas citas antes de activar la sincronización para todos.
 - [ ] Workflows: «Lead nuevo» y **«Cita agendada» (imprescindible: es el que da la agenda a los callers con el sistema del link)**; «Cambio de etapa» si hace falta; avisos de reportes. Comprobar en Administración → Integraciones → «Últimos eventos».
 - [ ] Token de GHL y calendarios de cada closer (Administración → Integraciones y ficha de cada closer). El token lo pegas tú.
