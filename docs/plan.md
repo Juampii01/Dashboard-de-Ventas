@@ -40,7 +40,7 @@
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
 | 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado, probado en la nube y con el diseño glass (11 oct) |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
-| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente**: antes, 3 respuestas de Cristian (ver 5 · «Para conectar GHL») |
+| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **En marcha**: ✅ lead nuevo de Biblioteca publicado (11 oct). Siguiente: agendas («Cita agendada») |
 | 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
 | 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 3 archivos de contraseñas | Cristian | Pendiente |
 | 9 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
@@ -84,7 +84,13 @@
 - [ ] Actualizar la herramienta de Supabase de mi Mac (de la 2.90 a la 2.120) cuando ejecutes `brew trust supabase/tap`. Hoy funciona con la 2.90.
 
 ### 4.3 Conectar GHL (sigo `GUIA-GHL.md`)
-- [ ] **Primero, las respuestas de Cristian:** qué calendario (o calendarios) hay detrás de `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo; si empezamos por «Cita agendada»; y si GHL está abierto en su Chrome para mirarlo juntos.
+- [x] **Lead nuevo de Biblioteca → app, automático** (11 oct, decisión de Cristian: primero leads, después agendas). En GHL (subcuenta Maestria), carpeta «1. Dashboard ventas», workflow **«0. AP - Biblioteca»**, **publicado** por Cristian: disparador «Contact Tag» = se añade «biblioteca recursos» (la etiqueta la pone el workflow de siempre, «AP - Biblioteca de recursos», que no se ha tocado) → acción **«B · Webhook (Entrada)»** (Webhook normal, no premium) a la Entrada de la app **«GHL · Biblioteca»** (Maestria → Administración → Entradas; pipeline Biblioteca Recursos, primera columna) → «Wait» (lo puso Cristian).
+  - Probado con «Test workflow» y el contacto «PRUEBA Dashboard»: el lead entró en Maestria · Biblioteca Recursos con su id de GHL y **las 6 respuestas** con su pregunta exacta (GHL manda todos los campos del contacto por su nombre). Lead de prueba borrado después (con permiso; Maestria vuelve a 0 leads).
+  - **Se descartó la A** («Custom webhook», premium): GHL la saltó con «COMPANY does not have enough funds» (la subcuenta no tiene saldo para acciones premium). Quitada del workflow.
+  - **Sin comprobar todavía:** con el workflow publicado, un lead real que entre por la landing (que llegue solo, con la etiqueta «biblioteca recursos»; en la prueba manual llegó sin etiquetas porque «Test workflow» no la pone). Un lead que repite y ya tiene la etiqueta quizá no vuelva a dispararlo (sin comprobar).
+  - Falta borrar en GHL el contacto «PRUEBA Dashboard» (`info+prueba@eternity.llc`): lo hace Cristian. En Administración → Entradas → «GHL · Biblioteca» queda el registro del envío de prueba.
+- [ ] Fallo pequeño visto: en Administración → Entradas sale «En local (localhost) las landings no pueden llegar…» aunque la app está publicada.
+- [ ] Antes de las agendas: qué calendario (o calendarios) hay detrás de `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo.
 - [ ] **Antes de nada, comprobar que GHL manda todas las citas** (su lista no va por páginas): si llegara incompleta, la app cancelaría citas buenas. Se prueba con un closer con muchas citas antes de activar la sincronización para todos.
 - [ ] Workflows: «Lead nuevo» y **«Cita agendada» (imprescindible: es el que da la agenda a los callers con el sistema del link)**; «Cambio de etapa» si hace falta; avisos de reportes. Comprobar en Administración → Integraciones → «Últimos eventos».
 - [ ] Token de GHL y calendarios de cada closer (Administración → Integraciones y ficha de cada closer). El token lo pegas tú.
