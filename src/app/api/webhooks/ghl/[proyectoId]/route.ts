@@ -6,6 +6,7 @@ import { datosAgendaGhl, guardarLeads, telefonoClave, type LeadEntrada } from "@
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
+import { fechaDeGhl } from "@/lib/formato";
 
 // Recibe eventos de los workflows de GHL (acción «Webhook»).
 // Campo `tipo`: lead_nuevo | cita_agendada | cambio_etapa.
@@ -110,9 +111,16 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
     } else if (tipo === "cita_agendada") {
       const lead = await buscarOCrearLead(proyecto, body);
       if (!lead) throw new Error("No se pudo identificar el lead");
-      const inicio = primero(body, ["fecha", "calendar.startTime", "appointment.start_time", "start_time", "startTime", "customData.fecha"]);
-      const fecha = new Date(inicio);
-      if (!inicio || isNaN(fecha.getTime())) throw new Error("La cita no trae fecha");
+      // 11 oct 2026: GHL manda calendar.startTime sin zona ("2026-10-14T15:30:00", hora de calendar.selectedTimezone).
+      // Se prueba cada campo por orden y vale el primero que sea una fecha; sin zona, se lee en la del calendario
+      // (o la del proyecto). El texto tipo «Wednesday, October 14, 2026 9:30 PM» no vale (no trae zona).
+      const zonaCita = primero(body, ["calendar.selectedTimezone", "appointment.timezone", "timezone"]) || proyecto.zona_horaria;
+      let fecha: Date | null = null;
+      for (const c of ["fecha", "calendar.startTime", "appointment.start_time", "start_time", "startTime", "customData.fecha"]) {
+        const v = primero(body, [c]);
+        if (v && (fecha = fechaDeGhl(v, zonaCita))) break;
+      }
+      if (!fecha) throw new Error("La cita no trae fecha");
       const closerEmail = primero(body, ["closer_email", "customData.closer_email", "user.email", "assigned_user.email"]).toLowerCase();
       let closerId: string | null = null;
       // Arreglo 20: el closer se busca solo entre los miembros de este proyecto

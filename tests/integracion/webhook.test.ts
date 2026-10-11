@@ -97,6 +97,20 @@ describe("Arreglos 18, 19 y 20 del webhook de GHL", () => {
     expect((await enviar({ tipo: "cita_agendada", email, fecha: "2026-11-04T15:00:00Z" })).status).toBe(200); // otra hora: otra cita
     expect(await citaDe(l!.id)).toHaveLength(2);
   });
+  it("cita con el formato real de GHL: la hora sin zona se lee en la zona del calendario (11 oct 2026)", async () => {
+    // Copia del webhook que mandó GHL en la primera reserva de prueba (Webhook normal + Custom data)
+    const r = await enviar({
+      contact_id: `${e.pref}-real`,
+      email: `${e.pref}-real@x.test`,
+      first_name: "Real",
+      calendar: { startTime: "2026-10-14T15:30:00", selectedTimezone: "America/New_York", appointmentId: `${e.pref}-cita-real` },
+      customData: { tipo: "cita_agendada", fecha: "Wednesday, October 14, 2026 9:30 PM", closer_email: e.p.closerA.email },
+    });
+    expect(r.status).toBe(200);
+    const { data: cita } = await db.from("citas").select("fecha, closer_id").eq("ghl_cita_id", `${e.pref}-cita-real`).single();
+    expect(new Date(cita!.fecha).toISOString()).toBe("2026-10-14T19:30:00.000Z"); // 15:30 de Nueva York
+    expect(cita!.closer_id).toBe(e.p.closerA.id);
+  });
   it("20: un closer que no es de este proyecto no se asigna", async () => {
     await db.from("miembros_proyecto").delete().eq("proyecto_id", e.proyecto.id).eq("perfil_id", e.p.closerB.id);
     try {

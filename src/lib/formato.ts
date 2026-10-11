@@ -167,6 +167,24 @@ export function ahoraMs() {
   return Date.now();
 }
 
+// Fecha de una cita que manda GHL (11 oct 2026). calendar.startTime llega como "2026-10-14T15:30:00": hora del
+// reloj de la zona del calendario, sin zona. Si trae zona (Z o ±hh:mm) se respeta; si no, se lee en `zona`
+// (la que manda GHL o la del proyecto). Una zona que no existe se trata como UTC. Si no es una fecha, null.
+export function fechaDeGhl(valor: string, zona: string): Date | null {
+  const v = valor.trim();
+  const sinZona = v.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+  if (sinZona) {
+    try {
+      return new Date(localAIso(`${sinZona[1]}T${sinZona[2]}`, zona));
+    } catch {
+      return new Date(`${sinZona[1]}T${sinZona[2]}:00Z`);
+    }
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(v)) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // "2026-10-15T16:30" (hora local del proyecto) -> ISO en UTC.
 // Calcula el desfase para esa hora exacta (vale también en los días de cambio de hora).
 export function localAIso(local: string, zona: string) {

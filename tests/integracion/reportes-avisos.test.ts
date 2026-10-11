@@ -46,7 +46,7 @@ describe("Reporte de fin de día", () => {
   it("el closer envía su reporte: se guarda y el aviso lleva destinatarios, respuestas y tasas", async () => {
     como(e, e.p.closerA);
     const r = await enviarReporte(null, closerFd());
-    expect(r?.ok).toMatch(/director ya tiene el aviso/);
+    expect(r?.ok).toMatch(/equipo ya tiene el aviso/);
     const { data } = await db.from("reportes").select("rol, fecha, respuestas").eq("perfil_id", e.p.closerA.id).single();
     expect(data).toMatchObject({ rol: "closer", fecha: "2026-10-08" });
     expect(data!.respuestas).toMatchObject({ llamadas_realizadas: 8, ventas: 2, puntos_mejora: "Cerrar antes" });
