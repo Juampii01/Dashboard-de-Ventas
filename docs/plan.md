@@ -16,21 +16,21 @@
 
 | Qué | Mi propuesta |
 |---|---|
-| ¿Preparo la pasada de punta a punta (paso 1 de abajo)? | Sí, antes del bloque 6. |
-| Qué es imprescindible para publicar y qué puede esperar (sección 4.2) | Lo que puse; muévelo si quieres. |
-| Cuándo hacer las mejoras de la sección 4.4 y cómo cambiar la zona horaria | Después de tu revisión. |
-| Mis criterios (sección 6.2) | Revisarlos en tu revisión. |
+| Mis criterios (sección 6.2) | Revisarlos en tu revisión (paso 3). |
+
+Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «imprescindible para publicar» (4.2) se queda tal cual; las 3 mejoras de la 4.4 van **antes de publicar**, y la zona horaria, como dice la 6.1. Resend sigue sin cuenta ni DNS.
 
 ## 3. Lo siguiente, en orden
 
 | # | Qué | Quién | Estado |
 |---|---|---|---|
-| 1 | **Pasada de punta a punta contigo**: CSV → caller → agenda → venta → Funnel, con datos reales de la Biblioteca, en Proyecto Prueba. Es tu regla («hasta que la ves, no construyo lo siguiente») y aún no la has visto. | Claude la prepara, Cristian la mira | Lista para hacer |
+| 1 | **Pasada de punta a punta contigo**: CSV → caller → agenda → venta → Funnel, con datos reales de la Biblioteca, en Proyecto Prueba. Es tu regla («hasta que la ves, no construyo lo siguiente») y aún no la has visto. | Claude la prepara, Cristian la mira | **Siguiente** (decidido el 11 oct) |
 | 2 | **Bloque 6 · Emails con Resend** (sección 4.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (5.1) |
-| 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Se puede hacer ya, a la vez que el 2 |
-| 4 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2 y 3 |
-| 5 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
-| 6 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
+| 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Después de la pasada, a la vez que el 2 |
+| 4 | **Las 3 mejoras** (sección 4.4), una a una, con su commit | Claude | Después de 1 (Cristian, 11 oct: antes de publicar) |
+| 5 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2, 3 y 4 |
+| 6 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
+| 7 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
 
 ---
 
@@ -72,10 +72,10 @@
 - [ ] Probar con las claves reales: calendario de GHL, llamadas de GHL con Deepgram, Fathom y la IA (análisis, coach y puntuación).
 - [ ] Medir el gasto real de Claude y Deepgram los primeros días (calculado ~0,05-0,08 $ por llamada de 1 hora, sin medir).
 
-### 4.4 Mejoras apuntadas (decides tú cuándo; ninguna bloquea publicar)
+### 4.4 Mejoras (Cristian, 11 oct: antes de publicar; paso 4)
 - [ ] Que dos agendas a la vez no puedan dar el mismo closer a la misma hora (hoy es posible, aunque poco probable).
 - [ ] Que la ventana de agendar sugiera las horas libres del closer, en vez de solo avisar.
-- [ ] Que un administrador pueda cambiar la zona horaria del proyecto (Cristian, 11 oct). Mueve todas las fechas: hay que decidir cómo antes de hacerlo.
+- [ ] Que un administrador pueda cambiar la zona horaria del proyecto, como dice la 6.1. Lo comprobado hoy: la zona es `proyectos.zona_horaria` y la base solo acepta Nueva York y Madrid; las citas guardan el momento exacto (no se mueven, solo se ven en otra hora); los horarios guardan la hora del reloj sin zona (estos son los que hay que convertir); los reportes guardan solo el día; 39 archivos usan la zona. **Ojo al hacerlo:** la diferencia entre Nueva York y Madrid no es siempre 6 h (unas semanas de marzo y de octubre-noviembre es 5 h, por los cambios de hora), y un horario puede pasar al día siguiente al convertirlo (20:00-23:00 en Nueva York = 02:00-05:00 del día siguiente en Madrid). Hay que probar los dos casos.
 
 ---
 
@@ -128,6 +128,7 @@
 | Biblioteca | Primera pestaña de KPIs (director y CEO). Su clasificación («Oferta») es un dato de cada lead que se recalcula solo; no ordena la cola. Cada CSV nuevo pone al día los datos. |
 | Productos | Membresía (47 $/mes, sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (precio personalizado). Cada uno con link de pago y de dossier. |
 | Reparto de leads | Solo entre callers. A mano, con el botón (4 formas) o automático al entrar con % por caller que suman 100, apagado y al 0 % por defecto. Con «solo en su horario» y nadie en horario, se reparte igual entre los que tienen %. |
+| Zona horaria | La cambia un administrador; solo Nueva York o Madrid. Al cambiarla, los horarios de cada persona se convierten para que sigan a la misma hora real; lo ya guardado por día (reportes, objetivos, rachas) se queda como está (11 oct). |
 | Horario | En la hora del proyecto, con la del aparato al lado. Obligatorio en el onboarding de callers y closers; cada uno cambia el suyo en «Mi perfil» y un administrador, el de cualquiera. |
 | Llamadas de closers | Duración (30 min por defecto), descanso, aviso mínimo y máximo al día: solo el administrador, generales o por closer. |
 | Rotación de closers | % por closer y 3 modos: lo elige quien agenda (por defecto), lo propone o lo decide la rotación. Salta al siguiente si no está libre; con «decide» y nadie libre, no deja agendar. Al reagendar, el mismo closer y tiene que estar libre. Las citas de GHL no las toca. |
