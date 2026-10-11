@@ -200,7 +200,7 @@ Pendiente menor, sin prisa: en Proyecto Prueba queda una venta antigua de prueba
 | 4.4 · Vista previa automática al repartir | `f64f64a` |
 | 4.4 · Venta antes de la hora cierra la cita «ahora»; GHL no toca citas terminadas | `a094747` |
 | 4.4 · Funnel con una sola tabla por persona; venta desde la ficha al closer de la cita | `b6dbca1` |
-| 4.4 · Ranking con las mismas reglas que «KPIs por persona» | (este commit) |
+| 4.4 · Ranking con las mismas reglas que «KPIs por persona» | `d47c48e` |
 
 ---
 
