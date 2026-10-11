@@ -236,7 +236,7 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 | Paso G carga rápida (Funnel con 30.000 leads: ~2,8 s → ~1 s en local) · cash de Ventas como Finanzas · objetivos de periodos pasados · limpieza de datos de prueba · plan y guías en `app/docs/` | `6a887c6`, `2e3a407` |
 | 1.0 «Antes de todo» (Llamadas de GHL oculta, perfiles de prueba) y Bloque A (Biblioteca en KPIs, oferta de cada lead, reparto manual, productos renombrados, membresía mensual) | `fa6c34b` |
 | 1.0 Bloques 1 y 2 (horario como GHL, «Mi perfil», disponibilidad de closers, reparto automático con %) | `f102dce` |
-| 1.0 Bloques 3 y 4 (rotación de closers, comisiones por tramos, «Cuenta para comisión») | (commit de hoy) |
+| 1.0 Bloques 3 y 4 (rotación de closers, comisiones por tramos, «Cuenta para comisión») | `0f6c688` |
 
 **Comprobado el 11 oct (tras los bloques 3 y 4):** 411 tests pasan (4 de rendimiento se saltan, como siempre) · tsc y eslint limpios · `next build` correcto · `npm audit` de producción 0 · 28 migraciones (11 oct: `rotacion_closers` y `comisiones_tramos`) · 42 tablas, todas con RLS · nada subido a la nube.
 
