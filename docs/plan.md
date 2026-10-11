@@ -24,10 +24,10 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 
 | # | Qué | Quién | Estado |
 |---|---|---|---|
-| 1 | **Pasada de punta a punta contigo**: CSV → caller → agenda → venta → Funnel, con datos reales de la Biblioteca, en Proyecto Prueba. Es tu regla («hasta que la ves, no construyo lo siguiente») y aún no la has visto. | Claude la prepara, Cristian la mira | **Siguiente** (decidido el 11 oct) |
+| 1 | **Pasada de punta a punta contigo**: CSV → reparto → caller → agenda → venta → Funnel, con los 1.005 leads de la Biblioteca, en Proyecto Prueba. | Cristian la hizo, Claude guió y comprobó en la base | **Hecha (11 oct)**: funciona y los números cuadran; salieron 6 mejoras (4.4) y el cambio de agendar por link de GHL. Datos de la pasada borrados con permiso (las 37 tablas como antes). |
 | 2 | **Bloque 6 · Emails con Resend** (sección 4.1) | Claude | Bloqueado: falta la cuenta de Resend y los DNS (5.1) |
 | 3 | **Tu revisión completa** (5.2) y arreglar lo que salga | Cristian, luego Claude | Después de la pasada, a la vez que el 2 |
-| 4 | **Las 3 mejoras** (sección 4.4), una a una, con su commit | Claude | Después de 1 (Cristian, 11 oct: antes de publicar) |
+| 4 | **Las mejoras de la 4.4**, en su orden (primero los 4 puntos de la pasada, luego agendar por link de GHL, luego el resto), una a una, con su commit | Claude | **Siguiente** (Cristian, 11 oct: antes de publicar) |
 | 5 | **Publicar** (sección 4.2) | Los dos | Después de 1, 2, 3 y 4 |
 | 6 | **Conectar GHL** (sección 4.3) | Los dos | Después de publicar |
 | 7 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
@@ -73,8 +73,23 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 - [ ] Medir el gasto real de Claude y Deepgram los primeros días (calculado ~0,05-0,08 $ por llamada de 1 hora, sin medir).
 
 ### 4.4 Mejoras (Cristian, 11 oct: antes de publicar; paso 4)
-- [ ] Que dos agendas a la vez no puedan dar el mismo closer a la misma hora (hoy es posible, aunque poco probable).
-- [ ] Que la ventana de agendar sugiera las horas libres del closer, en vez de solo avisar.
+**Lo primero (salió en la pasada del 11 oct; antes de cada uno, preguntar a Cristian cómo lo quiere):**
+- [ ] «Repartir» apagado sin explicación: que diga «Pulsa primero Ver reparto» o que la vista previa salga sola.
+- [ ] La ficha del lead deja registrar la venta antes de la hora de la cita (el botón «Cerrada» de la cita no); la cita cuenta entonces como «asistida» sin haber pasado.
+- [ ] «Ventas» (Vendedores) y «Cerradas» (KPIs por persona) dan números distintos para la misma persona: una cuenta ventas a su nombre y la otra sus citas que acabaron en venta (pasa cuando un director registra la venta en la cita de un closer). Unificar o renombrar.
+- [ ] El método de pago sale «Stripe» por defecto.
+
+**Después: agendar por link de GHL (Cristian, 11 oct, tras hablar con el equipo):**
+- [ ] El caller manda al lead el link del calendario de GHL y el lead reserva solo. En la app el caller solo marca «Link enviado» (sin hora ni closer).
+- [ ] Cuenta como **agendado** (Funnel y KPIs del caller) solo cuando llega la cita de GHL; la hora y el closer salen de GHL.
+- [ ] Quitar la rotación de closers (% por closer y los 3 modos, hecha en `0f6c688`): el closer lo pone GHL.
+- [ ] Los directores y el CEO pueden seguir creando una cita a mano en la app (hora y closer), por ejemplo si el lead llama directamente.
+- [ ] Reagendar: las citas de GHL se reagendan en GHL (la app se pone al día sola; el botón de la app lo explica y no deja); las hechas a mano en la app, en la app. Motivo: la app solo lee el calendario de GHL y en cada sincronización manda la hora de GHL.
+- Quitadas del plan por este cambio: «calendario real del closer al agendar» y «que dos agendas no den el mismo closer» (los controla el calendario de GHL).
+- Solo se puede probar de verdad al publicar y conectar GHL; en local, con citas de GHL simuladas.
+
+**Después:**
+- [ ] **(Después de la pasada · Cristian, 11 oct)** Cerrar moviendo la tarjeta: al soltar una tarjeta en «Cerrados» de cualquier CRM se abre «Registrar venta» (producto, facturación, cash); al guardar queda cerrada en todos (estado del lead, Callers, «Cerradas» de Post-call y la cita) y cuenta en Funnel, Ventas y comisiones; si se cancela, la tarjeta vuelve a su sitio. Solo closers, directores y CEO (los callers no pueden soltar en «Cerrados»). Visto en la pasada: hoy mover a «Cerrados» no registra nada y la venta no cuenta.
 - [ ] Que un administrador pueda cambiar la zona horaria del proyecto, como dice la 6.1. Lo comprobado hoy: la zona es `proyectos.zona_horaria` y la base solo acepta Nueva York y Madrid; las citas guardan el momento exacto (no se mueven, solo se ven en otra hora); los horarios guardan la hora del reloj sin zona (estos son los que hay que convertir); los reportes guardan solo el día; 39 archivos usan la zona. **Ojo al hacerlo:** la diferencia entre Nueva York y Madrid no es siempre 6 h (unas semanas de marzo y de octubre-noviembre es 5 h, por los cambios de hora), y un horario puede pasar al día siguiente al convertirlo (20:00-23:00 en Nueva York = 02:00-05:00 del día siguiente en Madrid). Hay que probar los dos casos.
 
 ---
@@ -131,7 +146,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 | Zona horaria | La cambia un administrador; solo Nueva York o Madrid. Al cambiarla, los horarios de cada persona se convierten para que sigan a la misma hora real; lo ya guardado por día (reportes, objetivos, rachas) se queda como está (11 oct). |
 | Horario | En la hora del proyecto, con la del aparato al lado. Obligatorio en el onboarding de callers y closers; cada uno cambia el suyo en «Mi perfil» y un administrador, el de cualquiera. |
 | Llamadas de closers | Duración (30 min por defecto), descanso, aviso mínimo y máximo al día: solo el administrador, generales o por closer. |
-| Rotación de closers | % por closer y 3 modos: lo elige quien agenda (por defecto), lo propone o lo decide la rotación. Salta al siguiente si no está libre; con «decide» y nadie libre, no deja agendar. Al reagendar, el mismo closer y tiene que estar libre. Las citas de GHL no las toca. |
+| Agendar | (11 oct) Por link de GHL: el caller marca «Link enviado»; cuenta como agendado cuando llega la cita de GHL, con su hora y su closer. Directores y CEO pueden crear citas a mano. Las citas de GHL se reagendan en GHL; las de a mano, en la app. La rotación de closers se quita (4.4). |
 | Comisiones | Tramos mensuales en dólares, editables en Administración, sobre toda la facturación del mes; las cuotas, con el % del mes de la venta; se paga sobre lo cobrado. Callers y closers por tramos; CEO y directores con su % propio; interruptor por persona. Las devoluciones no descuentan lo pagado y siguen contando para su tramo. La Membresía no paga comisión ni suma para el tramo (casilla por producto). |
 | Ficha de cada persona | La misma en Equipo y en Administración. Datos y comisión para quien tiene Equipo; el resto, solo CEO y directores con Administración. La marca de prueba, solo el CEO; el email lo cambia el administrador directamente. |
 | Reporte | Preguntas editables en Administración; del closer, las 3 de las tasas son fijas. Cada reporte guarda sus preguntas. |
@@ -194,7 +209,7 @@ Decidido el 11 oct: la pasada de punta a punta se prepara ya; la lista de «impr
 - **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas.
 - **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil).
 - **Post-call:** mover una cita «reagendada» puede contar la misma reunión dos veces; sacar una venta de su columna la borra con sus cobros y comisiones (pide confirmación).
-- **Citas:** un lead puede tener dos citas a horas distintas, y dos agendas a la vez podrían dar el mismo closer (mejora en 4.4).
+- **Citas:** un lead puede tener dos citas a horas distintas. Con el agendar por link, la app depende aún más de que GHL mande bien las citas (ver «Citas de GHL» arriba).
 - **Onboarding de closers:** si dos closers le venden al mismo cliente, comparten la checklist.
 - **Clave del webhook en la dirección** (tu decisión): puede quedar en registros intermedios; la guía recomienda mandarla en la cabecera.
 - Riesgos bajos: los estilos admiten código en línea; el diseño glass puede ir algo más lento en equipos viejos.
