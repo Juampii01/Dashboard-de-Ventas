@@ -16,7 +16,7 @@
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
 - **En local:** 436 tests escritos (431 + 5 de emails). **Ojo:** la suite completa se pasó entera por última vez con 431 (antes de Resend). Después de Resend solo se han pasado los 192 rápidos y los 9 de emails y avisos (estos, con Docker encendido). **Falta pasar la suite completa** con Docker encendido. La app compila; 30 cambios de base de datos.
 - **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
-- **Resend (emails) casi listo** (4.1): código publicado y clave puesta; falta que Resend verifique el dominio y la prueba real. Mientras, el equipo entra con email y contraseña.
+- **Resend (emails) funcionando** (4.1, 11 oct): dominio «Verified» y probado en la nube: el enlace mágico entra y no se puede reutilizar, y el aviso de un reporte llega por email (los dos a «Recibidos», no a spam).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ## 2. Pendiente de que decidas tú
@@ -35,7 +35,7 @@
 | 1 | Pasada de punta a punta (Proyecto Prueba, 1.005 leads) | Cristian, Claude guió | ✅ Hecha (11 oct) |
 | 2 | Mejoras de la 4.4 antes de publicar (los 4 puntos de la pasada y agendar por link de GHL) | Claude | ✅ Hechas (11 oct) |
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
-| 4 | **Bloque 6 · Resend** (4.1) | Los dos | **Casi**: código publicado (`e2fefba`), clave puesta, dominio en «Pending» (verificando DNS). Falta «Verified» y la prueba real |
+| 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado y probado en la nube (11 oct). Queda sacar a caller-test del proyecto «Test» |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
 | 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente** (Cristian ya está dentro de GHL) |
 | 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
@@ -53,17 +53,19 @@
 ### 4.1 Bloque 6 · Emails con Resend (11 oct, en marcha)
 **Decisiones de Cristian (11 oct):** remitente `Eternity <no-reply@eternity.llc>` (dominio raíz, no subdominio); la app manda ella misma los emails con Resend (no se toca el correo de Supabase); se hace todo el bloque.
 - [x] Dominio `eternity.llc` añadido en Resend (región North Virginia); registros en GoDaddy con «Auto configure»: `send` y `rsend` (CNAME) y `resend._domainkey` (TXT). El correo de Google Workspace (MX y SPF de la raíz) no se ha tocado.
-- [ ] **Resend: dominio «Verified».** Los 3 registros ya responden en GoDaddy (comprobado con dig en ns71 y ns72); Resend está en «Pending · Checking DNS» (dice que puede tardar horas). Hasta entonces Resend rechaza los envíos.
+- [x] **Resend: dominio «Verified»** (comprobado en el panel de Resend el 11 oct).
 - [x] Código: `src/lib/email.ts` (envío con Resend), los avisos de reportes también por email al CEO y a los directores, «Enviar enlace mágico» activo en la ficha (solo administradores), página `/auth/confirm` que recibe el enlace (caduca en 1 h, un solo uso) y aviso en el login si el enlace no vale. 5 tests nuevos (servidor local en lugar de Resend); probado en local que el enlace crea la sesión y no se puede reutilizar.
 - [x] `APP_URL` puesta en Vercel. `.env.example`, `GUIA-PUBLICAR.md` (paso 4 bis) y `GUIA-GHL.md` (el email ya no hace falta en GHL) al día.
 - [x] **`RESEND_API_KEY` en Vercel** (la creó y la pegó Cristian) y publicado otra vez (`ed40af6`). Comprobado en la nube que `/auth/confirm` responde.
-- [ ] Probar de verdad: un enlace mágico a Cristian y un reporte de prueba.
+- [x] Probado de verdad (11 oct): enlace mágico a `info@eternity.llc` desde la ficha → «Delivered» en Resend, llega a Recibidos, Cristian entra (Supabase: `login` 16:47) y al reutilizarlo da 403 «One-time token not found». Reporte de caller-test en el proyecto «Test» (allí no hay directores, así que solo avisa al CEO) → email «Test · Reporte de Caller Test» con todas las respuestas, en Recibidos.
+- [ ] **Sacar a caller-test del proyecto «Test»** (se añadió solo para la prueba; lo hace el CEO en Administración → Equipo). El reporte de prueba queda en «Test».
+- [ ] Mejora pequeña (sin decidir): el aviso del reporte va solo en texto, y al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
 - [x] Base en Supabase con los 30 cambios y el registro libre cerrado. Al subirlos falló uno (`gen_random_bytes` necesita `extensions.` en la nube); arreglado en `cc562d0`.
 - [x] Vercel con sus variables y publicado (hoy son 6, con `APP_URL` y `RESEND_API_KEY`).
-- [ ] Resend: dominio verificado y prueba real → ver 4.1.
+- [x] Resend: dominio verificado y prueba real → ver 4.1.
 - [x] Maestria preparada (simulación y de verdad); la base creó sola «Callers» y «Closers».
 - [x] Equipo real (10) y los 2 perfiles de prueba creados (los lanzó Cristian).
 - [x] Cristian entra como CEO en la app publicada.
@@ -110,7 +112,8 @@
 
 ### Ahora
 - [ ] **Guardar la clave de Resend** (`re_…`) en tu gestor o en `contraseñas.md`: **no está en `contraseñas.md`** (comprobado el 11 oct) y Resend no la vuelve a enseñar.
-- [ ] Cuando Resend diga «Verified»: probar el enlace mágico y un reporte (lo hacemos juntos).
+- [x] Resend «Verified»: enlace mágico y reporte probados (11 oct).
+- [ ] **Google Workspace:** Gmail avisa de que no puede renovar la suscripción; hay que actualizar el pago **antes del 2 nov 2026** o `info@eternity.llc` deja de recibir correo (y con él los avisos y enlaces de la app).
 - [x] Link de agenda: `https://codigomaestria.com/agenda` (puesto, 11 oct).
 - [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 2 archivos** de contraseñas (lo haces tú).
 - [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
@@ -224,7 +227,7 @@
 **Pueden hacer daño el primer día:**
 - **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (4.3). Y con el agendar por link, **sin el workflow «Cita agendada» ningún caller suma agendas**.
 - **Velocidad en la nube:** sin medir con datos (4.2).
-- **Emails:** hasta que Resend verifique el dominio, no sale ningún email (ni avisos de reportes ni enlaces mágicos). Si alguien olvida su contraseña, un administrador se la cambia desde su ficha o le manda un enlace mágico.
+- **Emails:** funcionan (probado el 11 oct). Dependen de que el correo de Google Workspace siga pagado (aviso: antes del 2 nov 2026).
 - **Dominio raíz en Resend** (decisión de Cristian): si algún email de la app se marcara como spam, afectaría también a la reputación del correo normal de @eternity.llc (Google Workspace). Resend recomendaba un subdominio.
 
 **A tener en cuenta:**
