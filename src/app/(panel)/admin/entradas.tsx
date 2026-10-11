@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Plus, Trash2, RefreshCw, Save } from "lucide-react";
 import { sinVaciar } from "@/components/sin-vaciar";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
@@ -42,8 +42,13 @@ function SelectorDestino({
 export function NuevaEntrada({ pipelines }: { pipelines: Pipe[] }) {
   const [estado, accion, enviando] = useActionState(crearEntrada, null as Res);
   const [destino, setDestino] = useState<{ p: string | null; e: string | null }>({ p: pipelines[0]?.id ?? null, e: null });
+  // 1.1 (11 oct 2026): al crearla, el nombre se borra (antes se quedaba y se podía crear dos veces); si falla, se queda
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (estado?.ok) form.current?.reset();
+  }, [estado]);
   return (
-    <form onSubmit={sinVaciar(accion)} className="space-y-3">
+    <form ref={form} onSubmit={sinVaciar(accion)} className="space-y-3">
       <label className="block"><span className="etiqueta-campo">Nombre (el de la landing)</span><input name="nombre" required className="campo" placeholder="Ej. Opt-in masterclass" /></label>
       <div>
         <span className="etiqueta-campo">Pipeline y columna por defecto</span>

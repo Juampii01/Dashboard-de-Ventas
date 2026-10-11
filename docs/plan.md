@@ -8,7 +8,7 @@
 
 La app está **terminada en local y probada** (v1, v2, los 36 arreglos de la auditoría, el Paso H, el Paso 0 y, de 1.0, «Antes de todo», el Bloque A y los bloques 1 a 4), **sin publicar**. Bloques 3 + 4 con su commit (11 oct). **No se publica hasta que esté todo** (Cristian, 11 oct).
 
-**Lo siguiente:** que Cristian vea los bloques 3 y 4. Después, los bloques 5 y 6, juntos en el siguiente commit. El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
+**Lo siguiente:** 1.1 hecho (11 oct). Que Cristian vea los bloques 3 y 4 y lo de 1.1 (incluidos 3 detalles para decidir). Después, los bloques 5 y 6, juntos en el siguiente commit. El 6 (Resend) necesita la cuenta de Resend y quien añada los DNS de eternity.llc (2.2); **pregunta abierta a Cristian:** ¿empiezo el 5 mientras tanto? Luego la pasada de pruebas en pantalla (1.1). Tu revisión completa (2.1) puede ir en paralelo.
 
 **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan y un caller y un closer trabajan un día real sin problemas.
 
@@ -133,24 +133,30 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 
 **Criterios míos en 1.0 (puedes cambiarlos):** el tope cuenta como «sin trabajar» los leads en Nuevo, No contesta y Llamar luego · la rotación de closers por defecto «lo elige quien agenda» y apagada · vista previa antes de repartir · el cambio de email lo hace el administrador sin pedir confirmación al usuario · las 3 preguntas de las tasas no se borran.
 
-### 1.1 Antes de tu revisión: probar en pantalla lo que solo está en tests
-- [ ] CRM → «Callers»: soltar una tarjeta en «Agendados», «Llamar luego», «No interesa» y «Cerrados» (se abre su ventana). (Permiso dado por Cristian el 10 oct: Carla un rato en Proyecto Prueba con datos «PRUEBA», borrados al terminar.)
-- [ ] CRM → llave de permisos: cambiar un permiso desde la ventana y ver que la persona deja de ver el pipeline (lo devuelvo como estaba).
-- [ ] Un director **sin** Administración (columnas bloqueadas, sin llave, sin Permisos). (Permiso dado: quitarla un rato y devolverla.)
-- [ ] Permisos «lo suyo» en pantalla: caller con Clientes, Ventas y KPIs · closer con «Mis leads» · Programas solo mirar.
-- [ ] Objetivos: crear y borrar un lanzamiento, quitar un objetivo, el diario con días marcados, el avance del director, la racha con días cumplidos y la celebración.
-- [ ] CRM: crear un pipeline y sus columnas de verdad (solo probado con tests).
-- [ ] Clientes: marcar un paso de onboarding y guardar un caso de éxito.
-- [ ] Administración: usuarios de GHL con callers dentro (solo se han visto vacíos). Los horarios se prueban en el bloque 1.
-- [ ] Finanzas: importar un CSV del banco, transferir entre cuentas, gastos programados, pagar una liquidación.
-- [ ] `preparar-proyecto` sobre una base vacía (que crea Maestria con «Callers» y «Closers»).
-- [ ] Ver la pantalla «Algo ha fallado» con un error de verdad.
-- [ ] Detalle: al crear una entrada de landing, el formulario se queda con el nombre escrito (se podría crear dos veces).
+### 1.1 Antes de tu revisión: probar en pantalla lo que solo está en tests ✅ (11 oct)
+Hecho en **Proyecto Prueba** con datos «PRUEBA» (Carla y el director dentro un rato), como CEO, director, Carla y Ana según cada punto. Al terminar, **todo borrado**: las filas de cada tabla de Proyecto Prueba son las mismas que al empezar (comparado tabla a tabla), Carla y el director como estaban, y Maestria sin tocar (1.005 leads, 0 citas).
+- [x] CRM → «Callers»: soltar en «Llamar luego», «Agendados», «Descartados» y «Cerrados» abre su ventana y guarda (en la base: llamar luego, cita, no interesa y venta). ⚠ Con el arrastre simulado del navegador de pruebas, «Llamar luego» funcionó con el ratón; las otras 3 se hicieron lanzando los eventos de arrastre desde la página (el mismo código que el ratón). **Tu prueba con tu ratón (2.1) sigue haciendo falta.**
+- [x] CRM → llave de permisos: «Sin acceso» a Carla en «Principal» → no lo ve ni entrando por su dirección (le sale «Callers»). Devuelto.
+- [x] Director **sin** Administración: sin llave, sin crear/renombrar/borrar pipelines, sin menú de columnas y sin «Administración». Devuelta.
+- [x] Permisos «lo suyo»: Carla con Ventas, Clientes, KPIs y Programas ve solo lo suyo (1 venta de 3, 1 cliente de 3, solo su fila en KPIs) y Programas solo mirar (sin «Gestionar» ni interruptores); Ana con «Mis leads» ve solo sus 3 leads como closer. Quitados.
+- [x] Objetivos: crear y borrar un lanzamiento, quitar un objetivo (queda «sin valor» desde ahora; los periodos pasados lo conservan), el diario con S y D marcados (hoy, domingo, cuenta), el avance del director (equipo 4 de 5, 80 %), la racha («4 días seguidos») y la celebración (sale el confeti y «¡Cumplido! 🎉»).
+- [x] CRM: crear un pipeline (sale con sus 4 columnas), añadir una columna y borrar el pipeline, todo desde la pantalla.
+- [x] Clientes: marcar «Bienvenida enviada» (guarda la fecha) y guardar un caso de éxito.
+- [x] Administración → Integraciones: Carla sale en «Llamadas de GHL: quién es quién» y su id de GHL se guarda.
+- [x] Finanzas: importar un CSV del banco (2 importados y aviso de la fila mala), transferir 100 € entre cuentas (saldos 1.920 → 1.820 y 0 → 100), un gasto programado (al registrar el pago, la fecha pasa sola al mes siguiente) y pagar una liquidación (crea el gasto en «Comisiones»). **De paso, probado en pantalla el tramo del Bloque 4:** «Tramo 3 % · 50,00 € facturados en el mes».
+- [x] ~~`preparar-proyecto` sobre una base vacía~~ → **pasa a 1.3** (Cristian, 11 oct): en local la base no está vacía (Maestria real); se prueba de verdad en la nube al publicar, primero simulando.
+- [x] «Algo ha fallado» con un error de verdad: sale «Esta sección no ha cargado», sin detalles técnicos, con un código para el director, «Reintentar» e «Ir al inicio», y el menú sigue. La página de prueba se borró al momento.
+- [x] **Arreglado:** al crear una entrada de landing, el formulario se vacía (antes se quedaba el nombre y se podía crear dos veces). Si falla, lo escrito se queda (no probado en pantalla: habría que forzar un error del servidor).
+- **Cristian (11 oct):** sí a todo: se hace en Proyecto Prueba con datos «PRUEBA» (borrados al terminar), Carla y un closer de prueba un rato en Proyecto Prueba, el director sin Administración un rato, una página de prueba que falla (borrada al momento) y se arregla el detalle de la landing.
+- **Detalles encontrados (para que decidas; no arreglados):**
+  - Al agendar con un closer **sin horario puesto**, el aviso dice «está fuera de su horario (o es su día libre)»; sería más claro «no tiene horario puesto».
+  - En «Mis KPIs» de un caller, la tabla de closers dice «No hay closers en este proyecto» aunque los hay (es que solo ve lo suyo); mejor «Aquí solo ves lo tuyo».
+  - Un caller con Programas ve cuántos clientes tiene cada programa en todo el proyecto (no solo los suyos). Es un número, sin nombres; decide si te vale.
+
+### 1.2 Después de tu revisión
 - [ ] Mejora (bloque 3, propuesta de Claude): bloquear en la base la elección de la rotación, como ya se hace en el reparto de leads. Hoy, si dos personas agendan justo a la vez, podrían dar el mismo closer a la misma hora (poco probable con este volumen).
 - [ ] Mejora (bloque 3, propuesta de Claude): que la ventana de agendar sugiera las horas libres del closer en vez de solo avisar.
 - [ ] **Pendiente (Cristian, 11 oct):** que un administrador pueda **cambiar la zona horaria del proyecto** (hoy solo se elige al crearlo). Cuidado: mueve todas las fechas (ventas, KPIs, objetivos, horarios); decidir cómo antes de hacerlo.
-
-### 1.2 Después de tu revisión
 - [ ] Arreglar lo que encuentres (lo apunto aquí y tú decides qué va antes de publicar).
 - [ ] Cambiar los criterios míos que no te gusten (lista en la sección 4).
 
@@ -160,7 +166,7 @@ Pedido: *«En la sección KPIs, lo primero que veamos sea esta vista; que se pue
 - [ ] Crear las tablas en la nube (`supabase db push`: las 22 migraciones de hoy + las de 1.0). **Necesita de Cris:** el proyecto de Supabase creado, con «Allow new users to sign up» desactivado.
 - [ ] Configurar Vercel: carpeta `app`, `NEXT_PUBLIC_SUPABASE_URL` **antes** del primer despliegue, las 3 variables de Supabase, `CLAVE_CIFRADO`, las 2 de IA y `RESEND_API_KEY`. **Necesita de Cris:** la cuenta de Vercel y guardar `CLAVE_CIFRADO` en su gestor de contraseñas.
 - [ ] Resend: verificar eternity.llc (los registros DNS pueden tardar en propagarse: hacerlo al principio), poner Resend como servidor de correo de Supabase y probar un enlace mágico y un aviso de reporte reales. **Necesita de Cris:** cuenta de Resend y quien añada los DNS.
-- [ ] `preparar-proyecto --confirmar` (Maestria con sus pipelines y productos).
+- [ ] `preparar-proyecto --confirmar` (Maestria con sus pipelines y productos). **Antes**, sin `--confirmar` (simula) y comprobar que crea Maestria con «Callers» y «Closers» (la prueba que salía en 1.1).
 - [ ] `crear-usuarios scripts/salida/equipo.csv --confirmar`: **el CSV ya está hecho** (10 personas, 10 oct; en `scripts/salida/`, fuera de git; simulación correcta). Contraseñas «Maestria-» + 8 caracteres al azar, guardadas solo en `scripts/salida/`. **Necesita de Cris:** mandárselas por WhatsApp (decisión de Cristian). Con ellos se crean también los 2 perfiles de prueba (closer-test y caller-test, marcados «prueba», con «Llamadas de GHL» abierta).
 - [ ] Subir los contactos de GHL. **Necesita de Cris:** un CSV nuevo exportado de GHL.
 - [ ] Comprobar en Vercel lo que en local no se puede: subir PDF y CSV, límite de intentos, HTTPS, consola sin bloqueos y la velocidad de las cifras en la nube.
