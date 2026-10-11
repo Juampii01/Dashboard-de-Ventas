@@ -30,7 +30,7 @@ create table public.entradas (
   id uuid primary key default gen_random_uuid(),
   proyecto_id uuid not null references public.proyectos (id) on delete cascade,
   nombre text not null,
-  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token text not null unique default encode(extensions.gen_random_bytes(24), 'hex'),
   pipeline_id uuid references public.pipelines (id) on delete set null,
   etapa_id uuid references public.etapas (id) on delete set null,
   reglas jsonb not null default '[]'::jsonb,

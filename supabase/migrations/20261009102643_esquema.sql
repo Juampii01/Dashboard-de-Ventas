@@ -8,7 +8,7 @@ alter table public.proyectos
   add column modo_reparto text not null default 'manual'
     check (modo_reparto in ('manual', 'rotativo')),
   add column rotacion_indice integer not null default 0,
-  add column webhook_secreto text not null default encode(gen_random_bytes(18), 'hex'),
+  add column webhook_secreto text not null default encode(extensions.gen_random_bytes(18), 'hex'),
   add column aviso_webhook_url text,
   add column color text not null default '#2f55d4';
 
