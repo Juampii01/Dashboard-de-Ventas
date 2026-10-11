@@ -35,14 +35,14 @@
 | 1 | Pasada de punta a punta (Proyecto Prueba, 1.005 leads) | Cristian, Claude guió | ✅ Hecha (11 oct) |
 | 2 | Mejoras de la 4.4 antes de publicar (los 4 puntos de la pasada y agendar por link de GHL) | Claude | ✅ Hechas (11 oct) |
 | 3 | **Publicar** (4.2) | Los dos | ✅ Publicada (11 oct); faltan las comprobaciones de 4.2 |
-| 4b | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Después de Resend |
-| 5 | **Link de agenda** en Administración → Proyecto y reparto | Cristian me pasa el link | Pendiente |
-| 6 | **Mandar los accesos al equipo** por WhatsApp y borrar los 2 archivos de contraseñas | Cristian | Pendiente |
-| 7 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | Pendiente |
-| 8 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
-| 9 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
-| 10 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
-| 4 | **Bloque 6 · Resend** (4.1) | Los dos | **Ahora** (Cristian, 11 oct: antes que los leads y GHL) |
+| 4 | **Bloque 6 · Resend** (4.1) | Los dos | **Casi**: código publicado (`e2fefba`), clave puesta, dominio en «Pending» (verificando DNS). Falta «Verified» y la prueba real |
+| 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
+| 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **Siguiente** (Cristian ya está dentro de GHL) |
+| 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
+| 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 2 archivos de contraseñas | Cristian | Pendiente |
+| 9 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
+| 10 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
+| 11 | **Día real** con un caller y un closer, y ajustes | Los dos | Al final |
 
 ---
 
@@ -53,10 +53,10 @@
 ### 4.1 Bloque 6 · Emails con Resend (11 oct, en marcha)
 **Decisiones de Cristian (11 oct):** remitente `Eternity <no-reply@eternity.llc>` (dominio raíz, no subdominio); la app manda ella misma los emails con Resend (no se toca el correo de Supabase); se hace todo el bloque.
 - [x] Dominio `eternity.llc` añadido en Resend (región North Virginia); registros en GoDaddy con «Auto configure»: `send` y `rsend` (CNAME) y `resend._domainkey` (TXT). El correo de Google Workspace (MX y SPF de la raíz) no se ha tocado.
-- [ ] **Resend: dominio «Verified»** (los registros tardaban en verse desde fuera; volver a pulsar «Verify DNS Records»).
+- [ ] **Resend: dominio «Verified».** Los 3 registros ya responden en GoDaddy (comprobado con dig en ns71 y ns72); Resend está en «Pending · Checking DNS» (dice que puede tardar horas). Hasta entonces Resend rechaza los envíos.
 - [x] Código: `src/lib/email.ts` (envío con Resend), los avisos de reportes también por email al CEO y a los directores, «Enviar enlace mágico» activo en la ficha (solo administradores), página `/auth/confirm` que recibe el enlace (caduca en 1 h, un solo uso) y aviso en el login si el enlace no vale. 5 tests nuevos (servidor local en lugar de Resend); probado en local que el enlace crea la sesión y no se puede reutilizar.
 - [x] `APP_URL` puesta en Vercel. `.env.example`, `GUIA-PUBLICAR.md` (paso 4 bis) y `GUIA-GHL.md` (el email ya no hace falta en GHL) al día.
-- [ ] **`RESEND_API_KEY` en Vercel** (la crea y la pega Cristian) y volver a publicar.
+- [x] **`RESEND_API_KEY` en Vercel** (la creó y la pegó Cristian) y publicado otra vez (`ed40af6`). Comprobado en la nube que `/auth/confirm` responde.
 - [ ] Probar de verdad: un enlace mágico a Cristian y un reporte de prueba.
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
@@ -110,7 +110,7 @@
 
 ### Ahora
 - [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
-- [ ] **Pasarme el link del calendario de GHL** (el de reservas que reparte entre closers) para ponerlo en Administración.
+- [x] Link de agenda: `https://codigomaestria.com/agenda` (puesto, 11 oct).
 - [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 2 archivos** de contraseñas (lo haces tú).
 - [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
