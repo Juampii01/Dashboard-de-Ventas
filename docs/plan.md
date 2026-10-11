@@ -61,7 +61,9 @@
 - [ ] **Sacar a caller-test del proyecto «Test»** (se añadió solo para la prueba; lo hace el CEO en Administración → Equipo). Quedan 2 reportes de prueba en «Test» (10 y 11 oct).
 - [x] **Emails con el diseño glass de la app** (Cristian, 11 oct) · `88229b7`: `src/lib/plantilla-email.ts` (degradado, tarjeta translúcida, logo, botón granate). Gmail no admite el desenfoque (`backdrop-filter`, según caniemail.com), así que se imita. El aviso del reporte, con sus respuestas en una tabla, **visto en Gmail** y bien. El del enlace mágico, visto solo en Chrome (falta verlo en Gmail: hace falta la sesión de CEO).
 - [ ] Mejora pequeña (sin decidir): al caller le dice «Tu director ya tiene el aviso» aunque solo lo reciba el CEO.
-- [ ] **Fallos vistos el 11 oct en la nube (sin arreglar, sin decidir):** (1) en Reportes, el primer clic en «Crear nuevo reporte» al cargar la página no abre nada (pasó 2 veces; el segundo clic sí); (2) en «Reportes» del caller, la tarjeta de su propio reporte sale con el nombre «—».
+- [x] **Nombre «—» en las tarjetas de Reportes** · `850a8c9`: la página buscaba los nombres en `equipo()`, que deja fuera los perfiles de prueba (`es_prueba`) y a quien ya no está; ahora busca también ahí (con `conBajas`). Publicado; **falta verlo en pantalla** (hace falta entrar como caller-test).
+- [ ] **Primer clic en «Crear nuevo reporte» que no abre** (visto 2 veces el 11 oct). **Sin reproducir:** en una tercera prueba se abrió al primer clic, y el login responde a clics en menos de 1 s (scripts a 564 ms). El código del botón no tiene nada raro. Volver a probarlo con la sesión de caller-test; si no vuelve a pasar, se cierra.
+- [ ] Ver en Gmail el email del enlace mágico con el diseño nuevo (hace falta la sesión de CEO).
 
 ### 4.2 Publicar (sigo `GUIA-PUBLICAR.md`)
 - [x] Código en GitHub (repositorio privado `eternitydevzz/Dashboard-de-ventas`).
@@ -222,6 +224,7 @@
 | Publicar: guía corregida (Root Directory vacío), migraciones arregladas para la nube, primera publicación | `46886d9`, `cc562d0`, `959af89`, `119d64a`, `06b4064` |
 | Bloque 6 · Resend: avisos de reportes por email, enlace mágico, `/auth/confirm`; publicado con la clave | `e2fefba`, `ed40af6` |
 | Emails con el diseño glass de la app | `88229b7` |
+| Reportes: nombre de perfiles de prueba y bajas | `850a8c9` |
 
 ---
 
