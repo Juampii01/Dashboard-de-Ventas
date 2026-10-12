@@ -46,7 +46,7 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
     <>
       <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={datos.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
       {datos.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={datos.eventos.map((e) => ({ v: e, t: e }))} />}
-      <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
+      <div className="2xl:ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
     </>
   );
 

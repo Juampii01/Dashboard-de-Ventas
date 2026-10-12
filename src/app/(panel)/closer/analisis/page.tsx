@@ -77,7 +77,7 @@ export default async function AnalisisPage({ searchParams }: PageProps<"/closer/
             {[["resumen", "Resumen"], ["llamadas", "Llamadas"], ...(jefe ? [["manual", "Manual"]] : [])].map(([v, t], i) => <Link key={v} href={url({ sub: v === "resumen" ? null : v })} className={`rounded-md px-3 py-1.5 text-sm ${sub === v ? "bg-primario text-white" : "text-texto-2"}`}><span className="mr-1 font-mono text-[10px] opacity-70">0{i + 1}</span>{t}</Link>)}
           </div>
           {jefe && <FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
-          <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} conActualizar={false} /></div>
+          <div className="2xl:ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} conActualizar={false} /></div>
         </div>
         {(pendientes > 0 || errores > 0) && <p className="text-sm text-texto-2">{pendientes > 0 && <>En cola o analizándose: <b>{pendientes}</b>. </>}{errores > 0 && <>Con error: <b className="text-mal">{errores}</b> (ábrelas para ver el motivo y «Re-analizar»).</>}</p>}
 

@@ -45,7 +45,7 @@ export default async function LlamadasGrabadas({ searchParams }: PageProps<"/cal
         <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
           {jefe && <FiltroUrl nombre="quien" etiqueta="Quién llamó" todos="Todo el equipo" opciones={[...gente.map((g) => ({ v: g.id, t: g.nombre })), { v: "sin", t: "Sin asignar (falta su usuario de GHL)" }]} />}
           <span className="text-sm text-texto-2">{lista.length} llamadas · {hechas.length} analizadas{media !== null ? ` · media ${media}/100` : ""}</span>
-          <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} porDefecto="semana" conActualizar={false} /></div>
+          <div className="2xl:ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} porDefecto="semana" conActualizar={false} /></div>
         </div>
         {lista.length === 0 ? (
           <div className="tarjeta"><Vacio icono={PhoneCall} texto="No hay llamadas en este periodo. Pulsa «Traer llamadas de GHL»." /></div>
