@@ -38,7 +38,10 @@
 - [x] **Barra de carga** arriba mientras un filtro o el periodo traen datos (antes solo se atenuaba el filtro).
 - [x] **Probado en pantalla por Claude** (12 oct, app publicada, datos reales): Comparativa sale al momento tras el clic; al cambiar el periodo estando en Comparativa se queda en Comparativa con los números nuevos (Cristian Ortiz 8 → 7 en «Semana»); al recargar sigue en Comparativa; vuelve bien a Individual; el filtro de closer funciona (José: 8 esta semana, igual que en Comparativa); la barra azul sale arriba mientras carga; consola sin errores; las 8 pantallas con la barra de periodo responden 200. **Fallo encontrado y arreglado:** al cambiar el periodo en Comparativa la dirección perdía `vista=comparativa` (al recargar volvía a Individual). Agendas sigue tardando lo mismo en el servidor (0,6-0,9 s) aunque ahora calcula las dos vistas.
 - [ ] Que Cristian lo note en su Mac.
-- [ ] Si siguen los tirones: bajar el tiempo de servidor de Funnel y KPIs (las más lentas) y ver qué hacer con el «despertar» de Vercel (3-4 s la primera vez tras un rato sin uso).
+- [x] **Dónde se va el tiempo** (12 oct, midiendo cuándo empieza a llegar cada pantalla): el login, sin datos, ya tarda 0,3-0,5 s (viaje España ↔ Washington + comprobar la sesión); el icono, que no pasa por el servidor, 0,05 s. **Funnel solo tarda ~0,1 s más que el login** en empezar: sus cálculos son rápidos. **KPIs pesaba 770 KB** (7 veces el Funnel) porque la Biblioteca metía las 1.188 personas dentro de la página.
+- [x] **KPIs → Biblioteca sin las filas dentro** (`06b865c`): la página sale con resúmenes y barras (**770 KB → 84 KB**) y la tabla pide sus filas después («Cargando los 1206 leads…»). Probado: la tabla carga con sus 1.206 leads, buscador y filtros.
+- [ ] **Investigar el menú lateral:** al abrir una pantalla, el navegador pide por adelantado todas las demás (Funnel, CRM, Callers, Agendas…) **varias veces seguidas**; la herramienta de Claude marcó varias con 503, pero en los registros de Vercel no sale ningún 503 (sin aclarar). Si de verdad repite, carga el servidor sin motivo y puede dar tirones.
+- [ ] El «despertar» de Vercel (2-4 s la primera vez tras un rato sin uso o tras publicar).
 - **Hecha cuando:** te enseño las medidas de antes y de después, y lo notas tú en tu Mac.
 
 **Fase 3 · Diseño común** (piezas que usan todas las pantallas)
