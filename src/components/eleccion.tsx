@@ -222,7 +222,8 @@ export function Desplegable(props: PropsSelect) {
   );
 }
 
-export function Pastillas(props: PropsSelect) {
+// `corto`: en la pastilla solo lo de antes del paréntesis («Editar (también columnas)» → «Editar»); el texto entero, al pasar el ratón
+export function Pastillas({ corto, ...props }: PropsSelect & { corto?: boolean }) {
   const { ref, opciones, valor } = useEspejo();
   const pequena = /\btext-xs\b/.test(props.className ?? ""); // en tablas (Permisos) van más pequeñas
   return (
@@ -243,10 +244,11 @@ export function Pastillas(props: PropsSelect) {
             role="radio"
             aria-checked={elegida}
             disabled={props.disabled || o.desactivada}
+            title={corto ? o.texto : undefined}
             onClick={() => ref.current && elegir(ref.current, o.valor)}
-            className={`cursor-pointer rounded-lg font-medium ${pequena ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"} transition-colors disabled:cursor-not-allowed ${elegida ? "bg-ok text-white shadow-sm" : "text-texto-2 hover:bg-panel hover:text-texto"}`}
+            className={`cursor-pointer whitespace-nowrap rounded-lg font-medium ${pequena ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"} transition-colors disabled:cursor-not-allowed ${elegida ? "bg-ok text-white shadow-sm" : "text-texto-2 hover:bg-panel hover:text-texto"}`}
           >
-            {o.texto}
+            {corto ? o.texto.replace(/\s*\(.*\)\s*$/, "") : o.texto}
           </button>
         );
       })}

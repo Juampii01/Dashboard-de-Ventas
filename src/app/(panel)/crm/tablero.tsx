@@ -828,6 +828,7 @@ function ModalPermisos({
               <div key={r.v} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{r.t}</span>
                 <Pastillas
+                  corto
                   aria-label={`${r.t} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio ?? ""}
@@ -849,6 +850,7 @@ function ModalPermisos({
               <div key={g.id} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{g.nombre} <span className="text-xs text-texto-3">· {g.rol}</span></span>
                 <Pastillas
+                  corto
                   aria-label={`${g.nombre} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio}
