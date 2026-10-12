@@ -305,7 +305,6 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
             </div>
             <Seccion titulo="Nueva entrada">
               <NuevaEntrada pipelines={pipes} />
-              <p className="mt-3 rounded-lg bg-aviso-suave px-3 py-2 text-xs text-aviso">En local (localhost) las landings no pueden llegar a esta dirección. Funcionará al publicar la app; entonces la dirección cambiará al dominio real.</p>
             </Seccion>
           </div>
         )}
@@ -332,18 +331,24 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
               </Seccion>
             )}
             <Seccion titulo="Webhook de entrada (GHL → Eternity)">
-              <p className="text-sm text-texto-2">
-                En cada workflow de GHL añade la acción <b>Custom Webhook</b>, con <b>Event = CUSTOM</b>, <b>Method = POST</b> y <b>Content-Type = application/json</b>. Paso a paso en <code className="rounded bg-panel-2 px-1">GUIA-GHL.md</code>.
-              </p>
-              <Secreto url={urlWebhook} cabecera={CABECERA_SECRETO} secreto={proyecto.webhook_secreto} />
-              <p className="mt-3 rounded-lg bg-aviso-suave px-3 py-2 text-xs text-aviso">En local (localhost) GHL no puede llegar a esta URL. Funcionará al publicar la app; entonces la URL cambiará al dominio real.</p>
-              <div className="mt-4 space-y-3">
-                <div className="titulo-seccion">Cuerpo («Raw Body») de cada workflow</div>
-                {PLANTILLAS_GHL.map((p) => (
-                  <Plantilla key={p.clave} titulo={p.titulo} disparador={p.disparador} cuerpo={p.cuerpo} />
-                ))}
-                <p className="text-xs text-texto-3">Donde pone «ELIGE_EN_GHL», borra el texto y elige la variable con el icono de etiqueta de GHL.</p>
+              <div className="space-y-2 text-sm text-texto-2">
+                <p>
+                  Para las <b>citas</b>: en el workflow de GHL añade la acción <b>Webhook</b> (la normal; «Custom webhook» es de pago) con <b>Method = POST</b> y esta URL. En <b>Custom data</b>: <code className="rounded bg-panel-2 px-1">tipo</code> = <code className="rounded bg-panel-2 px-1">cita_agendada</code> y <code className="rounded bg-panel-2 px-1">closer_email</code> = Appointment · Assigned User · Email. En <b>Headers</b>: <code className="rounded bg-panel-2 px-1">{CABECERA_SECRETO}</code> = la clave. La hora la coge sola del calendario.
+                </p>
+                <p>
+                  Para los <b>leads nuevos</b> no se usa esta URL: crea una entrada en la pestaña <b>Entradas</b> y pon su dirección en un Webhook normal, sin Custom data. Paso a paso en <code className="rounded bg-panel-2 px-1">GUIA-GHL.md</code>.
+                </p>
               </div>
+              <Secreto url={urlWebhook} cabecera={CABECERA_SECRETO} secreto={proyecto.webhook_secreto} />
+              <details className="mt-4 rounded-lg border border-borde">
+                <summary className="cursor-pointer px-3 py-2 text-sm text-texto-2">Cuerpos JSON para «Custom webhook» (de pago; no hacen falta con el Webhook normal)</summary>
+                <div className="space-y-3 border-t border-borde p-3">
+                  {PLANTILLAS_GHL.map((p) => (
+                    <Plantilla key={p.clave} titulo={p.titulo} disparador={p.disparador} cuerpo={p.cuerpo} />
+                  ))}
+                  <p className="text-xs text-texto-3">Donde pone «ELIGE_EN_GHL», borra el texto y elige la variable con el icono de etiqueta de GHL.</p>
+                </div>
+              </details>
             </Seccion>
             <Seccion titulo="Últimos eventos recibidos">
               {(eventos ?? []).length === 0 ? (
