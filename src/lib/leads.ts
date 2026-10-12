@@ -231,6 +231,15 @@ export async function guardarLeads(
 // 4.4 (Cristian, 11 oct): datos de una cita que llega de GHL. La agenda (KPIs, Ranking y comisión) es de quien marcó
 // «Link enviado»; si nadie lo marcó, del caller del lead; sin caller, de nadie. Las estrellas son las que puso el
 // caller al enviar el link.
+// Decisión de Cristian (12 oct 2026): todo lead con una cita que llega de GHL (webhook o sincronización) pasa al
+// pipeline «Orgánico», columna «Agendados». Si el proyecto no tiene ese pipeline o esa columna, no se mueve.
+export async function moverAAgendadosOrganico(proyectoId: string, leadId: string) {
+  const { data: pipe } = await db().from("pipelines").select("id, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal").ilike("nombre", "orgánico").maybeSingle();
+  const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => x.nombre.trim().toLowerCase() === "agendados");
+  if (!pipe || !etapa) return;
+  await escribir(db().from("leads").update({ pipeline_id: pipe.id, etapa_id: etapa.id }).eq("id", leadId), "leads");
+}
+
 export async function datosAgendaGhl(leadId: string): Promise<{ agendada_por: string | null; estrellas_caller: number | null }> {
   const { data } = await db().from("leads").select("link_enviado_por, caller_id, estrellas_caller").eq("id", leadId).maybeSingle();
   return { agendada_por: data?.link_enviado_por ?? data?.caller_id ?? null, estrellas_caller: data?.estrellas_caller ?? null };

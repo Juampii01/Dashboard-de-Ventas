@@ -163,4 +163,24 @@ describe("Arreglo 21: citas borradas en GHL", () => {
     const { data: p } = await db.from("proyectos").select("ghl_ultimo_resultado").eq("id", e.proyecto.id).single();
     expect(p!.ghl_ultimo_resultado).toMatch(/2 canceladas \(borradas en GHL\)/);
   });
+
+  it("12 oct (Cristian): un lead con cita nueva de GHL pasa a «Orgánico → Agendados»; una cancelada no lo mueve", async () => {
+    const { data: org } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre: "Orgánico", orden: 5 }).select().single();
+    const { data: ets } = await db.from("etapas").insert(["Nuevos", "Agendados"].map((n, i) => ({ pipeline_id: org!.id, nombre: n, orden: i }))).select();
+    const agendados = ets!.find((x) => x.nombre === "Agendados")!.id;
+    await db.from("leads").update({ ghl_contact_id: `${e.pref}-cB` }).eq("id", e.leads.LeadB);
+    contactos[`${e.pref}-cOrg`] = { firstName: "Org", lastName: "Nuevo", email: `${e.pref}-org@x.test` };
+    contactos[`${e.pref}-cCan`] = { firstName: "Can", lastName: "Celada", email: `${e.pref}-can@x.test` };
+    eventos = [
+      { id: `${e.pref}-o1`, contactId: `${e.pref}-cB`, title: "LeadB", startTime: "2026-10-20T10:00:00-04:00", appointmentStatus: "confirmed" },
+      { id: `${e.pref}-o2`, contactId: `${e.pref}-cOrg`, title: "Nuevo", startTime: "2026-10-21T10:00:00-04:00", appointmentStatus: "new" },
+      { id: `${e.pref}-o3`, contactId: `${e.pref}-cCan`, title: "Cancelada", startTime: "2026-10-22T10:00:00-04:00", appointmentStatus: "cancelled" },
+    ];
+    await sync();
+    const lead = async (filtro: { id?: string; email?: string }) =>
+      (await (filtro.id ? db.from("leads").select("pipeline_id, etapa_id").eq("id", filtro.id) : db.from("leads").select("pipeline_id, etapa_id").eq("email", filtro.email!)).single()).data;
+    expect(await lead({ id: e.leads.LeadB })).toEqual({ pipeline_id: org!.id, etapa_id: agendados });
+    expect(await lead({ email: `${e.pref}-org@x.test` })).toEqual({ pipeline_id: org!.id, etapa_id: agendados });
+    expect((await lead({ email: `${e.pref}-can@x.test` }))!.pipeline_id).not.toBe(org!.id);
+  });
 });

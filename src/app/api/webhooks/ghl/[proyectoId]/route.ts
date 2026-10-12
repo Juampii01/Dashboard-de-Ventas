@@ -2,7 +2,7 @@ import { escribir } from "@/lib/datos";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { datosAgendaGhl, guardarLeads, telefonoClave, type LeadEntrada } from "@/lib/leads";
+import { datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave, type LeadEntrada } from "@/lib/leads";
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
@@ -138,6 +138,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       else
         await escribir(db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, ...(await datosAgendaGhl(lead.id)), fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId }), "citas");
       await escribir(db().from("leads").update({ estado_caller: "agendado", llamar_en: null, ...(closerId ? { closer_id: closerId } : {}) }).eq("id", lead.id), "leads");
+      await moverAAgendadosOrganico(proyecto.id, lead.id);
       await escribir(db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cita", resultado: "agendada", nota: "Cita agendada en el calendario de GHL" }), "actividades");
     } else if (tipo === "cambio_etapa") {
       const lead = await buscarOCrearLead(proyecto, body);

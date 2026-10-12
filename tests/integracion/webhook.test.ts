@@ -145,6 +145,15 @@ describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
     expect((await conCabecera({ tipo: "cambio_etapa", contact_id: `${e.pref}-cab`, pipeline: "Pipeline test", etapa: "Agendados" })).status).toBe(200);
     expect((await db.from("leads").select("etapa_id").eq("id", lead!.id).single()).data!.etapa_id).toBe(e.etapas.Agendados);
   });
+  it("12 oct (Cristian): una cita que llega por el webhook deja su lead en «Orgánico → Agendados»", async () => {
+    const { data: org } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre: "Orgánico", orden: 5 }).select().single();
+    const { data: ets } = await db.from("etapas").insert(["Nuevos", "Agendados"].map((n, i) => ({ pipeline_id: org!.id, nombre: n, orden: i }))).select();
+    const r = await enviar({ contact_id: `${e.pref}-org`, email: `${e.pref}-org@x.test`, first_name: "Org", calendar: { startTime: "2026-10-20T10:00:00", selectedTimezone: "America/New_York" }, customData: { tipo: "cita_agendada" } });
+    expect(r.status).toBe(200);
+    const { data: lead } = await db.from("leads").select("pipeline_id, etapa_id").eq("ghl_contact_id", `${e.pref}-org`).single();
+    expect(lead).toEqual({ pipeline_id: org!.id, etapa_id: ets!.find((x) => x.nombre === "Agendados")!.id });
+    await db.from("pipelines").delete().eq("id", org!.id);
+  });
   it("las plantillas son JSON válido una vez rellenadas", async () => {
     const { PLANTILLAS_GHL } = await import("@/lib/plantillas-ghl");
     for (const p of PLANTILLAS_GHL) expect(() => JSON.parse(p.cuerpo), p.clave).not.toThrow();

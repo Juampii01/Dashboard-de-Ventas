@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/datos";
 import { descifrar } from "@/lib/cifrado";
-import { datosAgendaGhl, guardarLeads, telefonoClave } from "@/lib/leads";
+import { datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoDesdeGhl, eventosGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
 import type { Proyecto } from "@/lib/tipos";
 import { ABIERTAS } from "@/lib/llamadas";
@@ -111,7 +111,10 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
         continue;
       }
       await db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id);
-      if (estado === "pendiente" || estado === "confirmada") await db().from("leads").update({ estado_caller: "agendado", closer_id: c.perfil_id, llamar_en: null }).eq("id", leadId);
+      if (estado === "pendiente" || estado === "confirmada") {
+        await db().from("leads").update({ estado_caller: "agendado", closer_id: c.perfil_id, llamar_en: null }).eq("id", leadId);
+        await moverAAgendadosOrganico(proyecto.id, leadId);
+      }
       await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: leadId, tipo: "cita", resultado: "agendada", nota: `Cita del calendario de GHL con ${c.perfiles.nombre}` });
       r.nuevas++;
     }
