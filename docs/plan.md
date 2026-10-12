@@ -10,7 +10,7 @@
 - **Funciona y está comprobado en la nube:**
   - Login, cabeceras de seguridad, subida de CSV y pestaña Biblioteca de KPIs.
   - **Emails con Resend** (enlace mágico y aviso de cada reporte, con el diseño glass).
-  - **GHL conectado:** los leads nuevos de la Biblioteca entran solos (workflow 0); las citas de los 3 calendarios entran solas con su hora y su closer (workflows 1-3); el token sincroniza las citas de los 4 closers.
+  - **GHL conectado:** los leads nuevos de la Biblioteca entran solos (workflow 0); las citas de los 4 calendarios entran solas con su hora y su closer (workflows 1-4); el token sincroniza las citas de los 4 closers.
   - **Todo lead con cita de GHL pasa a «Orgánico → Agendados»** (publicado el 12 oct; probado con tests, **sin probar todavía con una cita nueva real**).
 - **Datos reales en Maestria (12 oct, contados en la base):** **1.178 leads** (Biblioteca Recursos 1.165 · Webinar 1 8 · Orgánico 5), **todos sin caller** (reparto apagado); **15 citas**, y sus 15 leads en «Orgánico → Agendados».
 - **Equipo (12 personas):** CEO «Cris y José» (`info@eternity.llc`); Juan y Junior, directores con Administración; 5 callers (Felipe, Miguel, Hanna, Lucas, Tomás); 4 closers (Andrés, Renzo, Cristian Ortiz y José Gómez); + 2 perfiles de prueba (closer-test y caller-test). **Nadie del equipo ha entrado todavía:** los accesos no se han mandado.
@@ -34,7 +34,7 @@
 | # | Qué | Quién |
 |---|---|---|
 | 1 | **Borrar en GHL las pruebas** (5 citas y 3 contactos, sección 5): si no, la sincronización las vuelve a traer | Cristian |
-| 2 | **Probar «Orgánico → Agendados» con una reserva real** (por ejemplo en «#1 Maestria founders») | Los dos |
+| 2 | **Probar el workflow 3 con una reserva nueva** en `codigomaestria.com/agenda` («Orgánico → Agendados» por la sincronización ✅ 12 oct) | Los dos |
 | 3 | **Arreglos pequeños** (4.1) | Claude |
 | 4 | **Comprobaciones de la nube** que faltan (4.2) | Claude |
 | 5 | **Repartir los leads** entre los callers | Cristian y directores |
@@ -56,6 +56,11 @@
 - [ ] En Proyecto Prueba (local) queda una venta de prueba del 9 oct a nombre del CEO (Ana sale con «1 cerrada · 0 €»): borrarla o pasarla a Ana si me dices (solo afecta a las pruebas en local).
 
 - [ ] **Tests en GitHub en vez de Docker** (Cristian, 12 oct: no volver a usar Docker; **no es para ahora**). Un archivo de GitHub Actions que, en cada commit que cambie código (no en los de documentos), arranca la base en los ordenadores de GitHub, pasa los ~450 tests y marca ✅ o ❌. **Montarlo en 10 minutos como máximo** (Cristian). Comprobado el 12 oct: cuenta `eternitydevzz` gratis y repositorio privado → **2.000 minutos al mes** (docs.github.com, «GitHub Actions billing»; Linux cuenta 1 a 1); no hace falta ningún secreto (las 4 variables de los tests salen de la base que arranca GitHub y una clave de cifrado de prueba). Estimado, sin medir: ~5-6 min por pasada. Cuando funcione, Cristian desinstala Docker Desktop (con él se va la copia vieja local: 1.005 leads del 10 oct y Proyecto Prueba).
+
+- [x] **Workflow 3 arreglado y workflow 4 creado** (12 oct). En GHL hay **dos calendarios de founders**: «#1 Maestria founders» (el que usa `codigomaestria.com/agenda`; comprobado en la ficha de la reserva de prueba) y «#1 Llamada de Descubrimiento | MaestrIA…». El 3 vigilaba el segundo y tenía 0 inscritos. Ahora: **3. AP - Cita Founders** → «#1 Maestria founders»; **4. AP - Cita descubrimiento** (copia del 3, con URL, Custom data, clave y Wait de 999 días comprobados) → «#1 Llamada de Descubrimiento». Los dos publicados.
+- [x] **«Orgánico → Agendados» probado con una reserva real por la sincronización** (12 oct): la reserva de prueba (12 oct, 8:45 Nueva York = 12:45 UTC, José) llegó con su hora y su closer y su lead quedó en «Orgánico → Agendados»; las citas canceladas no movieron su lead. **Sin probar por el webhook** (la reserva se hizo antes de arreglar el 3).
+- La reserva quedó unida al lead «Test» (`team@test.com`) y no a «PRUEBA Founders»: en GHL es el **mismo contacto** (mismo teléfono, GHL lo reutilizó) y la app une por el id de contacto de GHL, así que se queda con el nombre que tenía. Comportamiento correcto.
+- [ ] **Volvieron los leads de prueba** con la sincronización (como estaba avisado): Kiiiriii y PRUEBA Closers (en Webinar 1, citas canceladas), «Test» `tst@test.com`, «Test» `team@test.com` (con 2 citas, una es la reserva de hoy) y «Prueba Lia» (en Orgánico → Agendados). Hay que borrarlos en GHL (sección 5) y después en la app.
 
 ### 4.2 Comprobaciones de la nube
 - [ ] **Medir la velocidad** con los 1.178 leads (en local, el Funnel con 30.000 leads carga en ~1 s). Si va lenta, se arregla.
@@ -82,7 +87,7 @@
 
 ### Urgente
 - [ ] **Google Workspace:** actualizar el pago **antes del 2 nov 2026** o `info@eternity.llc` deja de recibir correo (y con él los avisos y enlaces de la app).
-- [ ] **Borrar en GHL** las 5 citas de prueba (Kiiiriii y PRUEBA Closers del 14 oct; «Test» tst@test.com del 30 sep y 9 oct; «Prueba» info+prueba-lia del 2 oct) y los contactos de prueba (PRUEBA Dashboard `info+prueba@eternity.llc`, PRUEBA Closers `info+prueba2@eternity.llc`, Kiiiriii `kiiir@test.com`). Yo no borro datos para siempre.
+- [ ] **Borrar en GHL** las 5 citas de prueba (Kiiiriii y PRUEBA Closers del 14 oct; «Test» tst@test.com del 30 sep y 9 oct; «Prueba» info+prueba-lia del 2 oct) y la reserva de prueba del 12 oct (8:45 Nueva York, «#1 Maestria founders»), y los contactos de prueba (PRUEBA Dashboard `info+prueba@eternity.llc`, PRUEBA Closers `info+prueba2@eternity.llc`, Kiiiriii `kiiir@test.com`, «Test» `tst@test.com`, «Test»/PRUEBA Founders `team@test.com`/`info+prueba3@eternity.llc` y «Prueba Lia» `info+prueba-lia@eternity.llc`). Yo no borro datos para siempre.
 - [ ] **Guardar la clave de Resend** (`re_…`) en tu gestor: no está en `contraseñas.md` y Resend no la vuelve a enseñar.
 - [ ] Guardar en tu gestor lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
@@ -136,7 +141,7 @@
 | Onboarding de closers | Sus clientes = a quienes les registró una venta. Los puntos los editan el CEO y los directores. |
 | Cola del caller | La prioridad A/B/C no ordena; primero los «llamar luego» y «link enviado» que ya tocan, luego nuevos, luego «no contesta», y dentro, del más nuevo al más viejo. |
 | Emails | (11 oct) La app manda ella misma los emails con Resend, desde `Eternity <no-reply@eternity.llc>` (dominio raíz, decisión de Cristian): el aviso de cada reporte (al CEO y a los directores) y el enlace mágico que un administrador manda desde la ficha (caduca en 1 h, un solo uso). No se toca el correo de Supabase. El cambio de email lo hace un administrador directamente (no manda email). Sin email de bienvenida: los accesos van por WhatsApp. |
-| GHL (12 oct) | Workflows de la app en la carpeta «1. Dashboard ventas», numerados, **siempre publicados** y con un Wait de 999 días al final. Acción **Webhook normal** (no «Custom webhook», que es premium). Primero leads y después agendas. Calendarios: «#2 Callers» y «#3 Closers» = Andrés y Renzo; «#1 Maestria founders» = Cristian y José. **Todo lead con cita de GHL va a «Orgánico → Agendados»** (publicado el 12 oct). El link de agenda de los callers lleva a «#1 Maestria founders». Los leads se suben con CSV (lo hace Cristian). |
+| GHL (12 oct) | Workflows de la app en la carpeta «1. Dashboard ventas», numerados, **siempre publicados** y con un Wait de 999 días al final. Acción **Webhook normal** (no «Custom webhook», que es premium). Primero leads y después agendas. Calendarios: «#2 Callers» y «#3 Closers» = Andrés y Renzo; «#1 Maestria founders» y «#1 Llamada de Descubrimiento» = Cristian y José (dos calendarios distintos, workflows 3 y 4). **Todo lead con cita de GHL va a «Orgánico → Agendados»** (publicado el 12 oct). El link de agenda de los callers lleva a «#1 Maestria founders». Los leads se suben con CSV (lo hace Cristian). |
 | Leads en varios pipelines (12 oct) | Cristian quiere que un lead pueda estar en varios pipelines para ver los números de cada fuente (por diseñar, 4.3). |
 | Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, el link de agenda, y los links y recursos. |
 | Docker (12 oct) | **No se vuelve a usar Docker.** Los tests de integración irán en GitHub (4.1), cuando toque. |
@@ -197,7 +202,7 @@
 ## 8. Cómo entrar y dónde está cada cosa
 
 - **La app publicada:** https://dashboard-de-ventas-iota.vercel.app (tu acceso: `info@eternity.llc`, contraseña en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv`, fila «Cris y José»).
-- **GHL:** subcuenta **Maestria** (Location ID `ZGWJLBH58RJtl2iGhykp`) · workflows en Automation → carpeta **«1. Dashboard ventas»** (0 Biblioteca, 1 Callers, 2 Closers, 3 Founders) · Private Integration **«App Eternity (dashboard)»** · en la app: Administración → **Integraciones GHL** (token, ids de closers, «Últimos eventos») y → **Entradas** («GHL · Biblioteca»).
+- **GHL:** subcuenta **Maestria** (Location ID `ZGWJLBH58RJtl2iGhykp`) · workflows en Automation → carpeta **«1. Dashboard ventas»** (0 Biblioteca, 1 Callers, 2 Closers, 3 Founders, 4 Descubrimiento) · Private Integration **«App Eternity (dashboard)»** · en la app: Administración → **Integraciones GHL** (token, ids de closers, «Últimos eventos») y → **Entradas** («GHL · Biblioteca»).
 - **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
 - **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
 - **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.

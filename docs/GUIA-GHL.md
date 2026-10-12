@@ -32,11 +32,12 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 | **0. AP - Biblioteca** | Contact Tag → se añade «biblioteca recursos» (la pone el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) | Webhook normal, **sin** Custom data ni cabecera | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
 | **1. AP - Cita Callers** | Customer booked appointment · In calendar = «#2 Callers - Maestria» | Webhook normal «Cita (app)» | `/api/webhooks/ghl/<id de Maestria>` |
 | **2. AP - Cita Closers** | ídem · «#3 Closers - Maestria» | ídem (copia del 1) | ídem |
-| **3. AP - Cita Founders** | ídem · «#1 Maestria founders» (antes «#1 Llamada de Descubrimiento…») | ídem (copia del 2) | ídem |
+| **3. AP - Cita Founders** | ídem · «#1 Maestria founders» (el de `codigomaestria.com/agenda`; arreglado el 12 oct: antes vigilaba el de abajo) | ídem (copia del 2) | ídem |
+| **4. AP - Cita descubrimiento** | ídem · «#1 Llamada de Descubrimiento \| MaestrIA…» (otro calendario de founders, 12 oct) | ídem (copia del 3) | ídem |
 
 **«Cita (app)»** (Webhook normal, POST): *Custom data* `tipo` = `cita_agendada`, `fecha` = Appointment · Start Date Time, `closer_email` = Appointment · Assigned User · Email; *Headers* `x-eternity-secreto` = la clave de Maestria (Administración → Integraciones → «Copiar clave»; empieza por `704d0dde…`; ojo, la del proyecto «Test» es otra).
 
-**Calendarios (Cristian, 12 oct):** «#2 Callers» y «#3 Closers» = Andrés y Renzo (closers actuales); «#1 Maestria founders» = Cristian y José (el que más se usa ahora). En la app, Cristian Ortiz (`cristianortiz@astraire.com`) y José Gómez (`jose@eternity.llc`) son closers de Maestria con su email de GHL.
+**Calendarios (Cristian, 12 oct):** «#2 Callers» y «#3 Closers» = Andrés y Renzo (closers actuales); «#1 Maestria founders» y «#1 Llamada de Descubrimiento | MaestrIA…» = Cristian y José (son **dos calendarios distintos**; la landing de agenda usa «#1 Maestria founders»). En la app, Cristian Ortiz (`cristianortiz@astraire.com`) y José Gómez (`jose@eternity.llc`) son closers de Maestria con su email de GHL.
 
 **La hora de la cita (fallo arreglado el 11 oct, `f16b240`):** GHL manda `calendar.startTime` **sin zona** («2026-10-14T15:30:00», hora de `calendar.selectedTimezone`). La app la lee en esa zona (o en la del proyecto). El `fecha` de *Custom data* llega como texto («Wednesday, October 14, 2026 9:30 PM») y no se usa.
 
