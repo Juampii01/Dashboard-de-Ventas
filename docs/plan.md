@@ -27,7 +27,8 @@
 - [x] **«¿No puedes entrar? Te mandamos un enlace»** en el login (misma respuesta exista o no el email; 3 por email y 10 por conexión cada hora).
 - [x] Probado de verdad (12 oct): email de bienvenida a `info@eternity.llc` → llegó, Cristian entró por el dominio nuevo. **Sin probar todavía:** una persona nueva creando su contraseña en la bienvenida, y «¿No puedes entrar?» con un email real.
 - [x] **Antonio** creado (12 oct; lo lanzó Cristian; el primer intento falló con «no existe el proyecto», seguramente por la red, y el segundo fue bien) y **acceso enviado** («Enviado a Antonio»). Su contraseña temporal quedó en `scripts/salida/usuarios-creados-2026-10-12-10-50.csv` (no hace falta: crea la suya al entrar; borrar con los demás CSV).
-- [ ] Mandar el acceso a **Juan y Junior** cuando Cristian lo diga. Entran solo a familiarizarse, sin tocar nada.
+- [x] Acceso enviado a **Juan y Junior** (12 oct, «Enviado a Juan, Junior»). Los 3 directores entran solo a familiarizarse, sin tocar nada (se lo dice Cristian).
+- [ ] Comprobar en la base que los 3 directores han entrado y terminado la bienvenida (con su contraseña).
 - **Hecha cuando:** los 3 directores han recibido su acceso y han entrado.
 
 **Fase 2 · Velocidad**
