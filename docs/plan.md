@@ -41,7 +41,7 @@
 | 4 | **Bloque 6 · Resend** (4.1) | Los dos | ✅ Verificado, probado en la nube y con el diseño glass (11 oct) |
 | 5 | **Link de agenda** | Claude | ✅ `https://codigomaestria.com/agenda` (la landing con el calendario), puesto en Maestria (11 oct) |
 | 6 | **Conectar GHL** (4.3): workflows de lead nuevo y cita agendada, token, calendarios | Los dos | **En marcha**: ✅ lead nuevo de Biblioteca (23 leads reales en Maestria a las 20:45 UTC del 11 oct) y ✅ citas probadas con una reserva real y la hora arreglada. Falta: closers Cristian y José, cita de «#3 Closers», token de GHL y calendarios de cada closer |
-| 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | Pendiente |
+| 7 | **Subir los leads reales** a Maestria (exportación nueva de GHL → CRM → Biblioteca Recursos) | Cristian, Claude comprueba | **Biblioteca ✅** (12 oct): 1.158 leads (1.094 del CSV + 64 del workflow), sin emails repetidos, todos en Biblioteca Recursos sin caller; 1.154 con las 6 respuestas; KPIs → Biblioteca rellena. Faltan los de otras fuentes (Webinar, DFY…) si Cristian los quiere |
 | 8 | **Mandar los accesos al equipo** por WhatsApp y borrar los 4 archivos de contraseñas | Cristian | Pendiente |
 | 9 | Comprobaciones de la nube que faltan (4.2) | Claude | Pendiente |
 | 10 | Mejoras de después de publicar (4.4): cerrar moviendo a «Cerrados» y zona horaria | Claude | Pendiente |
