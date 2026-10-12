@@ -32,8 +32,12 @@
 - **Hecha cuando:** los 3 directores han recibido su acceso y han entrado.
 
 **Fase 2 · Velocidad**
-- [ ] Medir en la nube cuánto tarda cada pantalla; comprobar la región de Vercel.
-- [ ] Que «Individual ↔ Comparativa» y los botones que solo cambian la vista sean instantáneos; señal de «cargando».
+- [x] **Medido en la nube** (12 oct, con la sesión del CEO y los datos reales de Maestria, 3 veces cada una; tiempo de servidor + red desde España): Funnel 0,8-1,3 s (3,8 s la primera vez: Vercel «despierta» la función), KPIs 0,9-1,2 s, Agendas 0,6-1 s, CRM 0,7-0,8 s, Ventas 0,6-0,75 s, Ranking 0,65-0,76 s, Equipo 0,6-0,67 s, Administración 0,67-0,79 s; el login, 0,45 s.
+- [x] **Región:** las funciones de Vercel están en **iad1 (Washington)**, junto a Supabase (East US): no hay que cambiarla (la cabecera `x-vercel-id` lo dice: `cdg1::iad1`, entra por París y se ejecuta en Washington).
+- [x] **Individual ↔ Comparativa al instante** (`0fc2a87`): las dos vistas llegan calculadas y el botón solo cambia cuál se ve (antes cada clic volvía a pedir la página: ~1 s sin ninguna señal).
+- [x] **Barra de carga** arriba mientras un filtro o el periodo traen datos (antes solo se atenuaba el filtro).
+- [ ] **Que Cristian lo pruebe en su Mac** (Claude no puede medir los clics: con la ventana oculta, Chrome congela la página).
+- [ ] Si siguen los tirones: bajar el tiempo de servidor de Funnel y KPIs (las más lentas) y ver qué hacer con el «despertar» de Vercel (3-4 s la primera vez tras un rato sin uso).
 - **Hecha cuando:** te enseño las medidas de antes y de después, y lo notas tú en tu Mac.
 
 **Fase 3 · Diseño común** (piezas que usan todas las pantallas)
