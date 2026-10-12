@@ -35,7 +35,7 @@
 |---|---|---|
 | 1 | **Borrar en GHL las pruebas** (5 citas y 3 contactos, sección 5): si no, la sincronización las vuelve a traer | Cristian |
 | 2 | **Probar «Orgánico → Agendados» con una reserva real** (por ejemplo en «#1 Maestria founders») | Los dos |
-| 3 | **Arreglos pequeños** (4.1): texto de Integraciones GHL y aviso falso de «localhost» | Claude |
+| 3 | **Arreglos pequeños** (4.1) | Claude |
 | 4 | **Comprobaciones de la nube** que faltan (4.2) | Claude |
 | 5 | **Repartir los leads** entre los callers | Cristian y directores |
 | 6 | **Mandar los accesos** por WhatsApp y borrar los 4 CSV de contraseñas | Cristian |
@@ -50,8 +50,7 @@
 **Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado). Docker se enciende solo para los tests de integración y se apaga después.
 
 ### 4.1 Arreglos pequeños
-- [ ] El texto de Administración → Integraciones GHL sigue explicando el «Custom webhook» (premium) y sus cuerpos JSON: ponerlo como se montó (Webhook normal, Custom data y cabecera `x-eternity-secreto`).
-- [ ] Administración → Entradas dice «En local (localhost) las landings no pueden llegar…» aunque la app está publicada.
+- [x] Administración: fuera los dos avisos viejos de «localhost» (Entradas e Integraciones) e Integraciones explica el Webhook normal; los cuerpos JSON del «Custom webhook» quedan plegados como referencia · `3a6c447` (visto en la app publicada, 12 oct).
 - [ ] El test de Orgánico de `ghl-calendario.test.ts` solo pasa con su archivo entero (usa el token que pone un test anterior): que lo ponga él mismo.
 - [ ] `calcularVendedores` quedó sin uso (solo lo usan 3 tests): quitarlo con sus tests.
 - [ ] En Proyecto Prueba (local) queda una venta de prueba del 9 oct a nombre del CEO (Ana sale con «1 cerrada · 0 €»): borrarla o pasarla a Ana si me dices (solo afecta a las pruebas en local).

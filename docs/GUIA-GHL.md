@@ -48,7 +48,7 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 
 **Token (API, 12 oct):** Private Integration **«App Eternity (dashboard)»** (Settings → Private Integrations) con solo `calendars/events.readonly`, `contacts.readonly` y `conversations/message.readonly`; Location ID `ZGWJLBH58RJtl2iGhykp`. El token lo pegó Cristian en Administración → Integraciones GHL, donde están también los ids de GHL de los 4 closers. La sincronización trae las citas de cada closer (30 días atrás y 60 adelante) y la API sí manda la hora con zona. Los callers **no tienen id de GHL** todavía: sin él, «Llamadas de GHL» no les atribuye nada.
 
-**Lo que falta en Maestria** (detalle en el plan, 4.3): solo la Biblioteca entra sola (Webinar, Orgánico y DFY, sin workflow; se suben con CSV); avisos de reportes por WhatsApp (Parte 2) sin montar; borrar en GHL las citas y contactos de prueba (plan, sección 5). ⚠ El texto de Administración → Integraciones GHL todavía explica el «Custom webhook» y sus cuerpos JSON (por cambiar).
+**Lo que falta en Maestria** (detalle en el plan, 4.3): solo la Biblioteca entra sola (Webinar, Orgánico y DFY, sin workflow; se suben con CSV); avisos de reportes por WhatsApp (Parte 2) sin montar; borrar en GHL las citas y contactos de prueba (plan, sección 5).
 
 ---
 
