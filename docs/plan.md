@@ -22,11 +22,13 @@
 > Salió de `borrador-de-plan.md` (16 puntos de Cristian, con su análisis y sus respuestas). El orden lo decidió Cristian. Sin tiempos estimados.
 
 **Fase 1 · Dominio y accesos (ahora)**
-- [ ] Dominio `dashboard.eternity.llc`: añadirlo en Vercel; registro CNAME en GoDaddy; cambiar `APP_URL` en Vercel y las direcciones permitidas en Supabase; comprobar login y enlaces de email con el dominio nuevo. (La dirección `.vercel.app` sigue funcionando, así que GHL no se rompe; sus workflows se cambian al dominio nuevo con calma.)
-- [ ] Alta de **Antonio** (director con Administración, `antonio@salesbeastco.com`, +34 602 57 19 12): yo preparo el CSV y tú lanzas `crear-usuarios`.
-- [ ] **Email de acceso** con el diseño glass: enlace de un solo uso para entrar y crear su propia contraseña. Probarlo primero contigo.
-- [ ] Mandarlo a los **3 directores** (Juan, Junior y Antonio) cuando me lo digas, enseñándote antes la lista y el email. **Entran solo a familiarizarse, sin tocar nada** (se lo dice Cristian). El resto del equipo, cuando la app esté pulida.
-- **Hecha cuando:** la app abre en `dashboard.eternity.llc`, el login y el enlace del email funcionan con el dominio nuevo (probado contigo) y los directores han recibido su acceso.
+- [x] **Dominio `dashboard.eternity.llc`** (12 oct): añadido en Vercel; CNAME `dashboard` → `2c2ff403e7e26992.vercel-dns-017.com` en GoDaddy (lo añadió Claude con permiso); responde con HTTPS; `APP_URL` cambiada. La dirección `.vercel.app` sigue funcionando (GHL no se rompe; sus workflows se pasan al dominio nuevo con calma). Ojo: la sesión es por dirección; en el dominio nuevo hay que entrar otra vez.
+- [x] **Email de acceso** (12 oct, `e55a58b` … ): Administración → Equipo → «Enviar acceso por email» (marcar personas o «Todos los activos»; confirmar en el mismo botón). Enlace de un solo uso que **dura 24 h** (ajuste «Email OTP expiration» de Supabase = 86.400 s; Supabase avisa de que pasa de lo recomendado). Al abrirlo: **pantalla de entrada animada** (logo, saludo, barra ~3 s) → bienvenida (los nuevos crean ahí su contraseña) o «Mi perfil» con el aviso para cambiarla.
+- [x] **«¿No puedes entrar? Te mandamos un enlace»** en el login (misma respuesta exista o no el email; 3 por email y 10 por conexión cada hora).
+- [x] Probado de verdad (12 oct): email de bienvenida a `info@eternity.llc` → llegó, Cristian entró por el dominio nuevo. **Sin probar todavía:** una persona nueva creando su contraseña en la bienvenida, y «¿No puedes entrar?» con un email real.
+- [ ] Alta de **Antonio** (director con Administración): CSV listo en `scripts/salida/director-antonio.csv` y simulado; **falta que Cristian lance** `node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/director-antonio.csv --confirmar`.
+- [ ] Mandar el acceso a los **3 directores** (Juan, Junior y Antonio) cuando Cristian lo diga. Entran solo a familiarizarse, sin tocar nada.
+- **Hecha cuando:** los 3 directores han recibido su acceso y han entrado.
 
 **Fase 2 · Velocidad**
 - [ ] Medir en la nube cuánto tarda cada pantalla; comprobar la región de Vercel.
