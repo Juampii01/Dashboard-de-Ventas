@@ -26,8 +26,8 @@
 - [x] **Email de acceso** (12 oct, `e55a58b` … ): Administración → Equipo → «Enviar acceso por email» (marcar personas o «Todos los activos»; confirmar en el mismo botón). Enlace de un solo uso que **dura 24 h** (ajuste «Email OTP expiration» de Supabase = 86.400 s; Supabase avisa de que pasa de lo recomendado). Al abrirlo: **pantalla de entrada animada** (logo, saludo, barra ~3 s) → bienvenida (los nuevos crean ahí su contraseña) o «Mi perfil» con el aviso para cambiarla.
 - [x] **«¿No puedes entrar? Te mandamos un enlace»** en el login (misma respuesta exista o no el email; 3 por email y 10 por conexión cada hora).
 - [x] Probado de verdad (12 oct): email de bienvenida a `info@eternity.llc` → llegó, Cristian entró por el dominio nuevo. **Sin probar todavía:** una persona nueva creando su contraseña en la bienvenida, y «¿No puedes entrar?» con un email real.
-- [ ] Alta de **Antonio** (director con Administración): CSV listo en `scripts/salida/director-antonio.csv` y simulado; **falta que Cristian lance** `node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/director-antonio.csv --confirmar`.
-- [ ] Mandar el acceso a los **3 directores** (Juan, Junior y Antonio) cuando Cristian lo diga. Entran solo a familiarizarse, sin tocar nada.
+- [x] **Antonio** creado (12 oct; lo lanzó Cristian; el primer intento falló con «no existe el proyecto», seguramente por la red, y el segundo fue bien) y **acceso enviado** («Enviado a Antonio»). Su contraseña temporal quedó en `scripts/salida/usuarios-creados-2026-10-12-10-50.csv` (no hace falta: crea la suya al entrar; borrar con los demás CSV).
+- [ ] Mandar el acceso a **Juan y Junior** cuando Cristian lo diga. Entran solo a familiarizarse, sin tocar nada.
 - **Hecha cuando:** los 3 directores han recibido su acceso y han entrado.
 
 **Fase 2 · Velocidad**
