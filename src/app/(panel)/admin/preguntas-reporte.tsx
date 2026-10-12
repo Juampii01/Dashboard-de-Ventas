@@ -6,6 +6,7 @@ import { useAccion } from "@/components/acciones-lead";
 import type { Pregunta } from "@/lib/reportes";
 import { guardarPreguntasReporte } from "./acciones";
 import { confirmar } from "@/components/dialogos";
+import { Pastillas } from "@/components/eleccion";
 
 // Preguntas del reporte de fin de día de un rol (bloque 7 de 1.0). Las fijas (las 3 de las tasas del closer) se
 // pueden renombrar pero no quitar ni cambiar de tipo. Los reportes ya enviados se quedan con las suyas.
@@ -33,10 +34,10 @@ export function EditorPreguntas({ rol, inicial, fijas, personalizadas }: { rol: 
                 <button type="button" className="rounded p-0.5 text-texto-3 hover:text-texto disabled:opacity-30" disabled={i === lista.length - 1} onClick={() => mover(i, 1)} aria-label={`Bajar «${p.texto || "pregunta nueva"}»`}><ArrowDown className="h-3.5 w-3.5" /></button>
               </div>
               <input className="campo min-w-48 flex-1 py-1" value={p.texto} onChange={(e) => poner(i, { texto: e.target.value })} placeholder="Texto de la pregunta" aria-label={`Pregunta ${i + 1}`} />
-              <select className="campo w-auto py-1" value={p.tipo} disabled={fija} onChange={(e) => poner(i, { tipo: e.target.value as Pregunta["tipo"] })} aria-label={`Tipo de la pregunta ${i + 1}`}>
+              <Pastillas className="campo w-auto py-1" value={p.tipo} disabled={fija} onChange={(e) => poner(i, { tipo: e.target.value as Pregunta["tipo"] })} aria-label={`Tipo de la pregunta ${i + 1}`}>
                 <option value="numero">Número</option>
                 <option value="texto">Texto</option>
-              </select>
+              </Pastillas>
               <input className="campo min-w-40 flex-1 py-1 text-xs" value={p.ayuda ?? ""} onChange={(e) => poner(i, { ayuda: e.target.value })} placeholder="Ayuda (opcional)" aria-label={`Ayuda de la pregunta ${i + 1}`} />
               {fija ? (
                 <span className="inline-flex items-center gap-1 text-xs text-texto-3" title="Se usa para las tasas del closer: se puede renombrar, no quitar"><Lock className="h-3.5 w-3.5" /> fija</span>

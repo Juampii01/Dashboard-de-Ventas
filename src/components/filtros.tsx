@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CalendarRange, Search } from "lucide-react";
+import { Desplegable } from "@/components/eleccion";
 
 const PERIODOS = [
   { v: "hoy", t: "Hoy" },
@@ -43,7 +44,7 @@ export function Filtros({
   return (
     <div className={`tarjeta flex flex-wrap items-center gap-2 p-2.5 ${cargando ? "opacity-70" : ""}`}>
       {vendedores && (
-        <select
+        <Desplegable
           aria-label="Vendedor"
           className="campo w-auto min-w-44"
           value={params.get("vendedor") ?? ""}
@@ -55,10 +56,10 @@ export function Filtros({
               {v.nombre} · {v.rol}
             </option>
           ))}
-        </select>
+        </Desplegable>
       )}
       {productos && (
-        <select
+        <Desplegable
           aria-label="Producto"
           className="campo w-auto min-w-44"
           value={params.get("producto") ?? ""}
@@ -70,7 +71,7 @@ export function Filtros({
               {p.nombre}
             </option>
           ))}
-        </select>
+        </Desplegable>
       )}
       <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
         {PERIODOS.map((p) => (

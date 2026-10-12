@@ -72,7 +72,7 @@ export function GestionarCliente({ leadId, nombre, ficha, pasos, notas, pestana 
 
             {tab === "caso" && (
               <form className="space-y-3" action={(fd) => ejecutar(async () => cerrarSiOk(await guardarCasoExito(leadId, { caso, resultado: String(fd.get("resultado") ?? ""), enlace: String(fd.get("enlace") ?? ""), fecha: String(fd.get("fecha") ?? "") }), () => setAbierto(false)), "Caso de éxito guardado")}>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={caso} onChange={(e) => setCaso(e.target.checked)} /> Es un caso de éxito</label>
+                <label className="flex items-center gap-2"><input type="checkbox" className="interruptor" checked={caso} onChange={(e) => setCaso(e.target.checked)} /> Es un caso de éxito</label>
                 <div><label className="etiqueta-campo" htmlFor="caso-res">Resultado que consiguió</label><textarea id="caso-res" name="resultado" rows={3} defaultValue={ficha.caso_resultado ?? ""} className="campo" placeholder="Ej. Primer cliente de 3.000 € en 6 semanas" /></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="etiqueta-campo" htmlFor="caso-enl">Enlace al testimonio</label><input id="caso-enl" name="enlace" defaultValue={ficha.caso_enlace ?? ""} className="campo" placeholder="https://…" /></div>

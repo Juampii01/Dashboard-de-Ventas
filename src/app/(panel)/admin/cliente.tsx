@@ -6,6 +6,7 @@ import { Copy, Check, RefreshCw } from "lucide-react";
 import { anadirAlProyecto, crearProyecto, crearUsuario, guardarLinkAgenda, guardarProyecto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 type Res = { ok?: string; error?: string } | null;
 function Resultado({ estado }: { estado: Res }) {
@@ -20,12 +21,12 @@ export function FormUsuario({ soyCeo }: { soyCeo: boolean }) {
       <label className="block"><span className="etiqueta-campo">Email</span><input name="email" type="email" required className="campo" /></label>
       <div>
         <label className="etiqueta-campo" htmlFor="cliente-rol">Rol</label>
-        <select id="cliente-rol" name="rol" className="campo" defaultValue="caller">
+        <Pastillas id="cliente-rol" name="rol" className="campo" defaultValue="caller">
           <option value="caller">Caller</option>
           <option value="closer">Closer</option>
           <option value="director">Director de ventas</option>
           {soyCeo && <option value="ceo">CEO</option>}
-        </select>
+        </Pastillas>
       </div>
       <label className="block"><span className="etiqueta-campo">Contraseña temporal (mín. 8)</span><input name="password" type="text" minLength={8} required className="campo" autoComplete="off" /></label>
       <Resultado estado={estado} />
@@ -76,10 +77,10 @@ export function FormNuevoProyecto() {
       </div>
       <div>
         <label className="etiqueta-campo" htmlFor="cliente-moneda-y-zona-horaria">Moneda y zona horaria</label>
-        <select id="cliente-moneda-y-zona-horaria" name="region" className="campo">
+        <Pastillas id="cliente-moneda-y-zona-horaria" name="region" className="campo">
           <option value="us">USD · Nueva York (EE. UU.)</option>
           <option value="es">EUR · Madrid (España)</option>
-        </select>
+        </Pastillas>
       </div>
       <Resultado estado={estado} />
       <button className="btn-primario" disabled={enviando}>Crear proyecto</button>
@@ -156,10 +157,10 @@ export function AnadirExistente({ personas, proyecto }: { personas: { id: string
   return (
     <div className="space-y-3">
       <p className="text-xs text-texto-3">Para quien ya tiene usuario en otro proyecto: entra con el mismo email y contraseña y elige el proyecto en el selector.</p>
-      <select className="campo" value={elegido} onChange={(e) => setElegido(e.target.value)}>
+      <Desplegable className="campo" value={elegido} onChange={(e) => setElegido(e.target.value)}>
         <option value="">Elige una persona…</option>
         {personas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-      </select>
+      </Desplegable>
       <Mensajes error={error} ok={ok} />
       <button className="btn-primario w-full" disabled={!elegido || pendiente} onClick={() => ejecutar(async () => { await anadirAlProyecto(elegido); setElegido(""); }, `Añadida a ${proyecto}`)}>
         Añadir a {proyecto}

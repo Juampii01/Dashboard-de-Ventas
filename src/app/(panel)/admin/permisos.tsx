@@ -2,6 +2,7 @@
 
 import { useAccion } from "@/components/acciones-lead";
 import { guardarPermisoSeccion, guardarPermisoPersona } from "./acciones";
+import { Pastillas } from "@/components/eleccion";
 
 const ROLES = [
   { v: "director", t: "Directores" },
@@ -100,7 +101,7 @@ export function ListaPermisosPersona({ persona, datos, onCambio }: { persona: { 
               {nunca ? (
                 <span className="text-xs text-texto-3">{s.v === "mi_funnel" ? "No aplica" : "Nunca"}</span>
               ) : (
-                <select
+                <Pastillas
                   aria-label={`${s.t} para ${persona.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={valor}
@@ -117,7 +118,7 @@ export function ListaPermisosPersona({ persona, datos, onCambio }: { persona: { 
                   <option value="rol">Como su rol ({delRol ? "sí" : "no"})</option>
                   <option value="si" disabled={!datos.puedoDar.includes(s.v)}>Sí</option>
                   <option value="no">No</option>
-                </select>
+                </Pastillas>
               )}
             </div>
           );

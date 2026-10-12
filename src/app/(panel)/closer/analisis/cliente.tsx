@@ -10,6 +10,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { AGENTES, type Agente, type ConfigAgentes } from "@/lib/ia-agentes";
 import { aceptarAutocompletado, analizarPendientesAhora, evaluarManual, guardarConfigIa, reanalizar, rechazarAutocompletado } from "./acciones";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 // Texto de la IA con viñetas y **negritas**, sin meter HTML (React lo escapa todo)
 export function TextoIa({ texto }: { texto: string }) {
@@ -68,7 +69,7 @@ export function EvaluarManual({ id, nota, texto }: { id: string; nota: number | 
   const [n, setN] = useState(nota ? String(nota) : "");
   return (
     <form className="flex flex-wrap items-center gap-2" action={(fd) => ejecutar(() => evaluarManual(id, Number(n), String(fd.get("t") ?? "")), "Evaluación guardada")}>
-      <select value={n} onChange={(e) => setN(e.target.value)} className="campo w-auto py-1" aria-label="Nota de 1 a 10"><option value="">Nota…</option>{Array.from({ length: 10 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select>
+      <Desplegable value={n} onChange={(e) => setN(e.target.value)} className="campo w-auto py-1" aria-label="Nota de 1 a 10"><option value="">Nota…</option>{Array.from({ length: 10 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</Desplegable>
       <input name="t" defaultValue={texto} className="campo w-56 py-1" placeholder="Comentario (opcional)" aria-label="Comentario" />
       <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente || !n}>Guardar</button>
       {nota !== null && <span className="text-xs text-ok">Evaluada</span>}
@@ -108,8 +109,8 @@ export function ConfigurarIa({ configs, productos }: { configs: Config[]; produc
               <div className="space-y-2">
                 <p className="text-texto-2">¿Para qué llamadas es esta configuración? La de un programa manda sobre la general.</p>
                 {[{ id: "", nombre: "General (todas las llamadas)" }, ...productos].map((p) => (
-                  <label key={p.id || "g"} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${alcance === p.id ? "border-primario bg-primario-suave" : "border-borde"}`}>
-                    <input type="radio" checked={alcance === p.id} onChange={() => elegir(p.id)} /> {p.nombre} {de(p.id) && <span className="text-xs text-ok">· configurado</span>}
+                  <label key={p.id || "g"} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${alcance === p.id ? "border-ok bg-ok-suave" : "border-borde"}`}>
+                    <input type="radio" className="sr-only" checked={alcance === p.id} onChange={() => elegir(p.id)} /> {p.nombre} {de(p.id) && <span className="text-xs text-ok">· configurado</span>}
                   </label>
                 ))}
               </div>
@@ -129,7 +130,7 @@ export function ConfigurarIa({ configs, productos }: { configs: Config[]; produc
                   return (
                     <div key={a.v} className={`rounded-lg border border-borde p-3 ${x.activo === false ? "opacity-60" : ""}`}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <label className="flex flex-1 items-center gap-2 font-medium"><input type="checkbox" checked={x.activo !== false} onChange={(e) => cambiar(a.v, { activo: e.target.checked })} /> {a.t}</label>
+                        <label className="flex flex-1 items-center gap-2 font-medium"><input type="checkbox" className="interruptor" checked={x.activo !== false} onChange={(e) => cambiar(a.v, { activo: e.target.checked })} /> {a.t}</label>
                         <div className="flex rounded-md bg-panel-2 p-0.5 text-xs">
                           <button type="button" onClick={() => cambiar(a.v, { instrucciones: null })} className={`rounded px-2 py-1 ${!propio ? "bg-primario text-white" : "text-texto-2"}`}>Predeterminado</button>
                           <button type="button" onClick={() => cambiar(a.v, { instrucciones: x.instrucciones ?? a.d })} className={`rounded px-2 py-1 ${propio ? "bg-primario text-white" : "text-texto-2"}`}>Personalizar</button>

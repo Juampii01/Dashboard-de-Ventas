@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { consultarAgenda } from "@/app/(panel)/leads/agenda";
+import { Desplegable } from "@/components/eleccion";
 
 type Persona = { id: string; nombre: string };
 
@@ -34,9 +35,9 @@ export function CamposCita({ closers, inicial, id }: { closers: Persona[]; inici
       </label>
       <div>
         <label className="etiqueta-campo" htmlFor={id}>Closer</label>
-        <select id={id} name="closer" required className="campo" value={closer} onChange={(e) => setCloser(e.target.value)}>
+        <Desplegable id={id} name="closer" required className="campo" value={closer} onChange={(e) => setCloser(e.target.value)}>
           {closers.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-        </select>
+        </Desplegable>
       </div>
       {!fecha && <p className="text-xs text-texto-3">Elige la hora para ver si el closer está libre.</p>}
       {aviso && fecha && <p className="rounded-lg bg-aviso-suave px-3 py-2 text-xs text-aviso">⚠ {aviso} Puedes agendar igual.</p>}

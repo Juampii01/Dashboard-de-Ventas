@@ -102,7 +102,7 @@ export function TablaBiblioteca({ filas, callers }: { filas: FilaTabla[]; caller
         {OFERTAS.map((o) => (
           <button key={o.v} onClick={() => setSolo(o.v)} className={`chip ${solo === o.v ? "bg-primario text-white" : "bg-panel-2 text-texto-2"}`}>{o.t} <small className="ml-1 opacity-80">{cuenta[o.v]}</small></button>
         ))}
-        <label className="ml-2 flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} className="accent-[var(--primario)]" /> Sin caller</label>
+        <label className="ml-2 flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
         <div className="ml-auto"><RepartirLeads callers={callers} fijo={{ soloBiblioteca: true }} ofertaInicial={solo || null} etiqueta={`Repartir ${solo ? ETIQUETA_OFERTA[solo] : "leads"}`} /></div>
       </div>
       <div className="relative">

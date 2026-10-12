@@ -8,6 +8,7 @@ import { Copiar } from "./cliente";
 import { borrarEntrada, crearEntrada, guardarEntrada, nuevaDireccionEntrada } from "./acciones";
 import { OPERADORES, type Regla } from "@/lib/entrada";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 type Pipe = { id: string; nombre: string; etapas: { id: string; nombre: string }[] };
 type Res = { ok?: string; error?: string } | null;
@@ -28,14 +29,14 @@ function SelectorDestino({
   const etapas = pipelines.find((p) => p.id === pipeline)?.etapas ?? [];
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      <select className="campo" value={pipeline ?? ""} onChange={(e) => onCambio(e.target.value || null, null)} aria-label="Pipeline">
+      <Desplegable className="campo" value={pipeline ?? ""} onChange={(e) => onCambio(e.target.value || null, null)} aria-label="Pipeline">
         <option value="">{vacio}</option>
         {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-      </select>
-      <select className="campo" value={etapa ?? ""} disabled={!pipeline} onChange={(e) => onCambio(pipeline, e.target.value || null)} aria-label="Columna">
+      </Desplegable>
+      <Desplegable className="campo" value={etapa ?? ""} disabled={!pipeline} onChange={(e) => onCambio(pipeline, e.target.value || null)} aria-label="Columna">
         <option value="">Primera columna</option>
         {etapas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-      </select>
+      </Desplegable>
     </div>
   );
 }
@@ -89,7 +90,7 @@ export function EditorEntrada({ entrada, pipelines }: { entrada: EntradaVista; p
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="block"><span className="etiqueta-campo">Nombre</span><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
-        <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" checked={activa} onChange={(e) => setActiva(e.target.checked)} /> Activa</label>
+        <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" className="interruptor" checked={activa} onChange={(e) => setActiva(e.target.checked)} /> Activa</label>
       </div>
 
       <div>
@@ -122,9 +123,9 @@ export function EditorEntrada({ entrada, pipelines }: { entrada: EntradaVista; p
             <li key={i} className="space-y-2 rounded-lg border border-borde bg-panel-2 p-3">
               <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]">
                 <input className="campo" list={listaCampos} placeholder="Campo (p. ej. quiz_completed)" value={r.campo} onChange={(e) => cambiarRegla(i, { campo: e.target.value })} aria-label="Campo" />
-                <select className="campo" value={r.operador} onChange={(e) => cambiarRegla(i, { operador: e.target.value as Regla["operador"] })} aria-label="Condición">
+                <Desplegable className="campo" value={r.operador} onChange={(e) => cambiarRegla(i, { operador: e.target.value as Regla["operador"] })} aria-label="Condición">
                   {OPERADORES.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-                </select>
+                </Desplegable>
                 <input className="campo" placeholder="Valor (p. ej. true)" value={r.valor ?? ""} disabled={r.operador === "existe" || r.operador === "no_existe"} onChange={(e) => cambiarRegla(i, { valor: e.target.value })} aria-label="Valor" />
                 <button type="button" className="rounded-md p-2 text-texto-3 hover:bg-mal-suave hover:text-mal" title="Quitar regla" onClick={() => setReglas((rs) => rs.filter((_, j) => j !== i))}>
                   <Trash2 className="h-4 w-4" />

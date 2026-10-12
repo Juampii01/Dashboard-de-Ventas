@@ -12,6 +12,7 @@ import { borrarCuentaFathom, guardarCuentaFathom } from "@/app/(panel)/closer/ll
 import { cambiarEmailPersona, guardarContactoPersona, marcarPrueba, type cargarFicha } from "./ficha-acciones";
 import type { Rol } from "@/lib/tipos";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 // Partes de la ficha de cada persona (bloque 5 de 1.0). Cada una se pone al día al guardar (recargar).
 export type Ficha = Exclude<Awaited<ReturnType<typeof cargarFicha>>, { error: string }>;
@@ -66,14 +67,14 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {f.soyCeo ? (
-              <select className="campo w-auto py-1" value={p.rol} disabled={pendiente} aria-label="Rol" onChange={(e) => hacer(() => actualizarMiembro(p.id, { rol: e.target.value as Rol }), "Rol cambiado")}>
+              <Desplegable className="campo w-auto py-1" value={p.rol} disabled={pendiente} aria-label="Rol" onChange={(e) => hacer(() => actualizarMiembro(p.id, { rol: e.target.value as Rol }), "Rol cambiado")}>
                 {(Object.keys(ROL_TXT) as Rol[]).map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}
-              </select>
+              </Desplegable>
             ) : (
               <span className="text-texto-2">{ROL_TXT[p.rol]}{p.activo ? "" : " · desactivado"} <span className="text-xs text-texto-3">(el rol y desactivar, solo el CEO)</span></span>
             )}
             {f.soyCeo && p.rol === "director" && (
-              <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={p.admin_activo} disabled={pendiente} onChange={(e) => hacer(() => actualizarMiembro(p.id, { admin_activo: e.target.checked }), e.target.checked ? "Con Administración" : "Sin Administración")} /> Administración</label>
+              <label className="flex items-center gap-1 text-xs"><input type="checkbox" className="interruptor" checked={p.admin_activo} disabled={pendiente} onChange={(e) => hacer(() => actualizarMiembro(p.id, { admin_activo: e.target.checked }), e.target.checked ? "Con Administración" : "Sin Administración")} /> Administración</label>
             )}
             {f.soyCeo && <button type="button" className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => hacer(() => actualizarMiembro(p.id, { activo: !p.activo }), p.activo ? "Desactivado" : "Activado")}>{p.activo ? "Desactivar" : "Activar"}</button>}
             <button
@@ -93,7 +94,7 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
         )}
         {f.soyCeo && !f.soyYo && (
           <label className="flex items-start gap-2 text-xs">
-            <input type="checkbox" className="mt-0.5" checked={p.es_prueba} disabled={pendiente} onChange={(e) => hacer(() => marcarPrueba(p.id, e.target.checked), e.target.checked ? "Marcado como perfil de prueba" : "Ya no es perfil de prueba")} />
+            <input type="checkbox" className="interruptor mt-0.5" checked={p.es_prueba} disabled={pendiente} onChange={(e) => hacer(() => marcarPrueba(p.id, e.target.checked), e.target.checked ? "Marcado como perfil de prueba" : "Ya no es perfil de prueba")} />
             <span><b>Perfil de prueba</b> · no cuenta en cifras, reparto ni liquidaciones, y no sale en Equipo (solo el CEO lo cambia).</span>
           </label>
         )}
@@ -113,7 +114,7 @@ export function PipelinesPersona({ f, recargar }: { f: Ficha; recargar: () => vo
       {f.pipelines.map((pi) => (
         <div key={pi.id} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 hover:bg-panel-2">
           <div className="min-w-0 text-sm font-medium">{pi.nombre} <span className="text-xs font-normal text-texto-3">· ahora: {NIVEL_TXT[pi.efectivo]}</span></div>
-          <select
+          <Pastillas
             className="campo w-auto py-1 text-xs"
             aria-label={`${pi.nombre} para ${f.persona.nombre}`}
             value={pi.propio ?? ""}
@@ -124,7 +125,7 @@ export function PipelinesPersona({ f, recargar }: { f: Ficha; recargar: () => vo
             <option value="editar">Editar</option>
             <option value="ver">Ver</option>
             <option value="sin_acceso">Sin acceso</option>
-          </select>
+          </Pastillas>
         </div>
       ))}
       {error && <p className="text-xs text-mal">{error}</p>}

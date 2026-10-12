@@ -8,6 +8,7 @@ import { activarPrograma, guardarPrograma, type DatosPrograma } from "./acciones
 import type { Producto } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { pct } from "@/lib/formato";
+import { Pastillas } from "@/components/eleccion";
 
 const COLORES = ["#2f55d4", "#7c3aed", "#db2777", "#d97706", "#15803d", "#0891b2", "#b91c1c"];
 const ROLES = [
@@ -96,16 +97,16 @@ function Ventana({ programa, moneda, comisionesRol, editables, onCerrar }: { pro
                   <div className="etiqueta-campo">Color</div>
                   <div className="flex gap-2">{COLORES.map((c) => <button key={c} type="button" onClick={() => poner({ color: c })} className={`h-8 w-8 rounded-full ${d.color === c ? "ring-2 ring-texto ring-offset-2 ring-offset-panel" : ""}`} style={{ background: c }} aria-label={`Color ${c}`} />)}</div>
                 </div>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.activo} onChange={(e) => poner({ activo: e.target.checked })} /> Activo (se puede vender)</label>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.vende_caller} onChange={(e) => poner({ vende_caller: e.target.checked })} /> Lo puede vender el caller (low ticket)</label>
-                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={d.cuenta_comision !== false} onChange={(e) => poner({ cuenta_comision: e.target.checked })} /><span>Cuenta para comisión<span className="block text-xs text-texto-3">Si lo quitas, sus ventas no pagan comisión a nadie ni suman para los tramos (como la Membresía, de momento).</span></span></label>
-                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={d.backend_offer} onChange={(e) => poner({ backend_offer: e.target.checked })} /><span>Back-end offer<span className="block text-xs text-texto-3">En Finanzas → Resumen, lo cobrado de este programa cuenta como «Back-end» en vez de «Venta nueva» o «Cuotas». Vale también para lo ya cobrado.</span></span></label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="interruptor" checked={d.activo} onChange={(e) => poner({ activo: e.target.checked })} /> Activo (se puede vender)</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="interruptor" checked={d.vende_caller} onChange={(e) => poner({ vende_caller: e.target.checked })} /> Lo puede vender el caller (low ticket)</label>
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="interruptor mt-1" checked={d.cuenta_comision !== false} onChange={(e) => poner({ cuenta_comision: e.target.checked })} /><span>Cuenta para comisión<span className="block text-xs text-texto-3">Si lo quitas, sus ventas no pagan comisión a nadie ni suman para los tramos (como la Membresía, de momento).</span></span></label>
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="interruptor mt-1" checked={d.backend_offer} onChange={(e) => poner({ backend_offer: e.target.checked })} /><span>Back-end offer<span className="block text-xs text-texto-3">En Finanzas → Resumen, lo cobrado de este programa cuenta como «Back-end» en vez de «Venta nueva» o «Cuotas». Vale también para lo ya cobrado.</span></span></label>
               </>
             )}
             {tab === "precios" && (
               <>
                 <div><label className="etiqueta-campo" htmlFor="cliente-como-lo-paga-el-cliente">Cómo lo paga el cliente</label>
-                  <select id="cliente-como-lo-paga-el-cliente" className="campo max-w-xs" value={d.modo_pago} onChange={(e) => poner({ modo_pago: e.target.value as "unico" | "cuotas" | "mensual" })}><option value="unico">Una sola vez</option><option value="cuotas">En cuotas</option><option value="mensual">Cada mes, sin fin (membresía)</option></select>
+                  <Pastillas id="cliente-como-lo-paga-el-cliente" className="campo max-w-xs" value={d.modo_pago} onChange={(e) => poner({ modo_pago: e.target.value as "unico" | "cuotas" | "mensual" })}><option value="unico">Una sola vez</option><option value="cuotas">En cuotas</option><option value="mensual">Cada mes, sin fin (membresía)</option></Pastillas>
                 </div>
                 {d.modo_pago === "cuotas" && <label className="block"><span className="etiqueta-campo">Número de cuotas</span><input type="number" min={2} max={60} className="campo w-28" value={d.num_cuotas ?? ""} onChange={(e) => poner({ num_cuotas: Number(e.target.value) || null })} /></label>}
                 <div className="grid gap-3 sm:grid-cols-2">

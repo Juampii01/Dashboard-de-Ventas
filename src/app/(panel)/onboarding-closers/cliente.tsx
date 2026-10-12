@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
 import { borrarPasoCloser, guardarPasoCloser, marcarPasoCloser } from "./acciones";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 type Paso = { id: string; nombre: string };
 
@@ -58,9 +59,9 @@ function FilaPaso({ paso }: { paso: Paso }) {
 export function FiltroCloser({ closers, valor }: { closers: Paso[]; valor: string }) {
   const router = useRouter();
   return (
-    <select className="campo w-auto" value={valor} aria-label="Closer" onChange={(e) => router.push(e.target.value ? `/onboarding-closers?closer=${e.target.value}` : "/onboarding-closers")}>
+    <Desplegable className="campo w-auto" value={valor} aria-label="Closer" onChange={(e) => router.push(e.target.value ? `/onboarding-closers?closer=${e.target.value}` : "/onboarding-closers")}>
       <option value="">Todos los closers</option>
       {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-    </select>
+    </Desplegable>
   );
 }

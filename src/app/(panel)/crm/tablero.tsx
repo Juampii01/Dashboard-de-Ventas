@@ -50,6 +50,7 @@ import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
 import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
 import { confirmar, pedirTexto } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 export type LeadTarjeta = {
   id: string;
@@ -297,7 +298,7 @@ export function TableroCrm({
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
         {jefe && <label className="flex items-center gap-2 px-2 text-sm text-texto-2">
-          <input type="checkbox" checked={soloSinCaller} onChange={(e) => setSoloSinCaller(e.target.checked)} className="accent-[var(--primario)]" />
+          <input type="checkbox" className="interruptor" checked={soloSinCaller} onChange={(e) => setSoloSinCaller(e.target.checked)} />
           Sin caller asignado
         </label>}
         {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
@@ -558,7 +559,7 @@ function MenuColumna({
             </div>
             {uniones.length > 0 && <label className="block px-2 pb-2">
               <span className="text-[11px] text-texto-3">Unir a un estado</span>
-              <select
+              <Desplegable
                 className="campo mt-1 py-1 text-xs"
                 value={unida ?? ""}
                 onChange={(e) => {
@@ -568,7 +569,7 @@ function MenuColumna({
               >
                 <option value="">Sin unir (columna libre)</option>
                 {uniones.map((u) => <option key={u.v} value={u.v}>{u.t}</option>)}
-              </select>
+              </Desplegable>
             </label>}
             {!primera && (
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2" onClick={() => { onMover(-1); setAbierto(false); }}>
@@ -619,16 +620,16 @@ function VistaLista({
     <div className="tarjeta overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-borde bg-panel-2 p-3 text-sm">
         <span className="font-medium">{seleccion.size} seleccionados</span>
-        <select value={caller} onChange={(e) => setCaller(e.target.value)} className="campo w-auto">
+        <Desplegable value={caller} onChange={(e) => setCaller(e.target.value)} className="campo w-auto">
           <option value="">Caller…</option>
           <option value="__ninguno">Quitar caller</option>
           {callers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-        </select>
-        <select value={closer} onChange={(e) => setCloser(e.target.value)} className="campo w-auto">
+        </Desplegable>
+        <Desplegable value={closer} onChange={(e) => setCloser(e.target.value)} className="campo w-auto">
           <option value="">Closer…</option>
           <option value="__ninguno">Quitar closer</option>
           {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-        </select>
+        </Desplegable>
         <button
           className="btn-primario"
           disabled={!seleccion.size || (!caller && !closer)}
@@ -756,9 +757,9 @@ export function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: 
                     <div className="truncate text-sm font-medium" title={c}>{c}</div>
                     <div className="truncate text-xs text-texto-3">Ej: {vista.ejemplo[c] || "—"}</div>
                   </div>
-                  <select value={mapa[c]} onChange={(e) => setMapa((m) => ({ ...m, [c]: e.target.value as Campo }))} className="campo py-1.5 text-xs">
+                  <Desplegable value={mapa[c]} onChange={(e) => setMapa((m) => ({ ...m, [c]: e.target.value as Campo }))} className="campo py-1.5 text-xs">
                     {CAMPOS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-                  </select>
+                  </Desplegable>
                 </div>
               ))}
             </div>
@@ -768,12 +769,12 @@ export function ModalImportar({ pipelines, pipelineId, onCerrar }: { pipelines: 
         {sinContacto && <p className="rounded-lg bg-aviso-suave px-3 py-2 text-sm text-aviso">Ninguna columna es email, teléfono ni Contact Id: no se podrá importar ningún lead.</p>}
         <div>
           <label className="etiqueta-campo" htmlFor="tablero-pipeline-donde-entran">Pipeline donde entran</label>
-          <select id="tablero-pipeline-donde-entran" name="pipeline" defaultValue={pipelineId} className="campo">
+          <Desplegable id="tablero-pipeline-donde-entran" name="pipeline" defaultValue={pipelineId} className="campo">
             {pipelines.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
+          </Desplegable>
         </div>
         <label className="flex items-center gap-2 text-sm text-texto-2">
-          <input type="checkbox" name="repartir" className="accent-[var(--primario)]" />
+          <input type="checkbox" name="repartir" className="interruptor " />
           Repartir los nuevos entre los callers con sus % (solo si el reparto automático está encendido en Administración)
         </label>
         {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
@@ -826,7 +827,7 @@ function ModalPermisos({
             return (
               <div key={r.v} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{r.t}</span>
-                <select
+                <Desplegable
                   aria-label={`${r.t} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio ?? ""}
@@ -834,7 +835,7 @@ function ModalPermisos({
                 >
                   <option value="">Lo de siempre ({texto(defecto)})</option>
                   {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
-                </select>
+                </Desplegable>
               </div>
             );
           })}
@@ -847,7 +848,7 @@ function ModalPermisos({
             return (
               <div key={g.id} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{g.nombre} <span className="text-xs text-texto-3">· {g.rol}</span></span>
-                <select
+                <Desplegable
                   aria-label={`${g.nombre} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio}
@@ -855,7 +856,7 @@ function ModalPermisos({
                 >
                   <option value="">Como su rol ({texto(deSuRol)})</option>
                   {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
-                </select>
+                </Desplegable>
               </div>
             );
           })}

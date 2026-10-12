@@ -32,6 +32,7 @@ import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
 import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
 import type { Perfil } from "@/lib/tipos";
+import { Desplegable } from "@/components/eleccion";
 
 const ICONOS = {
   funnel: BarChart3,
@@ -92,7 +93,7 @@ export function BarraLateral({
           >
             <Image src="/marca/maestria-blanco.png" alt="" width={16} height={15} style={{ height: "auto" }} />
           </span>
-          <select
+          <Desplegable
             aria-label="Proyecto"
             value={proyecto.id}
             disabled={pendiente || proyectos.length < 2}
@@ -109,7 +110,7 @@ export function BarraLateral({
                 {p.nombre}
               </option>
             ))}
-          </select>
+          </Desplegable>
           <ChevronDown className="pointer-events-none absolute right-2.5 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
         </div>
       </div>

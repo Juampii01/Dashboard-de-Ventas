@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { PERIODOS_NAV } from "@/lib/periodos";
 import { BarraCarga } from "@/components/barra-carga";
+import { Desplegable } from "@/components/eleccion";
 
 // Día / Semana / Mes / Año / Personalizado + ‹ periodo › + Actualizar. Todo va en la URL (p, n, desde, hasta).
 export function BarraPeriodo({ etiqueta, porDefecto = "mes", conActualizar = true }: { etiqueta: string; porDefecto?: string; conActualizar?: boolean }) {
@@ -89,7 +90,7 @@ export function FiltroUrl({ nombre, etiqueta, opciones, todos }: { nombre: strin
   return (
     <>
       <BarraCarga activa={cargando} />
-      <select
+      <Desplegable
       aria-label={etiqueta}
       className={`campo w-auto min-w-40 ${cargando ? "opacity-70" : ""}`}
       value={params.get(nombre) ?? ""}
@@ -102,7 +103,7 @@ export function FiltroUrl({ nombre, etiqueta, opciones, todos }: { nombre: strin
     >
       <option value="">{todos}</option>
       {opciones.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-      </select>
+      </Desplegable>
     </>
   );
 }

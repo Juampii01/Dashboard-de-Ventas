@@ -10,6 +10,7 @@ import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { pct } from "@/lib/formato";
+import { Desplegable } from "@/components/eleccion";
 
 type Area = { id: string; nombre: string; color: string };
 type Puesto = { id: string; area_id: string | null; nombre: string; rol_base: Rol | "otro" };
@@ -147,9 +148,9 @@ function Asistente({ areas, puestos, productos, comisionesRol, rolesQuePuedoDar,
                   <div className={`rounded-xl border border-dashed p-4 ${puestoNuevo ? "border-oro" : "border-borde"}`}>
                     <div className="mb-2 font-semibold">Crear puesto nuevo</div>
                     <input className="campo mb-2" placeholder="Nombre del puesto (p. ej. Closer senior)" value={puestoNuevo?.nombre ?? ""} onChange={(e) => { setPuestoNuevo({ nombre: e.target.value, rol_base: puestoNuevo?.rol_base ?? "closer" }); setPuesto(null); setRol(null); }} />
-                    <select className="campo" value={puestoNuevo?.rol_base ?? "closer"} onChange={(e) => setPuestoNuevo({ nombre: puestoNuevo?.nombre ?? "", rol_base: e.target.value as Rol | "otro" })} aria-label="Rol base del puesto">
+                    <Desplegable className="campo" value={puestoNuevo?.rol_base ?? "closer"} onChange={(e) => setPuestoNuevo({ nombre: puestoNuevo?.nombre ?? "", rol_base: e.target.value as Rol | "otro" })} aria-label="Rol base del puesto">
                       {["closer", "caller", "director", ...(soyCeo ? ["ceo"] : []), "otro"].map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}
-                    </select>
+                    </Desplegable>
                   </div>
                 </div>
                 <p className="text-xs text-texto-3">Puedes seguir sin puesto y ponérselo después.</p>
@@ -255,7 +256,7 @@ function Asistente({ areas, puestos, productos, comisionesRol, rolesQuePuedoDar,
                     </li>
                   ))}
                 </ul>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Marcar como <b>líder</b> de su área</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="interruptor" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Marcar como <b>líder</b> de su área</label>
               </>
             )}
             {(aviso && intentado) || error ? <p className="text-sm text-mal">{error || aviso}</p> : null}

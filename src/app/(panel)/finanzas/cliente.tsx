@@ -25,6 +25,7 @@ import {
   transferir,
 } from "./acciones";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 type Op = { id: string; nombre: string };
 type Cat = Op & { tipo: "ingreso" | "egreso"; en_profit: boolean };
@@ -50,8 +51,8 @@ export function NuevoMovimiento({ tipo, categorias, cuentas }: { tipo: "ingreso"
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><span className="etiqueta-campo">Importe</span><input name="importe" inputMode="decimal" required className="campo" /></label>
               <label className="block"><span className="etiqueta-campo">Fecha</span><input name="fecha" type="date" className="campo" /></label>
-              <label className="block"><span className="etiqueta-campo">Categoría</span><select name="categoria" className="campo"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === tipo).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
-              <label className="block"><span className="etiqueta-campo">Cuenta</span><select name="cuenta" className="campo"><option value="">La de por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
+              <label className="block"><span className="etiqueta-campo">Categoría</span><Desplegable name="categoria" className="campo"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === tipo).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></label>
+              <label className="block"><span className="etiqueta-campo">Cuenta</span><Desplegable name="cuenta" className="campo"><option value="">La de por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></label>
             </div>
             <label className="block"><span className="etiqueta-campo">Descripción</span><input name="descripcion" className="campo" placeholder={tipo === "egreso" ? "Ej. Anuncios de Meta, octubre" : "Ej. Afiliado"} /></label>
             {error && <p className="text-sm text-mal">{error}</p>}
@@ -87,7 +88,7 @@ export function Categorias({ tipo, categorias }: { tipo: "ingreso" | "egreso"; c
             {mias.map((c) => (
               <form key={c.id} className="flex items-center gap-2" action={(fd) => ejecutar(() => guardarCategoria(c.id, tipo, String(fd.get("nombre")), fd.get("profit") === "on"), "Guardada")}>
                 <input name="nombre" defaultValue={c.nombre} className="campo py-1.5" aria-label="Nombre" />
-                {tipo === "egreso" && <label className="flex shrink-0 items-center gap-1 text-xs"><input type="checkbox" name="profit" defaultChecked={c.en_profit} /> En profit/ROAS</label>}
+                {tipo === "egreso" && <label className="flex shrink-0 items-center gap-1 text-xs"><input type="checkbox" className="interruptor" name="profit" defaultChecked={c.en_profit} /> En profit/ROAS</label>}
                 <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2" disabled={pendiente} title="Guardar"><Check className="h-4 w-4" /></button>
               </form>
             ))}
@@ -135,8 +136,8 @@ export function Transferir({ cuentas, desde }: { cuentas: Op[]; desde: string })
         <Modal titulo="Transferir entre cuentas" onCerrar={() => setAbierto(false)}>
           <form className="space-y-3" action={(fd) => ejecutar(async () => { const r = await transferir(String(fd.get("origen")), String(fd.get("destino")), String(fd.get("importe")), String(fd.get("fecha") ?? ""), String(fd.get("descripcion") ?? "")); if (!(r && typeof r === "object" && "error" in r)) setAbierto(false); return r; }, "Transferencia hecha")}>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="etiqueta-campo">Desde</span><select name="origen" className="campo" defaultValue={desde}>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
-              <label className="block"><span className="etiqueta-campo">Hacia</span><select name="destino" className="campo" defaultValue={cuentas.find((c) => c.id !== desde)?.id}>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
+              <label className="block"><span className="etiqueta-campo">Desde</span><Desplegable name="origen" className="campo" defaultValue={desde}>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></label>
+              <label className="block"><span className="etiqueta-campo">Hacia</span><Desplegable name="destino" className="campo" defaultValue={cuentas.find((c) => c.id !== desde)?.id}>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></label>
               <label className="block"><span className="etiqueta-campo">Importe</span><input name="importe" inputMode="decimal" required className="campo" /></label>
               <label className="block"><span className="etiqueta-campo">Fecha</span><input name="fecha" type="date" className="campo" /></label>
             </div>
@@ -162,11 +163,11 @@ export function NuevoProgramado({ categorias, cuentas }: { categorias: Cat[]; cu
             <label className="block"><span className="etiqueta-campo">Descripción</span><input name="descripcion" required className="campo" placeholder="Ej. Licencia de GHL" /></label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><span className="etiqueta-campo">Importe</span><input name="importe" inputMode="decimal" required className="campo" /></label>
-              <label className="block"><span className="etiqueta-campo">Cada</span><select name="cada" className="campo" defaultValue="mes"><option value="semana">Semana</option><option value="mes">Mes</option><option value="anio">Año</option></select></label>
+              <label className="block"><span className="etiqueta-campo">Cada</span><Pastillas name="cada" className="campo" defaultValue="mes"><option value="semana">Semana</option><option value="mes">Mes</option><option value="anio">Año</option></Pastillas></label>
               <label className="block"><span className="etiqueta-campo">Próximo pago</span><input name="proxima" type="date" required className="campo" /></label>
-              <label className="block"><span className="etiqueta-campo">Categoría</span><select name="categoria" className="campo"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === "egreso").map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
+              <label className="block"><span className="etiqueta-campo">Categoría</span><Desplegable name="categoria" className="campo"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === "egreso").map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></label>
             </div>
-            <select name="cuenta" className="campo" aria-label="Cuenta"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+            <Desplegable name="cuenta" className="campo" aria-label="Cuenta"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable>
             {error && <p className="text-sm text-mal">{error}</p>}
             <button className="btn-primario w-full" disabled={pendiente}>Guardar</button>
           </form>
@@ -243,7 +244,7 @@ export function ImportarBanco({ cuentas }: { cuentas: Op[] }) {
         <Modal titulo="Importar movimientos del banco" onCerrar={() => { setAbierto(false); setRes(null); }}>
           <div className="space-y-3 text-sm">
             <p className="text-texto-2">Columnas: <code>fecha</code> (AAAA-MM-DD o DD/MM/AAAA), <code>descripcion</code> e <code>importe</code> (negativo = gasto). Quedan «sin conciliar» hasta que les pongas categoría.</p>
-            <select className="campo" value={cuenta} onChange={(e) => setCuenta(e.target.value)} aria-label="Cuenta"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+            <Desplegable className="campo" value={cuenta} onChange={(e) => setCuenta(e.target.value)} aria-label="Cuenta"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable>
             <input type="file" accept=".csv,text/csv" className="campo" disabled={cargando} onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; setError(""); const t = await f.text(); iniciar(async () => { try { setRes((await exigirOk(importarMovimientos(t, cuenta || null))) as { importados: number; fallos: string[] }); } catch (err) { setError(err instanceof Error ? err.message : "Algo falló."); } }); }} />
             {cargando && <p className="text-texto-3">Importando…</p>}
             {error && <p className="text-mal">{error}</p>}
@@ -259,7 +260,7 @@ export function Conciliar({ id, categorias, tipo }: { id: string; categorias: Ca
   const { pendiente, error, ejecutar } = useAccion();
   return (
     <form className="inline-flex items-center gap-1" action={(fd) => ejecutar(() => conciliarMovimiento(id, String(fd.get("categoria") || "") || null), "Conciliado")}>
-      <select name="categoria" className="campo w-auto py-1 text-xs" aria-label="Categoría"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === tipo).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+      <Desplegable name="categoria" className="campo w-auto py-1 text-xs" aria-label="Categoría"><option value="">Sin categoría</option>{categorias.filter((c) => c.tipo === tipo).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable>
       <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente}><Check className="h-3.5 w-3.5" /> Conciliar</button>
       {error && <span className="text-xs text-mal">{error}</span>}
     </form>
@@ -283,7 +284,7 @@ export function PagarLiquidacion({ id, pagada, cuentas }: { id: string; pagada: 
     <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => void confirmar("¿Desmarcar como pagada? Se borra el gasto que se creó.").then((ok) => ok && ejecutar(() => desmarcarLiquidacion(id), "Vuelve a pendiente"))}><Undo2 className="h-3.5 w-3.5" /> Desmarcar</button>
   ) : (
     <span className="inline-flex items-center gap-1">
-      <select value={cuenta} onChange={(e) => setCuenta(e.target.value)} className="campo w-auto py-1 text-xs" aria-label="Cuenta desde la que se paga"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+      <Desplegable value={cuenta} onChange={(e) => setCuenta(e.target.value)} className="campo w-auto py-1 text-xs" aria-label="Cuenta desde la que se paga"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable>
       <button className="btn-primario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => pagarLiquidacion(id, cuenta || null), "Marcada como pagada")}><Check className="h-3.5 w-3.5" /> Pagada</button>
       {error && <span className="text-xs text-mal">{error}</span>}
     </span>

@@ -8,6 +8,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { MODOS_REPARTO, type ModoReparto } from "@/lib/reparto";
 import { OFERTAS } from "@/lib/oferta";
 import { previsualizarReparto, repartirLeads, type PeticionReparto } from "@/app/(panel)/crm/reparto";
+import { Desplegable } from "@/components/eleccion";
 
 type Persona = { id: string; nombre: string };
 type Vista = { disponibles: number; total: number; porCaller: { id: string; nombre: string; n: number; carga: number | null }[] };
@@ -124,10 +125,10 @@ export function RepartirLeads({
             )}
             <label className="block">
               <span className="etiqueta-campo">Oferta (de la Biblioteca)</span>
-              <select className="campo" value={oferta} onChange={(e) => cambiar(setOferta)(e.target.value)}>
+              <Desplegable className="campo" value={oferta} onChange={(e) => cambiar(setOferta)(e.target.value)}>
                 <option value="">Todas</option>
                 {OFERTAS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-              </select>
+              </Desplegable>
             </label>
             <div>
               <div className="etiqueta-campo">Entre estos callers</div>
@@ -141,9 +142,9 @@ export function RepartirLeads({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="etiqueta-campo">Cómo</span>
-                <select className="campo" value={modo} onChange={(e) => cambiar(setModo)(e.target.value as ModoReparto)}>
+                <Desplegable className="campo" value={modo} onChange={(e) => cambiar(setModo)(e.target.value as ModoReparto)}>
                   {MODOS_REPARTO.map((m) => <option key={m.v} value={m.v}>{m.t}</option>)}
-                </select>
+                </Desplegable>
               </label>
               <label className="block">
                 <span className="etiqueta-campo">{textoNumero}</span>

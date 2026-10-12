@@ -8,6 +8,7 @@ import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 export type Area = { id: string; nombre: string; color: string };
 export type Puesto = { id: string; area_id: string | null; nombre: string };
@@ -35,15 +36,15 @@ export function DatosYComision({ m, areas, puestos, productos, rolesQuePuedoDar,
     <div className="space-y-3 text-sm">
       <label className="block"><span className="etiqueta-campo">Nombre</span><input className="campo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
       <div className="grid grid-cols-2 gap-3">
-        <label className="block"><span className="etiqueta-campo">Área</span><select className="campo" value={area} onChange={(e) => setArea(e.target.value)}><option value="">Sin área</option>{areas.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></label>
-        <label className="block"><span className="etiqueta-campo">Puesto</span><select className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
+        <label className="block"><span className="etiqueta-campo">Área</span><Desplegable className="campo" value={area} onChange={(e) => setArea(e.target.value)}><option value="">Sin área</option>{areas.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</Desplegable></label>
+        <label className="block"><span className="etiqueta-campo">Puesto</span><Desplegable className="campo" value={puesto} onChange={(e) => setPuesto(e.target.value)}><option value="">Sin puesto</option>{puestos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Desplegable></label>
       </div>
-      <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
+      <div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" className="interruptor" checked={lider} onChange={(e) => setLider(e.target.checked)} /> Líder de su área</label><label className="flex items-center gap-2"><input type="checkbox" className="interruptor" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Activo</label></div>
       {conTramos && (
         <fieldset className="rounded-lg border border-borde p-3" disabled={!puedeComision || pendiente}>
           <legend className="px-1 text-xs font-medium text-texto-2">¿Qué manda en su comisión?</legend>
-          <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={modo === "tramos"} onChange={() => { setModo("tramos"); ejecutar(() => cambiarModoComision(m.id, "tramos"), "Mandan los tramos"); }} /> Los tramos</label>
-          <label className="inline-flex items-center gap-2"><input type="radio" checked={modo === "propio"} onChange={() => { setModo("propio"); ejecutar(() => cambiarModoComision(m.id, "propio"), "Manda su % propio"); }} /> Su % propio</label>
+          <div className="grupo-pastillas"><label className="pastilla"><input type="radio" checked={modo === "tramos"} onChange={() => { setModo("tramos"); ejecutar(() => cambiarModoComision(m.id, "tramos"), "Mandan los tramos"); }} /> Los tramos</label>
+          <label className="pastilla"><input type="radio" checked={modo === "propio"} onChange={() => { setModo("propio"); ejecutar(() => cambiarModoComision(m.id, "propio"), "Manda su % propio"); }} /> Su % propio</label></div>
           <p className="mt-1 text-xs text-texto-3">{modo === "tramos" ? "Cobra el % del tramo que alcance cada mes (Administración → Comisiones). Lo de abajo no se usa." : "Cobra su % de abajo (o el de su rol)."}</p>
         </fieldset>
       )}
@@ -56,8 +57,8 @@ export function DatosYComision({ m, areas, puestos, productos, rolesQuePuedoDar,
       ) : (
       <fieldset className="rounded-lg border border-borde p-3">
         <legend className="px-1 text-xs font-medium text-texto-2">Comisión</legend>
-        <label className="mr-4 inline-flex items-center gap-2"><input type="radio" checked={!propia} onChange={() => setPropia(false)} /> La de su rol</label>
-        <label className="inline-flex items-center gap-2"><input type="radio" checked={propia} onChange={() => setPropia(true)} /> Una propia</label>
+        <div className="grupo-pastillas"><label className="pastilla"><input type="radio" checked={!propia} onChange={() => setPropia(false)} /> La de su rol</label>
+        <label className="pastilla"><input type="radio" checked={propia} onChange={() => setPropia(true)} /> Una propia</label></div>
         {propia && (
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
@@ -92,7 +93,7 @@ export function DatosYComision({ m, areas, puestos, productos, rolesQuePuedoDar,
             <form className="space-y-2" action={(fd) => ejecutar(() => darAccesoMiembro(m.id, String(fd.get("email")), String(fd.get("password")), String(fd.get("rol")) as Rol), "Acceso creado")}>
               <input name="email" type="email" required className="campo" placeholder="Email de acceso" />
               <input name="password" type="text" minLength={8} required className="campo" placeholder="Contraseña temporal (mín. 8)" autoComplete="off" />
-              <select name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</select>
+              <Desplegable name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</Desplegable>
               <button className="btn-primario w-full" disabled={pendiente}>Crear acceso</button>
             </form>
           )}

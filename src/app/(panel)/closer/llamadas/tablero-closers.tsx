@@ -16,6 +16,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { esClavePrecall, type ClaveCloser } from "@/lib/llamadas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 // Tablero «Closers» (Paso 0, Cristian 10 oct 2026): Pre-call y Post-call juntos, en el CRM y en Agendas.
 // Columnas unidas: Pre-call cambia el estado de la cita; Post-call como en el H6 (estrellas, fecha, venta; las
@@ -274,7 +275,7 @@ export function TableroClosers({
             <label className="block"><span className="etiqueta-campo">Importe cobrado</span><input name="importe" inputMode="decimal" required defaultValue={ventana.item.venta.pendiente.toFixed(2)} className="campo" /></label>
             <label className="block">
               <span className="etiqueta-campo">Método</span>
-              <select name="metodo" className="campo" defaultValue="stripe"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></select>
+              <Pastillas name="metodo" className="campo" defaultValue="stripe"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></Pastillas>
             </label>
             <label className="block"><span className="etiqueta-campo">Fecha del cobro (vacía = hoy)</span><input name="fecha" type="date" className="campo" /></label>
             <button className="btn-primario w-full">Registrar cobro</button>
@@ -305,7 +306,7 @@ export function TableroClosers({
 // «Mover a…»: lo mismo que arrastrar (sirve en el móvil)
 function MoverA({ origen, columnas, onMover }: { origen: string; columnas: ColumnaC[]; onMover: (d: ColumnaC) => void }) {
   return (
-    <select
+    <Desplegable
       aria-label="Mover a"
       className="campo w-auto py-1 text-xs"
       value=""
@@ -316,7 +317,7 @@ function MoverA({ origen, columnas, onMover }: { origen: string; columnas: Colum
     >
       <option value="">Mover a…</option>
       {columnas.filter((c) => c.id !== origen).map((c) => <option key={c.id} value={c.id}>{c.t}</option>)}
-    </select>
+    </Desplegable>
   );
 }
 

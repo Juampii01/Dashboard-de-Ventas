@@ -10,6 +10,7 @@ import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import type { Producto } from "@/lib/tipos";
 import { CamposCita } from "@/components/campos-cita";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 type Persona = { id: string; nombre: string };
 
@@ -265,7 +266,7 @@ export function FormVenta({
     <form action={onEnviar} className="space-y-3">
       <div>
         <label className="etiqueta-campo" htmlFor="acciones-lead-producto">Producto</label>
-        <select id="acciones-lead-producto"
+        <Desplegable id="acciones-lead-producto"
           name="producto"
           value={productoId}
           onChange={(e) => {
@@ -283,7 +284,7 @@ export function FormVenta({
               {p.nombre} {p.precio ? `· ${simbolo}${p.precio}` : "· precio personalizado"}
             </option>
           ))}
-        </select>
+        </Desplegable>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -302,7 +303,7 @@ export function FormVenta({
         </div>
         <div>
           <label className="etiqueta-campo" htmlFor="acciones-lead-tipo-de-pago">Tipo de pago</label>
-          <select id="acciones-lead-tipo-de-pago"
+          <Pastillas id="acciones-lead-tipo-de-pago"
             name="tipo_pago"
             value={tipo}
             onChange={(e) => {
@@ -315,7 +316,7 @@ export function FormVenta({
             <option value="reserva">Reserva (seña)</option>
             <option value="cuotas">Cuotas</option>
             <option value="mensual">Cada mes (membresía)</option>
-          </select>
+          </Pastillas>
         </div>
         <div>
           <label className="etiqueta-campo" htmlFor="acciones-lead-cash-collected-hoy">Cash collected hoy</label>
@@ -326,21 +327,21 @@ export function FormVenta({
         ) : (
           <div>
             <label className="etiqueta-campo" htmlFor="acciones-lead-metodo">Método</label>
-            <select id="acciones-lead-metodo" name="metodo" className="campo">
+            <Pastillas id="acciones-lead-metodo" name="metodo" className="campo">
               <option value="stripe">Stripe</option>
               <option value="transferencia">Transferencia</option>
               <option value="otro">Otro</option>
-            </select>
+            </Pastillas>
           </div>
         )}
         {tipo === "cuotas" && (
           <div>
             <label className="etiqueta-campo" htmlFor="acciones-lead-metodo-2">Método</label>
-            <select id="acciones-lead-metodo-2" name="metodo" className="campo">
+            <Pastillas id="acciones-lead-metodo-2" name="metodo" className="campo">
               <option value="stripe">Stripe</option>
               <option value="transferencia">Transferencia</option>
               <option value="otro">Otro</option>
-            </select>
+            </Pastillas>
           </div>
         )}
         <label className="block"><span className="etiqueta-campo">Fecha de la venta</span><input name="fecha" type="date" className="campo" /></label>
@@ -349,11 +350,11 @@ export function FormVenta({
         <div>
           <label className="etiqueta-campo" htmlFor="acciones-lead-vendedor-si-no-eres-tu">Vendedor</label>
           {/* Con cita, por defecto el closer de la cita (lo decide también el servidor si no se elige nada) */}
-          <select id="acciones-lead-vendedor-si-no-eres-tu" name="vendedor" defaultValue="" className="campo">
+          <Desplegable id="acciones-lead-vendedor-si-no-eres-tu" name="vendedor" defaultValue="" className="campo">
             <option value="">{closerCita ? `${closerCita.nombre} (closer de la cita)` : "Yo"}</option>
             {closerCita && miId && <option value={miId}>Yo</option>}
             {vendedores.filter((v) => v.id !== closerCita?.id).map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          </Desplegable>
         </div>
       )}
       <label className="block"><span className="etiqueta-campo">Nota</span><textarea name="nota" rows={2} className="campo" /></label>

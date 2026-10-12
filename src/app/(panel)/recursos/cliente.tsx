@@ -7,6 +7,7 @@ import { subirDelFormulario } from "@/lib/subir-cliente";
 import { useAccion } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 import { confirmar, pedirTexto } from "@/components/dialogos";
+import { Pastillas } from "@/components/eleccion";
 
 export function NuevoRecurso() {
   const [abierto, setAbierto] = useState(false);
@@ -41,13 +42,13 @@ export function NuevoRecurso() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="etiqueta-campo" htmlFor="cliente-tipo">Tipo</label>
-                <select id="cliente-tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo">
+                <Pastillas id="cliente-tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo">
                   <option value="pdf">PDF</option><option value="enlace">Enlace</option><option value="guion">Guion</option><option value="video">Vídeo</option>
-                </select>
+                </Pastillas>
               </div>
               <div>
                 <label className="etiqueta-campo" htmlFor="cliente-para">Para</label>
-                <select id="cliente-para" name="para_rol" className="campo"><option value="todos">Todo el equipo</option><option value="caller">Solo callers</option><option value="closer">Solo closers</option></select>
+                <Pastillas id="cliente-para" name="para_rol" className="campo"><option value="todos">Todo el equipo</option><option value="caller">Solo callers</option><option value="closer">Solo closers</option></Pastillas>
               </div>
             </div>
             {tipo === "pdf" && <label className="block"><span className="etiqueta-campo">Archivo PDF (máx. 15 MB)</span><input type="file" name="archivo" accept="application/pdf" required className="campo" /></label>}

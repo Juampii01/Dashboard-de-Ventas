@@ -6,6 +6,7 @@ import { guardarObjetivo, quitarObjetivo, crearLanzamiento, borrarLanzamiento } 
 import { useAccion } from "@/components/acciones-lead";
 import { CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos-constantes";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 type Persona = { id: string; nombre: string; rol: RolObjetivo };
 type Lanz = { id: string; nombre: string };
@@ -35,34 +36,34 @@ export function FormObjetivo({ personas, lanzamientos }: { personas: Persona[]; 
     >
       <label className="block lg:col-span-2">
         <span className="etiqueta-campo">Para quién</span>
-        <select className="campo" value={para} onChange={(e) => setPara(e.target.value)}>
+        <Desplegable className="campo" value={para} onChange={(e) => setPara(e.target.value)}>
           <optgroup label="Por rol">
             {ROLES.map((r) => <option key={r.v} value={`rol:${r.v}`}>{r.t}</option>)}
           </optgroup>
           <optgroup label="Una persona (manda sobre el de su rol)">
             {personas.map((p) => <option key={p.id} value={`persona:${p.id}`}>{p.nombre} · {p.rol}</option>)}
           </optgroup>
-        </select>
+        </Desplegable>
       </label>
       <label className="block">
         <span className="etiqueta-campo">Periodo</span>
-        <select className="campo" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+        <Desplegable className="campo" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
           {PERIODOS.map((p) => <option key={p.v} value={p.v} disabled={p.v === "lanzamiento" && lanzamientos.length === 0}>{p.t}</option>)}
-        </select>
+        </Desplegable>
       </label>
       {periodo === "lanzamiento" && (
         <label className="block">
           <span className="etiqueta-campo">Lanzamiento</span>
-          <select name="lanzamiento" className="campo" required>
+          <Desplegable name="lanzamiento" className="campo" required>
             {lanzamientos.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-          </select>
+          </Desplegable>
         </label>
       )}
       <label className="block">
         <span className="etiqueta-campo">Cifra</span>
-        <select name="cifra" className="campo" key={rol}>
+        <Desplegable name="cifra" className="campo" key={rol}>
           {cifras.map((c) => <option key={c.v} value={c.v}>{c.t}</option>)}
-        </select>
+        </Desplegable>
       </label>
       <label className="block">
         <span className="etiqueta-campo">Objetivo</span>
@@ -129,10 +130,10 @@ export function FormLanzamiento({ eventos }: { eventos: string[] }) {
       <label className="block"><span className="etiqueta-campo">Fin</span><input name="fin" type="date" required className="campo" /></label>
       <label className="block">
         <span className="etiqueta-campo">Evento de los leads (opcional)</span>
-        <select name="evento" className="campo" defaultValue="">
+        <Desplegable name="evento" className="campo" defaultValue="">
           <option value="">Sin evento: cuenta todo</option>
           {eventos.map((e) => <option key={e} value={e}>{e}</option>)}
-        </select>
+        </Desplegable>
       </label>
       <div className="lg:col-span-5"><button className="btn-secundario" disabled={pendiente}><Plus className="h-4 w-4" /> Crear lanzamiento</button></div>
     </form>

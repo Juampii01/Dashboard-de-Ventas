@@ -25,11 +25,11 @@ export function RepartoPorcentaje({ auto, soloHorario, callers }: { auto: boolea
   return (
     <div className="space-y-4">
       <label className="flex items-start gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
-        <input type="checkbox" className="mt-0.5 accent-[var(--primario)]" checked={on} onChange={(e) => setOn(e.target.checked)} />
+        <input type="checkbox" className="interruptor mt-0.5" checked={on} onChange={(e) => setOn(e.target.checked)} />
         <span><b>Repartir solos los leads que entran</b><br /><span className="text-texto-3">De GHL, de las landings y del CSV (si marcas «Repartir» al subirlo). Apagado: se reparten a mano o con «Repartir leads».</span></span>
       </label>
       <label className="flex items-start gap-2 rounded-lg border border-borde bg-panel-2 p-3 text-sm">
-        <input type="checkbox" className="mt-0.5 accent-[var(--primario)]" checked={horario} onChange={(e) => setHorario(e.target.checked)} />
+        <input type="checkbox" className="interruptor mt-0.5" checked={horario} onChange={(e) => setHorario(e.target.checked)} />
         <span><b>Solo a quien esté en su horario</b><br /><span className="text-texto-3">Si en ese momento no hay nadie en su horario, se reparte igual entre todos los que tienen %.</span></span>
       </label>
       <div className="space-y-1.5">

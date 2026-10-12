@@ -8,6 +8,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { confirmar } from "@/components/dialogos";
+import { Pastillas } from "@/components/eleccion";
 
 export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe, membresiaActiva = false }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean; membresiaActiva?: boolean }) {
   const { pendiente: cargando, error, ok, ejecutar } = useAccion();
@@ -77,7 +78,7 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe,
             <label className="block"><span className="etiqueta-campo">Importe cobrado</span><input name="importe" inputMode="decimal" required defaultValue={pendiente.toFixed(2)} className="campo" /></label>
             <div>
               <label className="etiqueta-campo" htmlFor="fila-acciones-metodo">Método</label>
-              <select id="fila-acciones-metodo" name="metodo" className="campo"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></select>
+              <Pastillas id="fila-acciones-metodo" name="metodo" className="campo"><option value="stripe">Stripe</option><option value="transferencia">Transferencia</option><option value="otro">Otro</option></Pastillas>
             </div>
             <label className="block"><span className="etiqueta-campo">Fecha del cobro (vacía = hoy)</span><input name="fecha" type="date" className="campo" /></label>
             <button className="btn-primario w-full">Guardar cobro</button>

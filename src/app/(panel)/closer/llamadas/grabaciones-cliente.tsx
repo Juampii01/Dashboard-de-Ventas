@@ -9,6 +9,7 @@ import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { borrarCuentaFathom, conciliarGrabacionManual, desunirGrabacion, guardarCuentaFathom, probarFathom, sincronizarFathomAhora } from "./acciones-fathom";
 import { confirmar } from "@/components/dialogos";
+import { Desplegable } from "@/components/eleccion";
 
 type CuentaVista = { id: string; nombre: string; perfil_id: string; formato_titulo: string | null; sincronizado: string | null; resultado: string | null };
 
@@ -64,7 +65,7 @@ export function CuentasFathom({ cuentas, closers, jefe, yo }: { cuentas: CuentaV
             >
               <div><label className="etiqueta-campo" htmlFor="fa-nombre">Nombre</label><input id="fa-nombre" name="nombre" required defaultValue={editando === "nueva" ? "" : editando.nombre} className="campo" placeholder="Ej. Fathom de Ana" /></div>
               {jefe && (
-                <div><label className="etiqueta-campo" htmlFor="fa-closer">Closer</label><select id="fa-closer" name="closer" defaultValue={editando === "nueva" ? closers[0]?.id : editando.perfil_id} className="campo">{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
+                <div><label className="etiqueta-campo" htmlFor="fa-closer">Closer</label><Desplegable id="fa-closer" name="closer" defaultValue={editando === "nueva" ? closers[0]?.id : editando.perfil_id} className="campo">{closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</Desplegable></div>
               )}
               <div>
                 <label className="etiqueta-campo" htmlFor="fa-key">API key de Fathom</label>
@@ -113,10 +114,10 @@ export function AccionesGrabacion({ id, unida, descartada, opciones }: { id: str
     <span className="inline-flex flex-wrap items-center justify-end gap-1">
       {!unida && !descartada && (
         <>
-          <select value={cita} onChange={(e) => setCita(e.target.value)} className="campo w-auto max-w-56 py-1 text-xs" aria-label="Cita a la que unir la grabación">
+          <Desplegable value={cita} onChange={(e) => setCita(e.target.value)} className="campo w-auto max-w-56 py-1 text-xs" aria-label="Cita a la que unir la grabación">
             <option value="">{opciones.length ? "Elegir cita…" : "No hay citas cerca"}</option>
             {opciones.map((o) => <option key={o.id} value={o.id}>{o.texto}</option>)}
-          </select>
+          </Desplegable>
           <button className="btn-primario px-2 py-1 text-xs" disabled={pendiente || !cita} onClick={() => ejecutar(() => conciliarGrabacionManual(id, cita), "Grabación unida")}><Link2 className="h-3.5 w-3.5" /> Unir</button>
           <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => desunirGrabacion(id, true), "Descartada")} title="No es una llamada de venta">Descartar</button>
         </>
