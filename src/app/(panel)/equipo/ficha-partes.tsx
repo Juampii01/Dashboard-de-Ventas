@@ -55,7 +55,7 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-secundario" disabled={pendiente} onClick={() => ejecutar(() => enviarEnlaceMagico(p.id), `Enlace enviado a ${p.email}`)}>Enviar enlace mágico</button>
-          <span className="text-xs text-texto-3">Le llega un email para entrar sin contraseña (caduca en 1 hora).</span>
+          <span className="text-xs text-texto-3">Le llega un email para entrar sin contraseña (dura 24 horas).</span>
         </div>
         {!p.onboarding_completo && <p className="text-xs text-aviso">Aún no ha hecho el onboarding.</p>}
       </Bloque>

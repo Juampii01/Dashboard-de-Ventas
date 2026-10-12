@@ -24,6 +24,10 @@ async function completar(formData: FormData) {
   const telefono = String(formData.get("telefono") ?? "").trim();
   const whatsapp = String(formData.get("whatsapp") ?? "").trim();
   if (!nombre) redirect("/onboarding?error=nombre");
+  // Fase 1 (Cristian, 12 oct 2026): los accesos llegan por email con un enlace; aquí cada uno crea su contraseña
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) redirect("/onboarding?error=password");
+  if (password !== String(formData.get("password2") ?? "")) redirect("/onboarding?error=password2");
   if (conHorario(perfil.rol)) {
     let h = null;
     try {
@@ -35,6 +39,8 @@ async function completar(formData: FormData) {
     const { error } = await createAdminClient().from("miembros_proyecto").update({ horario: h }).eq("proyecto_id", proyecto.id).eq("perfil_id", perfil.id);
     if (error) throw new Error(`No se pudo guardar el horario: ${error.message}`);
   }
+  const { error: errPass } = await createAdminClient().auth.admin.updateUserById(perfil.id, { password });
+  if (errPass) redirect("/onboarding?error=password");
   await createAdminClient()
     .from("perfiles")
     .update({ nombre, telefono: telefono || null, whatsapp: whatsapp || null, onboarding_completo: true })
@@ -45,6 +51,8 @@ async function completar(formData: FormData) {
 
 const ERRORES: Record<string, string> = {
   nombre: "El nombre es obligatorio.",
+  password: "Crea una contraseña de al menos 8 caracteres.",
+  password2: "Las dos contraseñas no coinciden.",
   horario: "Pon tu horario: al menos un tramo en algún día, con la hora de inicio antes que la de fin.",
 };
 
@@ -86,6 +94,15 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           <div>
             <label className="etiqueta-campo" htmlFor="onboarding-whatsapp">WhatsApp</label>
             <input id="onboarding-whatsapp" name="whatsapp" defaultValue={perfil.whatsapp ?? ""} placeholder="+34 600 000 000" className="campo" />
+          </div>
+          <div>
+            <label className="etiqueta-campo" htmlFor="onboarding-password">Crea tu contraseña</label>
+            <input id="onboarding-password" name="password" type="password" required minLength={8} autoComplete="new-password" className="campo" />
+          </div>
+          <div>
+            <label className="etiqueta-campo" htmlFor="onboarding-password2">Repítela</label>
+            <input id="onboarding-password2" name="password2" type="password" required minLength={8} autoComplete="new-password" className="campo" />
+            <p className="mt-1 text-xs text-texto-3">Mínimo 8 caracteres. La usarás para entrar a partir de ahora.</p>
           </div>
           {!conHorario(perfil.rol) && <button className="btn-primario w-full">Empezar</button>}
           {error && ERRORES[error] && !conHorario(perfil.rol) && <p className="text-sm text-mal">{ERRORES[error]}</p>}

@@ -12,8 +12,7 @@ import { SECCIONES_TODAS, NUNCA, ROLES_PERMISO, seccionesPermitidas } from "@/li
 import type { RolPermiso } from "@/lib/permisos-constantes";
 import { ajustesValidos, type AjustesCalendario } from "@/lib/disponibilidad";
 import type { Rol } from "@/lib/tipos";
-import { enviarEmail, urlApp } from "@/lib/email";
-import { plantillaEmail } from "@/lib/plantilla-email";
+import { mandarEnlace } from "@/lib/acceso";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
 type Res = { ok?: string; error?: string } | null;
@@ -80,7 +79,7 @@ export async function cambiarPassword(perfilId: string, password: string) {
 }
 
 // Bloque 6 (Cristian, 11 oct 2026): un administrador manda a alguien del proyecto un enlace para entrar sin
-// contraseña. La app genera el enlace (Supabase) y lo envía ella misma con Resend; caduca en 1 hora.
+// contraseña. La app genera el enlace (Supabase) y lo envía ella misma con Resend; dura 24 h (ajuste de Supabase, 12 oct).
 export async function enviarEnlaceMagico(perfilId: string) {
   return seguro(async () => {
     const { perfil, proyecto } = await exigir(puedeAdmin);
@@ -89,22 +88,36 @@ export async function enviarEnlaceMagico(perfilId: string) {
     const { data: objetivo } = await db().from("perfiles").select("nombre, email, rol, activo").eq("id", perfilId).single();
     if (!objetivo?.activo) throw new ErrorUsuario("Esa persona está desactivada.");
     if (perfil.rol !== "ceo" && objetivo.rol === "ceo") throw new ErrorUsuario("Solo el CEO puede tocar a otro CEO.");
-    const { data, error } = await db().auth.admin.generateLink({ type: "magiclink", email: objetivo.email });
-    if (error || !data?.properties?.hashed_token) throw new ErrorUsuario("No se pudo generar el enlace. Prueba otra vez.");
-    const enlace = `${urlApp()}/auth/confirm?token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=magiclink`;
-    const r = await enviarEmail({
-      para: [objetivo.email],
-      asunto: `Tu enlace para entrar en ${proyecto.nombre} · Eternity`,
-      texto: `Hola ${objetivo.nombre}:\n\nPulsa este enlace para entrar en la app de ventas de Eternity (caduca en 1 hora y solo vale una vez):\n\n${enlace}\n\nSi no lo has pedido tú, ignora este email.`,
-      html: plantillaEmail({
-        urlBase: urlApp(),
-        titulo: "Tu enlace para entrar",
-        intro: `Hola ${objetivo.nombre}: pulsa el botón para entrar en la app de ventas de Eternity. Caduca en 1 hora y solo vale una vez.`,
-        boton: { texto: "Entrar en Eternity", url: enlace },
-        pie: "Si no lo has pedido tú, ignora este email.",
-      }),
-    });
+    const r = await mandarEnlace(objetivo, "ficha", proyecto.nombre);
     if (!r.enviado) throw new ErrorUsuario(`No se pudo enviar el email (${r.motivo}).`);
+  });
+}
+
+// Fase 1 (Cristian, 12 oct 2026): mandar el acceso por email a varias personas del proyecto a la vez. Cada una
+// recibe un enlace para entrar (24 h, un solo uso) y crea su contraseña al entrar. Solo administradores; a un CEO
+// solo lo puede elegir otro CEO. Se manda uno a uno y se dice a quién llegó y a quién no.
+export async function enviarAccesos(perfilIds: string[]) {
+  return seguro(async () => {
+    const { perfil, proyecto } = await exigir(puedeAdmin);
+    const ids = [...new Set(perfilIds)].filter((x) => typeof x === "string" && x);
+    if (!ids.length) throw new ErrorUsuario("Elige al menos una persona.");
+    if (ids.length > 60) throw new ErrorUsuario("Como mucho 60 personas a la vez.");
+    const { data: miembros } = await db().from("miembros_proyecto").select("perfil_id").eq("proyecto_id", proyecto.id).in("perfil_id", ids);
+    const delProyecto = new Set((miembros ?? []).map((m) => m.perfil_id as string));
+    const { data: personas } = await db().from("perfiles").select("id, nombre, email, rol, activo").in("id", ids);
+    const enviados: string[] = [];
+    const fallos: { nombre: string; motivo: string }[] = [];
+    for (const p of personas ?? []) {
+      if (!delProyecto.has(p.id)) fallos.push({ nombre: p.nombre, motivo: "no está en este proyecto" });
+      else if (!p.activo) fallos.push({ nombre: p.nombre, motivo: "está desactivado" });
+      else if (p.rol === "ceo" && perfil.rol !== "ceo") fallos.push({ nombre: p.nombre, motivo: "solo el CEO puede mandárselo a otro CEO" });
+      else {
+        const r = await mandarEnlace(p, "bienvenida", proyecto.nombre);
+        if (r.enviado) enviados.push(p.nombre);
+        else fallos.push({ nombre: p.nombre, motivo: r.motivo });
+      }
+    }
+    return { enviados, fallos };
   });
 }
 

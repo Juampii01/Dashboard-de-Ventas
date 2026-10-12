@@ -1,10 +1,10 @@
 import Image from "next/image";
-import { FormularioLogin } from "./formulario";
+import { FormularioLogin, PedirEnlace } from "./formulario";
 
 const ERRORES: Record<string, string> = {
   "sin-acceso": "Tu usuario está desactivado. Habla con tu director.",
   "sin-proyecto": "Todavía no tienes ningún proyecto asignado. Habla con tu director.",
-  enlace: "Ese enlace ya se usó o ha caducado (dura 1 hora). Entra con tu contraseña o pide otro enlace.",
+  enlace: "Ese enlace ya se usó o ha caducado (dura 24 horas). Entra con tu contraseña o pide otro aquí abajo («¿No puedes entrar?»).",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -23,6 +23,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="tarjeta p-6">
           {aviso && <p className="mb-4 rounded-lg bg-aviso-suave px-3 py-2 text-sm text-aviso">{aviso}</p>}
           <FormularioLogin />
+          <div className="mt-5 border-t border-borde pt-4">
+            <PedirEnlace />
+          </div>
         </div>
       </div>
     </main>
