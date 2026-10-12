@@ -4,6 +4,7 @@ import type { Proyecto, Respuesta } from "@/lib/tipos";
 import type { LeadEntrada } from "@/lib/csv";
 import { enHorario, horarioValido } from "@/lib/horarios";
 import { calcularOferta, normalizarRespuestas } from "@/lib/oferta";
+import { anadirTarjetas } from "@/lib/tarjetas";
 
 // «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
 // se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
@@ -191,11 +192,26 @@ export async function guardarLeads(
     }
   }
 
-  // Actualiza los que ya existían SIN perder nada (no toca pipeline ni asignación):
+  // Actualiza los que ya existían SIN perder nada (no toca su pipeline principal ni la asignación):
   // etiquetas y respuestas se suman; el origen (fuente, evento, UTM) se queda el primero.
+  // Fase 4 (Cristian, 12 oct): si entra por otro pipeline, gana una tarjeta en ese pipeline (como GHL).
+  // Lectura por tandas de 500 y escrituras de 20 en 20 (antes, 2-3 viajes seguidos por lead: un CSV grande
+  // pasaba del tiempo máximo del servidor y la subida se quedaba en «Importando…»).
   let cambianOferta = 0;
-  for (const { id, e } of actualizar) {
-    const { data: antes } = await db().from("leads").select("etiquetas, respuestas, fuente, evento, seguimiento, quiz_score, datos, email, oferta").eq("id", id).single();
+  type Antes = { id: string; etiquetas: string[] | null; respuestas: Respuesta[] | null; fuente: string | null; evento: string | null; seguimiento: Record<string, string> | null; quiz_score: number | null; datos: Record<string, unknown> | null; email: string | null; oferta: string | null; pipeline_id: string | null };
+  const previos = new Map<string, Antes>();
+  for (let i = 0; i < actualizar.length; i += 500) {
+    const { data, error } = await db()
+      .from("leads")
+      .select("id, etiquetas, respuestas, fuente, evento, seguimiento, quiz_score, datos, email, oferta, pipeline_id")
+      .in("id", actualizar.slice(i, i + 500).map((a) => a.id));
+    if (error) throw new Error(`Error leyendo leads: ${error.message}`);
+    for (const d of (data ?? []) as Antes[]) previos.set(d.id, d);
+  }
+  const historial: { proyecto_id: string; lead_id: string; perfil_id: string | null; tipo: string; nota: string }[] = [];
+  const tarjetasNuevas: { lead_id: string; pipeline_id: string; etapa_id: string | null }[] = [];
+  const cambiosPorLead = actualizar.map(({ id, e }) => {
+    const antes = previos.get(id);
     const etiquetas = [...new Set([...(antes?.etiquetas ?? []), ...e.etiquetas])];
     const respuestas = unirRespuestas(antes?.respuestas ?? [], e.respuestas);
     // Bloque A: la oferta se recalcula con los datos nuevos
@@ -207,6 +223,10 @@ export async function guardarLeads(
     if (e.nombre) cambios.nombre = e.nombre;
     if (e.apellido) cambios.apellido = e.apellido;
     if (e.ghl_contact_id) cambios.ghl_contact_id = e.ghl_contact_id;
+    if (opciones.pipelineId) {
+      if (!antes?.pipeline_id) Object.assign(cambios, { pipeline_id: opciones.pipelineId, etapa_id: etapaId });
+      else if (antes.pipeline_id !== opciones.pipelineId) tarjetasNuevas.push({ lead_id: id, pipeline_id: opciones.pipelineId, etapa_id: etapaId });
+    }
     if (e.extra) {
       if (!antes?.fuente && e.extra.fuente) cambios.fuente = e.extra.fuente;
       if (!antes?.evento && e.extra.evento) cambios.evento = e.extra.evento;
@@ -214,18 +234,20 @@ export async function guardarLeads(
       cambios.seguimiento = { ...e.extra.seguimiento, ...(antes?.seguimiento ?? {}) };
       cambios.datos = { ...(antes?.datos ?? {}), ...e.extra.datos };
       const otraVez = [e.extra.evento && e.extra.evento !== antes?.evento ? `evento «${e.extra.evento}»` : "", e.extra.fuente && e.extra.fuente !== antes?.fuente ? `fuente «${e.extra.fuente}»` : ""].filter(Boolean);
-      await db().from("actividades").insert({
-        proyecto_id: proyecto.id,
-        lead_id: id,
-        perfil_id: opciones.perfilId,
-        tipo: "webhook",
-        nota: `${opciones.notaActividad ?? "Volvió a entrar"}${otraVez.length ? ` · ${otraVez.join(" · ")}` : ""}`,
-      });
+      historial.push({ proyecto_id: proyecto.id, lead_id: id, perfil_id: opciones.perfilId, tipo: "webhook", nota: `${opciones.notaActividad ?? "Volvió a entrar"}${otraVez.length ? ` · ${otraVez.join(" · ")}` : ""}` });
     }
-    await escribir(db().from("leads").update(cambios).eq("id", id), "leads");
+    return { id, cambios };
+  });
+  for (let i = 0; i < cambiosPorLead.length; i += 20) {
+    await Promise.all(cambiosPorLead.slice(i, i + 20).map(({ id, cambios }) => escribir(db().from("leads").update(cambios).eq("id", id), "leads")));
   }
+  for (let i = 0; i < historial.length; i += 500) {
+    const { error } = await db().from("actividades").insert(historial.slice(i, i + 500));
+    if (error) console.error("[actividad] no se pudo guardar el historial:", error.message);
+  }
+  const tarjetas = await anadirTarjetas(proyecto.id, tarjetasNuevas);
 
-  return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length, cambianOferta };
+  return { insertados, actualizados: actualizar.length, invalidos, repartidos: turnos.filter(Boolean).length, cambianOferta, tarjetas };
 }
 
 // 4.4 (Cristian, 11 oct): datos de una cita que llega de GHL. La agenda (KPIs, Ranking y comisión) es de quien marcó
@@ -246,10 +268,22 @@ export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id
   return pipe && etapa ? { pipeline_id: pipe.id, id: etapa.id } : null;
 }
 
+// Fase 4 (criterio de Claude, 12 oct): con varios pipelines, el lead no sale del suyo (p. ej. Biblioteca): gana su
+// tarjeta en esa columna. Si ese ya es su pipeline principal (o no tiene), se mueve como siempre.
 export async function moverAAgendadosOrganico(proyectoId: string, leadId: string) {
   const destino = await columnaCitasGhl(proyectoId);
   if (!destino) return;
-  await escribir(db().from("leads").update({ pipeline_id: destino.pipeline_id, etapa_id: destino.id }).eq("id", leadId), "leads");
+  const { data: lead } = await db().from("leads").select("pipeline_id").eq("id", leadId).maybeSingle();
+  if (!lead?.pipeline_id || lead.pipeline_id === destino.pipeline_id) {
+    await escribir(db().from("leads").update({ pipeline_id: destino.pipeline_id, etapa_id: destino.id }).eq("id", leadId), "leads");
+    return;
+  }
+  const creadas = await anadirTarjetas(proyectoId, [{ lead_id: leadId, pipeline_id: destino.pipeline_id, etapa_id: destino.id }]);
+  if (!creadas) {
+    const { error } = await db().from("tarjetas_extra").update({ etapa_id: destino.id }).eq("lead_id", leadId).eq("pipeline_id", destino.pipeline_id);
+    // Sin la tabla (migración sin aplicar): como antes, se mueve el lead
+    if (error) await escribir(db().from("leads").update({ pipeline_id: destino.pipeline_id, etapa_id: destino.id }).eq("id", leadId), "leads");
+  }
 }
 
 export async function datosAgendaGhl(leadId: string): Promise<{ agendada_por: string | null; estrellas_caller: number | null }> {

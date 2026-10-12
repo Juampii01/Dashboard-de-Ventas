@@ -69,6 +69,7 @@ export type LeadTarjeta = {
   etiquetas: string[];
   respuestas: Respuesta[];
   oferta?: string | null; // bloque A
+  otroPipeline?: boolean; // Fase 4: tarjeta en un pipeline que no es el suyo principal
 };
 
 type Persona = { id: string; nombre: string };
@@ -618,7 +619,12 @@ function Tarjeta({
       nombre={`${lead.nombre} ${lead.apellido}`.trim()}
       telefono={lead.telefono}
       email={lead.email}
-      arriba={<span className="shrink-0 text-[11px] text-texto-3" title={`Entró el ${lead.creado_en.slice(0, 10)}`}>{haceDias(lead.creado_en)}</span>}
+      arriba={
+        <span className="flex shrink-0 items-center gap-1 text-[11px] text-texto-3">
+          {lead.otroPipeline && <span title="También está en otro pipeline (su pipeline principal es otro)">🔗</span>}
+          <span title={`Entró el ${lead.creado_en.slice(0, 10)}`}>{haceDias(lead.creado_en)}</span>
+        </span>
+      }
       arrastrable
       onArrastrar={(e) => {
         e.dataTransfer.setData("text/plain", lead.id);

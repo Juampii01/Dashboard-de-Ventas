@@ -12,6 +12,7 @@ import { db, registrarActividad, escribir } from "@/lib/datos";
 import { guardarLeads, primeraEtapa } from "@/lib/leads";
 import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
+import { moverTarjeta, tarjetaDe } from "@/lib/tarjetas";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -56,7 +57,7 @@ export async function importarCsv(_prev: unknown, formData: FormData) {
       repartir: formData.get("repartir") === "on",
     });
     refrescar();
-    return { ok: `Importados ${r.insertados} leads nuevos · ${r.actualizados} actualizados${r.cambianOferta ? ` · ${r.cambianOferta} cambian de oferta` : ""} · ${r.repartidos} repartidos a callers${r.invalidos ? ` · ${r.invalidos} filas sin email ni teléfono` : ""}.` };
+    return { ok: `Importados ${r.insertados} leads nuevos · ${r.actualizados} actualizados${r.tarjetas ? ` · ${r.tarjetas} ya estaban en otro pipeline (tarjeta nueva aquí)` : ""}${r.cambianOferta ? ` · ${r.cambianOferta} cambian de oferta` : ""} · ${r.repartidos} repartidos a callers${r.invalidos ? ` · ${r.invalidos} filas sin email ni teléfono` : ""}.` };
   });
 }
 
@@ -285,10 +286,21 @@ export async function moverLead(leadId: string, etapaId: string) {
     const e = await etapaDelProyecto(etapaId, proyecto.id);
     if (e.pipelines.tipo === "closers") throw new ErrorUsuario("En «Closers» se mueven citas, no leads.");
     await exigirNivel(perfil, proyecto.id, e.pipeline_id, "ver"); // Paso 0
-    const { data: lead } = await db().from("leads").select("id, etapa_id, etapa_callers_id, estado_caller, caller_id, closer_id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle();
+    const { data: lead } = await db().from("leads").select("id, pipeline_id, etapa_id, etapa_callers_id, estado_caller, caller_id, closer_id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!lead) throw new ErrorUsuario("Lead no encontrado.");
     if (!esJefe(perfil) && lead.caller_id !== perfil.id && lead.closer_id !== perfil.id) throw new ErrorUsuario("Este lead no está asignado a ti.");
     const callers = e.pipelines.tipo === "callers";
+    // Fase 4: la tarjeta de este lead en un pipeline que no es el suyo principal
+    if (!callers && lead.pipeline_id && lead.pipeline_id !== e.pipeline_id) {
+      const t = await tarjetaDe(leadId, e.pipeline_id);
+      if (t) {
+        if (t.etapa_id === etapaId) return;
+        await moverTarjeta(leadId, e.pipeline_id, etapaId);
+        await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Su tarjeta de otro pipeline, movida a «${e.nombre}»` });
+        refrescar();
+        return;
+      }
+    }
     if ((callers ? lead.etapa_callers_id : lead.etapa_id) === etapaId) return;
     // Una columna unida a un estado solo se alcanza cambiando el estado (su botón o su ventana), para no desincronizar
     if (e.estado_caller && e.estado_caller !== lead.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón para mover el lead ahí.`);
@@ -393,10 +405,17 @@ export async function moverLeads(leadIds: string[], etapaId: string) {
     if (e.pipelines.tipo === "closers") throw new ErrorUsuario("En «Closers» se mueven citas, no leads.");
     if (e.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón en cada lead.`);
     const callers = e.pipelines.tipo === "callers";
-    await escribir(
-      db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).in("id", ids).eq("proyecto_id", proyecto.id),
-      "leads"
-    );
+    // Fase 4: los que ya tienen tarjeta en ese pipeline (sin ser el suyo principal) mueven esa tarjeta;
+    // el resto cambia su pipeline y columna principales
+    const { data: extra } = callers ? { data: [] } : await db().from("tarjetas_extra").select("lead_id").in("lead_id", ids).eq("pipeline_id", e.pipeline_id);
+    const conTarjeta = new Set((extra ?? []).map((x) => x.lead_id as string));
+    const principales = ids.filter((id) => !conTarjeta.has(id));
+    if (conTarjeta.size) await escribir(db().from("tarjetas_extra").update({ etapa_id: etapaId }).in("lead_id", [...conTarjeta]).eq("pipeline_id", e.pipeline_id), "tarjetas_extra");
+    if (principales.length)
+      await escribir(
+        db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).in("id", principales).eq("proyecto_id", proyecto.id),
+        "leads"
+      );
     await db().from("actividades").insert(ids.map((id) => ({ proyecto_id: proyecto.id, lead_id: id, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${e.nombre}» (en masa)` })));
     refrescar();
     return ids.length;

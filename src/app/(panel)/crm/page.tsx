@@ -3,6 +3,7 @@ import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { calcularNivel, filasPermisoPipeline } from "@/lib/pipelines";
 import { columnaCitasGhl } from "@/lib/leads";
+import { contarTarjetas, tarjetasDelPipeline } from "@/lib/tarjetas";
 import { cargarCitasVentas, columnasCloser } from "@/lib/tablero-closers";
 import { ABIERTAS } from "@/lib/llamadas";
 import { Cabecera, Contenido } from "@/components/ui";
@@ -70,8 +71,26 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
       : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
   ]);
   const etapas = (etapasData.data ?? []) as Etapa[];
+  // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro
+  const extra = pipeline?.tipo === "normal" ? await tarjetasDelPipeline(pipeline.id) : [];
+  const extraLeads: (LeadTarjeta & { etapa_callers_id: string | null })[] = [];
+  if (extra.length) {
+    const columnaDe = new Map(extra.map((x) => [x.lead_id, x.etapa_id]));
+    const ids = [...columnaDe.keys()];
+    for (let i = 0; i < ids.length; i += 300) {
+      let q = db()
+        .from("leads")
+        .select("id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta")
+        .in("id", ids.slice(i, i + 300));
+      q = deLaPersona(q);
+      const { data } = await q;
+      for (const l of (data ?? []) as (LeadTarjeta & { etapa_callers_id: string | null })[]) extraLeads.push({ ...l, etapa_id: columnaDe.get(l.id) ?? null, otroPipeline: true });
+    }
+  }
+  const extraPorPipeline = jefe && !persona ? await contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id)) : {};
   // En «Callers» la columna de cada lead es la de su llamada
-  const leads: LeadTarjeta[] = leadsCrudos.map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));
+  const yaEstan = new Set(leadsCrudos.map((l) => l.id));
+  const leads: LeadTarjeta[] = [...leadsCrudos, ...extraLeads.filter((l) => !yaEstan.has(l.id))].map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));
 
   let closers: ReturnType<typeof columnasCloser> | null = null;
   if (pipeline?.tipo === "closers") {
@@ -115,7 +134,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
           pipeline={pipeline}
           etapas={etapas}
           leads={leads}
-          conteos={Object.fromEntries(conteos)}
+          conteos={Object.fromEntries(conteos.map(([id, n]) => [id, n + (id === pipeline?.id ? extraLeads.length : extraPorPipeline[id] ?? 0)]))}
           callers={gente.filter((g) => g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre }))}
           closers={gente.filter((g) => g.rol === "closer").map((g) => ({ id: g.id, nombre: g.nombre }))}
           admin={admin}

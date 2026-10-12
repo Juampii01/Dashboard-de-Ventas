@@ -73,6 +73,12 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const closerCita = citaAbierta?.closer_id ? { id: citaAbierta.closer_id, nombre: nombre(citaAbierta.closer_id) } : undefined;
   const pipeline = (pipelines.data as Pipeline[]).find((p) => p.id === lead.pipeline_id);
   const etapa = (etapas.data as Etapa[]).find((e) => e.id === lead.etapa_id);
+  // Fase 4: sus tarjetas en otros pipelines (si la tabla aún no existe, ninguna)
+  const { data: extra } = await db().from("tarjetas_extra").select("pipeline_id, etapa_id").eq("lead_id", id);
+  const tambienEn = (extra ?? []).map((x) => ({
+    pipeline: (pipelines.data as Pipeline[]).find((p) => p.id === x.pipeline_id),
+    etapa: (etapas.data as Etapa[]).find((e) => e.id === x.etapa_id),
+  })).filter((x) => x.pipeline);
   const nombreCompleto = `${lead.nombre} ${lead.apellido}`.trim() || "Sin nombre";
 
   return (
@@ -86,6 +92,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             </Link>
             {pipeline && <>· {pipeline.nombre}</>}
             {etapa && <Insignia tono="primario">{etapa.nombre}</Insignia>}
+            {tambienEn.map((x) => (
+              <Link key={x.pipeline!.id} href={`/crm?pipeline=${x.pipeline!.id}`} className="hover:underline" title="También está en este pipeline">
+                <Insignia>🔗 {x.pipeline!.nombre}{x.etapa ? ` · ${x.etapa.nombre}` : ""}</Insignia>
+              </Link>
+            ))}
             <Insignia>{ETIQUETA_ESTADO_CALLER[lead.estado_caller]}</Insignia>
             <OfertaChip oferta={lead.oferta} vacio={false} />
             <span className="text-texto-3">· entró el {fechaHora(lead.creado_en, proyecto)} · origen {lead.origen.toUpperCase()}</span>
