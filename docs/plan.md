@@ -45,7 +45,7 @@
 - **Hecha cuando:** te enseño las medidas de antes y de después, y lo notas tú en tu Mac.
 
 **Fase 3 · Diseño común** (piezas que usan todas las pantallas)
-- [ ] Ventanas propias en vez de las del navegador (las 31 de «… says»).
+- [x] **Ventanas propias** (`277abae`, 12 oct): las 27 de confirmar y las 4 de escribir texto ya son de la app (`src/components/dialogos.tsx`: `confirmar()` y `pedirTexto()`, estilo glass, en español, botón rojo «Sí, seguir» si borra o quita). No queda ningún `confirm(`/`prompt(` en el código. Probado en pantalla por Claude (app publicada, sesión de Cristian, solo «Cancelar»): CRM → «Renombrar pipeline» (sale el nombre actual seleccionado) y «Borrar pipeline» (aviso rojo con el detalle); al cancelar, «Webinar 1» sigue igual; consola sin errores. **Publicación:** Vercel falló dos veces con `git_info_fail` (no pudo leer el commit en GitHub; 12:55-13:13, la build ni empezó; en local compilaba). Relanzado el mismo commit por la API de Vercel con permiso de Cristian → READY. Si vuelve a pasar: relanzar; si se repite, reconectar el repo en Vercel → Settings → Git.
 - [ ] Un solo estilo de selección: interruptor verde para sí/no, pastillas para pocas opciones y desplegable propio para muchas.
 - [ ] Barra de filtros que se vea bien en pantallas pequeñas (componente común de 7 pantallas).
 - **Hecha cuando:** no queda ninguna ventana «… says» en la app y te enseño las 7 pantallas de la barra con el ancho de tu Mac.
