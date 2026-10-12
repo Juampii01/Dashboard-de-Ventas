@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   BarChart3,
@@ -66,6 +66,10 @@ export function BarraLateral({
   menu: { grupo: string; items: ItemMenu[] }[];
 }) {
   const ruta = usePathname();
+  // Fase 2 (Cristian, 12 oct 2026): el menú ya no precarga todas las pantallas al aparecer (medido: 24 peticiones
+  // al servidor en 10 s por cada pantalla abierta); solo la que se señala con el ratón o el dedo, justo antes del clic.
+  const router = useRouter();
+  const precargar = (href: string) => router.prefetch(href);
   const [abierto, setAbierto] = useState(false);
   const [pendiente, iniciar] = useTransition();
 
@@ -122,6 +126,10 @@ export function BarraLateral({
                   <li key={it.href}>
                     <Link
                       href={it.href}
+                      prefetch={false}
+                      onMouseEnter={() => precargar(it.href)}
+                      onFocus={() => precargar(it.href)}
+                      onTouchStart={() => precargar(it.href)}
                       onClick={() => setAbierto(false)}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 ${
                         activo
@@ -148,7 +156,7 @@ export function BarraLateral({
       <div className="border-t border-borde p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           {/* Bloque 1 de 1.0: tocar tu nombre abre «Mi perfil» */}
-          <Link href="/perfil" onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
+          <Link href="/perfil" prefetch={false} onMouseEnter={() => precargar("/perfil")} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primario-suave text-xs font-semibold text-primario">
               {iniciales(perfil.nombre)}
             </div>
