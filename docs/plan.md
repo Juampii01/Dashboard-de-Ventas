@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 12 oct 2026. Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
+> Al día: 12 oct 2026, 21:26 (hora de España). Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
 
 **Índice:** 1. Dónde estamos · 2. Plan por fases · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -8,11 +8,12 @@
 
 ## 1. Dónde estamos
 
-- **App publicada:** https://dashboard-de-ventas-iota.vercel.app. Cada commit a `main` se publica solo.
-- **Funciona en la nube:** login, emails (Resend), subida de CSV, leads de la Biblioteca que entran solos y citas de los 4 calendarios de GHL que entran solas (las que tienen cita van a «Orgánico → Agendados»).
-- **Datos de Maestria:** 1.192 leads, **todos sin caller**; 16 citas reales; 0 datos de prueba.
-- **Equipo:** 12 personas creadas (CEO, 2 directores, 5 callers, 4 closers). **Nadie ha entrado todavía.**
-- **Falta para terminar:** repartir los leads, mandar los accesos y un día real con un caller y un closer.
+- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo; hoy 3 commits no le llegaron a Vercel y se relanzaron por la API (ver «Urgente»).
+- **Funciona en la nube:** login, emails de acceso (Resend), subida de CSV, leads de la Biblioteca que entran solos (⚠ **sin sus respuestas**, ver «Urgente») y citas de los 4 calendarios de GHL.
+- **Datos de Maestria (base, 12 oct):** 1.274 leads, 1.214 sin caller; 16 citas.
+- **Equipo:** 14 personas reales (CEO, 3 directores, 6 callers, 4 closers) + 2 de prueba. **Acceso enviado a todos.** Han entrado y hecho la bienvenida 9: Cris y José, Juan, Junior, y los 6 callers (Tomás, Felipe, Miguel Angel, Hanna, Lucas, Facundo). **Faltan:** Antonio (director) y los 4 closers (Andrés, Renzo, Cristian Ortiz, José Gómez).
+- **Fases:** 1 casi hecha (falta Antonio) · 2 hecha salvo el «despertar» de Vercel y que lo notes en tu Mac · 3 hecha, falta tu visto bueno con el ancho de tu Mac · **urgente: Biblioteca sin respuestas** · siguiente: Fase 4.
+- **Falta para terminar:** arreglar la Biblioteca, repartir los leads y un día real con un caller y un closer.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ---
@@ -84,7 +85,7 @@
 - [ ] **Tests en GitHub** (Cristian: de lo último). ⚠ Hasta entonces, los cambios de la Fase 4 (varios pipelines) solo los vigilan los tests unitarios y la prueba en pantalla.
 - [ ] **Segunda versión, de lo último:** coach con IA que escucha la llamada en directo («DI AHORA», transcripción en vivo).
 
-**Al final del todo · lo de Cristian:** pagar Google Workspace (**antes del 2 nov 2026: quedan 21 días a 12 oct**), guardar las claves en su gestor, usuarios de GHL de los callers, claves de Fathom/Claude/Deepgram, Vercel Pro, repartir los leads, mandar los accesos al resto del equipo y **día real** con un caller y un closer.
+**Al final del todo · lo de Cristian:** pagar Google Workspace (**antes del 2 nov 2026: quedan 21 días a 12 oct**), guardar las claves en su gestor, usuarios de GHL de los callers, claves de Fathom/Claude/Deepgram, Vercel Pro, repartir los leads, ~~mandar los accesos al resto del equipo~~ (hecho el 12 oct) y **día real** con un caller y un closer.
 
 **Cómo se pasa de fase:** al terminar cada una te la enseño y no empiezo la siguiente sin tu visto bueno. Sin tiempos estimados (Cristian).
 
