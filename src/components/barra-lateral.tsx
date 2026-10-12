@@ -19,7 +19,6 @@ import {
   Moon,
   LogOut,
   ListChecks,
-  ChevronDown,
   Menu,
   X,
   Network,
@@ -103,7 +102,7 @@ export function BarraLateral({
                 await cambiarProyecto(id);
               });
             }}
-            className="campo appearance-none py-2.5 pl-11 pr-8 font-medium disabled:opacity-100"
+            className="campo py-2.5 pl-11 pr-3 font-medium disabled:opacity-100"
           >
             {proyectos.map((p) => (
               <option key={p.id} value={p.id}>
@@ -111,7 +110,6 @@ export function BarraLateral({
               </option>
             ))}
           </Desplegable>
-          <ChevronDown className="pointer-events-none absolute right-2.5 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-3" />
         </div>
       </div>
 

@@ -8,7 +8,7 @@ import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { confirmar } from "@/components/dialogos";
-import { Desplegable } from "@/components/eleccion";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 export type Area = { id: string; nombre: string; color: string };
 export type Puesto = { id: string; area_id: string | null; nombre: string };
@@ -93,7 +93,7 @@ export function DatosYComision({ m, areas, puestos, productos, rolesQuePuedoDar,
             <form className="space-y-2" action={(fd) => ejecutar(() => darAccesoMiembro(m.id, String(fd.get("email")), String(fd.get("password")), String(fd.get("rol")) as Rol), "Acceso creado")}>
               <input name="email" type="email" required className="campo" placeholder="Email de acceso" />
               <input name="password" type="text" minLength={8} required className="campo" placeholder="Contraseña temporal (mín. 8)" autoComplete="off" />
-              <Desplegable name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</Desplegable>
+              <Pastillas name="rol" className="campo" defaultValue={rolesQuePuedoDar[0]}>{rolesQuePuedoDar.map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}</Pastillas>
               <button className="btn-primario w-full" disabled={pendiente}>Crear acceso</button>
             </form>
           )}

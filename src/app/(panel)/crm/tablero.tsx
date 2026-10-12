@@ -50,7 +50,7 @@ import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
 import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
 import { confirmar, pedirTexto } from "@/components/dialogos";
-import { Desplegable } from "@/components/eleccion";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 export type LeadTarjeta = {
   id: string;
@@ -827,7 +827,7 @@ function ModalPermisos({
             return (
               <div key={r.v} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{r.t}</span>
-                <Desplegable
+                <Pastillas
                   aria-label={`${r.t} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio ?? ""}
@@ -835,7 +835,7 @@ function ModalPermisos({
                 >
                   <option value="">Lo de siempre ({texto(defecto)})</option>
                   {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
-                </Desplegable>
+                </Pastillas>
               </div>
             );
           })}
@@ -848,7 +848,7 @@ function ModalPermisos({
             return (
               <div key={g.id} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{g.nombre} <span className="text-xs text-texto-3">· {g.rol}</span></span>
-                <Desplegable
+                <Pastillas
                   aria-label={`${g.nombre} en ${pipeline.nombre}`}
                   className="campo w-auto py-1 text-xs"
                   value={propio}
@@ -856,7 +856,7 @@ function ModalPermisos({
                 >
                   <option value="">Como su rol ({texto(deSuRol)})</option>
                   {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.t}</option>)}
-                </Desplegable>
+                </Pastillas>
               </div>
             );
           })}

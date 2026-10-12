@@ -6,7 +6,7 @@ import { guardarObjetivo, quitarObjetivo, crearLanzamiento, borrarLanzamiento } 
 import { useAccion } from "@/components/acciones-lead";
 import { CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos-constantes";
 import { confirmar } from "@/components/dialogos";
-import { Desplegable } from "@/components/eleccion";
+import { Desplegable, Pastillas } from "@/components/eleccion";
 
 type Persona = { id: string; nombre: string; rol: RolObjetivo };
 type Lanz = { id: string; nombre: string };
@@ -47,9 +47,9 @@ export function FormObjetivo({ personas, lanzamientos }: { personas: Persona[]; 
       </label>
       <label className="block">
         <span className="etiqueta-campo">Periodo</span>
-        <Desplegable className="campo" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+        <Pastillas className="campo" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
           {PERIODOS.map((p) => <option key={p.v} value={p.v} disabled={p.v === "lanzamiento" && lanzamientos.length === 0}>{p.t}</option>)}
-        </Desplegable>
+        </Pastillas>
       </label>
       {periodo === "lanzamiento" && (
         <label className="block">

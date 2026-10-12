@@ -172,7 +172,7 @@ export function Desplegable(props: PropsSelect) {
             ref={lista}
             role="listbox"
             className="ventana vidrio fixed z-[60] flex max-h-72 flex-col overflow-hidden rounded-2xl border border-borde p-1 text-sm"
-            style={{ left: pos.left, width: Math.max(pos.width, 200), ...(pos.arriba ? { bottom: window.innerHeight - pos.top } : { top: pos.top }) }}
+            style={{ left: pos.left, minWidth: Math.max(pos.width, 200), maxWidth: Math.min(420, window.innerWidth - pos.left - 12), ...(pos.arriba ? { bottom: window.innerHeight - pos.top } : { top: pos.top }) }}
           >
             {conBuscador && (
               <label className="mb-1 flex items-center gap-2 border-b border-borde px-2.5 py-2">

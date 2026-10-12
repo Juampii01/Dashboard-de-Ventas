@@ -12,7 +12,7 @@ import { borrarCuentaFathom, guardarCuentaFathom } from "@/app/(panel)/closer/ll
 import { cambiarEmailPersona, guardarContactoPersona, marcarPrueba, type cargarFicha } from "./ficha-acciones";
 import type { Rol } from "@/lib/tipos";
 import { confirmar } from "@/components/dialogos";
-import { Desplegable, Pastillas } from "@/components/eleccion";
+import { Pastillas } from "@/components/eleccion";
 
 // Partes de la ficha de cada persona (bloque 5 de 1.0). Cada una se pone al día al guardar (recargar).
 export type Ficha = Exclude<Awaited<ReturnType<typeof cargarFicha>>, { error: string }>;
@@ -67,9 +67,9 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {f.soyCeo ? (
-              <Desplegable className="campo w-auto py-1" value={p.rol} disabled={pendiente} aria-label="Rol" onChange={(e) => hacer(() => actualizarMiembro(p.id, { rol: e.target.value as Rol }), "Rol cambiado")}>
+              <Pastillas className="campo w-auto py-1" value={p.rol} disabled={pendiente} aria-label="Rol" onChange={(e) => hacer(() => actualizarMiembro(p.id, { rol: e.target.value as Rol }), "Rol cambiado")}>
                 {(Object.keys(ROL_TXT) as Rol[]).map((r) => <option key={r} value={r}>{ROL_TXT[r]}</option>)}
-              </Desplegable>
+              </Pastillas>
             ) : (
               <span className="text-texto-2">{ROL_TXT[p.rol]}{p.activo ? "" : " · desactivado"} <span className="text-xs text-texto-3">(el rol y desactivar, solo el CEO)</span></span>
             )}
