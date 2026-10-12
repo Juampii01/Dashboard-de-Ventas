@@ -1,6 +1,6 @@
 # Guía · Conectar GoHighLevel con Eternity
 
-> Escrita el 9 oct 2026 y puesta al día el 11 oct 2026 (reparto con %, agendar por link de GHL, reporte editable, ficha de cada persona) a partir de la documentación oficial de GHL ([Workflow Action - Custom webhook](https://help.gohighlevel.com/support/solutions/articles/155000003305-workflow-action-webhook)).
+> Escrita el 9 oct 2026 y puesta al día el 11 oct 2026 (reparto con %, agendar por link de GHL, reporte editable, ficha de cada persona) y el 12 oct 2026 con **cómo quedó montado de verdad en Maestria** (sección siguiente) a partir de la documentación oficial de GHL ([Workflow Action - Custom webhook](https://help.gohighlevel.com/support/solutions/articles/155000003305-workflow-action-webhook)).
 > **⚠ comprobar** = cosas que la documentación de GHL no detalla (nombres exactos de algunas variables y disparadores); se eligen en GHL con el selector y se prueban con un lead de prueba.
 > Solo funciona **con la app publicada**: GHL no puede llegar a tu ordenador.
 
@@ -19,7 +19,34 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 
 ---
 
+## Cómo está montado en Maestria (12 oct 2026, comprobado con GHL real)
+
+**Lo importante:** la acción **«Custom webhook» de GHL es premium** (GHL cobra cada ejecución) y la subcuenta no tiene saldo: GHL la salta con «COMPANY does not have enough funds». Por eso **todo va con la acción «Webhook» normal**, que deja añadir *Custom data* y *Headers* sin ser premium. La app ya entiende lo que manda (todos los campos del contacto por su nombre, y lo de *Custom data* dentro de `customData`).
+
+**Todos los workflows de la app** están en la carpeta **«1. Dashboard ventas»**, numerados, **publicados** (en borrador no se disparan) y acaban con un **Wait de 999 días**:
+
+| Workflow | Disparador | Acción | A dónde va |
+|---|---|---|---|
+| **0. AP - Biblioteca** | Contact Tag → se añade «biblioteca recursos» (la pone el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) | Webhook normal, **sin** Custom data ni cabecera | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
+| **1. AP - Cita Callers** | Customer booked appointment · In calendar = «#2 Callers - Maestria» | Webhook normal «Cita (app)» | `/api/webhooks/ghl/<id de Maestria>` |
+| **2. AP - Cita Closers** | ídem · «#3 Closers - Maestria» | ídem (copia del 1) | ídem |
+| **3. AP - Cita Founders** | ídem · «#1 Maestria founders» (antes «#1 Llamada de Descubrimiento…») | ídem (copia del 2) | ídem |
+
+**«Cita (app)»** (Webhook normal, POST): *Custom data* `tipo` = `cita_agendada`, `fecha` = Appointment · Start Date Time, `closer_email` = Appointment · Assigned User · Email; *Headers* `x-eternity-secreto` = la clave de Maestria (Administración → Integraciones → «Copiar clave»; empieza por `704d0dde…`; ojo, la del proyecto «Test» es otra).
+
+**Calendarios (Cristian, 12 oct):** «#2 Callers» y «#3 Closers» = Andrés y Renzo (closers actuales); «#1 Maestria founders» = Cristian y José (el que más se usa ahora). En la app, Cristian Ortiz (`cristianortiz@astraire.com`) y José Gómez (`jose@eternity.llc`) son closers de Maestria con su email de GHL.
+
+**La hora de la cita (fallo arreglado el 11 oct, `f16b240`):** GHL manda `calendar.startTime` **sin zona** («2026-10-14T15:30:00», hora de `calendar.selectedTimezone`). La app la lee en esa zona (o en la del proyecto). El `fecha` de *Custom data* llega como texto («Wednesday, October 14, 2026 9:30 PM») y no se usa.
+
+**Lead con cita → «Orgánico → Agendados»** (decisión de Cristian, 12 oct): ⚠ escrito pero **sin publicar** todavía (faltan los tests; ver el plan).
+
+**Probado con reservas reales:** «#2 Callers» y «#3 Closers» (hora y closer bien). «#1 founders» sin reserva de prueba: lo cubre la sincronización por API.
+
+---
+
 ## Parte 1 · GHL → Eternity (3 workflows)
+
+> Lo de esta parte es el diseño original con «Custom webhook». **En Maestria se usa el Webhook normal** (sección anterior); la tabla de campos y los cuerpos JSON siguen valiendo como referencia de qué entiende la app.
 
 ### Configuración común de la acción «Custom Webhook»
 
@@ -59,7 +86,7 @@ Por qué la clave va en la cabecera y no en la URL: la propia documentación de 
 - **Raw Body:** el JSON «2 · Cita agendada».
 - `fecha`: elige con el selector la **fecha y hora de inicio de la cita**. ⚠ comprobar que la variable incluye la hora y la zona; si la cita aparece a otra hora en la app, avísame.
 - `closer_email`: elige el **email del usuario asignado a la cita**. Tiene que ser el mismo email con el que el closer entra en la app **y el closer tiene que estar añadido a este proyecto**; si no, la cita llega sin closer y la asigna el director.
-- **Cómo encuentra la app al lead de la cita:** por el Contact Id de GHL; si no, por el email; si no trae email, por el **teléfono** (últimas 9 cifras, así «+34 600 111 222» y «600 111 222» son el mismo). Si no existe, lo crea. Si la cita no trae ninguno de los tres, sale en «Últimos eventos» con el error «no viene email, teléfono ni contacto de GHL».
+- **Cómo encuentra la app al lead de la cita:** por el Contact Id de GHL; si no, por el email; si no trae email, por el **teléfono** (últimas 9 cifras, así «+34 600 111 222» y «600 111 222» son el mismo). Si no existe, lo crea (en el **primer pipeline**, hoy «Webinar 1»; ⚠ con el cambio pendiente irá a «Orgánico → Agendados»). Si la cita no trae ninguno de los tres, sale en «Últimos eventos» con el error «no viene email, teléfono ni contacto de GHL».
 - **No se duplican citas:** si GHL reenvía la misma cita, se actualiza la que ya existe (por su id de GHL; y si no trae id, por el mismo lead a la misma hora).
 - **Agendar por link (11 oct):** este workflow es **el que da la agenda**. El caller ya no agenda en la app: manda al lead el link del calendario de GHL (el que se guarda en Administración → Proyecto y reparto → «Link de agenda») y pulsa **«Link enviado»** con sus estrellas. Cuando el lead reserva, GHL manda la cita aquí: la hora y el closer salen de GHL (el reparto entre closers lo hace el calendario de GHL; la app ya no tiene rotación). La agenda (KPIs, Ranking y comisión) cuenta para quien marcó «Link enviado»; si nadie lo marcó, para el caller del lead. Si a los 2 días no ha llegado la cita, el lead vuelve a la cola del caller. **Sin este workflow, ningún caller suma agendas.**
 - **Reagendar (11 oct):** todas las citas se reagendan y se mueven **en la app**, también las que vinieron de GHL (la app es el CRM; GHL solo trae datos). Al reagendar, la cita nueva ya no está unida a GHL: la sincronización no le cambia la hora. ⚠ Los recordatorios que manda GHL al lead siguen con la hora vieja salvo que también se cambie en GHL.
@@ -129,7 +156,9 @@ Administración → Integraciones → «Nueva clave». Después hay que poner la
 
 ### El token
 
-1. En GHL (subcuenta de Maestria): **Ajustes → Private Integrations → crear** ⚠ comprobar el nombre exacto del menú.
+> **Hecho en Maestria el 12 oct:** Private Integration «App Eternity (dashboard)» con solo los 3 permisos de abajo; Location ID `ZGWJLBH58RJtl2iGhykp`; «Probar conexión» correcto. Ids de usuario de GHL de los closers: Andrés `GFc1HiIWJkr1PlTQOSNn`, Renzo `Dyz4qLnUYxbkfyEJ3srG`, Cristian `DubIbjsps2tK1fhLcgcP`, José `J8xk7z0XlRevokd1bsH8`. Con el id de usuario se traen sus citas de **cualquier** calendario. Primera sincronización: 20 citas, **horas correctas** (la API sí manda la zona).
+
+1. En GHL (subcuenta de Maestria): **Settings → Private Integrations → Create** (comprobado: el menú se llama así).
 2. Permisos (comprobados en la especificación oficial de GHL):
    - `calendars/events.readonly` → citas de los closers.
    - `contacts.readonly` → datos del contacto de cada cita.

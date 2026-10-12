@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 11 oct 2026 (noche, tras cerrar Resend). Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan tiene dónde estamos, lo que falta, las decisiones vigentes y los riesgos.
+> Al día: 12 oct 2026 (madrugada, tras conectar GHL). Lo ya hecho, con todo su detalle (pruebas, cifras, respuestas de cada ronda), está en `plan-historial-10oct.md` y `plan-historial-11oct.md`; la auditoría, en `Arreglar-dashboard.md`. Este plan tiene dónde estamos, lo que falta, las decisiones vigentes y los riesgos.
 
 ---
 
@@ -15,7 +15,8 @@
   - **Equipo creado:** 10 personas (CEO «Cris y José», Juan y Junior directores con Administración, 5 callers y 2 closers) + 2 perfiles de prueba (closer-test y caller-test). Contraseñas solo en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv` y `…-13-46.csv` (fuera de GitHub). Hay un tercero, `…-2026-10-10-22-30.csv`, con los mismos 2 perfiles de prueba (creado el 10 oct por la noche; sin comprobar si sus contraseñas aún valen: la que funciona hoy es la de `…-13-46`).
 - **Comprobado en la nube:** el login carga (200) y Cristian entra; las cabeceras de seguridad están (CSP, HSTS, X-Frame-Options…); el webhook de GHL responde. **Sin comprobar todavía:** velocidad con datos, subir PDF y CSV, límite de intentos y la consola del navegador (4.2).
 - **En local:** 451 tests (447 pasan y 4 de velocidad que solo se lanzan a mano). **Suite completa pasada entera el 11 oct (noche)** tras el arreglo de la hora de las citas, con Docker encendido unos minutos y apagado después. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. La app compila; 30 cambios de base de datos.
-- **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante.
+- **Docker apagado por defecto** (Cristian, 11 oct: consume mucha RAM). Se enciende 5 minutos solo para pasar los tests de integración antes de un cambio importante. **La app no lo necesita** (usa Supabase en la nube); solo sirve para una copia vacía de la base en el Mac, donde los tests crean y borran datos falsos.
+- ⚠ **12 oct: Docker Desktop no arranca** (la app está abierta pero el motor no responde; se paró la espera con 2 intentos). **Bloquea** los tests del cambio «Orgánico → Agendados» (4.3), que está escrito **sin commit ni publicar**. Arreglo: reiniciar Docker Desktop (o el Mac) y mirar si pide algo (actualización, condiciones).
 - **Resend (emails) terminado** (4.1, 11 oct): dominio «Verified» y probado en la nube: el enlace mágico entra y no se puede reutilizar, y el aviso de un reporte llega por email (los dos a «Recibidos», no a spam), con el diseño glass de la app.
 - **Proyecto «Test» en la nube** (de Cristian): solo con el CEO; sirve para probar en la nube sin avisar a los directores. Tiene 2 reportes de prueba de caller-test (10 y 11 oct).
 - **«Terminado»** = el equipo real entra en la app publicada (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
@@ -104,7 +105,10 @@
 - [ ] Workflows: «Lead nuevo» y **«Cita agendada» (imprescindible: es el que da la agenda a los callers con el sistema del link)**; «Cambio de etapa» si hace falta; avisos de reportes. Comprobar en Administración → Integraciones → «Últimos eventos».
 - [x] **Token de GHL** (12 oct): Private Integration «App Eternity (dashboard)» en Maestria con solo `calendars/events.readonly`, `contacts.readonly` y `conversations/message.readonly` (la creó Claude; el token lo pegó Cristian). Location ID `ZGWJLBH58RJtl2iGhykp`. «Probar conexión» correcto. Id de usuario de GHL de cada closer: Andrés `GFc1HiIWJkr1PlTQOSNn`, Renzo `Dyz4qLnUYxbkfyEJ3srG`, Cristian `DubIbjsps2tK1fhLcgcP`, José `J8xk7z0XlRevokd1bsH8`.
 - [x] **Primera sincronización** (12 oct, 04:04 UTC; arrancó sola al abrir Agendas): «20 nuevas · 0 actualizadas · 0 sin unir · 0 inválidas». **Horas correctas** comparadas con GHL (Sofía 12 oct 15:30 EDT = 19:30 UTC; Christian 08:00 EDT = 12:00 UTC…): la API manda la hora con zona, así que `ghl-sync.ts` no necesita el arreglo del webhook. 11 citas se unieron a leads de Biblioteca; **9 crearon un lead nuevo en «Webinar 1»** (el primer pipeline): 5 reales (Wendy, José Ramón, Lenin, Moisés, Adriàn) y 4 de prueba (Kiiiriii, PRUEBA Closers, «Test» tst@test.com, «Prueba» info+prueba-lia). Las 2 citas de prueba canceladas vuelven en cada sincronización porque siguen en GHL (canceladas).
-- [ ] Decidir (Cristian): ¿borrar en la app las citas/leads de prueba que vienen de GHL? ¿Los 5 leads reales nuevos se quedan en «Webinar 1» o van a otro pipeline?
+- [x] **Decidido y hecho (Cristian, 12 oct):** borrados en la app los 5 leads de prueba que vinieron de GHL (Kiiiriii, PRUEBA Closers, «Test» tst@test.com y team@test.com, «Prueba» info+prueba-lia) con sus citas; los 5 reales (Wendy, José Ramón, Lenin, Moisés, Adriàn) pasados a **«Orgánico → Nuevos»**. Quedan 15 citas reales.
+- [ ] **Cristian:** borrar en GHL las 5 citas de prueba (si no, la sincronización las vuelve a traer y crea otra vez sus leads): Kiiiriii y PRUEBA Closers (canceladas, 14 oct), «Test» tst@test.com (30 sep y 9 oct) y «Prueba» info+prueba-lia (2 oct). Claude no borra datos para siempre.
+- [ ] **«Orgánico → Agendados»** (decisión de Cristian, 12 oct): todo lead con cita de GHL (webhook o sincronización) pasa a «Orgánico», columna «Agendados» (una cita cancelada no lo mueve). **Escrito, sin probar ni publicar** (bloqueado por Docker): `moverAAgendadosOrganico` en `src/lib/leads.ts`, llamada desde el webhook (`route.ts`) y desde `ghl-sync.ts`; 2 tests nuevos (`webhook.test.ts` y `ghl-calendario.test.ts`). Al publicar: mover también a «Agendados» los 15 leads que ya tienen cita (los 5 que están en «Orgánico → Nuevos» y los 10 que siguen en «Biblioteca Recursos»). Busca el pipeline por el nombre «Orgánico» y la columna «Agendados»: si se renombran, deja de mover.
+- [ ] El texto de Administración → Integraciones GHL sigue explicando el «Custom webhook» (premium) y sus cuerpos JSON: ponerlo como se montó (Webhook normal, Custom data y cabecera).
 - [ ] Ajustar las marcas «⚠ comprobar» de las guías con tus pantallas de GHL, Supabase y Vercel.
 - [ ] Landings directas: una entrada por landing en Administración → Entradas.
 - [ ] Probar con GHL real lo que solo se ha simulado: «Link enviado» → reserva → la cita llega a nombre del caller con sus estrellas; lead por teléfono; cita sin id sin duplicar; closer que no es del proyecto; cita borrada en GHL → «cancelada»; reagendar en la app una cita de GHL; avisos al CEO aunque no sea miembro; un segundo reporte del día no repite el aviso.
@@ -127,6 +131,9 @@
 - [x] Todas las citas se reagendan y se mueven en la app, también las de GHL; la cita nueva no lleva el id de GHL, así la sincronización no le cambia la hora.
 - [x] Link de agenda del proyecto en Administración → Proyecto y reparto (solo administradores, solo https).
 
+**Pendiente nuevo (Cristian, 12 oct): un lead en varios pipelines**
+- [ ] Hoy un lead está en **un solo pipeline**: al subir un CSV, si la persona ya existe (mismo email) se pone al día pero **se queda en su primer pipeline** (criterio de 6.2). Con el CSV de Webinar 1 solo entraron 8 nuevos; de 107 con etiqueta de webinar, 100 siguen en Biblioteca. **Cristian quiere que pueda «duplicarse»** para ver bien los números de cada fuente. **Antes de hacerlo, decidir con Cristian:** ¿la misma persona aparece una vez en cada pipeline (una tarjeta por pipeline) o es un solo lead que «pertenece» a varios? ¿Cómo cuenta en Funnel, KPIs, reparto y comisiones (una persona o una por pipeline)? ¿Qué pasa al llamarla o venderle desde uno de los pipelines? Y, si hace falta, que la subida respete la etapa de GHL.
+
 **Después de publicar (Cristian, 11 oct):**
 - [ ] **Cerrar moviendo la tarjeta:** al soltar en «Cerrados» de cualquier CRM se abre «Registrar venta»; al guardar queda cerrada en todos (lead, Callers, «Cerradas» de Post-call y la cita) y cuenta en Funnel, Ventas y comisiones; si se cancela, vuelve a su sitio. Solo closers, directores y CEO.
 - [ ] **Cambiar la zona horaria del proyecto** (6.1). Lo comprobado: la zona es `proyectos.zona_horaria` (solo Nueva York y Madrid); las citas guardan el momento exacto; los horarios guardan la hora del reloj (hay que convertirlos); los reportes, solo el día; 39 archivos usan la zona. **Ojo:** entre Nueva York y Madrid no siempre hay 6 h (unas semanas, 5 h) y un horario puede pasar al día siguiente al convertirlo; probar los dos casos.
@@ -143,14 +150,14 @@
 - [ ] **Mandar a cada persona su acceso por WhatsApp** (dirección, email y contraseña de `usuarios-creados-…csv`) y después **borrar los 4 archivos** `usuarios-creados-…csv` de contraseñas (lo haces tú; el 4.º es el de los closers Cristian y José, del 12 oct).
 - [ ] Guardar en tu gestor de contraseñas lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
-### Para conectar GHL (paso 6, el siguiente)
-- [ ] El token de GHL (Private Integration) y los ids de calendario de cada closer (los pegas tú).
-- [ ] Crear en GHL los workflows que te indique.
-- [ ] Decirme qué calendario (o calendarios) de GHL hay detrás de la landing `codigomaestria.com/agenda` y cómo reparte entre Andrés y Renzo (¿uno que reparte o uno por closer?).
-- [ ] Decirme si empezamos por el workflow «Cita agendada» y si tienes GHL abierto en tu Chrome.
+### Para conectar GHL (paso 6)
+- [x] Token de GHL pegado y conexión probada (12 oct). Workflows creados y publicados en «1. Dashboard ventas». Calendarios aclarados (4.3).
+- [ ] Borrar en GHL las 5 citas de prueba (4.3).
+- [ ] Reiniciar Docker Desktop para que pasen los tests de «Orgánico → Agendados».
 
 ### Después de GHL (paso 7)
-- [ ] **Subir los leads:** exportación nueva de GHL (todos los contactos) → app → CRM → pipeline **Biblioteca Recursos** → Subir CSV → Importar (sin marcar «Repartir»). Pásame el mensaje verde y lo compruebo.
+- [x] **Subir los leads de la Biblioteca** (12 oct): 1.158 en Maestria. Webinar 1 subido: solo 8 nuevos (el resto ya estaba; ver 4.4 «un lead en varios pipelines»).
+- [ ] Subir los de otras fuentes (DFY…) cuando se resuelva lo de varios pipelines.
 
 ### Cuando puedas
 - [x] Cuenta de Resend y DNS de eternity.llc (hechos el 11 oct con «Auto configure» de GoDaddy).
@@ -210,7 +217,7 @@
 - En la Membresía, la facturación es la del primer mes; los meses siguientes entran como cobros.
 - «Nuevo cliente» y el onboarding de clientes son del CEO y los directores; cobrar vale con «Ventas» o «Agendas».
 - Pipelines por defecto: los de origen, Ver para todos; «Callers», para callers y directores; «Closers», para closers y directores.
-- Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas; sin email se le reconoce por el teléfono (últimas 9 cifras).
+- Un lead que vuelve a entrar mantiene su primer origen y suma etiquetas y respuestas; sin email se le reconoce por el teléfono (últimas 9 cifras). ⚠ **Cristian quiere cambiarlo** (12 oct): que pueda estar en varios pipelines (4.4).
 - En Agendas solo cuentan las ventas de closers; un gasto sin categoría cuenta en el profit; Fathom se sincroniza con el botón.
 - Reparto: el tope cuenta como «sin trabajar» Nuevo, No contesta y Llamar luego; le toca a quien tiene menos para su %, y la cuenta empieza de cero al cambiar los %.
 - «Link enviado» cuenta como contacto (como un WhatsApp).
@@ -261,6 +268,8 @@
 - **Dominio raíz en Resend** (decisión de Cristian): si algún email de la app se marcara como spam, afectaría también a la reputación del correo normal de @eternity.llc (Google Workspace). Resend recomendaba un subdominio.
 
 **A tener en cuenta:**
+- **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
+- **Docker** (solo para los tests): el 12 oct no arrancaba; sin él no se pueden pasar los tests de integración.
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).

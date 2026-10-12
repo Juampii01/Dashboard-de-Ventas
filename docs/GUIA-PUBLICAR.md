@@ -1,7 +1,7 @@
 # Guía · Publicar Eternity
 
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
-> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto, agendar por link de GHL, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Falta el paso de Resend (emails), que se añade con el bloque 6. Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
+> Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto, agendar por link de GHL, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Puesta al día otra vez el 12 oct 2026: **la app ya está publicada** (https://dashboard-de-ventas-iota.vercel.app), Resend verificado y probado (paso 4 bis), equipo y closers creados, leads de la Biblioteca subidos y GHL conectado (GUIA-GHL.md, sección «Cómo está montado en Maestria»). Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
 
 ---
 
@@ -10,7 +10,7 @@
 **Necesitas:**
 - Un email para crear 3 cuentas gratuitas: **GitHub**, **Supabase** y **Vercel**.
 - Para la v2 (opcional, se puede añadir después): una cuenta en la **API de Claude** (Anthropic) y otra en **Deepgram**. Son de pago por uso.
-- Docker Desktop abierto (para el paso 3).
+- Docker Desktop abierto (para el paso 3 y para pasar los tests de integración en tu Mac). **Docker no hace falta para que la app funcione**: la app usa Supabase en la nube. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. ⚠ El 12 oct Docker Desktop se quedó abierto sin responder: reiniciarlo (o el Mac) antes de los tests.
 - El CSV del equipo (paso 6) y una exportación nueva de contactos de GHL (paso 7).
 
 **Qué es cada cosa:**
@@ -122,6 +122,8 @@ node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/equipo
 1. En GHL, exporta los contactos de nuevo (para que estén al día).
 2. Entra en la app como CEO → CRM → **Subir CSV** (o KPIs → **Biblioteca** → «Actualizar con CSV») → revisa qué es cada columna → elige el pipeline → Importar. Los que ya están se ponen al día (respuestas nuevas y su «Oferta») sin duplicar; al acabar dice cuántos son nuevos, actualizados y cuántos cambian de oferta.
 3. El CSV de la biblioteca del 10 oct (1.005 personas) está en `app/scripts/salida/biblioteca-10oct.csv` (fuera de GitHub: lleva datos personales).
+4. **Hecho el 12 oct:** Biblioteca → 1.158 leads en «Biblioteca Recursos» (1.154 con las 6 respuestas). Webinar 1 → solo 8 nuevos.
+5. ⚠ **Hoy un lead está en un solo pipeline:** si el CSV trae a alguien que ya existe (mismo email), se pone al día (suma etiquetas y respuestas) pero **se queda en su primer pipeline**. Por eso, de 107 leads con etiqueta de webinar, 100 siguen en Biblioteca. Pendiente (Cristian, 12 oct): que un lead pueda estar en varios pipelines para ver los números de cada fuente (plan, sección 4.4). La subida tampoco trae la etapa de GHL: todos entran en la primera columna.
 
 ## Paso 8 · Conectar GHL
 
@@ -140,14 +142,14 @@ Como CEO o director, en **Agendas → Análisis → Configurar IA**: el contexto
 - [ ] Entras como CEO y ves Maestria con sus 4 pipelines, «Callers», «Closers» y sus productos.
 - [ ] Un caller entra, hace el onboarding (con su horario: Mañana, Tarde, Todo el día o el suyo) y ve sus leads; un closer pone su horario para recibir llamadas. Los dos lo cambian en «Mi perfil» (tocando su nombre, abajo a la izquierda).
 - [ ] Administración → Proyecto y reparto: los directores ponen el % de cada caller (suman 100) y encienden el reparto automático; un lead de prueba de GHL entra asignado y en su historial pone «reparto automático (%)».
-- [ ] Un lead de prueba de GHL llega solo (Administración → Integraciones → «Últimos eventos»).
-- [ ] Un reporte de fin de día manda el aviso por email/WhatsApp.
+- [x] Un lead de GHL llega solo (Administración → Integraciones → «Últimos eventos»): comprobado el 11-12 oct con leads reales de la Biblioteca.
+- [x] Un reporte de fin de día manda el aviso por email (comprobado el 11 oct, con el diseño glass). WhatsApp por GHL: sin montar.
 - [ ] Desde el móvil se ve bien.
 - [ ] (v2) Una grabación de Fathom se une sola a su cita y, al rato, sale analizada en Agendas → Análisis.
 - [ ] (v2) «Traer llamadas de GHL» trae llamadas y salen transcritas y analizadas.
 - [ ] (v2) El coach responde («Coach IA» en la ficha de un lead).
 - [ ] (v2) Finanzas: una venta en cuotas aparece en «Pagos pendientes».
-- [ ] KPIs → Biblioteca: salen las 1.005 personas y la escalera (Membresía 627, Grupal 242, VIP 96, DFY 65).
+- [x] KPIs → Biblioteca: con los datos reales del 12 oct salen 1.158 personas y la escalera (Membresía 737, Grupal 269, VIP 108, DFY 70).
 - [ ] Una venta de Membresía deja en «Pagos pendientes» el cobro del mes siguiente; «Dar de baja» (en Ventas) lo quita.
 - [ ] Administración → Proyecto y reparto: el «Link de agenda» (el calendario de GHL). Un caller pulsa «Link enviado» en un lead: pide estrellas, abre WhatsApp con el link y el lead pasa a la columna «Link enviado» de «Callers».
 - [ ] La ficha de cada persona (Empresa → Equipo o Administración → Equipo → «Ficha»): datos y comisión, acceso (email, contraseña, rol), permisos de secciones y pipelines, horario y su % de reparto (callers), GHL y Fathom.
@@ -182,7 +184,8 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 |---|---|
 | La web da error al entrar | Vercel → Deployments → Logs. Suele ser una variable mal copiada. |
 | «Email o contraseña incorrectos» con la contraseña buena | Que el usuario exista (paso 6). Un administrador puede ponerle otra contraseña en su ficha (Administración → Equipo → «Ficha» → «Acceso»). |
-| GHL no crea leads | Administración → Integraciones → «Últimos eventos». Si sale error, el mensaje dice qué falta. |
+| GHL no crea leads | Administración → Integraciones → «Últimos eventos». Si sale error, el mensaje dice qué falta. Que el workflow de GHL esté **publicado** (en borrador no se dispara). Si en «Execution logs» de GHL sale «not enough funds», es una acción premium («Custom webhook»): usar el «Webhook» normal (GUIA-GHL.md). |
+| Una cita sale a otra hora | GHL manda la hora sin zona; la app la lee en la zona del calendario (arreglado el 11 oct). Si vuelve a pasar, mirar `calendar.startTime` y `selectedTimezone` en el evento de «Últimos eventos». |
 | No llegan avisos de reportes | Administración → Proyecto → «Webhook de avisos» y el workflow de GHL (GUIA-GHL.md). |
 | (v2) Llamadas «En cola» que no avanzan | Que estén `ANTHROPIC_API_KEY` (y `DEEPGRAM_API_KEY`) en Vercel; después «Analizar pendientes» o «Reintentar». El motivo sale en cada llamada. |
 | (v2) «Fathom no acepta la API key» | La clave de esa cuenta: Cuentas → Editar → pegarla otra vez. |
