@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { PERIODOS_NAV } from "@/lib/periodos";
+import { BarraCarga } from "@/components/barra-carga";
 
 // Día / Semana / Mes / Año / Personalizado + ‹ periodo › + Actualizar. Todo va en la URL (p, n, desde, hasta).
 export function BarraPeriodo({ etiqueta, porDefecto = "mes", conActualizar = true }: { etiqueta: string; porDefecto?: string; conActualizar?: boolean }) {
@@ -26,6 +27,7 @@ export function BarraPeriodo({ etiqueta, porDefecto = "mes", conActualizar = tru
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${cargando ? "opacity-70" : ""}`}>
+      <BarraCarga activa={cargando} />
       <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
         {PERIODOS_NAV.map((x) => (
           <button
@@ -85,7 +87,9 @@ export function FiltroUrl({ nombre, etiqueta, opciones, todos }: { nombre: strin
   const params = useSearchParams();
   const [cargando, iniciar] = useTransition();
   return (
-    <select
+    <>
+      <BarraCarga activa={cargando} />
+      <select
       aria-label={etiqueta}
       className={`campo w-auto min-w-40 ${cargando ? "opacity-70" : ""}`}
       value={params.get(nombre) ?? ""}
@@ -98,6 +102,7 @@ export function FiltroUrl({ nombre, etiqueta, opciones, todos }: { nombre: strin
     >
       <option value="">{todos}</option>
       {opciones.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-    </select>
+      </select>
+    </>
   );
 }

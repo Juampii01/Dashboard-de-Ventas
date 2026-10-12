@@ -11,6 +11,7 @@ import { dinero, pct, hoyEnZona } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Seccion, Anillo } from "@/components/ui";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
 import { PestanasAgendas } from "./pestanas";
+import { VistaAgendas } from "./vista-agendas";
 
 export default async function AgendasMetricasPage({ searchParams }: PageProps<"/closer">) {
   const { perfil, proyecto } = await exigirPagina("agendas"); // H5
@@ -35,16 +36,19 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
   const filtros = { productoId: str("producto"), evento: str("evento") };
   const m = metricasAgendas(datos, rango, { closerIds: vis.ids, ...filtros });
   // Quien está de baja (arreglo 11) solo sale en los periodos en que tuvo citas o cobró algo
-  const porCloser = comparativa ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })).filter(({ c, m }) => !("baja" in c && c.baja) || m.agendadas || m.cash) : [];
+  // Fase 2: los jefes reciben las dos vistas ya calculadas (el botón Individual/Comparativa cambia al instante)
+  const porCloser = jefe ? vis.todos.map((c) => ({ c, m: metricasAgendas(datos, rango, { closerIds: [c.id], ...filtros }) })).filter(({ c, m }) => !("baja" in c && c.baja) || m.agendadas || m.cash) : [];
   const $ = (n: number) => dinero(n, proyecto);
   const panel = jefe ? null : await panelObjetivos(proyecto, perfil); // cada closer ve solo los suyos, su racha y el del equipo (H3-H4)
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]);
-  const conVista = (v: string | null) => {
-    const q = new URLSearchParams(qs);
-    if (v) q.set("vista", v);
-    else q.delete("vista");
-    return `/closer?${q}`;
-  };
+
+  const filtrosComunes = (
+    <>
+      <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={datos.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
+      {datos.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={datos.eventos.map((e) => ({ v: e, t: e }))} />}
+      <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
+    </>
+  );
 
   return (
     <>
@@ -62,20 +66,20 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
       <Contenido>
         <PestanasAgendas activa="/closer" />
         {panel && <PanelObjetivos panel={panel} dinero={$} celebrar={`${perfil.id}-${hoyEnZona(proyecto.zona_horaria)}`} />}
-        <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
-          {jefe && (
-            <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
-              <Link href={conVista(null)} className={`rounded-md px-3 py-1.5 text-sm ${!comparativa ? "bg-primario text-white" : "text-texto-2"}`}>Individual</Link>
-              <Link href={conVista("comparativa")} className={`rounded-md px-3 py-1.5 text-sm ${comparativa ? "bg-primario text-white" : "text-texto-2"}`}>Comparativa</Link>
-            </div>
-          )}
-          {jefe && !comparativa && <FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
-          <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={datos.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
-          {datos.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={datos.eventos.map((e) => ({ v: e, t: e }))} />}
-          <div className="ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
-        </div>
-
-        {comparativa ? <Comparativa filas={porCloser} moneda={$} /> : <Individual m={m} moneda={$} />}
+        {jefe ? (
+          <VistaAgendas
+            inicial={comparativa ? "comparativa" : "individual"}
+            filtroIndividual={<FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
+            resto={filtrosComunes}
+            individual={<Individual m={m} moneda={$} />}
+            comparativa={<Comparativa filas={porCloser} moneda={$} />}
+          />
+        ) : (
+          <>
+            <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">{filtrosComunes}</div>
+            <Individual m={m} moneda={$} />
+          </>
+        )}
 
         <details className="tarjeta p-4 text-xs text-texto-2">
           <summary className="cursor-pointer font-medium text-texto">¿Cómo se calcula cada número?</summary>
