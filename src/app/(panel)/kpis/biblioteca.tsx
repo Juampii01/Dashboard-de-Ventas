@@ -5,7 +5,8 @@ import { paisDeTelefono, resumenBiblioteca } from "@/lib/biblioteca";
 import { respuestasBiblioteca, type Oferta } from "@/lib/oferta";
 import { dinero, pct as formatoPct } from "@/lib/formato";
 import { Kpi, Seccion, Vacio } from "@/components/ui";
-import { TablaBiblioteca, type FilaTabla } from "./biblioteca-tabla";
+import { TablaBibliotecaDiferida } from "./biblioteca-tabla-diferida";
+import type { FilaTabla } from "./biblioteca-tabla";
 import { ActualizarCsv } from "./biblioteca-csv";
 import type { Pipeline, Producto, Proyecto } from "@/lib/tipos";
 
@@ -39,22 +40,28 @@ const ESCALERA: { clave: "membresia" | "grupal" | "vip" | "dfy"; producto: strin
   { clave: "dfy", producto: "DFY", quien: "Tiene negocio y quiere automatizarlo" },
 ];
 
-export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
-  const [leads, gente, { data: productos }, { data: pipes }] = await Promise.all([
-    cargarBiblioteca(proyecto.id),
-    equipo(proyecto.id),
-    db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
-    db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
-  ]);
-  const pipelines = (pipes ?? []) as Pipeline[];
+// Fase 2 (Cristian, 12 oct 2026): las filas de la tabla ya no van dentro de la página (eran ~700 KB con 1.188
+// personas); la tabla las pide justo después de pintar la página (`cargarTablaBiblioteca`).
+export async function filasDeBiblioteca(proyecto: Proyecto): Promise<{ filas: FilaTabla[]; callers: { id: string; nombre: string }[] }> {
+  const [leads, gente] = await Promise.all([cargarBiblioteca(proyecto.id), equipo(proyecto.id)]);
   const callers = gente.filter((g) => g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre }));
   const nombre = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? null;
-  const r = resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
-  const prod = (n: string) => ((productos ?? []) as Producto[]).find((p) => p.nombre.toLowerCase() === n.toLowerCase());
   const filas: FilaTabla[] = leads.map((l) => {
     const x = respuestasBiblioteca(l.respuestas);
     return { id: l.id, nombre: `${l.nombre} ${l.apellido ?? ""}`.trim(), telefono: l.telefono, email: l.email, pais: paisDeTelefono(l.telefono), alta: l.creado_en, ...x, etiquetas: l.etiquetas ?? [], oferta: l.oferta as Oferta | null, caller: nombre(l.caller_id) };
   });
+  return { filas, callers };
+}
+
+export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
+  const [leads, { data: productos }, { data: pipes }] = await Promise.all([
+    cargarBiblioteca(proyecto.id),
+    db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
+    db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
+  ]);
+  const pipelines = (pipes ?? []) as Pipeline[];
+  const r = resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
+  const prod = (n: string) => ((productos ?? []) as Producto[]).find((p) => p.nombre.toLowerCase() === n.toLowerCase());
   const barras = (xs: { t: string; n: number; pct: number }[]) => xs.map((x) => ({ t: x.t, n: x.n, pct: x.pct }));
   const csv = <ActualizarCsv pipelines={pipelines} pipelineId={pipelines.find((p) => p.nombre.toLowerCase().includes("biblioteca"))?.id} />;
 
@@ -125,7 +132,7 @@ export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
       </Seccion>
 
       <Seccion titulo="Todos los leads por oferta">
-        <TablaBiblioteca filas={filas} callers={callers} />
+        <TablaBibliotecaDiferida total={leads.length} />
       </Seccion>
     </div>
   );

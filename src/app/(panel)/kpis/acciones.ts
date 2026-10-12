@@ -107,3 +107,14 @@ export async function borrarLanzamiento(id: string) {
     refrescar();
   });
 }
+
+// Fase 2 (Cristian, 12 oct 2026): la tabla «Todos los leads por oferta» de la Biblioteca pide sus filas aparte,
+// para que la página salga antes (con las filas dentro pesaba ~770 KB). Solo director y CEO, como la pestaña.
+export async function cargarTablaBiblioteca() {
+  return seguro(async () => {
+    await exigirSeccion("kpis");
+    const { proyecto } = await exigir(esJefe);
+    const { filasDeBiblioteca } = await import("./biblioteca");
+    return filasDeBiblioteca(proyecto);
+  });
+}
