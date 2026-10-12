@@ -1,6 +1,6 @@
 # Guía · Publicar Eternity
 
-> **Estado y pendientes:** [`plan.md`](plan.md) (1 dónde estamos · 3 lo siguiente · 4.2 comprobaciones de la nube · 4.3 GHL y mejoras · 5 lo que te toca). Otra guía: [`GUIA-GHL.md`](GUIA-GHL.md).
+> **Estado y pendientes:** [`plan.md`](plan.md) (1 dónde estamos · 2 checklist de Claude · 3 checklist de Cristian · 4 decisiones · 5 riesgos). Otra guía: [`GUIA-GHL.md`](GUIA-GHL.md).
 
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
 > Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto, agendar por link de GHL, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Puesta al día otra vez el 12 oct 2026: **la app ya está publicada** (https://dashboard-de-ventas-iota.vercel.app), Resend verificado y probado (paso 4 bis), equipo y closers creados, leads de la Biblioteca subidos y GHL conectado (GUIA-GHL.md, sección «Cómo está montado en Maestria»). Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
@@ -12,7 +12,7 @@
 **Necesitas:**
 - Un email para crear 3 cuentas gratuitas: **GitHub**, **Supabase** y **Vercel**.
 - Para la v2 (opcional, se puede añadir después): una cuenta en la **API de Claude** (Anthropic) y otra en **Deepgram**. Son de pago por uso.
-- Docker Desktop abierto (para el paso 3 y para pasar los tests de integración en tu Mac; ⚠ desde el 12 oct no se usa: los tests irán en GitHub, ver el plan 4.1). **Docker no hace falta para que la app funcione**: la app usa Supabase en la nube. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. El 12 oct Docker Desktop se quedó abierto sin responder: se arregló reiniciándolo y, después, `supabase stop` y volver a arrancar.
+- Docker Desktop abierto (para el paso 3 y para pasar los tests de integración en tu Mac; ⚠ desde el 12 oct no se usa: los tests irán en GitHub, ver el plan, checklist de Claude, punto 12). **Docker no hace falta para que la app funcione**: la app usa Supabase en la nube. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. El 12 oct Docker Desktop se quedó abierto sin responder: se arregló reiniciándolo y, después, `supabase stop` y volver a arrancar.
 - El CSV del equipo (paso 6) y una exportación nueva de contactos de GHL (paso 7).
 
 **Qué es cada cosa:**
@@ -125,7 +125,7 @@ node --env-file=.env.produccion scripts/crear-usuarios.mjs scripts/salida/equipo
 2. Entra en la app como CEO → CRM → **Subir CSV** (o KPIs → **Biblioteca** → «Actualizar con CSV») → revisa qué es cada columna → elige el pipeline → Importar. Los que ya están se ponen al día (respuestas nuevas y su «Oferta») sin duplicar; al acabar dice cuántos son nuevos, actualizados y cuántos cambian de oferta.
 3. El CSV de la biblioteca del 10 oct (1.005 personas) está en `app/scripts/salida/biblioteca-10oct.csv` (fuera de GitHub: lleva datos personales).
 4. **Hecho el 12 oct:** Biblioteca → 1.158 leads en «Biblioteca Recursos» (1.154 con las 6 respuestas). Webinar 1 → solo 8 nuevos.
-5. ⚠ **Hoy un lead está en un solo pipeline:** si el CSV trae a alguien que ya existe (mismo email), se pone al día (suma etiquetas y respuestas) pero **se queda en su primer pipeline**. Por eso, de 107 leads con etiqueta de webinar, 100 siguen en Biblioteca. Pendiente (Cristian, 12 oct): que un lead pueda estar en varios pipelines para ver los números de cada fuente (plan, sección 4.3). La subida tampoco trae la etapa de GHL: todos entran en la primera columna.
+5. ⚠ **Hoy un lead está en un solo pipeline:** si el CSV trae a alguien que ya existe (mismo email), se pone al día (suma etiquetas y respuestas) pero **se queda en su primer pipeline**. Por eso, de 107 leads con etiqueta de webinar, 100 siguen en Biblioteca. Pendiente (Cristian, 12 oct): que un lead pueda estar en varios pipelines para ver los números de cada fuente (plan, checklist de Claude, punto 3). La subida tampoco trae la etapa de GHL: todos entran en la primera columna.
 
 ## Paso 8 · Conectar GHL
 
