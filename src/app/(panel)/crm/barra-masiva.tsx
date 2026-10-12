@@ -70,24 +70,23 @@ export function BarraMasiva({
   }
 
   return (
-    <div className="tarjeta flex flex-wrap items-center gap-2 border-primario/40 p-2.5 text-sm">
+    <div className="tarjeta flex flex-wrap items-center gap-1.5 border-primario/40 p-2 text-sm">
       <span className="font-semibold">{n} seleccionados</span>
       <button className="rounded-md p-1 text-texto-3 hover:bg-panel-2 hover:text-texto" onClick={limpiar} title="Quitar la selección" aria-label="Quitar la selección">
         <X className="h-4 w-4" />
       </button>
-      <span className="mx-1 h-6 w-px bg-borde" />
-      <Desplegable value={caller} onChange={(e) => setCaller(e.target.value)} className="campo w-auto py-1.5" aria-label="Caller">
+      <Desplegable value={caller} onChange={(e) => setCaller(e.target.value)} className="campo w-auto py-1.5 text-xs" aria-label="Caller">
         <option value="">Caller…</option>
         <option value="__ninguno">Quitar caller</option>
         {callers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
       </Desplegable>
-      <Desplegable value={closer} onChange={(e) => setCloser(e.target.value)} className="campo w-auto py-1.5" aria-label="Closer">
+      <Desplegable value={closer} onChange={(e) => setCloser(e.target.value)} className="campo w-auto py-1.5 text-xs" aria-label="Closer">
         <option value="">Closer…</option>
         <option value="__ninguno">Quitar closer</option>
         {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
       </Desplegable>
       <button
-        className="btn-secundario"
+        className="btn-secundario px-2.5 py-1.5 text-xs"
         disabled={!caller && !closer}
         onClick={() =>
           ejecutar(async () => {
@@ -99,13 +98,12 @@ export function BarraMasiva({
       >
         Asignar
       </button>
-      <span className="mx-1 h-6 w-px bg-borde" />
-      <Desplegable value={destino} onChange={(e) => setDestino(e.target.value)} className="campo w-auto py-1.5" aria-label="Mover a">
+      <Desplegable value={destino} onChange={(e) => setDestino(e.target.value)} className="campo w-auto py-1.5 text-xs" aria-label="Mover a">
         <option value="">Mover a…</option>
         {destinos.flatMap((d) => d.etapas.map((e) => <option key={e.id} value={e.id}>{`${d.pipeline} → ${e.nombre}`}</option>))}
       </Desplegable>
       <button
-        className="btn-secundario"
+        className="btn-secundario px-2.5 py-1.5 text-xs"
         disabled={!destino}
         onClick={() =>
           ejecutar(async () => {
@@ -117,23 +115,21 @@ export function BarraMasiva({
       >
         Mover
       </button>
-      <span className="mx-1 h-6 w-px bg-borde" />
       <div className="relative">
         <Tag className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-texto-3" />
-        <input value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} placeholder="Etiqueta" className="campo w-36 py-1.5 pl-8" aria-label="Etiqueta" />
+        <input value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} placeholder="Etiqueta" className="campo w-28 py-1.5 pl-8 text-xs" aria-label="Etiqueta" />
       </div>
-      <button className="btn-secundario" disabled={!etiqueta.trim()} onClick={() => ejecutar(async () => { await exigirOk(cambiarEtiquetas(ids, [etiqueta], [])); setEtiqueta(""); }, `Etiqueta «${etiqueta.trim()}» añadida`)}>
+      <button className="btn-secundario px-2.5 py-1.5 text-xs" disabled={!etiqueta.trim()} onClick={() => ejecutar(async () => { await exigirOk(cambiarEtiquetas(ids, [etiqueta], [])); setEtiqueta(""); }, `Etiqueta «${etiqueta.trim()}» añadida`)}>
         Añadir
       </button>
-      <button className="btn-secundario" disabled={!etiqueta.trim()} onClick={() => ejecutar(async () => { await exigirOk(cambiarEtiquetas(ids, [], [etiqueta])); setEtiqueta(""); }, `Etiqueta «${etiqueta.trim()}» quitada`)}>
+      <button className="btn-secundario px-2.5 py-1.5 text-xs" disabled={!etiqueta.trim()} onClick={() => ejecutar(async () => { await exigirOk(cambiarEtiquetas(ids, [], [etiqueta])); setEtiqueta(""); }, `Etiqueta «${etiqueta.trim()}» quitada`)}>
         Quitar
       </button>
-      <span className="mx-1 h-6 w-px bg-borde" />
-      <button className="btn-secundario" onClick={exportar}>
+      <button className="btn-secundario px-2.5 py-1.5 text-xs" onClick={exportar}>
         <Download className="h-4 w-4" /> Exportar
       </button>
       {ceo && <button
-        className="btn-secundario text-mal hover:border-mal"
+        className="btn-secundario px-2.5 py-1.5 text-xs text-mal hover:border-mal"
         onClick={() => {
           void confirmar(`¿Borrar ${n} leads? Los que tengan citas o ventas no se borran (se borran uno a uno desde su ficha). No se puede deshacer.`).then((ok) => {
             if (!ok) return;

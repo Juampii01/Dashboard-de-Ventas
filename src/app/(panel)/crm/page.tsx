@@ -121,6 +121,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
           admin={admin}
           citasGhl={citasGhl}
           destinos={destinos}
+          ceo={perfil.rol === "ceo"}
           editar={nivel === "editar"}
           jefe={jefe}
           productos={(productos ?? []) as Producto[]}

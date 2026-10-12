@@ -372,7 +372,7 @@ export function TableroCrm({
 
       {/* Barra de herramientas */}
       <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
-        <div className="relative min-w-60 flex-1">
+        <div className="relative min-w-40 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
@@ -400,7 +400,7 @@ export function TableroCrm({
           </>
         )}
         {editar && pipeline && (
-          <button onClick={nuevaColumna} className="btn-primario h-10 w-10 justify-center p-0" title="Nueva columna" aria-label="Nueva columna">
+          <button onClick={nuevaColumna} className="btn-primario h-10 w-10 shrink-0 justify-center p-0" title="Nueva columna" aria-label="Nueva columna">
             <Plus className="h-6 w-6" />
           </button>
         )}
