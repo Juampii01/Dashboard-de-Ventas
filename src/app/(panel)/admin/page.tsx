@@ -161,7 +161,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
             </Seccion>
             <div className="space-y-5">
               <Seccion titulo="Enviar acceso por email">
-                <EnviarAccesos personas={gente.filter((g) => g.activo && g.id !== perfil.id).map((g) => ({ id: g.id, nombre: g.nombre, email: g.email, rol: ETIQUETA_ROL[g.rol], prueba: !!g.es_prueba }))} />
+                <EnviarAccesos personas={gente.filter((g) => g.activo).map((g) => ({ id: g.id, nombre: g.nombre, email: g.email, rol: ETIQUETA_ROL[g.rol], prueba: !!g.es_prueba }))} />
               </Seccion>
               <Seccion titulo="Añadir persona nueva">
                 <FormUsuario soyCeo={perfil.rol === "ceo"} />
