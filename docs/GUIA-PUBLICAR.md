@@ -12,7 +12,7 @@
 **Necesitas:**
 - Un email para crear 3 cuentas gratuitas: **GitHub**, **Supabase** y **Vercel**.
 - Para la v2 (opcional, se puede añadir después): una cuenta en la **API de Claude** (Anthropic) y otra en **Deepgram**. Son de pago por uso.
-- Docker Desktop abierto (para el paso 3 y para pasar los tests de integración en tu Mac). **Docker no hace falta para que la app funcione**: la app usa Supabase en la nube. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. ⚠ El 12 oct Docker Desktop se quedó abierto sin responder: reiniciarlo (o el Mac) antes de los tests.
+- Docker Desktop abierto (para el paso 3 y para pasar los tests de integración en tu Mac). **Docker no hace falta para que la app funcione**: la app usa Supabase en la nube. Si `supabase start` falla por `pg_meta`/`studio`, arrancar sin ellos: `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor`. El 12 oct Docker Desktop se quedó abierto sin responder: se arregló reiniciándolo y, después, `supabase stop` y volver a arrancar.
 - El CSV del equipo (paso 6) y una exportación nueva de contactos de GHL (paso 7).
 
 **Qué es cada cosa:**
