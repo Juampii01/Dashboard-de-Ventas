@@ -36,7 +36,8 @@
 - [x] **Región:** las funciones de Vercel están en **iad1 (Washington)**, junto a Supabase (East US): no hay que cambiarla (la cabecera `x-vercel-id` lo dice: `cdg1::iad1`, entra por París y se ejecuta en Washington).
 - [x] **Individual ↔ Comparativa al instante** (`0fc2a87`): las dos vistas llegan calculadas y el botón solo cambia cuál se ve (antes cada clic volvía a pedir la página: ~1 s sin ninguna señal).
 - [x] **Barra de carga** arriba mientras un filtro o el periodo traen datos (antes solo se atenuaba el filtro).
-- [ ] **Que Cristian lo pruebe en su Mac** (Claude no puede medir los clics: con la ventana oculta, Chrome congela la página).
+- [x] **Probado en pantalla por Claude** (12 oct, app publicada, datos reales): Comparativa sale al momento tras el clic; al cambiar el periodo estando en Comparativa se queda en Comparativa con los números nuevos (Cristian Ortiz 8 → 7 en «Semana»); al recargar sigue en Comparativa; vuelve bien a Individual; el filtro de closer funciona (José: 8 esta semana, igual que en Comparativa); la barra azul sale arriba mientras carga; consola sin errores; las 8 pantallas con la barra de periodo responden 200. **Fallo encontrado y arreglado:** al cambiar el periodo en Comparativa la dirección perdía `vista=comparativa` (al recargar volvía a Individual). Agendas sigue tardando lo mismo en el servidor (0,6-0,9 s) aunque ahora calcula las dos vistas.
+- [ ] Que Cristian lo note en su Mac.
 - [ ] Si siguen los tirones: bajar el tiempo de servidor de Funnel y KPIs (las más lentas) y ver qué hacer con el «despertar» de Vercel (3-4 s la primera vez tras un rato sin uso).
 - **Hecha cuando:** te enseño las medidas de antes y de después, y lo notas tú en tu Mac.
 
