@@ -7,6 +7,7 @@ import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { Copiar } from "./cliente";
 import { borrarEntrada, crearEntrada, guardarEntrada, nuevaDireccionEntrada } from "./acciones";
 import { OPERADORES, type Regla } from "@/lib/entrada";
+import { confirmar } from "@/components/dialogos";
 
 type Pipe = { id: string; nombre: string; etapas: { id: string; nombre: string }[] };
 type Res = { ok?: string; error?: string } | null;
@@ -100,7 +101,7 @@ export function EditorEntrada({ entrada, pipelines }: { entrada: EntradaVista; p
             type="button"
             className="btn-secundario text-xs"
             disabled={pendiente}
-            onClick={() => confirm("La dirección actual dejará de funcionar y habrá que poner la nueva en la landing. ¿Seguir?") && ejecutar(() => nuevaDireccionEntrada(entrada.id), "Dirección nueva creada")}
+            onClick={() => void confirmar("La dirección actual dejará de funcionar y habrá que poner la nueva en la landing. ¿Seguir?").then((ok) => ok && ejecutar(() => nuevaDireccionEntrada(entrada.id), "Dirección nueva creada"))}
           >
             <RefreshCw className="h-3.5 w-3.5" /> Nueva dirección
           </button>
@@ -155,7 +156,7 @@ export function EditorEntrada({ entrada, pipelines }: { entrada: EntradaVista; p
           type="button"
           className="btn-secundario hover:text-mal"
           disabled={pendiente}
-          onClick={() => confirm("¿Borrar esta entrada? La landing dejará de poder enviar aquí. Los leads y envíos ya recibidos se quedan.") && ejecutar(() => borrarEntrada(entrada.id), "Entrada borrada")}
+          onClick={() => void confirmar("¿Borrar esta entrada? La landing dejará de poder enviar aquí. Los leads y envíos ya recibidos se quedan.").then((ok) => ok && ejecutar(() => borrarEntrada(entrada.id), "Entrada borrada"))}
         >
           <Trash2 className="h-4 w-4" /> Borrar
         </button>

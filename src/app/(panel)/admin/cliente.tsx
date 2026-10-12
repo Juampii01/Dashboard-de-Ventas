@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { anadirAlProyecto, crearProyecto, crearUsuario, guardarLinkAgenda, guardarProyecto, regenerarSecreto } from "./acciones";
 import { useAccion, Mensajes } from "@/components/acciones-lead";
+import { confirmar } from "@/components/dialogos";
 
 type Res = { ok?: string; error?: string } | null;
 function Resultado({ estado }: { estado: Res }) {
@@ -126,7 +127,7 @@ export function Secreto({ url, cabecera, secreto }: { url: string; cabecera: str
             type="button"
             className="btn-secundario text-xs"
             disabled={pendiente}
-            onClick={() => confirm("Si cambias la clave, tendrás que ponerla nueva en todos los workflows de GHL. ¿Seguir?") && ejecutar(() => regenerarSecreto(), "Clave nueva creada")}
+            onClick={() => void confirmar("Si cambias la clave, tendrás que ponerla nueva en todos los workflows de GHL. ¿Seguir?").then((ok) => ok && ejecutar(() => regenerarSecreto(), "Clave nueva creada"))}
           >
             <RefreshCw className="h-3.5 w-3.5" /> Nueva clave
           </button>

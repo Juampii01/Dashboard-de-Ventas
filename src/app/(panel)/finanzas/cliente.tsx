@@ -24,6 +24,7 @@ import {
   registrarProgramado,
   transferir,
 } from "./acciones";
+import { confirmar } from "@/components/dialogos";
 
 type Op = { id: string; nombre: string };
 type Cat = Op & { tipo: "ingreso" | "egreso"; en_profit: boolean };
@@ -66,7 +67,7 @@ export function BorrarMovimiento({ id }: { id: string }) {
   const { pendiente, error, ejecutar } = useAccion();
   return (
     <span className="inline-flex items-center gap-1">
-      <button className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => confirm("¿Borrar este movimiento?") && ejecutar(() => borrarMovimiento(id), "Borrado")}><Trash2 className="h-4 w-4" /></button>
+      <button className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => void confirmar("¿Borrar este movimiento?").then((ok) => ok && ejecutar(() => borrarMovimiento(id), "Borrado"))}><Trash2 className="h-4 w-4" /></button>
       {error && <span className="text-xs text-mal">{error}</span>}
     </span>
   );
@@ -180,7 +181,7 @@ export function AccionesProgramado({ id }: { id: string }) {
   return (
     <span className="inline-flex items-center gap-1">
       <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => registrarProgramado(id), "Pago registrado como gasto")} title="Registra este pago como gasto y pasa al siguiente"><Play className="h-3.5 w-3.5" /> Registrar pago</button>
-      <button className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} onClick={() => confirm("¿Quitar este gasto programado? Los pagos ya registrados se quedan.") && ejecutar(() => borrarProgramado(id), "Quitado")} title="Quitar"><Trash2 className="h-4 w-4" /></button>
+      <button className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} onClick={() => void confirmar("¿Quitar este gasto programado? Los pagos ya registrados se quedan.").then((ok) => ok && ejecutar(() => borrarProgramado(id), "Quitado"))} title="Quitar"><Trash2 className="h-4 w-4" /></button>
       {error && <span className="text-xs text-mal">{error}</span>}
     </span>
   );
@@ -216,9 +217,9 @@ export function AccionesVencimiento({ id, deVenta, estado, venceEl }: { id: stri
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-1">
       {!deVenta && estado !== "pagado" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => marcarVencimiento(id, "pagado"), "Marcado como cobrado")}><Check className="h-3.5 w-3.5" /> Cobrado</button>}
-      {estado !== "no_paga" && estado !== "pagado" && <button className="btn-secundario px-2 py-1 text-xs hover:text-mal" disabled={pendiente} onClick={() => confirm("¿Marcar como «no paga»?") && ejecutar(() => marcarVencimiento(id, "no_paga"), "Marcado como no paga")}>No paga</button>}
+      {estado !== "no_paga" && estado !== "pagado" && <button className="btn-secundario px-2 py-1 text-xs hover:text-mal" disabled={pendiente} onClick={() => void confirmar("¿Marcar como «no paga»?").then((ok) => ok && ejecutar(() => marcarVencimiento(id, "no_paga"), "Marcado como no paga"))}>No paga</button>}
       {estado === "no_paga" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => ejecutar(() => marcarVencimiento(id, "pendiente"), "Vuelve a pendiente")}><Undo2 className="h-3.5 w-3.5" /> Pendiente</button>}
-      {!deVenta && estado === "pagado" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} title="Se marcó como cobrado por error: vuelve a pendiente y se borra el ingreso que se creó" onClick={() => confirm("¿Deshacer el cobro? Vuelve a pendiente y se borra el ingreso que se creó.") && ejecutar(() => marcarVencimiento(id, "pendiente"), "Cobro deshecho")}><Undo2 className="h-3.5 w-3.5" /> Deshacer</button>}
+      {!deVenta && estado === "pagado" && <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} title="Se marcó como cobrado por error: vuelve a pendiente y se borra el ingreso que se creó" onClick={() => void confirmar("¿Deshacer el cobro? Vuelve a pendiente y se borra el ingreso que se creó.").then((ok) => ok && ejecutar(() => marcarVencimiento(id, "pendiente"), "Cobro deshecho"))}><Undo2 className="h-3.5 w-3.5" /> Deshacer</button>}
       {estado !== "pagado" && (fecha ? (
         <input type="date" defaultValue={venceEl} className="campo w-auto py-1 text-xs" autoFocus onBlur={(e) => { setFecha(false); if (e.target.value && e.target.value !== venceEl) ejecutar(() => cambiarVencimiento(id, e.target.value), "Fecha cambiada"); }} aria-label="Nueva fecha" />
       ) : (
@@ -279,7 +280,7 @@ export function PagarLiquidacion({ id, pagada, cuentas }: { id: string; pagada: 
   const { pendiente, error, ejecutar } = useAccion();
   const [cuenta, setCuenta] = useState("");
   return pagada ? (
-    <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => confirm("¿Desmarcar como pagada? Se borra el gasto que se creó.") && ejecutar(() => desmarcarLiquidacion(id), "Vuelve a pendiente")}><Undo2 className="h-3.5 w-3.5" /> Desmarcar</button>
+    <button className="btn-secundario px-2 py-1 text-xs" disabled={pendiente} onClick={() => void confirmar("¿Desmarcar como pagada? Se borra el gasto que se creó.").then((ok) => ok && ejecutar(() => desmarcarLiquidacion(id), "Vuelve a pendiente"))}><Undo2 className="h-3.5 w-3.5" /> Desmarcar</button>
   ) : (
     <span className="inline-flex items-center gap-1">
       <select value={cuenta} onChange={(e) => setCuenta(e.target.value)} className="campo w-auto py-1 text-xs" aria-label="Cuenta desde la que se paga"><option value="">Cuenta por defecto</option>{cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>

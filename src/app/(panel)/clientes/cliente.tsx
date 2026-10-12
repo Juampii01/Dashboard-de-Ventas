@@ -9,6 +9,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { ESTADOS_CLIENTE, type EstadoCliente, type FichaCliente } from "@/lib/clientes";
 import type { Producto } from "@/lib/tipos";
 import { anotarSeguimiento, borrarPasoOnboarding, cambiarEstadoCliente, guardarCasoExito, guardarPasoOnboarding, marcarPasoOnboarding, nuevoCliente } from "./acciones";
+import { confirmar } from "@/components/dialogos";
 
 type Paso = { id: string; nombre: string };
 const cerrarSiOk = (r: unknown, cerrar: () => void) => {
@@ -102,7 +103,7 @@ export function EditorPasos({ pasos }: { pasos: Paso[] }) {
               <form key={p.id} className="flex items-center gap-2" action={(fd) => ejecutar(() => guardarPasoOnboarding(p.id, String(fd.get("nombre"))), "Paso guardado")}>
                 <input name="nombre" defaultValue={p.nombre} className="campo py-1.5" aria-label="Nombre del paso" />
                 <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2" disabled={pendiente} title="Guardar"><Check className="h-4 w-4" /></button>
-                <button type="button" className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => confirm(`¿Borrar el paso «${p.nombre}»?`) && ejecutar(() => borrarPasoOnboarding(p.id), "Paso borrado")}><Trash2 className="h-4 w-4" /></button>
+                <button type="button" className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => void confirmar(`¿Borrar el paso «${p.nombre}»?`).then((ok) => ok && ejecutar(() => borrarPasoOnboarding(p.id), "Paso borrado"))}><Trash2 className="h-4 w-4" /></button>
               </form>
             ))}
             <form className="flex items-center gap-2 border-t border-borde pt-2" action={(fd) => ejecutar(() => guardarPasoOnboarding(null, String(fd.get("nombre"))), "Paso añadido")}>

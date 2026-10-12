@@ -9,6 +9,7 @@ import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { AGENTES, type Agente, type ConfigAgentes } from "@/lib/ia-agentes";
 import { aceptarAutocompletado, analizarPendientesAhora, evaluarManual, guardarConfigIa, reanalizar, rechazarAutocompletado } from "./acciones";
+import { confirmar } from "@/components/dialogos";
 
 // Texto de la IA con viñetas y **negritas**, sin meter HTML (React lo escapa todo)
 export function TextoIa({ texto }: { texto: string }) {
@@ -38,7 +39,7 @@ export function Reanalizar({ id }: { id: string }) {
   const { pendiente, error, ejecutar } = useAccion();
   return (
     <span className="inline-flex flex-col items-end">
-      <button className="btn-secundario" disabled={pendiente} onClick={() => confirm("¿Volver a analizar esta llamada? Gasta una nueva petición a Claude.") && ejecutar(() => reanalizar(id), "En cola: recarga en un minuto")}><RefreshCw className="h-4 w-4" /> Re-analizar</button>
+      <button className="btn-secundario" disabled={pendiente} onClick={() => void confirmar("¿Volver a analizar esta llamada? Gasta una nueva petición a Claude.").then((ok) => ok && ejecutar(() => reanalizar(id), "En cola: recarga en un minuto"))}><RefreshCw className="h-4 w-4" /> Re-analizar</button>
       {error && <span className="text-xs text-mal">{error}</span>}
     </span>
   );

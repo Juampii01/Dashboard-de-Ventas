@@ -15,6 +15,7 @@ import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { esClavePrecall, type ClaveCloser } from "@/lib/llamadas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
+import { confirmar } from "@/components/dialogos";
 
 // Tablero «Closers» (Paso 0, Cristian 10 oct 2026): Pre-call y Post-call juntos, en el CRM y en Agendas.
 // Columnas unidas: Pre-call cambia el estado de la cita; Post-call como en el H6 (estrellas, fecha, venta; las
@@ -91,8 +92,9 @@ export function TableroClosers({
     // Pre-call: cambia el estado de la cita
     if (esClavePrecall(clave)) {
       if (item.clase === "cita") ejecutar(() => cambiarEstadoCita(item.cita.id, clave, ""), `${item.cita.nombre} → ${destino.t}`);
-      else if (confirm(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`))
-        ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), clave, "")), `${item.venta.nombre} → ${destino.t}`);
+      else void confirmar(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`).then((ok) => {
+        if (ok) ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), clave, "")), `${item.venta.nombre} → ${destino.t}`);
+      });
       return;
     }
     // Venta entre Reserva, Cuotas y Cerradas
@@ -104,15 +106,17 @@ export function TableroClosers({
         else setVentana({ item, destino });
       } else if (pagada) toast(`Esta venta ya está pagada del todo: no hay nada que pasar a ${clave === "cuotas" ? "cuotas" : "reserva"}.`, "error");
       else if (clave === "cuotas") setVentana({ item, destino });
-      else if (confirm(`¿Pasar la venta de ${item.venta.nombre} a reserva? Lo que falta (${item.venta.faltaTxt}) queda en un solo plazo a 30 días.`))
-        ejecutar(() => cambiarFormaPago(item.venta.id, "reserva"), `${item.venta.nombre} → Reserva`);
+      else void confirmar(`¿Pasar la venta de ${item.venta.nombre} a reserva? Lo que falta (${item.venta.faltaTxt}) queda en un solo plazo a 30 días.`).then((ok) => {
+        if (ok) ejecutar(() => cambiarFormaPago(item.venta.id, "reserva"), `${item.venta.nombre} → Reserva`);
+      });
       return;
     }
     const estado = DIRECTO[clave];
     if (estado) {
       if (item.clase === "cita") ejecutar(() => cambiarEstadoCita(item.cita.id, estado, ""), `${item.cita.nombre} → ${destino.t}`);
-      else if (confirm(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`))
-        ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), estado, "")), `${item.venta.nombre} → ${destino.t}`);
+      else void confirmar(`¿Borrar la venta de ${item.venta.nombre} (${item.venta.facturacionTxt}) y pasar su cita a «${destino.t}»? Se borran también sus cobros y plazos; no se puede deshacer.`).then((ok) => {
+        if (ok) ejecutar(async () => exigirOk(cambiarEstadoCita(await quitarVenta(item.venta), estado, "")), `${item.venta.nombre} → ${destino.t}`);
+      });
       return;
     }
     setVentana({ item, destino }); // estrellas, fecha o venta

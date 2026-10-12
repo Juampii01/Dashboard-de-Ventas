@@ -6,6 +6,7 @@ import { borrarRecurso, crearRecurso, guardarLinkPago, prepararSubidaPdf } from 
 import { subirDelFormulario } from "@/lib/subir-cliente";
 import { useAccion } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
+import { confirmar, pedirTexto } from "@/components/dialogos";
 
 export function NuevoRecurso() {
   const [abierto, setAbierto] = useState(false);
@@ -65,7 +66,7 @@ export function NuevoRecurso() {
 export function BorrarRecurso({ id }: { id: string }) {
   const { pendiente, ejecutar } = useAccion();
   return (
-    <button className="rounded-md p-1 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => confirm("¿Borrar este recurso?") && ejecutar(() => borrarRecurso(id))}>
+    <button className="rounded-md p-1 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => void confirmar("¿Borrar este recurso?").then((ok) => ok && ejecutar(() => borrarRecurso(id)))}>
       <Trash2 className="h-4 w-4" />
     </button>
   );
@@ -104,8 +105,9 @@ export function LinkProducto({ etiqueta, url, productoId, campo, editor }: { eti
             disabled={pendiente}
             aria-label={`Editar ${etiqueta.toLowerCase()}`}
             onClick={() => {
-              const nuevo = prompt(`${etiqueta} (https://…). Déjalo vacío para quitarlo.`, url ?? "");
-              if (nuevo !== null) ejecutar(() => guardarLinkPago(productoId, nuevo, campo), `${etiqueta} guardado`);
+              void pedirTexto(`${etiqueta} (https://…). Déjalo vacío para quitarlo.`, url ?? "").then((nuevo) => {
+                if (nuevo !== null) ejecutar(() => guardarLinkPago(productoId, nuevo, campo), `${etiqueta} guardado`);
+              });
             }}
           >
             <Pencil className="h-3.5 w-3.5" />

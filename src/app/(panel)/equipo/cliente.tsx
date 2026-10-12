@@ -7,6 +7,7 @@ import { actualizarMiembroEquipo, borrarArea, cambiarModoComision, darAccesoMiem
 import type { ComisionPersona } from "@/lib/comisiones";
 import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
+import { confirmar } from "@/components/dialogos";
 
 export type Area = { id: string; nombre: string; color: string };
 export type Puesto = { id: string; area_id: string | null; nombre: string };
@@ -132,7 +133,7 @@ export function EditorAreas({ areas }: { areas: Area[] }) {
           <input name="color" type="color" defaultValue={a.color} className="h-8 w-8 shrink-0 cursor-pointer rounded border border-borde bg-transparent" aria-label="Color" />
           <input name="nombre" defaultValue={a.nombre} className="campo py-1.5" aria-label="Nombre del área" />
           <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2" disabled={pendiente} title="Guardar"><Save className="h-4 w-4" /></button>
-          <button type="button" className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => confirm(`¿Borrar el área «${a.nombre}»?`) && ejecutar(() => borrarArea(a.id), "Área borrada")}><Trash2 className="h-4 w-4" /></button>
+          <button type="button" className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal" disabled={pendiente} title="Borrar" onClick={() => void confirmar(`¿Borrar el área «${a.nombre}»?`).then((ok) => ok && ejecutar(() => borrarArea(a.id), "Área borrada"))}><Trash2 className="h-4 w-4" /></button>
         </form>
       ))}
       <form className="flex items-center gap-2" action={(fd) => ejecutar(() => guardarArea(null, String(fd.get("nombre")), String(fd.get("color"))), "Área creada")}>

@@ -7,6 +7,7 @@ import { useAccion, Mensajes } from "@/components/acciones-lead";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
+import { confirmar } from "@/components/dialogos";
 
 export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe, membresiaActiva = false }: { ventaId: string; pendiente: number; cobrado: number; devuelta: boolean; jefe: boolean; membresiaActiva?: boolean }) {
   const { pendiente: cargando, error, ok, ejecutar } = useAccion();
@@ -16,7 +17,7 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe,
   return (
     <div className="flex items-center justify-end gap-1">
       {membresiaActiva && (
-        <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} title="La membresía deja de generar cobros cada mes" onClick={() => confirm("¿Dar de baja esta membresía? Deja de generar cobros cada mes y se quitan los que aún no vencieron.") && ejecutar(() => darDeBajaMembresia(ventaId), "Membresía dada de baja")}>
+        <button className="btn-secundario px-2 py-1 text-xs" disabled={cargando} title="La membresía deja de generar cobros cada mes" onClick={() => void confirmar("¿Dar de baja esta membresía? Deja de generar cobros cada mes y se quitan los que aún no vencieron.").then((ok) => ok && ejecutar(() => darDeBajaMembresia(ventaId), "Membresía dada de baja"))}>
           Dar de baja
         </button>
       )}
@@ -36,11 +37,10 @@ export function FilaVentaAcciones({ ventaId, pendiente, cobrado, devuelta, jefe,
           disabled={cargando}
           title="Borrar venta"
           onClick={() =>
-            confirm("¿Borrar esta venta? No se puede deshacer. Su cita volverá a «En seguimiento».") &&
-            ejecutar(async () => {
+            void confirmar("¿Borrar esta venta? No se puede deshacer. Su cita volverá a «En seguimiento».").then((ok) => ok && ejecutar(async () => {
               const r = (await exigirOk(borrarVenta(ventaId))) as { aviso: string | null };
               toast(r.aviso ?? "Venta borrada", r.aviso ? "error" : undefined);
-            })
+            }))
           }
         >
           <Trash2 className="h-4 w-4" />

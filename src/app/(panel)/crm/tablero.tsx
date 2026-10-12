@@ -49,6 +49,7 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
 import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
+import { confirmar, pedirTexto } from "@/components/dialogos";
 
 export type LeadTarjeta = {
   id: string;
@@ -207,7 +208,9 @@ export function TableroCrm({
         onEditar={(n, c) => ejecutar(() => exigirOk(editarEtapa(e.id, n, c)))}
         onMover={(d) => ejecutar(() => exigirOk(moverEtapa(e.id, d)))}
         onBorrar={() => {
-          if (confirm(`¿Borrar la columna «${e.nombre}»? ${deOrigen ? "Sus leads pasan a la primera columna." : "Sus tarjetas vuelven a la columna de su estado."}`)) ejecutar(() => exigirOk(borrarEtapa(e.id)));
+          void confirmar(`¿Borrar la columna «${e.nombre}»? ${deOrigen ? "Sus leads pasan a la primera columna." : "Sus tarjetas vuelven a la columna de su estado."}`).then((ok) => {
+        if (ok) ejecutar(() => exigirOk(borrarEtapa(e.id)));
+      });
         }}
         onUnir={(estado) => {
           const t = UNIONES[tipo].find((u) => u.v === estado)?.t;
@@ -218,8 +221,9 @@ export function TableroCrm({
   const anadirColumna = editar && pipeline && (
     <button
       onClick={() => {
-        const n = prompt("Nombre de la nueva columna");
-        if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
+        void pedirTexto("Nombre de la nueva columna", "", { boton: "Crear columna" }).then((n) => {
+          if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
+        });
       }}
       className="flex h-14 w-60 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-borde-fuerte text-sm text-texto-2 hover:border-primario hover:text-primario"
     >
@@ -261,8 +265,9 @@ export function TableroCrm({
               className="btn-secundario px-2.5"
               title="Renombrar pipeline"
               onClick={() => {
-                const n = prompt("Nuevo nombre del pipeline", pipeline.nombre);
-                if (n) ejecutar(() => exigirOk(renombrarPipeline(pipeline.id, n)));
+                void pedirTexto("Nuevo nombre del pipeline", pipeline.nombre).then((n) => {
+                  if (n) ejecutar(() => exigirOk(renombrarPipeline(pipeline.id, n)));
+                });
               }}
             >
               <Pencil className="h-4 w-4" />
@@ -271,11 +276,12 @@ export function TableroCrm({
               className="btn-secundario px-2.5 hover:text-mal"
               title="Borrar pipeline"
               onClick={() => {
-                if (confirm(`¿Borrar el pipeline «${pipeline.nombre}»? Sus leads NO se borran: quedan sin pipeline.`))
-                  ejecutar(async () => {
+                void confirmar(`¿Borrar el pipeline «${pipeline.nombre}»? Sus leads NO se borran: quedan sin pipeline.`).then((ok) => {
+        if (ok) ejecutar(async () => {
                     await exigirOk(borrarPipeline(pipeline.id));
                     router.push("/crm");
                   });
+      });
               }}
             >
               <Trash2 className="h-4 w-4" />
@@ -528,9 +534,10 @@ function MenuColumna({
             <button
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2"
               onClick={() => {
-                const n = prompt("Nombre de la columna", etapa.nombre);
-                if (n) onEditar(n, etapa.color);
                 setAbierto(false);
+                void pedirTexto("Nombre de la columna", etapa.nombre).then((n) => {
+                  if (n) onEditar(n, etapa.color);
+                });
               }}
             >
               <Pencil className="h-4 w-4" /> Renombrar

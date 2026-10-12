@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
 import { borrarPasoCloser, guardarPasoCloser, marcarPasoCloser } from "./acciones";
+import { confirmar } from "@/components/dialogos";
 
 type Paso = { id: string; nombre: string };
 
@@ -48,7 +49,7 @@ function FilaPaso({ paso }: { paso: Paso }) {
     <div className="flex flex-wrap items-center gap-2">
       <input className="campo flex-1 py-1.5" value={nombre} onChange={(e) => setNombre(e.target.value)} aria-label={`Nombre del punto ${paso.nombre}`} />
       <button type="button" className="btn-secundario px-2 py-1 text-xs" disabled={pendiente || nombre.trim() === paso.nombre} onClick={() => ejecutar(() => guardarPasoCloser(paso.id, nombre), "Punto guardado")}>Guardar</button>
-      <button type="button" className="rounded p-1.5 text-texto-3 hover:text-mal" disabled={pendiente} onClick={() => confirm(`¿Quitar «${paso.nombre}»? Se quita de la checklist de todos los clientes.`) && ejecutar(() => borrarPasoCloser(paso.id), "Punto quitado")} aria-label={`Quitar el punto ${paso.nombre}`}><Trash2 className="h-4 w-4" /></button>
+      <button type="button" className="rounded p-1.5 text-texto-3 hover:text-mal" disabled={pendiente} onClick={() => void confirmar(`¿Quitar «${paso.nombre}»? Se quita de la checklist de todos los clientes.`).then((ok) => ok && ejecutar(() => borrarPasoCloser(paso.id), "Punto quitado"))} aria-label={`Quitar el punto ${paso.nombre}`}><Trash2 className="h-4 w-4" /></button>
       {error && <span className="w-full text-xs text-mal">{error}</span>}
     </div>
   );

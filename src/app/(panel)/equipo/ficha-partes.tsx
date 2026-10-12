@@ -11,6 +11,7 @@ import { guardarPermisoPipeline } from "@/app/(panel)/crm/acciones";
 import { borrarCuentaFathom, guardarCuentaFathom } from "@/app/(panel)/closer/llamadas/acciones-fathom";
 import { cambiarEmailPersona, guardarContactoPersona, marcarPrueba, type cargarFicha } from "./ficha-acciones";
 import type { Rol } from "@/lib/tipos";
+import { confirmar } from "@/components/dialogos";
 
 // Partes de la ficha de cada persona (bloque 5 de 1.0). Cada una se pone al día al guardar (recargar).
 export type Ficha = Exclude<Awaited<ReturnType<typeof cargarFicha>>, { error: string }>;
@@ -47,7 +48,7 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
       <Bloque titulo="Entrar en la app">
         <div className="flex flex-wrap items-end gap-2">
           <label className="block min-w-56 flex-1"><span className="etiqueta-campo">Email de acceso</span><input className="campo" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-          <button type="button" className="btn-secundario" disabled={pendiente || email.trim().toLowerCase() === p.email} onClick={() => confirm(`¿Cambiar el email de acceso de ${p.nombre} a ${email}? Desde ahora entrará con este.`) && hacer(() => cambiarEmailPersona(p.id, email), "Email cambiado")}>Cambiar email</button>
+          <button type="button" className="btn-secundario" disabled={pendiente || email.trim().toLowerCase() === p.email} onClick={() => void confirmar(`¿Cambiar el email de acceso de ${p.nombre} a ${email}? Desde ahora entrará con este.`).then((ok) => ok && hacer(() => cambiarEmailPersona(p.id, email), "Email cambiado"))}>Cambiar email</button>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <label className="block min-w-56 flex-1"><span className="etiqueta-campo">Nueva contraseña</span><input className="campo" type="text" autoComplete="off" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mínimo 8 caracteres" /></label>
@@ -80,11 +81,10 @@ export function AccesoPersona({ f, recargar }: { f: Ficha; recargar: () => void 
               className="btn-secundario px-2 py-1 text-xs hover:text-mal"
               disabled={pendiente}
               onClick={() =>
-                confirm("¿Quitar a esta persona de este proyecto? Su usuario y sus datos se mantienen; sus leads de este proyecto quedarán sin asignar.") &&
-                ejecutar(async () => {
+                void confirmar("¿Quitar a esta persona de este proyecto? Su usuario y sus datos se mantienen; sus leads de este proyecto quedarán sin asignar.").then((ok) => ok && ejecutar(async () => {
                   const r = (await exigirOk(quitarDelProyecto(p.id))) as { sinAsignar: number };
                   toast(r.sinAsignar ? `Quitado del proyecto. ${r.sinAsignar} leads suyos han quedado sin asignar: repártelos desde el CRM.` : "Quitado del proyecto.");
-                })
+                }))
               }
             >
               Quitar del proyecto
@@ -156,7 +156,7 @@ export function FathomPersona({ f, recargar }: { f: Ficha; recargar: () => void 
       {f.fathom.map((c) => (
         <div key={c.id} className="flex items-center justify-between rounded-lg bg-panel-2 px-3 py-1.5">
           <span>{c.nombre}</span>
-          <button type="button" className="rounded p-1 text-texto-3 hover:text-mal" aria-label={`Quitar la cuenta ${c.nombre}`} disabled={pendiente} onClick={() => confirm(`¿Quitar la cuenta de Fathom «${c.nombre}»?`) && ejecutar(async () => { await exigirOk(borrarCuentaFathom(c.id)); recargar(); }, "Cuenta quitada")}><Trash2 className="h-4 w-4" /></button>
+          <button type="button" className="rounded p-1 text-texto-3 hover:text-mal" aria-label={`Quitar la cuenta ${c.nombre}`} disabled={pendiente} onClick={() => void confirmar(`¿Quitar la cuenta de Fathom «${c.nombre}»?`).then((ok) => ok && ejecutar(async () => { await exigirOk(borrarCuentaFathom(c.id)); recargar(); }, "Cuenta quitada"))}><Trash2 className="h-4 w-4" /></button>
         </div>
       ))}
       <div className="flex flex-wrap items-end gap-2">

@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, Lock, Plus, X } from "lucide-react";
 import { useAccion } from "@/components/acciones-lead";
 import type { Pregunta } from "@/lib/reportes";
 import { guardarPreguntasReporte } from "./acciones";
+import { confirmar } from "@/components/dialogos";
 
 // Preguntas del reporte de fin de día de un rol (bloque 7 de 1.0). Las fijas (las 3 de las tasas del closer) se
 // pueden renombrar pero no quitar ni cambiar de tipo. Los reportes ya enviados se quedan con las suyas.
@@ -49,7 +50,7 @@ export function EditorPreguntas({ rol, inicial, fijas, personalizadas }: { rol: 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn-secundario px-3 py-1.5 text-xs" onClick={nueva}><Plus className="h-3.5 w-3.5" /> Añadir pregunta</button>
         <button type="button" className="btn-primario" disabled={pendiente} onClick={() => ejecutar(() => guardarPreguntasReporte(rol, lista), "Preguntas guardadas")}>Guardar</button>
-        {personalizadas && <button type="button" className="btn-secundario" disabled={pendiente} onClick={() => confirm("¿Volver a las preguntas de siempre? Los reportes ya enviados no cambian.") && ejecutar(() => guardarPreguntasReporte(rol, null), "Vuelven las de siempre")}>Volver a las de siempre</button>}
+        {personalizadas && <button type="button" className="btn-secundario" disabled={pendiente} onClick={() => void confirmar("¿Volver a las preguntas de siempre? Los reportes ya enviados no cambian.").then((ok) => ok && ejecutar(() => guardarPreguntasReporte(rol, null), "Vuelven las de siempre"))}>Volver a las de siempre</button>}
       </div>
       {error && <p className="text-xs text-mal">{error}</p>}
     </div>

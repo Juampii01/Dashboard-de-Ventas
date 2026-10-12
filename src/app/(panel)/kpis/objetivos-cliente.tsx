@@ -5,6 +5,7 @@ import { Plus, Trash2, X } from "lucide-react";
 import { guardarObjetivo, quitarObjetivo, crearLanzamiento, borrarLanzamiento } from "./acciones";
 import { useAccion } from "@/components/acciones-lead";
 import { CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos-constantes";
+import { confirmar } from "@/components/dialogos";
 
 type Persona = { id: string; nombre: string; rol: RolObjetivo };
 type Lanz = { id: string; nombre: string };
@@ -104,7 +105,7 @@ export function BotonQuitarObjetivo({ id }: { id: string }) {
       className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal"
       disabled={pendiente}
       title="Quitar objetivo"
-      onClick={() => confirm("¿Quitar este objetivo? Deja de contar en el periodo en curso; los ya terminados lo conservan.") && ejecutar(() => quitarObjetivo(id), "Objetivo quitado")}
+      onClick={() => void confirmar("¿Quitar este objetivo? Deja de contar en el periodo en curso; los ya terminados lo conservan.").then((ok) => ok && ejecutar(() => quitarObjetivo(id), "Objetivo quitado"))}
     >
       <X className="h-4 w-4" />
     </button>
@@ -145,7 +146,7 @@ export function BotonBorrarLanzamiento({ id, nombre }: { id: string; nombre: str
       className="rounded-md p-1.5 text-texto-3 hover:bg-mal-suave hover:text-mal"
       disabled={pendiente}
       title="Borrar lanzamiento"
-      onClick={() => confirm(`¿Borrar «${nombre}»? Se borran también sus objetivos.`) && ejecutar(() => borrarLanzamiento(id), "Lanzamiento borrado")}
+      onClick={() => void confirmar(`¿Borrar «${nombre}»? Se borran también sus objetivos.`).then((ok) => ok && ejecutar(() => borrarLanzamiento(id), "Lanzamiento borrado"))}
     >
       <Trash2 className="h-4 w-4" />
     </button>
