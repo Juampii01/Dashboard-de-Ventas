@@ -1,5 +1,7 @@
 # Guía · Publicar Eternity
 
+> **Estado y pendientes:** [`plan.md`](plan.md) (sección 1, dónde estamos; 4.2 publicar; 4.3 GHL). Otra guía: [`GUIA-GHL.md`](GUIA-GHL.md).
+
 > Para Cristian (o el director). Paso a paso, de tu ordenador a una web a la que entra todo el equipo.
 > Escrita el 9 oct 2026; puesta al día el 11 oct 2026 con todo el 1.0 hecho (Biblioteca, horarios, reparto, agendar por link de GHL, comisiones por tramos, ficha de cada persona, reporte editable, onboarding de closers). Puesta al día otra vez el 12 oct 2026: **la app ya está publicada** (https://dashboard-de-ventas-iota.vercel.app), Resend verificado y probado (paso 4 bis), equipo y closers creados, leads de la Biblioteca subidos y GHL conectado (GUIA-GHL.md, sección «Cómo está montado en Maestria»). Lo marcado con **⚠ comprobar** no lo he podido ver con tus cuentas: el nombre exacto del botón puede cambiar un poco.
 
@@ -186,7 +188,7 @@ En Vercel → Settings → Domains → añade, por ejemplo, `ventas.tudominio.co
 | «Email o contraseña incorrectos» con la contraseña buena | Que el usuario exista (paso 6). Un administrador puede ponerle otra contraseña en su ficha (Administración → Equipo → «Ficha» → «Acceso»). |
 | GHL no crea leads | Administración → Integraciones → «Últimos eventos». Si sale error, el mensaje dice qué falta. Que el workflow de GHL esté **publicado** (en borrador no se dispara). Si en «Execution logs» de GHL sale «not enough funds», es una acción premium («Custom webhook»): usar el «Webhook» normal (GUIA-GHL.md). |
 | Una cita sale a otra hora | GHL manda la hora sin zona; la app la lee en la zona del calendario (arreglado el 11 oct). Si vuelve a pasar, mirar `calendar.startTime` y `selectedTimezone` en el evento de «Últimos eventos». |
-| No llegan avisos de reportes | Administración → Proyecto → «Webhook de avisos» y el workflow de GHL (GUIA-GHL.md). |
+| No llegan avisos de reportes | Por email (Resend): que `RESEND_API_KEY` esté en Vercel y el dominio siga «Verified» en Resend; mirar «Emails» en el panel de Resend. Por WhatsApp (sin montar en Maestria): Administración → Proyecto → «Webhook de avisos» y el workflow de GHL (GUIA-GHL.md, Parte 2). |
 | (v2) Llamadas «En cola» que no avanzan | Que estén `ANTHROPIC_API_KEY` (y `DEEPGRAM_API_KEY`) en Vercel; después «Analizar pendientes» o «Reintentar». El motivo sale en cada llamada. |
 | (v2) «Fathom no acepta la API key» | La clave de esa cuenta: Cuentas → Editar → pegarla otra vez. |
 | (v2) «GHL no deja leer las llamadas» | Al token de GHL le falta el permiso `conversations/message.readonly` (GUIA-GHL.md, Parte 4). |

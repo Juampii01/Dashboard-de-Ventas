@@ -1,5 +1,7 @@
 # Guía · Conectar GoHighLevel con Eternity
 
+> **Estado y pendientes:** [`plan.md`](plan.md) (sección 1, dónde estamos; 4.2 publicar; 4.3 GHL). Otra guía: [`GUIA-PUBLICAR.md`](GUIA-PUBLICAR.md).
+
 > Escrita el 9 oct 2026 y puesta al día el 11 oct 2026 (reparto con %, agendar por link de GHL, reporte editable, ficha de cada persona) y el 12 oct 2026 con **cómo quedó montado de verdad en Maestria** (sección siguiente) a partir de la documentación oficial de GHL ([Workflow Action - Custom webhook](https://help.gohighlevel.com/support/solutions/articles/155000003305-workflow-action-webhook)).
 > **⚠ comprobar** = cosas que la documentación de GHL no detalla (nombres exactos de algunas variables y disparadores); se eligen en GHL con el selector y se prueban con un lead de prueba.
 > Solo funciona **con la app publicada**: GHL no puede llegar a tu ordenador.
@@ -41,6 +43,10 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 **Lead con cita → «Orgánico → Agendados»** (decisión de Cristian, 12 oct): ⚠ escrito pero **sin publicar** todavía (faltan los tests; ver el plan).
 
 **Probado con reservas reales:** «#2 Callers» y «#3 Closers» (hora y closer bien). «#1 founders» sin reserva de prueba: lo cubre la sincronización por API.
+
+**Token (API, 12 oct):** Private Integration **«App Eternity (dashboard)»** (Settings → Private Integrations) con solo `calendars/events.readonly`, `contacts.readonly` y `conversations/message.readonly`; Location ID `ZGWJLBH58RJtl2iGhykp`. El token lo pegó Cristian en Administración → Integraciones GHL, donde están también los ids de GHL de los 4 closers. La sincronización trae las citas de cada closer (30 días atrás y 60 adelante) y la API sí manda la hora con zona. Los callers **no tienen id de GHL** todavía: sin él, «Llamadas de GHL» no les atribuye nada.
+
+**Lo que falta en Maestria** (detalle en el plan, 4.3): solo la Biblioteca entra sola (Webinar, Orgánico y DFY, sin workflow; se suben con CSV); avisos de reportes por WhatsApp (Parte 2) sin montar; borrar en GHL las citas y contactos de prueba. ⚠ El texto de Administración → Integraciones GHL todavía explica el «Custom webhook» y sus cuerpos JSON (por cambiar).
 
 ---
 
