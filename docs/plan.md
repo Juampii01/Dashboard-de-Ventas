@@ -34,7 +34,7 @@
 | # | Qué | Quién |
 |---|---|---|
 | 1 | **Borrar en GHL las pruebas** (5 citas y 3 contactos, sección 5): si no, la sincronización las vuelve a traer | Cristian |
-| 2 | **Probar el workflow 3 con una reserva nueva** en `codigomaestria.com/agenda` («Orgánico → Agendados» por la sincronización ✅ 12 oct) | Los dos |
+| 2 | ✅ Workflow 3 y «Orgánico → Agendados» probados con reservas reales (webhook y sincronización, 12 oct) | — |
 | 3 | **Arreglos pequeños** (4.1) | Claude |
 | 4 | **Comprobaciones de la nube** que faltan (4.2) | Claude |
 | 5 | **Repartir los leads** entre los callers | Cristian y directores |
@@ -58,7 +58,7 @@
 - [ ] **Tests en GitHub en vez de Docker** (Cristian, 12 oct: no volver a usar Docker; **no es para ahora**). Un archivo de GitHub Actions que, en cada commit que cambie código (no en los de documentos), arranca la base en los ordenadores de GitHub, pasa los ~450 tests y marca ✅ o ❌. **Montarlo en 10 minutos como máximo** (Cristian). Comprobado el 12 oct: cuenta `eternitydevzz` gratis y repositorio privado → **2.000 minutos al mes** (docs.github.com, «GitHub Actions billing»; Linux cuenta 1 a 1); no hace falta ningún secreto (las 4 variables de los tests salen de la base que arranca GitHub y una clave de cifrado de prueba). Estimado, sin medir: ~5-6 min por pasada. Cuando funcione, Cristian desinstala Docker Desktop (con él se va la copia vieja local: 1.005 leads del 10 oct y Proyecto Prueba).
 
 - [x] **Workflow 3 arreglado y workflow 4 creado** (12 oct). En GHL hay **dos calendarios de founders**: «#1 Maestria founders» (el que usa `codigomaestria.com/agenda`; comprobado en la ficha de la reserva de prueba) y «#1 Llamada de Descubrimiento | MaestrIA…». El 3 vigilaba el segundo y tenía 0 inscritos. Ahora: **3. AP - Cita Founders** → «#1 Maestria founders»; **4. AP - Cita descubrimiento** (copia del 3, con URL, Custom data, clave y Wait de 999 días comprobados) → «#1 Llamada de Descubrimiento». Los dos publicados.
-- [x] **«Orgánico → Agendados» probado con una reserva real por la sincronización** (12 oct): la reserva de prueba (12 oct, 8:45 Nueva York = 12:45 UTC, José) llegó con su hora y su closer y su lead quedó en «Orgánico → Agendados»; las citas canceladas no movieron su lead. **Sin probar por el webhook** (la reserva se hizo antes de arreglar el 3).
+- [x] **«Orgánico → Agendados» probado con una reserva real por la sincronización** (12 oct): la reserva de prueba (12 oct, 8:45 Nueva York = 12:45 UTC, José) llegó con su hora y su closer y su lead quedó en «Orgánico → Agendados»; las citas canceladas no movieron su lead. **Y por el webhook** ✅ (12 oct, 07:04 UTC): reserva «PRUEBA» `info+prueba4@eternity.llc` en `codigomaestria.com/agenda` (teléfono ficticio 202-555-0147) → el workflow 3 la mandó, cita 20:15 UTC (22:15 Madrid, 16:15 Nueva York) con Cristian Ortiz, lead en «Orgánico → Agendados» y «agendado».
 - La reserva quedó unida al lead «Test» (`team@test.com`) y no a «PRUEBA Founders»: en GHL es el **mismo contacto** (mismo teléfono, GHL lo reutilizó) y la app une por el id de contacto de GHL, así que se queda con el nombre que tenía. Comportamiento correcto.
 - [ ] **Volvieron los leads de prueba** con la sincronización (como estaba avisado): Kiiiriii y PRUEBA Closers (en Webinar 1, citas canceladas), «Test» `tst@test.com`, «Test» `team@test.com` (con 2 citas, una es la reserva de hoy) y «Prueba Lia» (en Orgánico → Agendados). Hay que borrarlos en GHL (sección 5) y después en la app.
 
@@ -87,7 +87,7 @@
 
 ### Urgente
 - [ ] **Google Workspace:** actualizar el pago **antes del 2 nov 2026** o `info@eternity.llc` deja de recibir correo (y con él los avisos y enlaces de la app).
-- [ ] **Borrar en GHL** las 5 citas de prueba (Kiiiriii y PRUEBA Closers del 14 oct; «Test» tst@test.com del 30 sep y 9 oct; «Prueba» info+prueba-lia del 2 oct) y la reserva de prueba del 12 oct (8:45 Nueva York, «#1 Maestria founders»), y los contactos de prueba (PRUEBA Dashboard `info+prueba@eternity.llc`, PRUEBA Closers `info+prueba2@eternity.llc`, Kiiiriii `kiiir@test.com`, «Test» `tst@test.com`, «Test»/PRUEBA Founders `team@test.com`/`info+prueba3@eternity.llc` y «Prueba Lia» `info+prueba-lia@eternity.llc`). Yo no borro datos para siempre.
+- [ ] **Borrar en GHL** las 5 citas de prueba (Kiiiriii y PRUEBA Closers del 14 oct; «Test» tst@test.com del 30 sep y 9 oct; «Prueba» info+prueba-lia del 2 oct) y las 2 reservas de prueba del 12 oct en «#1 Maestria founders» (8:45 Nueva York, y 16:15 Nueva York «PRUEBA» `info+prueba4@eternity.llc`, que ocupa un hueco real de Cristian), y los contactos de prueba (PRUEBA Dashboard `info+prueba@eternity.llc`, PRUEBA Closers `info+prueba2@eternity.llc`, Kiiiriii `kiiir@test.com`, «Test» `tst@test.com`, «Test»/PRUEBA Founders `team@test.com`/`info+prueba3@eternity.llc` y «Prueba Lia» `info+prueba-lia@eternity.llc`). Yo no borro datos para siempre.
 - [ ] **Guardar la clave de Resend** (`re_…`) en tu gestor: no está en `contraseñas.md` y Resend no la vuelve a enseñar.
 - [ ] Guardar en tu gestor lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
