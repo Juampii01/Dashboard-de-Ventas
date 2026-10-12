@@ -47,13 +47,15 @@
 
 ## 4. Lo que me falta a mí (Claude)
 
-**Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla en Proyecto Prueba (datos «PRUEBA» borrados al terminar), plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado). Docker se enciende solo para los tests de integración y se apaga después.
+**Cómo trabajo en cada paso:** tests que fallen si se rompe la regla, la app compila, prueba en pantalla, plan y guías al día, te lo enseño y commit. **Yo no pego claves ni contraseñas ni creo cuentas:** eso lo haces tú (te lo dejo preparado). **Sin Docker** (Cristian, 12 oct): hasta que estén los tests en GitHub (4.1), solo paso los 178 tests unitarios y pruebo en pantalla en la app publicada, en el proyecto «Test».
 
 ### 4.1 Arreglos pequeños
 - [x] Administración: fuera los dos avisos viejos de «localhost» (Entradas e Integraciones) e Integraciones explica el Webhook normal; los cuerpos JSON del «Custom webhook» quedan plegados como referencia · `3a6c447` (visto en la app publicada, 12 oct).
 - [ ] El test de Orgánico de `ghl-calendario.test.ts` solo pasa con su archivo entero (usa el token que pone un test anterior): que lo ponga él mismo.
 - [ ] `calcularVendedores` quedó sin uso (solo lo usan 3 tests): quitarlo con sus tests.
 - [ ] En Proyecto Prueba (local) queda una venta de prueba del 9 oct a nombre del CEO (Ana sale con «1 cerrada · 0 €»): borrarla o pasarla a Ana si me dices (solo afecta a las pruebas en local).
+
+- [ ] **Tests en GitHub en vez de Docker** (Cristian, 12 oct: no volver a usar Docker; **no es para ahora**). Un archivo de GitHub Actions que, en cada commit que cambie código (no en los de documentos), arranca la base en los ordenadores de GitHub, pasa los ~450 tests y marca ✅ o ❌. **Montarlo en 10 minutos como máximo** (Cristian). Comprobado el 12 oct: cuenta `eternitydevzz` gratis y repositorio privado → **2.000 minutos al mes** (docs.github.com, «GitHub Actions billing»; Linux cuenta 1 a 1); no hace falta ningún secreto (las 4 variables de los tests salen de la base que arranca GitHub y una clave de cifrado de prueba). Estimado, sin medir: ~5-6 min por pasada. Cuando funcione, Cristian desinstala Docker Desktop (con él se va la copia vieja local: 1.005 leads del 10 oct y Proyecto Prueba).
 
 ### 4.2 Comprobaciones de la nube
 - [ ] **Medir la velocidad** con los 1.178 leads (en local, el Funnel con 30.000 leads carga en ~1 s). Si va lenta, se arregla.
@@ -137,6 +139,7 @@
 | GHL (12 oct) | Workflows de la app en la carpeta «1. Dashboard ventas», numerados, **siempre publicados** y con un Wait de 999 días al final. Acción **Webhook normal** (no «Custom webhook», que es premium). Primero leads y después agendas. Calendarios: «#2 Callers» y «#3 Closers» = Andrés y Renzo; «#1 Maestria founders» = Cristian y José. **Todo lead con cita de GHL va a «Orgánico → Agendados»** (publicado el 12 oct). El link de agenda de los callers lleva a «#1 Maestria founders». Los leads se suben con CSV (lo hace Cristian). |
 | Leads en varios pipelines (12 oct) | Cristian quiere que un lead pueda estar en varios pipelines para ver los números de cada fuente (por diseñar, 4.3). |
 | Lo configura el equipo | Qué `source` de cada landing va a qué pipeline (Administración → Entradas), las columnas del CRM, los pasos de los dos onboardings, las cuentas y categorías de Finanzas, el link de agenda, y los links y recursos. |
+| Docker (12 oct) | **No se vuelve a usar Docker.** Los tests de integración irán en GitHub (4.1), cuando toque. |
 | Commits | Por bloques. En este repositorio van firmados por `eternitydevzz` (si no, Vercel Hobby bloquea la publicación). |
 
 ### 6.2 Mis criterios (puedes cambiarlos)
@@ -175,7 +178,7 @@
 
 **A tener en cuenta:**
 - **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
-- **Docker** (solo para los tests): el 12 oct se quedó sin responder y hubo que reiniciarlo; si vuelve a pasar, reiniciar Docker Desktop y, si la base local no arranca, `supabase stop` y `supabase start -x …` (sección 8, «Docker y tests»).
+- **Sin tests de integración hasta montarlos en GitHub** (Cristian no quiere Docker): mientras tanto, un cambio en webhooks, reparto, comisiones o permisos solo lo vigilan los 178 tests unitarios y la prueba en pantalla. Los 247 de integración son los que pillaron, por ejemplo, el fallo de la hora de las citas.
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
@@ -203,7 +206,7 @@
 - **Usuarios de prueba en local** (`@eternity.test`, contraseña en `scripts/seed.mjs`): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@.
 - **Datos locales (Docker, solo en tu Mac):** Maestria = 1.005 leads de la Biblioteca del 10 oct (copia vieja, no se toca en las pruebas). Proyecto Prueba = donde pruebo. **Los datos reales están en la nube.**
 - **Proyecto «Test» en la nube** (de Cristian): solo con el CEO; para probar en la nube sin avisar a los directores. Tiene 2 reportes de prueba de caller-test (se dejan: no cuentan en cifras).
-- **Docker y tests:** Docker va apagado (consume mucha RAM; la app publicada no lo necesita). Para los tests: abrir Docker, `supabase start -x studio,postgres-meta,logflare,vector,imgproxy,supavisor` (si dice que ya está arrancado pero la base está parada: `supabase stop` y otra vez `start`), `npx vitest run`, y luego `supabase stop` y cerrar Docker.
+- **Docker:** ya no se usa (Cristian, 12 oct). El servidor local (3100/3200) y los tests de integración lo necesitaban; ahora se prueba en la app publicada (proyecto «Test») y los tests de integración irán en GitHub (4.1).
 - **Para programar:** toda ventana nueva va dentro de `<Portal>`.
 
 | Dónde | Qué |
