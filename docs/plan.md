@@ -33,7 +33,7 @@
 
 | # | Qué | Quién |
 |---|---|---|
-| 1 | ✅ Pruebas borradas en GHL y en la app (12 oct); falta «Test» `tst@test.com` (sección 5) | Cristian |
+| 1 | ✅ Pruebas borradas en GHL y en la app (12 oct) | Cristian |
 | 2 | ✅ Workflow 3 y «Orgánico → Agendados» probados con reservas reales (webhook y sincronización, 12 oct) | — |
 | 3 | **Arreglos pequeños** (4.1) | Claude |
 | 4 | **Comprobaciones de la nube** que faltan (4.2) | Claude |
@@ -60,7 +60,7 @@
 - [x] **Workflow 3 arreglado y workflow 4 creado** (12 oct). En GHL hay **dos calendarios de founders**: «#1 Maestria founders» (el que usa `codigomaestria.com/agenda`; comprobado en la ficha de la reserva de prueba) y «#1 Llamada de Descubrimiento | MaestrIA…». El 3 vigilaba el segundo y tenía 0 inscritos. Ahora: **3. AP - Cita Founders** → «#1 Maestria founders»; **4. AP - Cita descubrimiento** (copia del 3, con URL, Custom data, clave y Wait de 999 días comprobados) → «#1 Llamada de Descubrimiento». Los dos publicados.
 - [x] **«Orgánico → Agendados» probado con una reserva real por la sincronización** (12 oct): la reserva de prueba (12 oct, 8:45 Nueva York = 12:45 UTC, José) llegó con su hora y su closer y su lead quedó en «Orgánico → Agendados»; las citas canceladas no movieron su lead. **Y por el webhook** ✅ (12 oct, 07:04 UTC): reserva «PRUEBA» `info+prueba4@eternity.llc` en `codigomaestria.com/agenda` (teléfono ficticio 202-555-0147) → el workflow 3 la mandó, cita 20:15 UTC (22:15 Madrid, 16:15 Nueva York) con Cristian Ortiz, lead en «Orgánico → Agendados» y «agendado».
 - La reserva quedó unida al lead «Test» (`team@test.com`) y no a «PRUEBA Founders»: en GHL es el **mismo contacto** (mismo teléfono, GHL lo reutilizó) y la app une por el id de contacto de GHL, así que se queda con el nombre que tenía. Comportamiento correcto.
-- [x] **Leads de prueba limpiados** (12 oct): Cristian borró en GHL los contactos y citas de prueba (las 2 reservas de hoy, antes canceladas por Claude para liberar el hueco); la sincronización marcó 4 citas «borradas en GHL» y Claude borró en la app los 5 leads de prueba (Kiiiriii, PRUEBA Closers, «Test» `team@test.com`, Prueba Lia y PRUEBA `info+prueba4@`), sin ventas, con sus 6 citas (Maestria: 1.195 → 1.190 leads, 23 → 17 citas). **Queda «Test» `tst@test.com`** (cita del 30 sep, sigue en GHL: no se borró allí).
+- [x] **Leads de prueba limpiados** (12 oct): Cristian borró en GHL los contactos y citas de prueba (las 2 reservas de hoy, antes canceladas por Claude para liberar el hueco); la sincronización marcó 4 citas «borradas en GHL» y Claude borró en la app los 5 leads de prueba (Kiiiriii, PRUEBA Closers, «Test» `team@test.com`, Prueba Lia y PRUEBA `info+prueba4@`), sin ventas, con sus 6 citas (Maestria: 1.195 → 1.190 leads, 23 → 17 citas). Después, «Test» `tst@test.com` también borrado en la app (Cristian lo borra en GHL).
 
 ### 4.2 Comprobaciones de la nube
 - [ ] **Medir la velocidad** con los 1.178 leads (en local, el Funnel con 30.000 leads carga en ~1 s). Si va lenta, se arregla.
@@ -87,7 +87,7 @@
 
 ### Urgente
 - [ ] **Google Workspace:** actualizar el pago **antes del 2 nov 2026** o `info@eternity.llc` deja de recibir correo (y con él los avisos y enlaces de la app).
-- [x] Borrar en GHL las citas y contactos de prueba (12 oct). **Falta solo «Test» `tst@test.com`** (contacto y su cita del 30 sep): búscalo con «test.com». Después, Claude borra su lead en la app.
+- [x] Borrar en GHL las citas y contactos de prueba (12 oct). Último: «Test» `tst@test.com` (contacto y cita del 30 sep), buscando «test.com»; su lead en la app ya está borrado. ⚠ Si queda en GHL, la sincronización lo vuelve a traer.
 - [ ] **Guardar la clave de Resend** (`re_…`) en tu gestor: no está en `contraseñas.md` y Resend no la vuelve a enseñar.
 - [ ] Guardar en tu gestor lo de `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y la secret de `.env.produccion`. Si `CLAVE_CIFRADO` se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 
