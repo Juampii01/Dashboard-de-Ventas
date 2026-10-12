@@ -28,7 +28,8 @@
 - [x] Probado de verdad (12 oct): email de bienvenida a `info@eternity.llc` → llegó, Cristian entró por el dominio nuevo. **Sin probar todavía:** una persona nueva creando su contraseña en la bienvenida, y «¿No puedes entrar?» con un email real.
 - [x] **Antonio** creado (12 oct; lo lanzó Cristian; el primer intento falló con «no existe el proyecto», seguramente por la red, y el segundo fue bien) y **acceso enviado** («Enviado a Antonio»). Su contraseña temporal quedó en `scripts/salida/usuarios-creados-2026-10-12-10-50.csv` (no hace falta: crea la suya al entrar; borrar con los demás CSV).
 - [x] Acceso enviado a **Juan y Junior** (12 oct, «Enviado a Juan, Junior»). Los 3 directores entran solo a familiarizarse, sin tocar nada (se lo dice Cristian).
-- [ ] Comprobar en la base que los 3 directores han entrado y terminado la bienvenida (con su contraseña).
+- [ ] Comprobar en la base que los 3 directores han entrado y terminado la bienvenida (con su contraseña). 12 oct, 16:25: Juan y Junior sí; **Antonio todavía no**.
+- [x] **Facundo Fruhwald** (caller) creado desde Administración (12 oct; teléfono `+543517916015` tal cual lo dio Cristian, sin el 9 de móvil que llevan los demás de Argentina) y **acceso enviado a los 10 callers y closers** (Felipe, Miguel Angel, Hanna, Lucas, Tomás, Facundo, Andrés, Renzo, Cristian Ortiz, José Gómez; sin los perfiles de prueba). La app respondió «Enviado a…» los 10; no comprobado en Resend (su clave no está en local).
 - **Hecha cuando:** los 3 directores han recibido su acceso y han entrado.
 
 **Fase 2 · Velocidad**
