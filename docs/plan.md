@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 12 oct 2026, 21:26 (hora de España). Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
+> Al día: 12 oct 2026, 23:10 (hora de España). Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
 
 **Índice:** 1. Dónde estamos · 2. Plan por fases · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -8,12 +8,12 @@
 
 ## 1. Dónde estamos
 
-- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo; hoy 3 commits no le llegaron a Vercel y se relanzaron por la API (ver «Urgente»).
-- **Funciona en la nube:** login, emails de acceso (Resend), subida de CSV, leads de la Biblioteca que entran solos (⚠ **sin sus respuestas**, ver «Urgente») y citas de los 4 calendarios de GHL.
+- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo; hoy 3 commits no le llegaron a Vercel y se relanzaron por la API (ver Fase 3).
+- **Funciona en la nube:** login, emails de acceso (Resend), subida de CSV, leads de la Biblioteca que entran solos **con sus 6 respuestas** (arreglado el 12 oct) y citas de los 4 calendarios de GHL.
 - **Datos de Maestria (base, 12 oct):** 1.274 leads, 1.214 sin caller; 16 citas.
 - **Equipo:** 14 personas reales (CEO, 3 directores, 6 callers, 4 closers) + 2 de prueba. **Acceso enviado a todos.** Han entrado y hecho la bienvenida 9: Cris y José, Juan, Junior, y los 6 callers (Tomás, Felipe, Miguel Angel, Hanna, Lucas, Facundo). **Faltan:** Antonio (director) y los 4 closers (Andrés, Renzo, Cristian Ortiz, José Gómez).
-- **Fases:** 1 casi hecha (falta Antonio) · 2 hecha salvo el «despertar» de Vercel y que lo notes en tu Mac · 3 hecha, falta tu visto bueno con el ancho de tu Mac · **urgente: Biblioteca sin respuestas** · siguiente: Fase 4.
-- **Falta para terminar:** arreglar la Biblioteca, repartir los leads y un día real con un caller y un closer.
+- **Fases:** 1 casi hecha (falta Antonio) · 2 hecha salvo el «despertar» de Vercel y que lo notes en tu Mac · 3 hecha, falta tu visto bueno con el ancho de tu Mac · Biblioteca sin respuestas: **resuelto** (12 oct) · pendientes nuevos: CSV que se congela y actividad en GHL · siguiente: Fase 4.
+- **Falta para terminar:** repartir los leads y un día real con un caller y un closer.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ---
@@ -53,19 +53,26 @@
 - **Hecha cuando:** no queda ninguna ventana «… says» en la app y te enseño las 7 pantallas de la barra con el ancho de tu Mac.
 - [ ] **Falta para cerrarla:** enseñarte las pantallas de la barra con el ancho de tu Mac (solo probé Agendas a 1280 px) y tu visto bueno.
 
-**Urgente · Leads de la Biblioteca sin respuestas** (encontrado el 12 oct, pendiente de que Cristian decida)
-- **Medido en `webhook_eventos`:** los últimos 60 envíos del workflow «0. AP - Biblioteca» llegaron bien (60/60 procesados), pero **las 6 preguntas de la Biblioteca vienen vacías en los 60** (55 sin ningún campo de preguntas; 4 con los campos vacíos; 1 con 14 respuestas de otro embudo, etiqueta «webinar1»). Todos salen ~6 s después de crearse el contacto en GHL, origen «recursos».
-- **Hipótesis (sin verificar en GHL):** el workflow viejo «AP - Biblioteca de recursos» pone la etiqueta «biblioteca recursos» antes de guardar las respuestas, y el nuestro se dispara con esa etiqueta y manda el contacto aún vacío.
-- **Arreglo propuesto:** Wait de 2 min antes del webhook en «0. AP - Biblioteca»; y para los que ya entraron vacíos, CSV de GHL → «Actualizar con CSV» (KPIs → Biblioteca).
-- [ ] Ver en GHL un contacto de hoy (¿tiene ahora las respuestas?) y el orden de pasos del workflow viejo.
-- [ ] Añadir el Wait (con visto bueno de Cristian) y comprobar con un lead nuevo que llega con respuestas.
-- [ ] Poner al día los leads que entraron sin respuestas.
-- Acceso: Playwright pasa a usar el Chrome de Cristian con la extensión «Playwright MCP Bridge» (`--extension` + token en `~/.claude.json`, 12 oct); hace falta reiniciar Claude Code.
+**✅ Resuelto · Leads de la Biblioteca sin respuestas** (12 oct; probado con un lead de prueba de Cristian, que llegó con 6/6 respuestas)
+- **Causa (comprobada en el código de la landing `biblioteca.codigomaestria.com`):** la landing manda dos envíos a su `/api/signup`: `step: 'registro'` (pop-up con los datos) y después `step: 'cuestionario'` (las 6 respuestas). El primero ya hace que el workflow viejo «AP - Biblioteca de recursos» cree el contacto, la etiqueta y la oportunidad, así que el nuestro saltaba con el contacto vacío; el segundo guardaba las respuestas en GHL, pero ya no volvía a disparar el nuestro. Además, el Webhook normal de GHL **no manda los campos personalizados** si no se ponen en *Custom data*.
+- **Cómo queda «0. AP - Biblioteca»** (carpeta «1. Dashboard ventas»; el viejo no se toca): disparador **«Opportunity Created · In pipeline is 2. Biblioteca Recursos»** → **Wait 1 min** → «B · Webhook (Entrada)» con las 6 preguntas en *Custom data* (`{{contact.en_qu_situacin_ests_hoy}}`, `…qu_experiencia_tienes_con_ia`, `…qu_quieres_lograr_en_los_prximos_90_das`, `…cunto_tiempo_por_semana_le_puedes_dedicar`, `…si_encuentras_el_programa_correcto_ests_en_condiciones_de_invertir_en_tu_formacin`, `…cundo_quieres_empezar`) → Wait de siempre. Guardado y publicado.
+- **A vigilar:** quien tarde más de 1 min en el cuestionario llega sin respuestas (si pasa a menudo, subir el Wait a 3-5 min). Idea para más adelante: que `/api/signup` mande también las respuestas a la app.
+- [ ] Comprobar que los leads que entraron vacíos antes del arreglo quedaron al día con el CSV de Cristian (depende del punto siguiente).
+- [ ] **Subir CSV se congela** (12 oct, Cristian): KPIs → Biblioteca → «Subir CSV de leads» con la exportación de GHL (`Export_Contacts_All_Oct_2026_11_09_PM.csv`, 1.282 filas, 15 columnas, pipeline Biblioteca Recursos, reparto apagado): la ventana se queda en «Importando…» sin terminar. Sin investigar: ver si al final se guardó algo, cuánto tarda y si es un límite de tiempo de Vercel; arreglarlo para que avance por tandas y enseñe el progreso.
+- [ ] **Sin actividad en GHL** (12 oct, Cristian): los contactos de la Biblioteca salen con «No activities yet» y atribución «CRM Workflows». Visto: el formulario de la landing no es de GHL (manda a su `/api/signup` y de ahí al «Inbound Webhook» del workflow viejo), así que GHL no ve ni la visita ni el formulario. Falta confirmar y buscar el arreglo (por ejemplo, código de seguimiento de GHL en la landing). En «Create contact» del viejo, utm source/campaign salen como «ningún paso da este valor».
+- Acceso: Playwright usa el Chrome de Cristian con la extensión «Playwright MCP Bridge» (`--extension` + token en `~/.claude.json`, 12 oct).
+
+**Tirada fases 4-7 (pedida por Cristian el 12 oct, 23:30): todo seguido, sin preguntar; lo que necesite de él se apunta aquí y se hace al final.**
+- **Preguntas** (si no contesta, voy con el «por defecto» y lo marco como supuesto): 1) datos de la tarjeta (def.: nombre, teléfono, programa/estrellas, caller/closer, etiquetas, días en la columna); 2) caller/closer por persona o por tarjeta (def.: por persona); 3) borrar en masa = quitar tarjeta (def.) o borrar persona (solo CEO, aviso rojo); 4) exportar (def.: CSV de las columnas de la vista Lista); 5) «+» de columna (def.: después de «Repartir leads»); 6) organigrama (def.: CEO → 3 directores → callers y closers); 7) referencia visual para KPIs (def.: el glass actual); 8) guiones (def.: sección con guion de ejemplo editable; los reales, al final); 9) botones de resultado (def.: los que ya hay); 10) Reserva (def.: botón aparte en la ventana de links de cada programa); 11) coach IA en directo (def.: lo último, hasta donde se pueda sin claves); 12) zona horaria (como está decidida). Y: ¿tests en GitHub antes del cambio de «varios pipelines»? (recomendado; mientras tanto sigo el orden de Cristian y dejo ese cambio para el final de la Fase 4).
+- **Permisos** (sin ellos, se deja en local y se sube al final): 1) commit y push a `main` por bloques (publica en la app del equipo); 2) migraciones en la base de la nube, con copia de seguridad antes; 3) leer la base de la nube; 4) probar en la app publicada (proyecto «Test») creando y borrando datos de prueba; 5) relanzar despliegues de Vercel; 6) añadir librería para arrastrar; 7) workflow de GitHub Actions; 8) Playwright en el Chrome de Cristian.
+- **Respuestas de Cristian (12 oct, 23:45):** 1) tarjeta: lo que yo vea mejor · 2) caller/closer como ahora (de la persona, como en GHL) · 3) **borrar en masa, solo el CEO**; asignar, etiquetas y mover, también los directores · 4) no entendió «exportar» (explicárselo al final) · 5) el «+», que quede bien estético · 6) organigrama, sí · 7) estilo glass · 8) guion de ejemplo, sí · 9) botones de resultado los de ahora, **pero quitar que el caller pueda cerrar venta y que al pulsar «Llamar» se abra algo** · 10) y 11) ok · zona horaria: «que se pueda poner cualquier hora y punto, simplifica» (⚠ confirmar qué quiere decir antes de hacerlo) · **permisos: sí a todo**.
+- **Al final, con Cristian:** GHL (actividad, workflows de Webinar/Orgánico/DFY, ids de callers, avisos por WhatsApp), claves (Fathom, Claude, Deepgram), guiones reales, DFY.
 
 **Fase 4 · CRM como GHL**
 - [ ] Tarjeta común en pipelines de origen, Callers y Closers; sin «Mover a…»: solo se arrastra.
 - [ ] Casilla en cada tarjeta y acciones masivas: asignar caller/closer, mover de columna o pipeline, etiquetas, exportar y borrar (borrar con confirmación, solo CEO y directores).
 - [ ] Pipelines: ordenarlos arrastrando y renombrarlos con doble clic; que «Orgánico → Agendados» no dependa del nombre.
+- [ ] **Columnas** (Cristian, 12 oct): se mueven arrastrándolas; y un botón **«+» grande y azul** junto a «Crear lead» y «Repartir leads» para crear una columna nueva.
 - [ ] **La misma persona en varios pipelines** (una tarjeta por pipeline, como GHL); en Funnel, KPIs y comisiones cuenta como una persona. Después, workflows de lead nuevo de Webinar, Orgánico y DFY, y subir sus CSV.
 - **Hecha cuando:** todas las tarjetas se ven iguales, las acciones masivas funcionan en Proyecto «Test» y el CSV de Webinar 1 crea sus tarjetas sin quitarlas de Biblioteca (con las cifras de Funnel comprobadas en la base).
 
@@ -82,6 +89,20 @@
 
 **Fase 7 · Otros** (lo que ya estaba en el plan)
 - [ ] Comprobaciones de la nube (PDF, límite de login, consola), arreglos pequeños, ids de GHL de los callers y llamadas de GHL, claves de Fathom/Claude/Deepgram, avisos por WhatsApp, cerrar moviendo a «Cerrados», cambiar la zona horaria, pruebas con GHL real de lo simulado.
+- [ ] **Programas · varios links de pago** (Cristian, 12 oct): Grupal y VIP necesitan varios links (un pago, dos pagos, tres pagos…); la Membresía sigue con uno. Al pulsar el link se abre una ventana con todos los links de ese programa.
+  - Links de Stripe (los pasó Cristian, 12 oct):
+    - **Reserva** · 100 $ (link aparte, vale para cualquier programa; Cristian, 12 oct): https://buy.stripe.com/4gM9AScwe5aA7HEgEnbwk1K
+    - **Grupal** · PIF 1.997 $: https://buy.stripe.com/7sYdR867Q32s3ro73Nbwk1L
+    - **Grupal** · 1.020 $ × 2 meses: https://buy.stripe.com/fZu8wO7bU6eE4vsbk3bwk1M
+    - **Grupal** · 510 $ × 4 semanas: https://buy.stripe.com/6oU14m7bU46w9PM87Rbwk1N
+    - **Grupal** · 260 $ × 8 semanas: https://buy.stripe.com/cNi8wO8fY7iIe62bk3bwk1O
+    - **Grupal** · 700 $/mes × 3 meses: https://buy.stripe.com/00w14m53M9qQ8LI4VFbwk1P
+    - **VIP** · PIF 4.997 $: https://buy.stripe.com/14A6oGfIqcD22nk2Nxbwk1Q
+    - **VIP** · 2.550 $ × 2 meses: https://buy.stripe.com/14AbJ02VE46w7HEafZbwk1R
+    - **VIP** · 1.275 $ × 4 semanas: https://buy.stripe.com/28E4gybsa6eEbXU3RBbwk1S
+    - **VIP** · 650 $ × 8 semanas: https://buy.stripe.com/3cI7sK2VE5aAaTQbk3bwk1T
+    - **VIP** · 1.735 $ × 3 meses: https://buy.stripe.com/bJe00i2VE0Uk7HEgEnbwk1U
+  - [ ] **DFY:** pendiente decidir si lleva links (precio personalizado).
 - [ ] **Tests en GitHub** (Cristian: de lo último). ⚠ Hasta entonces, los cambios de la Fase 4 (varios pipelines) solo los vigilan los tests unitarios y la prueba en pantalla.
 - [ ] **Segunda versión, de lo último:** coach con IA que escucha la llamada en directo («DI AHORA», transcripción en vivo).
 
@@ -103,7 +124,7 @@
 | Base | Sin Stripe ni pasarelas: cada venta la apunta quien la hace. **La app es el CRM; GHL solo trae datos** (webhooks, landings, calendarios y llamadas). |
 | Aspecto | Diseño glass con granate Eternity y azul Maestria; español de España; dólares y hora de Nueva York por defecto. |
 | Nube | Planes gratuitos para empezar (Supabase gratis; Vercel Hobby mientras no funcione la tarjeta) y, desde el 12 oct, dominio propio **`dashboard.eternity.llc`** (Fase 1; Vercel Hobby lo permite). Emails con Resend (11 oct). |
-| Equipo real | Creado con `scripts/salida/equipo.csv`. Una sola cuenta CEO para «Cris y José»; Juan, Junior y **Antonio** (12 oct), directores con Administración. **Cristian y José también son closers** (12 oct), con sus emails de GHL, para las citas de «#1 Maestria founders»; cuentan en KPIs, Ranking y comisiones. Los accesos los manda Cristian por WhatsApp. |
+| Equipo real | Creado con `scripts/salida/equipo.csv`. Una sola cuenta CEO para «Cris y José»; Juan, Junior y **Antonio** (12 oct), directores con Administración. **Cristian y José también son closers** (12 oct), con sus emails de GHL, para las citas de «#1 Maestria founders»; cuentan en KPIs, Ranking y comisiones. Los accesos van por email desde la app (12 oct; antes, por WhatsApp). |
 | Roles | Solo el CEO cambia el rol o desactiva a alguien. Administración, Finanzas y Equipo nunca para callers ni closers. Las comisiones las cambian el CEO y los directores (un director, ni la suya ni la de su rol). |
 | Permisos | Por sección y por pipeline (Editar / Ver / Sin acceso), por rol o por persona; manda la persona. Una sección de otro rol = solo lo suyo. CEO y director con Administración, siempre todo. |
 | CRM | Como GHL: pipelines de origen con sus columnas, «Callers» (por el resultado de la llamada, con «Link enviado») y «Closers» (Pre-call y Post-call). Las columnas las personaliza el equipo. |
@@ -116,7 +137,7 @@
 | Objetivos | Por rol o persona (manda la persona); el del director = equipo entero; semana de lunes a domingo; diario de lunes a viernes por defecto; racha = cumplir todos los diarios. |
 | IA | Claude Sonnet 5.5; cada llamada se analiza al unirla a su cita. Llamadas de GHL: las contestadas de más de 1 minuto; si GHL no transcribe, Deepgram. |
 | Biblioteca | Primera pestaña de KPIs (director y CEO). Su clasificación («Oferta») es un dato de cada lead que se recalcula solo; no ordena la cola. Cada CSV nuevo pone al día los datos. |
-| Productos | Membresía (47 $/mes, sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (precio personalizado). Cada uno con link de pago y de dossier. |
+| Productos | Membresía (47 $/mes, sin fin), Grupal (1.997 $), VIP (4.997 $) y DFY (precio personalizado). Cada uno con link de pago y de dossier. **Cambia (12 oct):** Grupal y VIP, varios links de pago (1, 2, 3 pagos…), en una ventana; la Membresía, uno (Fase 7). |
 | Reparto de leads | Solo entre callers. A mano, con el botón (vista previa automática, 4 formas) o automático al entrar con % por caller que suman 100, apagado y al 0 % por defecto. Con «solo en su horario» y nadie en horario, se reparte igual entre los que tienen %. |
 | Zona horaria | La cambia un administrador; solo Nueva York o Madrid. Al cambiarla, los horarios de cada persona se convierten para que sigan a la misma hora real; lo ya guardado por día se queda como está. (Por hacer: Fase 7.) |
 | Horario | En la hora del proyecto, con la del aparato al lado. Obligatorio en el onboarding de callers y closers; cada uno cambia el suyo en «Mi perfil» y un administrador, el de cualquiera. |
@@ -163,13 +184,13 @@
 - **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (Fase 7; la primera sincronización cuadró). Los workflows de citas están publicados: si alguno se despublica, ningún caller suma agendas de ese calendario.
 - **Leads sin caller:** los ~1.200 están sin repartir y el reparto automático está apagado: hasta que se reparta, los callers no tienen cola.
 - **Solo la Biblioteca entra sola:** un lead nuevo de Webinar, Orgánico o DFY no llega a la app hasta que se cree su workflow o se suba un CSV.
-- **Velocidad en la nube:** sin medir con datos (Fase 2).
+- **Velocidad en la nube:** medida el 12 oct (Fase 2): 0,6-1,3 s por pantalla; la primera vez tras un rato sin uso, 2-4 s.
 - **Emails:** funcionan (probado el 11 oct). Dependen de que el correo de Google Workspace siga pagado (aviso: antes del 2 nov 2026).
 - **Dominio raíz en Resend** (decisión de Cristian): si algún email de la app se marcara como spam, afectaría también a la reputación del correo normal de @eternity.llc (Google Workspace). Resend recomendaba un subdominio.
 
 **A tener en cuenta:**
 - **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
-- **Sin tests de integración hasta montarlos en GitHub** (Cristian no quiere Docker): mientras tanto, un cambio en webhooks, reparto, comisiones o permisos solo lo vigilan los 178 tests unitarios y la prueba en pantalla. Los 247 de integración son los que pillaron, por ejemplo, el fallo de la hora de las citas.
+- **Sin tests de integración hasta montarlos en GitHub** (Cristian no quiere Docker): mientras tanto, un cambio en webhooks, reparto, comisiones o permisos solo lo vigilan los 204 tests unitarios (12 oct) y la prueba en pantalla. Los 247 de integración son los que pillaron, por ejemplo, el fallo de la hora de las citas.
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
@@ -187,13 +208,13 @@
 
 ## 5. Cómo entrar y dónde está cada cosa
 
-- **La app publicada:** https://dashboard-de-ventas-iota.vercel.app (tu acceso: `info@eternity.llc`, contraseña en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv`, fila «Cris y José»).
+- **La app publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app; tu acceso: `info@eternity.llc`, contraseña en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv`, fila «Cris y José»).
 - **GHL:** subcuenta **Maestria** (Location ID `ZGWJLBH58RJtl2iGhykp`) · workflows en Automation → carpeta **«1. Dashboard ventas»** (0 Biblioteca, 1 Callers, 2 Closers, 3 Founders, 4 Descubrimiento) · Private Integration **«App Eternity (dashboard)»** · en la app: Administración → **Integraciones GHL** (token, ids de closers, «Últimos eventos») y → **Entradas** («GHL · Biblioteca»).
 - **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
 - **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
-- **En local:** abrir Docker Desktop → servidor `eternity-dashboard` → http://localhost:3100 (versión compilada: `eternity-produccion` → http://localhost:3200; los dos en `PROYECTOS/GENERAL/.claude/launch.json`). Si el login falla, primero `open -a Docker`; si sale el diseño viejo, borrar `app/.next/dev` (con permiso) y reiniciar.
+- **En local:** ya no se usa (sin Docker desde el 12 oct; ver «Docker» más abajo). Se prueba en la app publicada.
 - **Perfiles de prueba en la nube:** closer-test@ y caller-test@eternity.llc (contraseñas en `scripts/salida/usuarios-creados-2026-10-11-13-46.csv`; no cuentan en cifras). Para probar en la nube sin avisar a nadie: añadirlos al proyecto «Test» y quitarlos al acabar.
-- **Para Claude con el navegador:** los clics «por referencia» a veces no llegan a la página (comprobado el 11 oct); pulsar por coordenadas. Las ventanas del navegador (`confirm`) las tiene que aceptar Cristian.
+- **Para Claude con el navegador:** los clics «por referencia» a veces no llegan a la página (comprobado el 11 oct); pulsar por coordenadas. La app ya no usa ventanas del navegador (`confirm`), son propias (Fase 3). En GHL (12 oct) los clics normales a veces se quedan colgados: funciona pulsar con JavaScript sobre el elemento. GHL tarda 15-25 s en cargar y a veces devuelve 404 en la dirección aunque la página carga.
 - **Usuarios de prueba en local** (`@eternity.test`, contraseña en `scripts/seed.mjs`): ceo@, director@ (con Administración), closer1@ (Ana), closer2@, caller1@ (Carla), caller2@, caller3@, caller4@.
 - **Datos locales (Docker, solo en tu Mac):** Maestria = 1.005 leads de la Biblioteca del 10 oct (copia vieja, no se toca en las pruebas). Proyecto Prueba = donde pruebo. **Los datos reales están en la nube.**
 - **Proyecto «Test» en la nube** (de Cristian): solo con el CEO; para probar en la nube sin avisar a los directores. Tiene 2 reportes de prueba de caller-test (se dejan: no cuentan en cifras).

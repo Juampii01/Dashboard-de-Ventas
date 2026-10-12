@@ -28,6 +28,7 @@ export type Proyecto = {
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   link_agenda?: string | null; // link del calendario de GHL que el caller manda al lead (11 oct)
+  etapa_citas_ghl?: string | null; // Fase 4: columna donde van los leads con cita de GHL (antes, «Orgánico → Agendados» por nombre)
   color: string;
 };
 

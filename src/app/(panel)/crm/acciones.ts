@@ -163,6 +163,50 @@ export async function moverEtapa(etapaId: string, direccion: -1 | 1) {
   });
 }
 
+// Orden nuevo de las columnas al soltar una arrastrándola (Fase 4): llegan todas, en su orden
+export async function ordenarEtapas(pipelineId: string, ids: string[]) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { perfil, proyecto } = await getSesion();
+    await exigirNivel(perfil, proyecto.id, pipelineId, "editar");
+    const { data } = await db().from("etapas").select("id").eq("pipeline_id", pipelineId);
+    const actuales = new Set((data ?? []).map((x) => x.id));
+    if (ids.length !== actuales.size || new Set(ids).size !== ids.length || !ids.every((id) => actuales.has(id)))
+      throw new ErrorUsuario("Las columnas han cambiado. Recarga la página.");
+    await Promise.all(ids.map((id, k) => escribir(db().from("etapas").update({ orden: k }).eq("id", id), "etapas")));
+    refrescar();
+  });
+}
+
+// Orden nuevo de los pipelines al soltar uno arrastrándolo (Fase 4): solo quien crea pipelines
+export async function ordenarPipelines(ids: string[]) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { proyecto } = await exigir(puedeAdmin);
+    const { data } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id);
+    const actuales = new Set((data ?? []).map((x) => x.id));
+    if (ids.length !== actuales.size || new Set(ids).size !== ids.length || !ids.every((id) => actuales.has(id)))
+      throw new ErrorUsuario("Los pipelines han cambiado. Recarga la página.");
+    await Promise.all(ids.map((id, k) => escribir(db().from("pipelines").update({ orden: k }).eq("id", id), "pipelines")));
+    refrescar();
+  });
+}
+
+// Columna donde van los leads con cita de GHL (Fase 4; antes «Orgánico → Agendados» por su nombre). null = ninguna.
+export async function marcarColumnaCitasGhl(etapaId: string | null) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { proyecto } = await exigir(puedeAdmin);
+    if (etapaId) {
+      const e = await etapaDelProyecto(etapaId, proyecto.id);
+      if (e.pipelines.tipo !== "normal") throw new ErrorUsuario("Solo puede ser una columna de un pipeline de origen.");
+    }
+    const { error } = await db().from("proyectos").update({ etapa_citas_ghl: etapaId }).eq("id", proyecto.id);
+    if (error) throw new ErrorUsuario(/etapa_citas_ghl/.test(error.message) ? "Falta aplicar la migración de la base (columna de citas de GHL)." : error.message);
+    refrescar();
+  });
+}
+
 export async function borrarEtapa(etapaId: string) {
   return seguro(async () => {
     await exigirSeccion("crm"); // H5
@@ -326,5 +370,78 @@ export async function crearLeadManual(formData: FormData) {
     if (error) throw new ErrorUsuario(error.code === "23505" ? "Ya existe un lead con ese email." : error.message);
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: data.id, perfil_id: perfil.id, tipo: "nota", nota: "Lead creado a mano" });
     refrescar();
+  });
+}
+
+// ---------- Acciones masivas (Fase 4, como GHL): CEO y directores; borrar, solo el CEO ----------
+const MAX_MASIVO = 2000;
+function idsValidos(ids: string[]) {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  if (!unicos.length) throw new ErrorUsuario("No hay leads seleccionados.");
+  if (unicos.length > MAX_MASIVO) throw new ErrorUsuario(`Máximo ${MAX_MASIVO} leads a la vez.`);
+  return unicos;
+}
+
+// Mueve los leads seleccionados a una columna (de este pipeline o de otro de origen). En «Callers», solo a columnas
+// libres: las unidas a un estado se alcanzan con su botón (para no desincronizar el estado).
+export async function moverLeads(leadIds: string[], etapaId: string) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { perfil, proyecto } = await exigir(esJefe);
+    const ids = idsValidos(leadIds);
+    const e = await etapaDelProyecto(etapaId, proyecto.id);
+    if (e.pipelines.tipo === "closers") throw new ErrorUsuario("En «Closers» se mueven citas, no leads.");
+    if (e.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón en cada lead.`);
+    const callers = e.pipelines.tipo === "callers";
+    await escribir(
+      db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).in("id", ids).eq("proyecto_id", proyecto.id),
+      "leads"
+    );
+    await db().from("actividades").insert(ids.map((id) => ({ proyecto_id: proyecto.id, lead_id: id, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${e.nombre}» (en masa)` })));
+    refrescar();
+    return ids.length;
+  });
+}
+
+// Añade y quita etiquetas a los leads seleccionados
+export async function cambiarEtiquetas(leadIds: string[], anadir: string[], quitar: string[]) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { proyecto } = await exigir(esJefe);
+    const ids = idsValidos(leadIds);
+    const limpia = (l: string[]) => [...new Set(l.map((x) => x.trim()).filter(Boolean))].slice(0, 20);
+    const mas = limpia(anadir);
+    const menos = new Set(limpia(quitar).map((x) => x.toLowerCase()));
+    if (!mas.length && !menos.size) throw new ErrorUsuario("Escribe alguna etiqueta.");
+    if (mas.some((x) => x.length > 60)) throw new ErrorUsuario("Etiqueta demasiado larga (máx. 60).");
+    const { data } = await db().from("leads").select("id, etiquetas").in("id", ids).eq("proyecto_id", proyecto.id);
+    await Promise.all(
+      (data ?? []).map((l) => {
+        const actuales = ((l.etiquetas ?? []) as string[]).filter((x) => !menos.has(x.toLowerCase()));
+        const nuevas = [...actuales, ...mas.filter((x) => !actuales.some((a) => a.toLowerCase() === x.toLowerCase()))];
+        return escribir(db().from("leads").update({ etiquetas: nuevas }).eq("id", l.id), "leads");
+      })
+    );
+    refrescar();
+    return data?.length ?? 0;
+  });
+}
+
+// Borra los leads seleccionados. Criterio de Claude (Fase 4): se salta los que tienen citas o ventas, porque al
+// borrar un lead se borran en cascada sus citas, ventas, cobros y comisiones. Esos se borran uno a uno, a propósito.
+export async function borrarLeads(leadIds: string[]) {
+  return seguro(async () => {
+    await exigirSeccion("crm");
+    const { proyecto } = await exigir((p) => p.rol === "ceo"); // borrar en masa, solo el CEO (Cristian, 12 oct)
+    const ids = idsValidos(leadIds);
+    const [{ data: conCita }, { data: conVenta }] = await Promise.all([
+      db().from("citas").select("lead_id").in("lead_id", ids),
+      db().from("ventas").select("lead_id").in("lead_id", ids),
+    ]);
+    const protegidos = new Set([...(conCita ?? []), ...(conVenta ?? [])].map((x) => x.lead_id as string));
+    const borrar = ids.filter((id) => !protegidos.has(id));
+    if (borrar.length) await escribir(db().from("leads").delete().in("id", borrar).eq("proyecto_id", proyecto.id), "leads");
+    refrescar();
+    return { borrados: borrar.length, saltados: protegidos.size };
   });
 }

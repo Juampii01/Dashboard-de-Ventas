@@ -2,6 +2,7 @@ import { esJefe, puedeAdmin } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { calcularNivel, filasPermisoPipeline } from "@/lib/pipelines";
+import { columnaCitasGhl } from "@/lib/leads";
 import { cargarCitasVentas, columnasCloser } from "@/lib/tablero-closers";
 import { ABIERTAS } from "@/lib/llamadas";
 import { Cabecera, Contenido } from "@/components/ui";
@@ -81,6 +82,16 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
 
   const nivel = pipeline ? niveles[pipeline.id] : "ver";
   const admin = puedeAdmin(perfil);
+  const citasGhl = admin ? (await columnaCitasGhl(proyecto.id))?.id ?? null : null;
+  // Acciones masivas (Fase 4): a qué columnas se pueden mover leads (las libres de los pipelines de origen y «Callers»)
+  const movibles = pipelines.filter((p) => p.tipo !== "closers");
+  const { data: etapasDestino } = jefe && movibles.length
+    ? await db().from("etapas").select("id, pipeline_id, nombre, estado_caller").in("pipeline_id", movibles.map((p) => p.id)).order("orden")
+    : { data: [] };
+  const destinos = movibles.map((p) => ({
+    pipeline: p.nombre,
+    etapas: (etapasDestino ?? []).filter((e) => e.pipeline_id === p.id && !e.estado_caller).map((e) => ({ id: e.id as string, nombre: e.nombre as string })),
+  })).filter((d) => d.etapas.length);
   return (
     <>
       <Cabecera
@@ -108,6 +119,8 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
           callers={gente.filter((g) => g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre }))}
           closers={gente.filter((g) => g.rol === "closer").map((g) => ({ id: g.id, nombre: g.nombre }))}
           admin={admin}
+          citasGhl={citasGhl}
+          destinos={destinos}
           editar={nivel === "editar"}
           jefe={jefe}
           productos={(productos ?? []) as Producto[]}

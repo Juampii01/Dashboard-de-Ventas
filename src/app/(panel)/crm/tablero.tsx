@@ -15,13 +15,10 @@ import {
   Trash2,
   ArrowLeft,
   ArrowRight,
-  Phone,
-  Mail,
   UserPlus,
   KeyRound,
 } from "lucide-react";
 import {
-  asignarLeads,
   borrarEtapa,
   borrarPipeline,
   crearEtapa,
@@ -32,6 +29,9 @@ import {
   prepararSubidaCsv,
   moverEtapa,
   moverLead,
+  ordenarEtapas,
+  ordenarPipelines,
+  marcarColumnaCitasGhl,
   renombrarPipeline,
   unirEstado,
   guardarPermisoPipeline,
@@ -51,6 +51,9 @@ import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
 import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
 import { confirmar, pedirTexto } from "@/components/dialogos";
 import { Desplegable, Pastillas } from "@/components/eleccion";
+import { ARRASTRE_COLUMNA, ARRASTRE_PIPELINE, reordenar } from "@/lib/orden";
+import { BarraMasiva, type DestinoMasivo } from "./barra-masiva";
+import { TarjetaCrm, haceDias } from "@/components/tarjeta-crm";
 
 export type LeadTarjeta = {
   id: string;
@@ -80,14 +83,17 @@ const COLORES = ["#64748b", "#2f55d4", "#d97706", "#7c3aed", "#0891b2", "#db2777
 const POR_COLUMNA = 40;
 
 export function TableroCrm({
-  pipelines,
+  pipelines: pipelinesServidor,
   pipeline,
-  etapas,
+  etapas: etapasServidor,
   leads: leadsIniciales,
   conteos,
   callers,
   closers,
   admin,
+  citasGhl = null,
+  destinos = [],
+  ceo = false,
   editar,
   jefe,
   productos,
@@ -104,6 +110,9 @@ export function TableroCrm({
   callers: Persona[];
   closers: Persona[];
   admin: boolean; // crear pipelines y sus permisos (CEO y director con Administración)
+  citasGhl?: string | null; // Fase 4: columna donde van los leads con cita de GHL (solo la ve un administrador)
+  destinos?: DestinoMasivo[]; // Fase 4: columnas a las que se pueden mover leads en masa
+  ceo?: boolean; // borrar en masa, solo el CEO
   editar: boolean; // Paso 0: «Editar» en este pipeline = sus columnas, renombrar y borrar
   jefe: boolean; // importar, crear y asignar leads (director y CEO)
   productos: Producto[];
@@ -125,6 +134,19 @@ export function TableroCrm({
   const [ventana, setVentana] = useState<{ lead: LeadTarjeta; destino: DestinoConVentana; etapaId: string } | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
+  // Fase 4: columnas y pipelines se ordenan arrastrando; el orden nuevo se ve al momento (optimista)
+  const [ordenCols, setOrdenCols] = useState<{ base: Etapa[]; ids: string[] } | null>(null);
+  const [ordenPipes, setOrdenPipes] = useState<{ base: Pipeline[]; ids: string[] } | null>(null);
+  const [colSobre, setColSobre] = useState<string | null>(null);
+  const [pipeSobre, setPipeSobre] = useState<string | null>(null);
+  const etapas = useMemo(
+    () => (ordenCols && ordenCols.base === etapasServidor ? ordenCols.ids.map((id) => etapasServidor.find((e) => e.id === id)!).filter(Boolean) : etapasServidor),
+    [ordenCols, etapasServidor]
+  );
+  const pipelines = useMemo(
+    () => (ordenPipes && ordenPipes.base === pipelinesServidor ? ordenPipes.ids.map((id) => pipelinesServidor.find((p) => p.id === id)!).filter(Boolean) : pipelinesServidor),
+    [ordenPipes, pipelinesServidor]
+  );
 
   const nombrePorId = useMemo(() => Object.fromEntries([...callers, ...closers].map((p) => [p.id, p.nombre])), [callers, closers]);
 
@@ -195,6 +217,43 @@ export function TableroCrm({
     }, mensaje);
   }
 
+  function soltarColumna(desde: string, hasta: string) {
+    setColSobre(null);
+    if (!pipeline || !editar || desde === hasta) return;
+    const ids = reordenar(etapas.map((e) => e.id), desde, hasta);
+    setOrdenCols({ base: etapasServidor, ids });
+    ejecutar(async () => {
+      try {
+        await exigirOk(ordenarEtapas(pipeline.id, ids));
+      } catch (e) {
+        setOrdenCols(null);
+        throw e;
+      }
+    });
+  }
+
+  function soltarPipeline(desde: string, hasta: string) {
+    setPipeSobre(null);
+    if (!admin || desde === hasta) return;
+    const ids = reordenar(pipelines.map((p) => p.id), desde, hasta);
+    setOrdenPipes({ base: pipelinesServidor, ids });
+    ejecutar(async () => {
+      try {
+        await exigirOk(ordenarPipelines(ids));
+      } catch (e) {
+        setOrdenPipes(null);
+        throw e;
+      }
+    });
+  }
+
+  function nuevaColumna() {
+    if (!pipeline) return;
+    void pedirTexto("Nombre de la nueva columna", "", { boton: "Crear columna" }).then((n) => {
+      if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])), `Columna «${n}» creada`);
+    });
+  }
+
   const sinColumna = leads.filter((l) => !l.etapa_id || !etapas.some((e) => e.id === l.etapa_id));
   const tipo: TipoPipeline = pipeline?.tipo ?? "normal";
   const deOrigen = tipo === "normal"; // aquí entran los leads (CSV, nuevo lead)
@@ -213,6 +272,7 @@ export function TableroCrm({
         if (ok) ejecutar(() => exigirOk(borrarEtapa(e.id)));
       });
         }}
+        citasGhl={admin && deOrigen ? { marcada: citasGhl === e.id, alCambiar: (si) => ejecutar(() => exigirOk(marcarColumnaCitasGhl(si ? e.id : null)), si ? `Los leads con cita de GHL irán a «${e.nombre}»` : "Los leads con cita de GHL ya no se mueven de columna") } : null}
         onUnir={(estado) => {
           const t = UNIONES[tipo].find((u) => u.v === estado)?.t;
           ejecutar(() => exigirOk(unirEstado(e.id, estado)), estado ? `«${e.nombre}» unida a «${t}»` : `«${e.nombre}» ya no está unida`);
@@ -221,11 +281,7 @@ export function TableroCrm({
     ) : null;
   const anadirColumna = editar && pipeline && (
     <button
-      onClick={() => {
-        void pedirTexto("Nombre de la nueva columna", "", { boton: "Crear columna" }).then((n) => {
-          if (n) ejecutar(() => exigirOk(crearEtapa(pipeline.id, n, COLORES[etapas.length % COLORES.length])));
-        });
-      }}
+      onClick={nuevaColumna}
       className="flex h-14 w-60 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-borde-fuerte text-sm text-texto-2 hover:border-primario hover:text-primario"
     >
       <Plus className="h-4 w-4" /> Añadir columna
@@ -241,9 +297,32 @@ export function TableroCrm({
             <Link
               key={p.id}
               href={`/crm?pipeline=${p.id}`}
+              draggable={admin}
+              onDragStart={(ev) => ev.dataTransfer.setData(ARRASTRE_PIPELINE, p.id)}
+              onDragOver={(ev) => {
+                if (!ev.dataTransfer.types.includes(ARRASTRE_PIPELINE)) return;
+                ev.preventDefault();
+                setPipeSobre(p.id);
+              }}
+              onDragLeave={() => setPipeSobre((s) => (s === p.id ? null : s))}
+              onDrop={(ev) => {
+                const desde = ev.dataTransfer.getData(ARRASTRE_PIPELINE);
+                if (!desde) return;
+                ev.preventDefault();
+                soltarPipeline(desde, p.id);
+              }}
+              onDoubleClick={(ev) => {
+                // Doble clic en el pipeline abierto = renombrarlo (Fase 4)
+                if (p.id !== pipeline?.id || !editar) return;
+                ev.preventDefault();
+                void pedirTexto("Nuevo nombre del pipeline", p.nombre).then((n) => {
+                  if (n) ejecutar(() => exigirOk(renombrarPipeline(p.id, n)), `Pipeline renombrado a «${n}»`);
+                });
+              }}
+              title={admin ? (p.id === pipeline?.id && editar ? "Arrastra para ordenar · doble clic para renombrar" : "Arrastra para ordenar") : undefined}
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
                 p.id === pipeline?.id ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2 hover:text-texto"
-              }`}
+              } ${pipeSobre === p.id ? "ring-2 ring-primario" : ""}`}
             >
               {p.nombre}
               <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${p.id === pipeline?.id ? "bg-white/20" : "bg-panel-2"}`}>{conteos[p.id] ?? 0}</span>
@@ -320,9 +399,28 @@ export function TableroCrm({
             <RepartirLeads callers={callers} fijo={{ pipelineId: pipeline?.id ?? null }} />
           </>
         )}
+        {editar && pipeline && (
+          <button onClick={nuevaColumna} className="btn-primario h-10 w-10 justify-center p-0" title="Nueva columna" aria-label="Nueva columna">
+            <Plus className="h-6 w-6" />
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg bg-mal-suave px-3 py-2 text-sm text-mal">{error}</p>}
+      {jefe && tipo !== "closers" && seleccion.size > 0 && (
+        <BarraMasiva
+          seleccion={seleccion}
+          leads={leads}
+          callers={callers}
+          closers={closers}
+          destinos={destinos}
+          nombrePorId={nombrePorId}
+          etapaNombre={Object.fromEntries(etapas.map((e) => [e.id, e.nombre]))}
+          ejecutar={ejecutar}
+          limpiar={() => setSeleccion(new Set())}
+          ceo={ceo}
+        />
+      )}
 
       {!pipeline ? (
         <div className="tarjeta p-10 text-center text-sm text-texto-3">{admin ? "No hay pipelines. Crea el primero con «+ Pipeline»." : "Todavía no hay pipelines."}</div>
@@ -334,6 +432,7 @@ export function TableroCrm({
           jefe={jefe}
           soloMirar={tableroClosers.soloMirar}
           menuColumna={(col, i) => menu(etapas.find((e) => e.id === col.id)!, i)}
+          reordenarColumna={editar ? soltarColumna : undefined}
           alFinal={
             <>
               {anadirColumna}
@@ -355,22 +454,38 @@ export function TableroCrm({
                 key={e.id}
                 onDragOver={(ev) => {
                   ev.preventDefault();
-                  setSobre(e.id);
+                  if (ev.dataTransfer.types.includes(ARRASTRE_COLUMNA)) setColSobre(e.id);
+                  else setSobre(e.id);
                 }}
-                onDragLeave={() => setSobre((s) => (s === e.id ? null : s))}
+                onDragLeave={() => {
+                  setSobre((s) => (s === e.id ? null : s));
+                  setColSobre((s) => (s === e.id ? null : s));
+                }}
                 onDrop={(ev) => {
                   ev.preventDefault();
+                  const col = ev.dataTransfer.getData(ARRASTRE_COLUMNA);
+                  if (col) return soltarColumna(col, e.id);
                   soltar(e.id, ev.dataTransfer.getData("text/plain"));
                 }}
                 className={`flex w-72 shrink-0 flex-col rounded-xl border bg-panel-2/60 transition-colors ${
-                  sobre === e.id ? "border-primario bg-primario-suave/40" : "border-borde"
+                  sobre === e.id ? "border-primario bg-primario-suave/40" : colSobre === e.id ? "border-primario border-dashed" : "border-borde"
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 border-b border-borde px-3 py-2.5" style={{ borderTop: `3px solid ${e.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+                <div
+                  draggable={editar}
+                  onDragStart={(ev) => {
+                    ev.dataTransfer.effectAllowed = "move";
+                    ev.dataTransfer.setData(ARRASTRE_COLUMNA, e.id);
+                  }}
+                  title={editar ? "Arrastra la columna para cambiarla de sitio" : undefined}
+                  className={`flex items-center justify-between gap-2 border-b border-borde px-3 py-2.5 ${editar ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  style={{ borderTop: `3px solid ${e.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+                >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{e.nombre}</div>
                     <div className="text-[11px] text-texto-3">
                       {enColumna.length} leads
+                      {admin && citasGhl === e.id && <span title="Aquí van los leads con cita de GHL"> · 📅 citas GHL</span>}
                       {e.estado_caller && <span title="Columna unida a un estado: los botones del caller mueven aquí y soltar aquí cambia el estado"> · ↔ {ETIQUETA_ESTADO_CALLER[e.estado_caller]}</span>}
                     </div>
                   </div>
@@ -378,7 +493,25 @@ export function TableroCrm({
                 </div>
                 <div className="flex max-h-[calc(100vh-330px)] min-h-32 flex-col gap-2 overflow-y-auto p-2">
                   {enColumna.slice(0, limite).map((l) => (
-                    <Tarjeta key={l.id} lead={l} caller={l.caller_id ? nombrePorId[l.caller_id] : null} onDrag={() => setArrastrando(l.id)} arrastrando={arrastrando === l.id} />
+                    <Tarjeta
+                      key={l.id}
+                      lead={l}
+                      caller={l.caller_id ? nombrePorId[l.caller_id] : null}
+                      closer={l.closer_id ? nombrePorId[l.closer_id] : null}
+                      onDrag={() => setArrastrando(l.id)}
+                      arrastrando={arrastrando === l.id}
+                      marcada={seleccion.has(l.id)}
+                      onMarcar={
+                        jefe
+                          ? () => {
+                              const s = new Set(seleccion);
+                              if (s.has(l.id)) s.delete(l.id);
+                              else s.add(l.id);
+                              setSeleccion(s);
+                            }
+                          : undefined
+                      }
+                    />
                   ))}
                   {enColumna.length > limite && (
                     <button onClick={() => setVerMas((v) => ({ ...v, [e.id]: limite + POR_COLUMNA }))} className="rounded-lg py-2 text-xs text-primario hover:bg-primario-suave">
@@ -401,16 +534,8 @@ export function TableroCrm({
           leads={leads}
           etapas={etapas}
           nombrePorId={nombrePorId}
-          callers={callers}
-          closers={closers}
           seleccion={seleccion}
           setSeleccion={setSeleccion}
-          onAsignar={(caller, closer) =>
-            ejecutar(async () => {
-              await exigirOk(asignarLeads([...seleccion], caller, closer));
-              setSeleccion(new Set());
-            })
-          }
         />
       )}
 
@@ -469,35 +594,53 @@ export function TableroCrm({
   );
 }
 
-function Tarjeta({ lead, caller, onDrag, arrastrando }: { lead: LeadTarjeta; caller: string | null; onDrag: () => void; arrastrando: boolean }) {
+function Tarjeta({
+  lead,
+  caller,
+  closer,
+  onDrag,
+  arrastrando,
+  marcada,
+  onMarcar,
+}: {
+  lead: LeadTarjeta;
+  caller: string | null;
+  closer: string | null;
+  onDrag: () => void;
+  arrastrando: boolean;
+  marcada: boolean;
+  onMarcar?: () => void;
+}) {
   const invertir = lead.respuestas.find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta;
   return (
-    <Link
+    <TarjetaCrm
       href={`/leads/${lead.id}`}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
+      nombre={`${lead.nombre} ${lead.apellido}`.trim()}
+      telefono={lead.telefono}
+      email={lead.email}
+      arriba={<span className="shrink-0 text-[11px] text-texto-3" title={`Entró el ${lead.creado_en.slice(0, 10)}`}>{haceDias(lead.creado_en)}</span>}
+      arrastrable
+      onArrastrar={(e) => {
         e.dataTransfer.setData("text/plain", lead.id);
         onDrag();
       }}
-      className={`block rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm transition hover:border-primario/60 ${arrastrando ? "opacity-40" : ""}`}
-    >
-      <div className="font-medium">{`${lead.nombre} ${lead.apellido}`.trim() || "Sin nombre"}</div>
-      <div className="mt-1 space-y-0.5 text-xs text-texto-3">
-        {lead.telefono && <div className="flex items-center gap-1.5"><Phone className="h-3 w-3" />{lead.telefono}</div>}
-        {lead.email && <div className="flex items-center gap-1.5 truncate"><Mail className="h-3 w-3" />{lead.email}</div>}
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        {invertir && (
-          <span className={`chip ${invertir.startsWith("Sí") ? "bg-ok-suave text-ok" : invertir.startsWith("En") ? "bg-aviso-suave text-aviso" : "bg-panel-2 text-texto-3"}`}>
-            {invertir}
-          </span>
-        )}
-        <OfertaChip oferta={lead.oferta} vacio={false} />
-        {lead.estado_caller !== "nuevo" && <span className="chip bg-primario-suave text-primario">{ETIQUETA_ESTADO_CALLER[lead.estado_caller]}</span>}
-        <span className="chip ml-auto bg-panel-2 text-texto-3">{caller ?? "Sin caller"}</span>
-      </div>
-    </Link>
+      apagada={arrastrando}
+      marcada={marcada}
+      onMarcar={onMarcar}
+      chips={
+        <>
+          {invertir && (
+            <span className={`chip ${invertir.startsWith("Sí") ? "bg-ok-suave text-ok" : invertir.startsWith("En") ? "bg-aviso-suave text-aviso" : "bg-panel-2 text-texto-3"}`}>{invertir}</span>
+          )}
+          <OfertaChip oferta={lead.oferta} vacio={false} />
+          {lead.estado_caller !== "nuevo" && <span className="chip bg-primario-suave text-primario">{ETIQUETA_ESTADO_CALLER[lead.estado_caller]}</span>}
+          {lead.etiquetas.slice(0, 3).map((e) => <span key={e} className="chip bg-panel-2 text-texto-2">{e}</span>)}
+          {lead.etiquetas.length > 3 && <span className="chip bg-panel-2 text-texto-3" title={lead.etiquetas.slice(3).join(", ")}>+{lead.etiquetas.length - 3}</span>}
+          <span className="chip ml-auto bg-panel-2 text-texto-3" title="Caller">{caller ?? "Sin caller"}</span>
+          {closer && <span className="chip bg-panel-2 text-texto-3" title="Closer">{closer}</span>}
+        </>
+      }
+    />
   );
 }
 
@@ -511,6 +654,7 @@ function MenuColumna({
   onMover,
   onBorrar,
   onUnir,
+  citasGhl,
 }: {
   etapa: Etapa;
   uniones: { v: string; t: string }[]; // vacío = pipeline de origen, sin uniones
@@ -521,6 +665,7 @@ function MenuColumna({
   onMover: (d: -1 | 1) => void;
   onBorrar: () => void;
   onUnir: (estado: string | null) => void;
+  citasGhl: { marcada: boolean; alCambiar: (si: boolean) => void } | null; // pipelines de origen, administrador
 }) {
   const [abierto, setAbierto] = useState(false);
   return (
@@ -571,6 +716,12 @@ function MenuColumna({
                 {uniones.map((u) => <option key={u.v} value={u.v}>{u.t}</option>)}
               </Desplegable>
             </label>}
+            {citasGhl && (
+              <label className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                <input type="checkbox" className="interruptor" checked={citasGhl.marcada} onChange={(ev) => { citasGhl.alCambiar(ev.target.checked); setAbierto(false); }} />
+                Aquí van los leads con cita de GHL
+              </label>
+            )}
             {!primera && (
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-panel-2" onClick={() => { onMover(-1); setAbierto(false); }}>
                 <ArrowLeft className="h-4 w-4" /> Mover a la izquierda
@@ -595,50 +746,23 @@ function VistaLista({
   leads,
   etapas,
   nombrePorId,
-  callers,
-  closers,
   seleccion,
   setSeleccion,
-  onAsignar,
 }: {
   leads: LeadTarjeta[];
   etapas: Etapa[];
   nombrePorId: Record<string, string>;
-  callers: Persona[];
-  closers: Persona[];
   seleccion: Set<string>;
   setSeleccion: (s: Set<string>) => void;
-  onAsignar: (caller: string | null | undefined, closer: string | null | undefined) => void;
 }) {
   const [limite, setLimite] = useState(100);
-  const [caller, setCaller] = useState("");
-  const [closer, setCloser] = useState("");
   const etapaNombre = Object.fromEntries(etapas.map((e) => [e.id, e]));
   const visibles = leads.slice(0, limite);
   const todos = visibles.length > 0 && visibles.every((l) => seleccion.has(l.id));
   return (
     <div className="tarjeta overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-borde bg-panel-2 p-3 text-sm">
-        <span className="font-medium">{seleccion.size} seleccionados</span>
-        <Desplegable value={caller} onChange={(e) => setCaller(e.target.value)} className="campo w-auto">
-          <option value="">Caller…</option>
-          <option value="__ninguno">Quitar caller</option>
-          {callers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-        </Desplegable>
-        <Desplegable value={closer} onChange={(e) => setCloser(e.target.value)} className="campo w-auto">
-          <option value="">Closer…</option>
-          <option value="__ninguno">Quitar closer</option>
-          {closers.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-        </Desplegable>
-        <button
-          className="btn-primario"
-          disabled={!seleccion.size || (!caller && !closer)}
-          onClick={() =>
-            onAsignar(caller ? (caller === "__ninguno" ? null : caller) : undefined, closer ? (closer === "__ninguno" ? null : closer) : undefined)
-          }
-        >
-          Asignar
-        </button>
+        <span className="font-medium">{seleccion.size ? `${seleccion.size} seleccionados · las acciones están arriba` : "Marca leads para asignarlos, moverlos, etiquetarlos o exportarlos"}</span>
         <span className="ml-auto text-texto-3">{leads.length} leads</span>
       </div>
       <div className="overflow-x-auto">

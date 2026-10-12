@@ -29,7 +29,7 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 
 | Workflow | Disparador | Acción | A dónde va |
 |---|---|---|---|
-| **0. AP - Biblioteca** | Contact Tag → se añade «biblioteca recursos» (la pone el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) | Webhook normal, **sin** Custom data ni cabecera | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
+| **0. AP - Biblioteca** | **Opportunity Created · In pipeline is «2. Biblioteca Recursos»** (la crea el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) → **Wait 1 min** (la landing manda primero los datos y después el cuestionario) | Webhook normal con las **6 preguntas en Custom data** (a la izquierda el texto de la pregunta; a la derecha su campo, p. ej. `{{contact.en_qu_situacin_ests_hoy}}`): el Webhook normal no manda los campos personalizados por su cuenta. Sin cabecera. Cambiado el 12 oct | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
 | **1. AP - Cita Callers** | Customer booked appointment · In calendar = «#2 Callers - Maestria» | Webhook normal «Cita (app)» | `/api/webhooks/ghl/<id de Maestria>` |
 | **2. AP - Cita Closers** | ídem · «#3 Closers - Maestria» | ídem (copia del 1) | ídem |
 | **3. AP - Cita Founders** | ídem · «#1 Maestria founders» (el de `codigomaestria.com/agenda`; arreglado el 12 oct: antes vigilaba el de abajo) | ídem (copia del 2) | ídem |

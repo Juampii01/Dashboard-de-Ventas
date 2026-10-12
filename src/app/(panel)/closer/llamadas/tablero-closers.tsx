@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Phone, ClipboardCheck, MessageCircle } from "lucide-react";
+import { ClipboardCheck, MessageCircle } from "lucide-react";
 import { cambiarEstadoCita, reagendarCita } from "../acciones";
 import { AccionesCita } from "../acciones-cita";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
@@ -16,12 +16,14 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import { esClavePrecall, type ClaveCloser } from "@/lib/llamadas";
 import type { EstadoCita, Producto } from "@/lib/tipos";
 import { confirmar } from "@/components/dialogos";
-import { Desplegable, Pastillas } from "@/components/eleccion";
+import { Pastillas } from "@/components/eleccion";
+import { ARRASTRE_COLUMNA } from "@/lib/orden";
+import { TarjetaCrm } from "@/components/tarjeta-crm";
 
 // Tablero «Closers» (Paso 0, Cristian 10 oct 2026): Pre-call y Post-call juntos, en el CRM y en Agendas.
 // Columnas unidas: Pre-call cambia el estado de la cita; Post-call como en el H6 (estrellas, fecha, venta; las
 // ventas entre Reserva, Cuotas y Cerradas; fuera de ellas se borran). Columnas libres: la cita se queda ahí
-// hasta que cambie su estado. Todo se mueve arrastrando o con «Mover a…».
+// hasta que cambie su estado. Todo se mueve arrastrando (Fase 4: sin «Mover a…», tarjeta común del CRM).
 
 export type TarjetaCitaC = {
   id: string;
@@ -53,6 +55,7 @@ export function TableroClosers({
   soloMirar = false,
   menuColumna,
   alFinal,
+  reordenarColumna,
 }: {
   columnas: ColumnaC[];
   productos: Producto[];
@@ -61,10 +64,12 @@ export function TableroClosers({
   soloMirar?: boolean;
   menuColumna?: (col: ColumnaC, i: number) => ReactNode; // CRM: «⋯» de la columna (quien puede editar)
   alFinal?: ReactNode; // CRM: «Añadir columna» y avisos
+  reordenarColumna?: (desde: string, hasta: string) => void; // CRM (Fase 4): columnas que se arrastran, quien puede editar
 }) {
   const { pendiente, error, ejecutar } = useAccion();
   const toast = useToast();
   const [sobre, setSobre] = useState<string | null>(null);
+  const [colSobre, setColSobre] = useState<string | null>(null);
   const [ventana, setVentana] = useState<Ventana | null>(null);
   const nombre = (i: Item) => (i.clase === "cita" ? i.cita.nombre : i.venta.nombre);
 
@@ -154,17 +159,33 @@ export function TableroClosers({
               key={col.id}
               onDragOver={(ev) => {
                 ev.preventDefault();
-                setSobre(col.id);
+                if (ev.dataTransfer.types.includes(ARRASTRE_COLUMNA)) setColSobre(col.id);
+                else setSobre(col.id);
               }}
-              onDragLeave={() => setSobre((s) => (s === col.id ? null : s))}
+              onDragLeave={() => {
+                setSobre((s) => (s === col.id ? null : s));
+                setColSobre((s) => (s === col.id ? null : s));
+              }}
               onDrop={(ev) => {
                 ev.preventDefault();
                 setSobre(null);
+                setColSobre(null);
+                const desde = ev.dataTransfer.getData(ARRASTRE_COLUMNA);
+                if (desde) return reordenarColumna?.(desde, col.id);
                 soltar(col, ev.dataTransfer.getData("text/plain"));
               }}
-              className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre === col.id ? "border-primario bg-primario-suave/40" : "border-borde bg-panel-2/60"}`}
+              className={`flex w-72 shrink-0 flex-col rounded-xl border transition-colors ${sobre === col.id ? "border-primario bg-primario-suave/40" : colSobre === col.id ? "border-dashed border-primario bg-panel-2/60" : "border-borde bg-panel-2/60"}`}
             >
-              <div className="flex items-start justify-between gap-2 border-b border-borde px-3 py-2.5" style={{ borderTop: `3px solid ${col.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+              <div
+                draggable={!!reordenarColumna}
+                onDragStart={(ev) => {
+                  ev.dataTransfer.effectAllowed = "move";
+                  ev.dataTransfer.setData(ARRASTRE_COLUMNA, col.id);
+                }}
+                title={reordenarColumna ? "Arrastra la columna para cambiarla de sitio" : undefined}
+                className={`flex items-start justify-between gap-2 border-b border-borde px-3 py-2.5 ${reordenarColumna ? "cursor-grab active:cursor-grabbing" : ""}`}
+                style={{ borderTop: `3px solid ${col.color}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+              >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-semibold">
                     <span className="truncate">{col.t}</span>
@@ -177,29 +198,24 @@ export function TableroClosers({
               <div className="flex max-h-[70vh] min-h-24 flex-col gap-2 overflow-y-auto p-2">
                 {total === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
                 {col.citas.map((c) => (
-                  <TarjetaCita key={c.id} c={c} origen={col.id} columnas={columnas} productos={productos} moneda={moneda} soloMirar={soloMirar} onMover={(dest) => mover({ clase: "cita", cita: c, origen: col.id }, dest)} />
+                  <TarjetaCita key={c.id} c={c} origen={col.id} productos={productos} moneda={moneda} soloMirar={soloMirar} />
                 ))}
                 {col.ventas.map((v) => (
-                  <div
+                  <TarjetaCrm
                     key={v.id}
-                    draggable={!soloMirar}
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "venta", id: v.id, origen: col.id }));
-                    }}
-                    className={`space-y-1.5 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm ${soloMirar ? "" : "cursor-grab active:cursor-grabbing"}`}
-                  >
-                    <a href={`/leads/${v.lead_id}`} className="font-medium hover:text-primario">{v.nombre}</a>
-                    <div className="text-xs text-texto-3">{v.detalle}</div>
-                    <div className="flex items-baseline justify-between text-xs">
-                      <span className="tabular-nums">{v.facturacionTxt}</span>
-                      {v.pendiente > 0.001 ? <span className="text-aviso">Falta {v.faltaTxt}</span> : <span className="text-ok">Pagada</span>}
-                    </div>
-                    {!soloMirar && <div className="relative flex flex-wrap items-center justify-between gap-1.5">
-                      <MoverA origen={col.id} columnas={columnas} onMover={(dest) => mover({ clase: "venta", venta: v, origen: col.id }, dest)} />
-                      <FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={v.devuelta} jefe={jefe} />
-                    </div>}
-                  </div>
+                    href={`/leads/${v.lead_id}`}
+                    nombre={v.nombre}
+                    arriba={<span className="shrink-0 text-xs tabular-nums">{v.facturacionTxt}</span>}
+                    arrastrable={!soloMirar}
+                    onArrastrar={(e) => e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "venta", id: v.id, origen: col.id }))}
+                    chips={
+                      <>
+                        <span className="chip bg-panel-2 text-texto-2">{v.detalle}</span>
+                        {v.pendiente > 0.001 ? <span className="chip bg-aviso-suave text-aviso">Falta {v.faltaTxt}</span> : <span className="chip bg-ok-suave text-ok">Pagada</span>}
+                      </>
+                    }
+                    pie={!soloMirar ? <div className="relative flex justify-end"><FilaVentaAcciones ventaId={v.id} pendiente={v.pendiente} cobrado={v.cobrado} devuelta={v.devuelta} jefe={jefe} /></div> : undefined}
+                  />
                 ))}
               </div>
             </div>
@@ -303,54 +319,39 @@ export function TableroClosers({
   );
 }
 
-// «Mover a…»: lo mismo que arrastrar (sirve en el móvil)
-function MoverA({ origen, columnas, onMover }: { origen: string; columnas: ColumnaC[]; onMover: (d: ColumnaC) => void }) {
-  return (
-    <Desplegable
-      aria-label="Mover a"
-      className="campo w-auto py-1 text-xs"
-      value=""
-      onChange={(e) => {
-        const d = columnas.find((c) => c.id === e.target.value);
-        if (d) onMover(d);
-      }}
-    >
-      <option value="">Mover a…</option>
-      {columnas.filter((c) => c.id !== origen).map((c) => <option key={c.id} value={c.id}>{c.t}</option>)}
-    </Desplegable>
-  );
-}
-
 const REGISTRABLES: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "seguimiento"];
 
-function TarjetaCita({ c, origen, columnas, productos, moneda, soloMirar, onMover }: { c: TarjetaCitaC; origen: string; columnas: ColumnaC[]; productos: Producto[]; moneda: string; soloMirar: boolean; onMover: (d: ColumnaC) => void }) {
+function TarjetaCita({ c, origen, productos, moneda, soloMirar }: { c: TarjetaCitaC; origen: string; productos: Producto[]; moneda: string; soloMirar: boolean }) {
   const [registrar, setRegistrar] = useState(false);
   const tel = (c.telefono ?? "").replace(/\D/g, "");
   return (
-    <div
-      draggable={!soloMirar}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "cita", id: c.id, origen }));
-      }}
-      className={`space-y-2 rounded-lg border border-borde bg-panel p-3 text-sm shadow-sm ${soloMirar ? "" : "cursor-grab active:cursor-grabbing"}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <a href={`/leads/${c.lead_id}`} className="font-medium hover:text-primario">{c.nombre}</a>
-        {c.closer && <span className="chip bg-panel-2 text-texto-3">{c.closer}</span>}
-      </div>
-      {c.telefono && <a href={`tel:${c.telefono}`} className="flex items-center gap-1.5 text-primario"><Phone className="h-3.5 w-3.5" />{c.telefono}</a>}
-      <div className="text-xs text-texto-2">📅 {c.fechaTxt}</div>
-      <div className="text-[11px] text-texto-3">{c.quien}</div>
-      {c.nota && <div className="text-xs text-texto-2">📝 {c.nota}</div>}
-      {!soloMirar && <div className="flex flex-wrap gap-1.5">
-        {REGISTRABLES.includes(c.estado) && (
-          <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
-        )}
-        <MoverA origen={origen} columnas={columnas} onMover={onMover} />
-        {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
-      </div>}
-      {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={c.pasada || esClavePrecall(c.natural)} productos={productos} moneda={moneda} /></div>}
-    </div>
+    <TarjetaCrm
+      href={`/leads/${c.lead_id}`}
+      nombre={c.nombre}
+      telefono={c.telefono}
+      arriba={c.closer ? <span className="chip shrink-0 bg-panel-2 text-texto-3">{c.closer}</span> : undefined}
+      arrastrable={!soloMirar}
+      onArrastrar={(e) => e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "cita", id: c.id, origen }))}
+      chips={
+        <>
+          <span className="chip bg-primario-suave text-primario">📅 {c.fechaTxt}</span>
+          <span className="chip bg-panel-2 text-texto-3">{c.quien}</span>
+        </>
+      }
+      pie={
+        <>
+          {c.nota && <div className="text-xs text-texto-2">📝 {c.nota}</div>}
+          {!soloMirar && (
+            <div className="flex flex-wrap gap-1.5">
+              {REGISTRABLES.includes(c.estado) && (
+                <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
+              )}
+              {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" draggable={false} className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
+            </div>
+          )}
+          {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={c.pasada || esClavePrecall(c.natural)} productos={productos} moneda={moneda} /></div>}
+        </>
+      }
+    />
   );
 }

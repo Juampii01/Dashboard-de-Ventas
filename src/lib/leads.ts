@@ -232,12 +232,24 @@ export async function guardarLeads(
 // «Link enviado»; si nadie lo marcó, del caller del lead; sin caller, de nadie. Las estrellas son las que puso el
 // caller al enviar el link.
 // Decisión de Cristian (12 oct 2026): todo lead con una cita que llega de GHL (webhook o sincronización) pasa al
-// pipeline «Orgánico», columna «Agendados». Si el proyecto no tiene ese pipeline o esa columna, no se mueve.
-export async function moverAAgendadosOrganico(proyectoId: string, leadId: string) {
+// pipeline «Orgánico», columna «Agendados». Fase 4: la columna se guarda en el proyecto (`etapa_citas_ghl`, se elige
+// en el «⋯» de la columna), así no depende del nombre. Sin ese dato (base aún sin la migración), se busca por nombre.
+export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id: string; id: string } | null> {
+  const { data: proy } = await db().from("proyectos").select("*").eq("id", proyectoId).maybeSingle();
+  if (proy && "etapa_citas_ghl" in proy) {
+    if (!proy.etapa_citas_ghl) return null;
+    const { data } = await db().from("etapas").select("id, pipeline_id").eq("id", proy.etapa_citas_ghl).maybeSingle();
+    return data ?? null;
+  }
   const { data: pipe } = await db().from("pipelines").select("id, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal").ilike("nombre", "orgánico").maybeSingle();
   const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => x.nombre.trim().toLowerCase() === "agendados");
-  if (!pipe || !etapa) return;
-  await escribir(db().from("leads").update({ pipeline_id: pipe.id, etapa_id: etapa.id }).eq("id", leadId), "leads");
+  return pipe && etapa ? { pipeline_id: pipe.id, id: etapa.id } : null;
+}
+
+export async function moverAAgendadosOrganico(proyectoId: string, leadId: string) {
+  const destino = await columnaCitasGhl(proyectoId);
+  if (!destino) return;
+  await escribir(db().from("leads").update({ pipeline_id: destino.pipeline_id, etapa_id: destino.id }).eq("id", leadId), "leads");
 }
 
 export async function datosAgendaGhl(leadId: string): Promise<{ agendada_por: string | null; estrellas_caller: number | null }> {
