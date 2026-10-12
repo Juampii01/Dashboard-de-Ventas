@@ -211,3 +211,20 @@ body {
 .celebracion-pieza {
   animation: caer-celebracion 2.6s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
 }
+
+/* Pantalla de entrada al abrir un enlace de acceso (Fase 1, Cristian 12 oct 2026) */
+@keyframes entrada-latido {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primario) 35%, transparent); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 18px color-mix(in srgb, var(--primario) 0%, transparent); }
+}
+@keyframes entrada-barra {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@keyframes entrada-aparece {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.entrada-logo { animation: entrada-latido 1.6s ease-in-out infinite; }
+.entrada-barra { animation: entrada-barra 2.8s ease-in-out forwards; }
+.entrada-texto { animation: entrada-aparece 0.6s ease-out both; }

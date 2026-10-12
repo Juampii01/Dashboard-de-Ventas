@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSessionClient } from "@/lib/supabase/server";
-import { destinoTrasEnlace } from "@/lib/enlace";
 
 // Bloque 6 (Cristian, 11 oct 2026): aquí llega el enlace mágico que manda un administrador desde la ficha.
 // Comprueba el código con Supabase, deja la sesión iniciada (cookies) y lleva a la app; si el enlace ya se usó o
@@ -15,9 +14,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createSessionClient();
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" });
     if (!error) {
-      const [ruta, consulta] = destinoTrasEnlace(siguiente).split("?");
-      destino.pathname = ruta;
-      if (consulta) destino.search = `?${consulta}`;
+      // Primero la pantalla de entrada con la marca (Cristian, 12 oct): ella lleva luego al destino
+      destino.pathname = "/entrando";
+      if (siguiente === "perfil") destino.search = "?siguiente=perfil";
       return NextResponse.redirect(destino);
     }
   }
