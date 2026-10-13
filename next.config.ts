@@ -27,9 +27,9 @@ const nextConfig: NextConfig = {
   experimental: {
     // Los archivos ya no pasan por las acciones (van directos a Supabase); por debajo de los 4,5 MB de Vercel
     serverActions: { bodySizeLimit: "4mb" },
-    // Velocidad (13 oct 2026): lo precargado (p. ej. una pestaña del CRM al pasar el ratón) vale 30 s, no 5 min,
+    // Velocidad (13 oct 2026): lo visitado o precargado (p. ej. una pestaña del CRM) vale 30 s (antes, nada o 5 min):
     // para no enseñar datos viejos de otros; los cambios propios lo refrescan al momento
-    staleTimes: { static: 30 },
+    staleTimes: { static: 30, dynamic: 30 },
   },
   async headers() {
     return [{ source: "/(.*)", headers: cabeceras }];
