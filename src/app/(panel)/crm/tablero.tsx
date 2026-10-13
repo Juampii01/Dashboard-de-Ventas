@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import {
   borrarEtapa,
-  borrarPipeline,
   crearEtapa,
   crearLeadManual,
   crearPipeline,
@@ -321,39 +320,11 @@ export function TableroCrm({
             });
           }}
         />
-        {(editar || admin) && pipeline && (
-          <div className="flex gap-1">
-            {admin && permisos && (
-              <button className="btn-secundario px-2.5" title="Quién ve este pipeline (permisos)" onClick={() => setModal("permisos")}>
-                <KeyRound className="h-4 w-4" />
-              </button>
-            )}
-            <button
-              className="btn-secundario px-2.5"
-              title="Renombrar pipeline"
-              onClick={() => {
-                void pedirTexto("Nuevo nombre del pipeline", pipeline.nombre).then((n) => {
-                  if (n) ejecutar(() => exigirOk(renombrarPipeline(pipeline.id, n)));
-                });
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            {deOrigen && <button
-              className="btn-secundario px-2.5 hover:text-mal"
-              title="Borrar pipeline"
-              onClick={() => {
-                void confirmar(`¿Borrar el pipeline «${pipeline.nombre}»? Sus leads NO se borran: quedan sin pipeline.`).then((ok) => {
-        if (ok) ejecutar(async () => {
-                    await exigirOk(borrarPipeline(pipeline.id));
-                    router.push("/crm");
-                  });
-      });
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>}
-          </div>
+        {/* Cristian (13 oct): sin botones de renombrar y borrar pipeline (se renombra con doble clic en el selector) */}
+        {admin && permisos && pipeline && (
+          <button className="btn-secundario px-2.5" title="Quién ve este pipeline (permisos)" onClick={() => setModal("permisos")}>
+            <KeyRound className="h-4 w-4" />
+          </button>
         )}
         <div className="relative min-w-40 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
