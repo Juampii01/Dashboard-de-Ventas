@@ -9,6 +9,7 @@ import { metricasAgendas, type MetricasAgendas } from "@/lib/metricas-agendas";
 import { leerPeriodo, rangoNav } from "@/lib/periodos";
 import { dinero, pct, hoyEnZona } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Seccion, Anillo } from "@/components/ui";
+import { Embudo } from "@/components/embudo";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
 import { PestanasAgendas } from "./pestanas";
 import { VistaAgendas } from "./vista-agendas";
@@ -98,11 +99,11 @@ export default async function AgendasMetricasPage({ searchParams }: PageProps<"/
 }
 
 function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) => string }) {
-  const max = Math.max(m.agendadas, 1);
+  // Fase 5: el mismo embudo dibujado que en KPIs
   const pasos = [
-    { t: "Agendadas", n: m.agendadas },
-    { t: "Asistencias", n: m.asistencias },
-    { t: "Cerradas", n: m.cerradas },
+    { t: "Agendadas", n: m.agendadas, d: "Citas del periodo" },
+    { t: "Asistencias", n: m.asistencias, d: "Citas a las que vino el lead" },
+    { t: "Cerradas", n: m.cerradas, d: "Citas cerradas con venta" },
   ];
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -119,19 +120,7 @@ function Individual({ m, moneda: $ }: { m: MetricasAgendas; moneda: (n: number) 
             <div className="text-[11px] text-texto-3">contratos cerrados</div>
           </div>
         </div>
-        <ul className="space-y-3">
-          {pasos.map((x, i) => (
-            <li key={x.t}>
-              <div className="mb-1 flex items-baseline justify-between text-sm">
-                <span className="font-medium">{x.t}</span>
-                <span className="tabular-nums"><b>{x.n}</b> <span className="text-xs text-texto-3">· {pct(i === 0 ? "100" : Math.round((x.n / max) * 1000) / 10)}</span></span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-panel-2" title={`${x.t}: ${x.n}`}>
-                <div className="h-full rounded-full bg-primario" style={{ width: `${pct((x.n / max) * 100)}`, opacity: 1 - i * 0.22 }} />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <Embudo titulo="Embudo de conversión" pasos={pasos} />
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-texto-2">
           <span>Perdidas <b>{m.perdidas}</b></span>
           <span>No-show <b>{m.noShow}</b></span>

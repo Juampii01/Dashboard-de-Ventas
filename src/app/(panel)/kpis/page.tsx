@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { CalendarRange, Target } from "lucide-react";
 import { exigirPagina, soloLoSuyo } from "@/lib/permisos";
-import { cargarBase } from "@/lib/metricas";
+import { cargarBase, enRango } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
-import { dinero, rangoDe, hoyEnZona, sumarDias, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
-import { Cabecera, Contenido, Seccion, Avatar, Vacio } from "@/components/ui";
+import { dinero, pct, rangoDe, hoyEnZona, sumarDias, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
+import { Cabecera, Contenido, Seccion, Vacio } from "@/components/ui";
 import { Filtros } from "@/components/filtros";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
 import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamiento } from "./objetivos-cliente";
 import { Biblioteca } from "./biblioteca";
+import { Embudo } from "@/components/embudo";
+import { TarjetasKpis, type PersonaKpi } from "@/components/tarjetas-kpis";
+import { TarjetaObjetivos } from "@/components/tarjeta-objetivos";
 import { esJefe } from "@/lib/auth";
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
@@ -57,15 +60,100 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
     const todos = calcularKpis(base, rango, proyecto.zona_horaria);
     const kpis = propio ? { ...todos, callers: todos.callers.filter((c) => c.perfil.id === perfil.id), closers: todos.closers.filter((c) => c.perfil.id === perfil.id) } : todos;
+    // Fase 5: tarjetas por persona y embudo del equipo
+    const n = (x: number) => x.toLocaleString("es-ES");
+    const tarjetasCallers: PersonaKpi[] = kpis.callers.map((c) => ({
+      id: c.perfil.id,
+      nombre: c.perfil.nombre,
+      rol: "Caller",
+      grandes: [
+        { t: "Llamadas", v: n(c.llamadas) },
+        { t: "Contactados", v: n(c.contactados) },
+        { t: "Agendados", v: n(c.agendados) },
+        { t: "Cerrados", v: n(c.cerrados) },
+      ],
+      tasas: [
+        { t: "Agendan / contactados", v: pct(c.agendaSobreContactado), tasa: c.agendaSobreContactado },
+        { t: "Asistencia", v: pct(c.asistencia), tasa: c.asistencia },
+        { t: "Cierre / agendados", v: pct(c.cierreSobreAgendado), tasa: c.cierreSobreAgendado },
+      ],
+      detalle: [
+        { t: "Llamadas", v: n(c.llamadas) },
+        { t: "Contactados", v: n(c.contactados) },
+        { t: "Contestan", v: n(c.contestan) },
+        { t: "Agendados", v: n(c.agendados) },
+        { t: "% agendan / contactados", v: pct(c.agendaSobreContactado) },
+        { t: "% agendan / contestan", v: pct(c.agendaSobreContesta) },
+        { t: "Cerrados", v: n(c.cerrados) },
+        { t: "% cierre / contactados", v: pct(c.cierreSobreContactado) },
+        { t: "% cierre / agendados", v: pct(c.cierreSobreAgendado) },
+        { t: "% asistencia", v: pct(c.asistencia) },
+        { t: "% cierre / asistencia", v: pct(c.cierreSobreAsistencia) },
+        { t: "Low ticket", v: c.lowTicketVentas ? `${c.lowTicketVentas} · ${$(c.lowTicketFacturacion)}` : "—" },
+      ],
+    }));
+    const tarjetasClosers: PersonaKpi[] = kpis.closers.map((c) => ({
+      id: c.perfil.id,
+      nombre: c.perfil.nombre,
+      rol: "Closer",
+      grandes: [
+        { t: "Citas", v: n(c.citas) },
+        { t: "Asistidas", v: n(c.asistidas) },
+        { t: "Cerradas", v: n(c.cerradas) },
+        { t: "Facturación", v: $(c.facturacion) },
+      ],
+      tasas: [
+        { t: "Cierre / agenda", v: pct(c.cierreSobreAgenda), tasa: c.cierreSobreAgenda },
+        { t: "Cierre / asistencia", v: pct(c.cierreSobreAsistencia), tasa: c.cierreSobreAsistencia },
+        { t: "Cobrado", v: pct(c.pctCobrado), tasa: c.pctCobrado },
+      ],
+      detalle: [
+        { t: "Citas", v: n(c.citas) },
+        { t: "Asistidas", v: n(c.asistidas) },
+        { t: "Cerradas", v: n(c.cerradas) },
+        { t: "% cierre / agenda", v: pct(c.cierreSobreAgenda) },
+        { t: "% cierre / asistencia", v: pct(c.cierreSobreAsistencia) },
+        { t: "Facturación", v: $(c.facturacion) },
+        { t: "% facturación del total", v: pct(c.parteFacturacion) },
+        { t: "Cash", v: $(c.cash) },
+        { t: "% cash del total", v: pct(c.parteCash) },
+        { t: "% cobrado", v: pct(c.pctCobrado) },
+      ],
+    }));
+    const leadsPeriodo = base.leads.filter((l) => enRango(l.creado_en, rango)).length;
     return (
       <>
         <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · ${rango.etiqueta}`} />
         <Contenido>
           {!propio && pestanas}
           <Filtros />
-          <Seccion titulo="Por persona">
-            <TablasKpis kpis={kpis} dinero={$} sinTotales={propio} />
+          {!propio && (
+            <Seccion titulo="Embudo del equipo">
+              <Embudo
+                titulo="Embudo del equipo"
+                pasos={[
+                  { t: "Leads", n: leadsPeriodo, d: "Leads que entraron en el periodo" },
+                  { t: "Contactados", n: kpis.totalCallers.contactados, d: "Personas a las que un caller llamó o escribió en el periodo" },
+                  { t: "Agendados", n: kpis.totalCallers.agendados, d: "Personas con una cita agendada por un caller en el periodo" },
+                  { t: "Asistieron", n: kpis.totalClosers.asistidas, d: "Citas del periodo a las que vino el lead" },
+                  { t: "Cerrados", n: kpis.totalClosers.cerradas, d: "Citas del periodo cerradas con venta" },
+                ]}
+              />
+              <p className="mt-2 text-xs text-texto-3">Cada paso cuenta lo que pasó en el periodo: no es la misma tanda de personas de arriba abajo.</p>
+            </Seccion>
+          )}
+          <Seccion titulo="Callers">
+            <TarjetasKpis personas={tarjetasCallers} vacio={propio ? "Aquí solo ves lo tuyo." : "No hay callers en este proyecto."} conFicha={jefe && !propio} />
           </Seccion>
+          <Seccion titulo="Closers">
+            <TarjetasKpis personas={tarjetasClosers} vacio={propio ? "Aquí solo ves lo tuyo." : "No hay closers en este proyecto."} conFicha={jefe && !propio} />
+          </Seccion>
+          <details className="tarjeta p-4">
+            <summary className="cursor-pointer text-sm font-medium text-texto-2">Ver como tabla (con los totales)</summary>
+            <div className="mt-4">
+              <TablasKpis kpis={kpis} dinero={$} sinTotales={propio} />
+            </div>
+          </details>
           <Seccion titulo="¿Cómo se calcula cada número?">
             <ExplicacionKpis />
           </Seccion>
@@ -116,18 +204,27 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           {personas.length === 0 ? (
             <Vacio icono={Target} texto="No hay callers, closers ni directores en este proyecto." />
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {[...personas]
                 .sort((a, b) => ORDEN_ROL[a.rol] - ORDEN_ROL[b.rol] || a.nombre.localeCompare(b.nombre))
-                .map((p) => (
-                  <div key={p.id}>
-                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                      <Avatar nombre={p.nombre} tamano="h-7 w-7 text-[10px]" /> {p.nombre}
-                      <span className="font-normal text-texto-3">· {ETIQUETA_ROL[p.rol]}{p.rol === "director" ? " (equipo entero)" : ""}</span>
-                    </div>
-                    <BarrasObjetivos avances={avances.get(p.id) ?? []} dinero={$} vacio="Sin objetivos ahora." />
-                  </div>
-                ))}
+                .map((p) => {
+                  const suyos = avances.get(p.id) ?? [];
+                  const medio = suyos.length ? suyos.reduce((s, a) => s + Math.min(100, a.pct), 0) / suyos.length : null;
+                  return (
+                    <TarjetaObjetivos
+                      key={p.id}
+                      id={p.id}
+                      nombre={p.nombre}
+                      rol={`${ETIQUETA_ROL[p.rol]}${p.rol === "director" ? " (equipo entero)" : ""}`}
+                      medio={medio}
+                      cumplidos={suyos.filter((a) => a.hecho >= a.meta).length}
+                      total={suyos.length}
+                      conFicha
+                    >
+                      <BarrasObjetivos avances={suyos} dinero={$} vacio="Sin objetivos ahora." />
+                    </TarjetaObjetivos>
+                  );
+                })}
             </div>
           )}
         </Seccion>
