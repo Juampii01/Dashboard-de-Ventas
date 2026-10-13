@@ -31,7 +31,7 @@ export type TarjetaCitaC = {
   nombre: string;
   telefono: string | null;
   fechaTxt: string;
-  quien: string; // «Agendó X» o el origen en GHL («GHL · Agendas YT · Closers»)
+  quien: string; // «Agendó X» o «Calendario GHL»
   nota: string | null;
   closer: string | null;
   pasada: boolean;
