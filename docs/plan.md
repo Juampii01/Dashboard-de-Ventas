@@ -87,9 +87,12 @@
 - [x] **Onboarding de closers**: cada cliente con anillo de % y una línea de pasos (círculo = pulsar para marcar; ✓ verde con la fecha); el CEO y los directores renombran, quitan y añaden puntos ahí mismo. **Sin probar con datos**: todavía no hay clientes.
 - **Hecha cuando:** te enseño cada pantalla y das el visto bueno.
 
-**Fase 6 · Guion de llamadas** (Cristian pide los guiones de caller y de closer al equipo)
-- [ ] Sección de llamadas con el guion por pasos, checklist, pistas, objeciones con respuesta y botones de resultado; editable por director y CEO, que pueden revisar lo que marcó cada uno.
-- **Hecha cuando:** los dos guiones están cargados y un caller y un closer de prueba hacen una llamada siguiendo el guion.
+**Fase 6 · Guion de llamadas** (hecha por mi parte el 13 oct, `65d51f9`; faltan los guiones reales y la migración)
+- [x] **«Llamar» ya no abre ninguna app** (antes era `tel:`; supuesto mío: abre el guion dentro de la app). Sale una ventana con el teléfono y «Copiar número», los pasos (qué decir con `{nombre}` y `{tu nombre}` rellenados, checklist y pistas), las objeciones con buscador y, al final, los botones de resultado de siempre (No contesta, Llamar luego, Link enviado o Agendar, No interesa y, salvo al caller, Venta). Al elegir el resultado se guarda lo marcado. Probado en pantalla en la ficha de Eduardo (cerrado sin elegir resultado).
+- [x] **El caller ya no registra ventas** (servidor, ficha y CRM).
+- [x] **Página «Guiones»** (menú «Día a día», CEO y directores): editar el guion del caller y el del closer (pasos, qué decir, checklist, pistas, objeciones; subir, bajar, quitar; «Volver al de ejemplo») y **«Lo que marcó cada uno»** (cuándo, quién, lead, checklist hecho y resultado; filtro por persona). Hasta que guardéis el vuestro, sale el **guion de ejemplo** (`lib/guiones.ts`).
+- [ ] Migración `20261016110000_guiones.sql` (la lanza Cristian con `supabase db push`): sin ella no se guarda ni el guion editado ni lo marcado.
+- [ ] Cargar los guiones reales (los pide Cristian al equipo) y una llamada de prueba de un caller y un closer.
 
 **Fase 7 · Otros** (lo que ya estaba en el plan)
 - [ ] Comprobaciones de la nube (PDF, límite de login, consola), arreglos pequeños, ids de GHL de los callers y llamadas de GHL, claves de Fathom/Claude/Deepgram, avisos por WhatsApp, cerrar moviendo a «Cerrados», cambiar la zona horaria, pruebas con GHL real de lo simulado.
