@@ -16,6 +16,9 @@ import type { Guion } from "@/lib/guiones";
 
 type Persona = { id: string; nombre: string };
 
+// Cristian (13 oct): el botón «Llamar» (con el guion) queda para más adelante
+const LLAMAR_ACTIVO = false;
+
 // Ejecuta una acción del servidor: muestra «guardado» en un aviso flotante
 // y, si falla, el error en el aviso y también junto al botón.
 export function useAccion() {
@@ -89,8 +92,9 @@ export function AccionesLead({
   return (
     <div className="space-y-3">
       <div className={`grid gap-2 ${compacto ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
-        {/* Fase 6 (Cristian, 12 oct): «Llamar» no abre ninguna app: abre el guion de la llamada */}
-        {guion && (
+        {/* Fase 6: «Llamar» abría el guion de la llamada. Cristian (13 oct): se quita de Callers y del CRM, será una
+            función futura. Para volver a ponerlo, cambiar LLAMAR_ACTIVO a true. */}
+        {LLAMAR_ACTIVO && guion && (
           <button type="button" className="btn-primario justify-start" onClick={() => setModal("guion")}>
             <PhoneCall className="h-4 w-4" /> Llamar
           </button>
