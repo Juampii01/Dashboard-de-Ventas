@@ -8,6 +8,7 @@ import { OFERTAS, ETIQUETA_OFERTA, type Oferta } from "@/lib/oferta";
 import { OfertaChip } from "@/components/oferta-chip";
 import { RANGO } from "@/lib/biblioteca";
 import { RepartirLeads } from "@/components/repartir-leads";
+import { TelefonoCopiable } from "@/components/telefono-copiable";
 
 export type FilaTabla = {
   id: string;
@@ -128,7 +129,7 @@ export function TablaBiblioteca({ filas, callers }: { filas: FilaTabla[]; caller
               <tr key={f.id} tabIndex={0} className="cursor-pointer hover:bg-panel-2" onClick={(e) => !(e.target as HTMLElement).closest("a") && setFicha(f)} onKeyDown={(e) => e.key === "Enter" && setFicha(f)}>
                 <td><OfertaChip oferta={f.oferta} /></td>
                 <td className="whitespace-nowrap font-medium">{f.nombre || "—"}</td>
-                <td className="whitespace-nowrap">{f.telefono ? <a href={`tel:${f.telefono.replace(/[^\d+]/g, "")}`} className="text-primario hover:underline">{f.telefono}</a> : "—"}</td>
+                <td className="whitespace-nowrap">{f.telefono ? <TelefonoCopiable telefono={f.telefono} className="text-primario hover:underline" /> : "—"}</td>
                 <td className="whitespace-nowrap">{f.pais}</td>
                 <td>{f.email ? <a href={`mailto:${f.email}`} className="text-primario hover:underline">{f.email}</a> : "—"}</td>
                 <td className="whitespace-nowrap tabular-nums">{f.alta ? new Date(f.alta).toLocaleDateString("es-ES") : "—"}</td>

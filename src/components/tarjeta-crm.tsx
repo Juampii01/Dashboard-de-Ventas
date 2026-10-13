@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { DragEvent, ReactNode } from "react";
 import { Phone, Mail } from "lucide-react";
+import { TelefonoCopiable } from "@/components/telefono-copiable";
 
 // Tarjeta común del CRM (Fase 4, como GHL): la misma en los pipelines de origen, «Callers» y «Closers».
 // Arriba el nombre (abre la ficha) y la casilla para las acciones masivas; debajo teléfono y email; después las
@@ -64,7 +65,7 @@ export function TarjetaCrm({
       </div>
       {(telefono || email) && (
         <div className="space-y-0.5 text-xs text-texto-3">
-          {telefono && <a href={`tel:${telefono}`} draggable={false} className="flex items-center gap-1.5 hover:text-primario"><Phone className="h-3 w-3" />{telefono}</a>}
+          {telefono && <TelefonoCopiable telefono={telefono} className="flex items-center gap-1.5 hover:text-primario"><Phone className="h-3 w-3" />{telefono}</TelefonoCopiable>}
           {email && <div className="flex items-center gap-1.5 truncate"><Mail className="h-3 w-3" />{email}</div>}
         </div>
       )}
