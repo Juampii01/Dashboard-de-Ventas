@@ -52,9 +52,10 @@ export type ClaveCloser = ClavePrecall | SubPostcall;
 export const CLAVES_CLOSER: { v: ClaveCloser; t: string }[] = [...CLAVES_PRECALL, ...SUB_POSTCALL.map((s) => ({ v: s.v, t: s.t }))];
 export const esClavePrecall = (c: string | null | undefined): c is ClavePrecall => CLAVES_PRECALL.some((x) => x.v === c);
 
-// La columna que le toca a una cita por su estado y su fecha (null = no sale: cerrada, o no califica ya pasada)
+// La columna que le toca a una cita por su estado y su fecha (null = no sale: cerrada)
+// «No califica» se ve siempre en su columna, aunque la cita ya pasara (Cristian, 13 oct 2026: antes se escondía)
 export function claveNatural(c: CitaL, ahora: number): ClaveCloser | null {
-  if (esPrecall(c, ahora)) return c.estado as ClavePrecall;
+  if (c.estado === "no_califica" || esPrecall(c, ahora)) return c.estado as ClavePrecall;
   return SUB_POSTCALL.find((s) => !esColumnaVentas(s.v) && enPostcall(c, s.v, ahora))?.v ?? null;
 }
 

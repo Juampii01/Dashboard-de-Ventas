@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ClipboardCheck, MessageCircle } from "lucide-react";
 import { cambiarEstadoCita, reagendarCita } from "../acciones";
-import { AccionesCita } from "../acciones-cita";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
 import { moverCitaColumna } from "@/app/(panel)/crm/acciones";
 import { borrarVenta, cambiarFormaPago, registrarCobro } from "@/app/(panel)/ventas/acciones";
@@ -198,7 +196,7 @@ export function TableroClosers({
               <div className="flex max-h-[70vh] min-h-24 flex-col gap-2 overflow-y-auto p-2">
                 {total === 0 && <p className="py-6 text-center text-xs text-texto-3">Sin llamadas</p>}
                 {col.citas.map((c) => (
-                  <TarjetaCita key={c.id} c={c} origen={col.id} productos={productos} moneda={moneda} soloMirar={soloMirar} />
+                  <TarjetaCita key={c.id} c={c} origen={col.id} soloMirar={soloMirar} />
                 ))}
                 {col.ventas.map((v) => (
                   <TarjetaCrm
@@ -319,11 +317,8 @@ export function TableroClosers({
   );
 }
 
-const REGISTRABLES: EstadoCita[] = ["pendiente", "confirmacion_pendiente", "confirmada", "seguimiento"];
-
-function TarjetaCita({ c, origen, productos, moneda, soloMirar }: { c: TarjetaCitaC; origen: string; productos: Producto[]; moneda: string; soloMirar: boolean }) {
-  const [registrar, setRegistrar] = useState(false);
-  const tel = (c.telefono ?? "").replace(/\D/g, "");
+// Sin botones (Cristian, 13 oct 2026): la cita se mueve arrastrando; el clic abre el popup del lead
+function TarjetaCita({ c, origen, soloMirar }: { c: TarjetaCitaC; origen: string; soloMirar: boolean }) {
   return (
     <TarjetaCrm
       leadId={c.lead_id}
@@ -338,20 +333,7 @@ function TarjetaCita({ c, origen, productos, moneda, soloMirar }: { c: TarjetaCi
           <span className="chip bg-panel-2 text-texto-3">{c.quien}</span>
         </>
       }
-      pie={
-        <>
-          {c.nota && <div className="text-xs text-texto-2">📝 {c.nota}</div>}
-          {!soloMirar && (
-            <div className="flex flex-wrap gap-1.5">
-              {REGISTRABLES.includes(c.estado) && (
-                <button className="btn-secundario px-2 py-1 text-xs" onClick={() => setRegistrar((v) => !v)}><ClipboardCheck className="h-3.5 w-3.5" /> Registrar</button>
-              )}
-              {tel && <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" draggable={false} className="btn-secundario px-2 py-1 text-xs text-ok"><MessageCircle className="h-3.5 w-3.5" /> Chat</a>}
-            </div>
-          )}
-          {registrar && <div className="border-t border-borde pt-2"><AccionesCita cita={{ id: c.id, estado: c.estado, lead_id: c.lead_id }} pasada={c.pasada || esClavePrecall(c.natural)} productos={productos} moneda={moneda} /></div>}
-        </>
-      }
+      pie={c.nota ? <div className="text-xs text-texto-2">📝 {c.nota}</div> : undefined}
     />
   );
 }

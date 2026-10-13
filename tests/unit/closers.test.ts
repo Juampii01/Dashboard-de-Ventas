@@ -56,3 +56,16 @@ describe("partirCloser (Agendas)", () => {
     expect(post.map((e) => e.id)).toEqual(["pp", "res", "ns"]);
   });
 });
+
+describe("«No califica» se ve siempre (Cristian, 13 oct 2026)", () => {
+  const PASADA = "2026-10-09T16:30:00Z";
+  const etapas = [{ id: "nc", columna_cita: "no_califica" }];
+  it("una cita no califica ya pasada sigue en su columna (antes se escondía)", () => {
+    const c = { id: "c1", lead_id: "l1", fecha: PASADA, estado: "no_califica" };
+    expect(claveNatural(c, AHORA)).toBe("no_califica");
+    expect(repartirCloser(etapas, [c], [], AHORA, 0).porColumna.get("nc")!.citas).toHaveLength(1);
+  });
+  it("una cita cerrada sigue sin columna", () => {
+    expect(claveNatural({ id: "c2", lead_id: "l2", fecha: PASADA, estado: "cerrada" }, AHORA)).toBeNull();
+  });
+});
