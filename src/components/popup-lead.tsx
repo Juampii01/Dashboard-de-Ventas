@@ -33,7 +33,7 @@ export function PopupLead({ leadId, nombre, onCerrar }: { leadId: string; nombre
       ) : !datos ? (
         <p className="py-6 text-center text-sm text-texto-3">Cargando…</p>
       ) : (
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto text-sm">
+        <div className="max-h-[calc(100dvh-13rem)] space-y-4 overflow-y-auto overscroll-contain pr-1 text-sm">
           <Bloque titulo="Contacto">
             <Dato k="Teléfono">
               {datos.telefono ? (

@@ -11,23 +11,29 @@ import { FiltroUrl } from "@/components/barra-periodo";
 import { Refresco } from "@/components/refresco";
 import { TableroCrm, type LeadTarjeta } from "./tablero";
 import type { Etapa, Pipeline, Producto } from "@/lib/tipos";
+import { cronometro } from "@/lib/tiempos";
 
 // Un solo CRM para todos (Paso H7) con los pipelines del equipo (Paso 0, como GHL): los de origen (Webinar 1…),
 // «Callers» (los leads con caller, por el resultado de su llamada) y «Closers» (Pre-call y Post-call juntos).
 // Cada pipeline tiene sus permisos: Editar (también columnas), Ver (mueve sus tarjetas) o Sin acceso.
 // Director y CEO ven todo (con filtro por persona); el caller y el closer, «Mi CRM» con lo suyo.
 export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
+  const t = cronometro("crm");
   const { perfil, proyecto } = await exigirPagina("crm"); // H5
+  t.paso("sesion+permisos");
   const jefe = esJefe(perfil);
   const sp = await searchParams;
   const gente = await equipo(proyecto.id, !!perfil.es_prueba);
+  t.paso("equipo");
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
   // Los leads de una persona: los que tiene asignados como caller o como closer
   const deLaPersona = <Q extends { or: (f: string) => Q }>(q: Q) => (persona ? q.or(`caller_id.eq.${persona.id},closer_id.eq.${persona.id}`) : q);
 
   const { data: pipelinesData } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
   const todos = (pipelinesData ?? []) as Pipeline[];
+  t.paso("pipelines");
   const filas = await filasPermisoPipeline(todos.map((p) => p.id));
+  t.paso("permisos-pipeline");
   const niveles = Object.fromEntries(todos.map((p) => [p.id, calcularNivel(perfil, p, filas)]));
   const pipelines = todos.filter((p) => niveles[p.id] !== "sin_acceso");
   const pipeline = pipelines.find((p) => p.id === sp.pipeline) ?? pipelines[0] ?? null;
@@ -70,6 +76,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
       ? Promise.resolve({ data: [] as Producto[] })
       : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
   ]);
+  t.paso(`etapas+leads(${leadsCrudos.length})+conteos(${conteos.length})+productos`);
   const etapas = (etapasData.data ?? []) as Etapa[];
   // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro
   const extra = pipeline?.tipo === "normal" ? await tarjetasDelPipeline(pipeline.id) : [];
@@ -87,7 +94,9 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
       for (const l of (data ?? []) as (LeadTarjeta & { etapa_callers_id: string | null })[]) extraLeads.push({ ...l, etapa_id: columnaDe.get(l.id) ?? null, otroPipeline: true });
     }
   }
+  t.paso(`tarjetas-extra(${extraLeads.length})`);
   const extraPorPipeline = jefe && !persona ? await contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id)) : {};
+  t.paso("contar-tarjetas");
   // En «Callers» la columna de cada lead es la de su llamada
   const yaEstan = new Set(leadsCrudos.map((l) => l.id));
   const leads: LeadTarjeta[] = [...leadsCrudos, ...extraLeads.filter((l) => !yaEstan.has(l.id))].map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));
@@ -99,6 +108,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
     closers = columnasCloser(etapas, citas, ventas, { proyecto, jefe, nombrePersona });
   }
 
+  t.paso("closers");
   const nivel = pipeline ? niveles[pipeline.id] : "ver";
   const admin = puedeAdmin(perfil);
   const citasGhl = admin ? (await columnaCitasGhl(proyecto.id))?.id ?? null : null;
@@ -107,6 +117,8 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
   const { data: etapasDestino } = jefe && movibles.length
     ? await db().from("etapas").select("id, pipeline_id, nombre, estado_caller").in("pipeline_id", movibles.map((p) => p.id)).order("orden")
     : { data: [] };
+  t.paso("citasGhl+destinos");
+  t.fin();
   const destinos = movibles.map((p) => ({
     pipeline: p.nombre,
     etapas: (etapasDestino ?? []).filter((e) => e.pipeline_id === p.id && !e.estado_caller).map((e) => ({ id: e.id as string, nombre: e.nombre as string })),

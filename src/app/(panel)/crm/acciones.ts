@@ -13,6 +13,7 @@ import { guardarLeads, primeraEtapa } from "@/lib/leads";
 import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 import { moverTarjeta, tarjetaDe } from "@/lib/tarjetas";
+import { cronometro } from "@/lib/tiempos";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -281,7 +282,9 @@ export async function guardarPermisoPipeline(pipelineId: string, quien: { rol: s
 // ---------- Mover y asignar leads ----------
 export async function moverLead(leadId: string, etapaId: string) {
   return seguro(async () => {
+    const t = cronometro("moverLead");
     await exigirSeccion("crm"); // H5
+    t.paso("seccion");
     // Paso H7: cada uno mueve sus leads (el caller los suyos, el closer los suyos; los jefes, todos)
     const { perfil, proyecto } = await getSesion();
     const e = await etapaDelProyecto(etapaId, proyecto.id);
@@ -305,8 +308,12 @@ export async function moverLead(leadId: string, etapaId: string) {
     if ((callers ? lead.etapa_callers_id : lead.etapa_id) === etapaId) return;
     // Una columna unida a un estado solo se alcanza cambiando el estado (su botón o su ventana), para no desincronizar
     if (e.estado_caller && e.estado_caller !== lead.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón para mover el lead ahí.`);
+    t.paso("comprobaciones");
     await escribir(db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).eq("id", leadId), "leads");
+    t.paso("guardar");
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${e.nombre}»${callers ? " (Callers)" : ""}` });
+    t.paso("historial");
+    t.fin();
     refrescar();
   });
 }
