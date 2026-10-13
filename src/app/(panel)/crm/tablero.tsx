@@ -125,7 +125,6 @@ export function TableroCrm({
   const [pendiente, iniciar] = useTransition();
   const [vista, setVista] = useState<"tablero" | "lista">("tablero");
   const [q, setQ] = useState("");
-  const [soloSinCaller, setSoloSinCaller] = useState(false);
   const [moviendo, setMoviendo] = useState<Record<string, string>>({}); // optimista: leadId -> etapaId
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   // Velocidad (13 oct 2026): la pestaña pulsada se marca al momento y el tablero se atenúa hasta que llega el nuevo;
@@ -157,7 +156,6 @@ export function TableroCrm({
     const t = q.trim().toLowerCase();
     return leadsIniciales
       .map((l) => (moviendo[l.id] ? { ...l, etapa_id: moviendo[l.id] } : l))
-      .filter((l) => !soloSinCaller || !l.caller_id)
       .filter(
         (l) =>
           !t ||
@@ -165,7 +163,7 @@ export function TableroCrm({
           (l.email ?? "").includes(t) ||
           (l.telefono ?? "").replace(/\s/g, "").includes(t.replace(/\s/g, ""))
       );
-  }, [leadsIniciales, moviendo, q, soloSinCaller]);
+  }, [leadsIniciales, moviendo, q]);
 
   const toast = useToast();
   function ejecutar(fn: () => Promise<unknown>, mensaje?: string) {
@@ -330,10 +328,6 @@ export function TableroCrm({
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
-        {jefe && <label className="flex items-center gap-2 px-2 text-sm text-texto-2">
-          <input type="checkbox" className="interruptor" checked={soloSinCaller} onChange={(e) => setSoloSinCaller(e.target.checked)} />
-          Sin caller asignado
-        </label>}
         {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
           <button onClick={() => setVista("tablero")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${vista === "tablero" ? "bg-panel text-texto shadow-sm" : "text-texto-3"}`}>
             <LayoutGrid className="h-4 w-4" /> Tablero
@@ -347,7 +341,7 @@ export function TableroCrm({
             <button onClick={() => setModal("importar")} className="btn-secundario">
               <Upload className="h-4 w-4" /> Subir CSV
             </button>
-            <RepartirLeads callers={callers} fijo={{ pipelineId: pipeline?.id ?? null }} />
+            <RepartirLeads callers={callers} fijo={{ pipelineId: pipeline?.id ?? null }} etiqueta="" />
           </>
         )}
         {editar && pipeline && (

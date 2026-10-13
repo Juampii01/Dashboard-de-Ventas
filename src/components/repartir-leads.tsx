@@ -18,7 +18,7 @@ export function RepartirLeads({
   callers,
   fijo,
   ofertaInicial,
-  etiqueta = "Repartir leads",
+  etiqueta = "Repartir leads", // vacía = solo el icono (CRM, Cristian 13 oct)
 }: {
   callers: Persona[];
   fijo?: Partial<PeticionReparto>; // filtros que vienen de la pantalla (p. ej. pipeline del CRM, solo Biblioteca)
@@ -92,7 +92,9 @@ export function RepartirLeads({
   return (
     <>
       <button
-        className="btn-primario"
+        className={`btn-primario ${etiqueta ? "" : "px-2.5"}`}
+        title="Repartir leads"
+        aria-label="Repartir leads"
         onClick={() => {
           // Al abrir, el filtro de oferta que tenga la pantalla en ese momento (p. ej. el chip «VIP» de la Biblioteca)
           setOferta(ofertaInicial ?? "");
@@ -100,7 +102,8 @@ export function RepartirLeads({
           setAbierto(true);
         }}
       >
-        <Shuffle className="h-4 w-4" /> {etiqueta}
+        <Shuffle className="h-4 w-4" />
+        {etiqueta}
       </button>
       {abierto && (
         <Modal titulo="Repartir leads" onCerrar={() => setAbierto(false)} ancho="max-w-xl">
