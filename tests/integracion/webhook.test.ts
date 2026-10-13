@@ -73,8 +73,12 @@ describe("Webhook de GHL", () => {
     expect(data!.etapa_id).toBe(e.etapas.Cerrados);
     expect((await enviar({ tipo: "cambio_etapa", contact_id: `${e.pref}-wh1`, pipeline_stage: "No existe" })).status).toBe(422);
   });
-  it("tipo desconocido", async () => {
-    expect((await enviar({ tipo: "venta" })).status).toBe(422);
+  it("tipo desconocido: se registra como ignorado y responde 200 (GHL no lo reintenta)", async () => {
+    const r = await enviar({ tipo: "venta" });
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true, ignorado: true });
+    const { data } = await db.from("webhook_eventos").select("procesado, error").eq("proyecto_id", e.proyecto.id).eq("tipo", "venta").single();
+    expect(data).toMatchObject({ procesado: false, error: "Ignorado: el tipo «venta» no se procesa" });
   });
 });
 
@@ -170,5 +174,95 @@ describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
   it("las plantillas son JSON válido una vez rellenadas", async () => {
     const { PLANTILLAS_GHL } = await import("@/lib/plantillas-ghl");
     for (const p of PLANTILLAS_GHL) expect(() => JSON.parse(p.cuerpo), p.clave).not.toThrow();
+  });
+});
+
+// Auditoría del 13 oct 2026: GHL reintenta, así que cada evento tiene que poder llegar dos veces (o a la vez).
+describe("Auditoría 13 oct: reintentos, códigos y validación", () => {
+  const leadDe = async (c: string) => (await db.from("leads").select("id, estado_caller, etapa_id").eq("ghl_contact_id", c).single()).data!;
+  const citasDe = async (leadId: string) => (await db.from("citas").select("id, fecha").eq("lead_id", leadId)).data ?? [];
+  const actividadesDe = async (leadId: string, tipo: string) => (await db.from("actividades").select("id").eq("lead_id", leadId).eq("tipo", tipo)).data ?? [];
+
+  it("lead_nuevo repetido a la vez: un solo lead", async () => {
+    const c = `${e.pref}-dup-lead`;
+    const cuerpo = { tipo: "lead_nuevo", contact_id: c, email: `${c}@x.test`, first_name: "Dup" };
+    const rs = await Promise.all([enviar(cuerpo), enviar(cuerpo)]);
+    expect(rs.map((r) => r.status)).toEqual([200, 200]);
+    expect((await db.from("leads").select("id").eq("proyecto_id", e.proyecto.id).eq("email", `${c}@x.test`)).data).toHaveLength(1);
+  });
+
+  it("cita con appointmentId reenviada a la vez: una cita, los dos 200 y una sola actividad", async () => {
+    const c = `${e.pref}-dup-cita`;
+    const cuerpo = { tipo: "cita_agendada", contact_id: c, email: `${c}@x.test`, calendar: { startTime: "2026-12-10T15:00:00Z", appointmentId: `${c}-apt` } };
+    await enviar({ tipo: "lead_nuevo", contact_id: c, email: `${c}@x.test` }); // el lead ya existe, como en GHL
+    const rs = await Promise.all([enviar(cuerpo), enviar(cuerpo)]);
+    expect(rs.map((r) => r.status)).toEqual([200, 200]);
+    const lead = await leadDe(c);
+    expect(await citasDe(lead.id)).toHaveLength(1);
+    expect(await actividadesDe(lead.id, "cita")).toHaveLength(1);
+  });
+
+  it("cita sin appointmentId ni closer reenviada a la vez: una cita (índice citas_ghl_sin_id_unica)", async () => {
+    const c = `${e.pref}-dup-sinid`;
+    await enviar({ tipo: "lead_nuevo", contact_id: c, email: `${c}@x.test` });
+    const cuerpo = { tipo: "cita_agendada", contact_id: c, fecha: "2026-12-11T15:00:00Z" };
+    const rs = await Promise.all([enviar(cuerpo), enviar(cuerpo)]);
+    expect(rs.map((r) => r.status)).toEqual([200, 200]);
+    expect(await citasDe((await leadDe(c)).id)).toHaveLength(1);
+  });
+
+  it("un reintento tardío de la misma cita no deshace lo que marcó el equipo (p. ej. «vendido»)", async () => {
+    const c = `${e.pref}-tarde`;
+    const cuerpo = { tipo: "cita_agendada", contact_id: c, email: `${c}@x.test`, calendar: { startTime: "2026-12-12T15:00:00Z", appointmentId: `${c}-apt` } };
+    expect((await enviar(cuerpo)).status).toBe(200);
+    const lead = await leadDe(c);
+    await db.from("leads").update({ estado_caller: "vendido" }).eq("id", lead.id);
+    const r = await enviar(cuerpo);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true, duplicado: true });
+    expect((await leadDe(c)).estado_caller).toBe("vendido");
+    expect(await actividadesDe(lead.id, "cita")).toHaveLength(1);
+  });
+
+  it("la misma cita movida de hora en GHL: se actualiza la hora y queda una actividad nueva", async () => {
+    const c = `${e.pref}-mover`;
+    const base = { tipo: "cita_agendada", contact_id: c, email: `${c}@x.test` };
+    await enviar({ ...base, calendar: { startTime: "2026-12-13T15:00:00Z", appointmentId: `${c}-apt` } });
+    expect((await enviar({ ...base, calendar: { startTime: "2026-12-14T16:00:00Z", appointmentId: `${c}-apt` } })).status).toBe(200);
+    const lead = await leadDe(c);
+    const citas = await citasDe(lead.id);
+    expect(citas).toHaveLength(1);
+    expect(new Date(citas[0].fecha).toISOString()).toBe("2026-12-14T16:00:00.000Z");
+    expect(await actividadesDe(lead.id, "cita")).toHaveLength(2);
+  });
+
+  it("cambio_etapa repetido: no repite la actividad", async () => {
+    const c = `${e.pref}-etapa2`;
+    await enviar({ tipo: "lead_nuevo", contact_id: c, email: `${c}@x.test` });
+    for (let i = 0; i < 2; i++) expect((await enviar({ tipo: "cambio_etapa", contact_id: c, etapa: "Cerrados" })).status).toBe(200);
+    expect(await actividadesDe((await leadDe(c)).id, "cambio_etapa")).toHaveLength(1);
+  });
+
+  it("validación: cuerpo que no es un objeto → 400; lead sin forma de identificarlo → 422 y no escribe nada", async () => {
+    for (const cuerpo of ["null", "[]", '"hola"']) expect((await enviar(cuerpo)).status, cuerpo).toBe(400);
+    const antes = (await db.from("leads").select("id", { count: "exact", head: true }).eq("proyecto_id", e.proyecto.id)).count;
+    const r = await enviar({ tipo: "lead_nuevo", first_name: "SinDatos" });
+    expect(r.status).toBe(422);
+    expect((await db.from("leads").select("id", { count: "exact", head: true }).eq("proyecto_id", e.proyecto.id)).count).toBe(antes);
+  });
+
+  it("cita sin fecha: 422 y no crea el lead", async () => {
+    const c = `${e.pref}-sin-fecha`;
+    expect((await enviar({ tipo: "cita_agendada", contact_id: c, email: `${c}@x.test` })).status).toBe(422);
+    expect((await db.from("leads").select("id").eq("ghl_contact_id", c)).data).toHaveLength(0);
+  });
+
+  it("los intentos sin secreto no gastan el cupo del proyecto", async () => {
+    const { reiniciarLimites } = await import("@/lib/limite");
+    await reiniciarLimites();
+    for (let i = 0; i < 5; i++) expect((await enviar({ tipo: "lead_nuevo" }, "mala")).status).toBe(401);
+    const { count } = await db.from("limite_intentos").select("id", { count: "exact", head: true }).eq("clave", `webhook:${e.proyecto.id}`);
+    expect(count).toBe(0);
+    await reiniciarLimites();
   });
 });
