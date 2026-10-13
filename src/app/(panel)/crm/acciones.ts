@@ -234,6 +234,7 @@ export async function unirEstado(etapaId: string, estado: string | null) {
     const e = await etapaEditable(etapaId);
     const tipo = e.pipelines.tipo;
     // Fase 7: en un pipeline de origen, una columna se puede unir a «Vendido» (soltar ahí abre «Registrar venta»)
+    if (tipo === "normal" && estado !== null && estado !== "vendido") throw new ErrorUsuario("En un pipeline de origen, una columna solo se une a «Vendido»; las demás uniones, en «Callers» y «Closers».");
     const validos: string[] = tipo === "callers" ? ESTADOS : tipo === "normal" ? ["vendido"] : CLAVES_CLOSER.map((c) => c.v);
     if (estado !== null && !validos.includes(estado)) throw new ErrorUsuario("Estado no válido.");
     const campo = tipo === "callers" ? "estado_caller" : "columna_cita";
