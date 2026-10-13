@@ -28,6 +28,7 @@ export type Proyecto = {
   webhook_secreto: string;
   aviso_webhook_url: string | null;
   link_agenda?: string | null; // link del calendario de GHL que el caller manda al lead (11 oct)
+  link_reserva?: string | null; // Fase 7: link de Reserva, vale para cualquier programa
   etapa_citas_ghl?: string | null; // Fase 4: columna donde van los leads con cita de GHL (antes, «Orgánico → Agendados» por nombre)
   color: string;
 };
@@ -107,6 +108,7 @@ export type Producto = {
   precio: number | null;
   link_pago: string | null;
   link_dossier?: string | null; // 1.0 bloque 7: va encima del link de pago
+  links_pago?: unknown; // Fase 7: varios links de pago (lib/links-pago)
   vende_caller: boolean;
   cuenta_comision?: boolean; // 1.0 bloque 4: si no, no paga comisión ni suma para el tramo
   activo: boolean;

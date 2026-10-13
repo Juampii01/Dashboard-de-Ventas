@@ -6,6 +6,8 @@ import { recursosVisibles } from "@/lib/recursos";
 import { dinero, fecha } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio } from "@/components/ui";
 import { NuevoRecurso, BorrarRecurso, CopiarLink, LinkProducto, VerGuion } from "./cliente";
+import { LinksPago } from "@/components/links-pago";
+import { linksDe } from "@/lib/links-pago";
 import type { Producto, Recurso } from "@/lib/tipos";
 
 const ICONO = { pdf: FileText, enlace: Link2, guion: ScrollText, video: Video };
@@ -51,7 +53,7 @@ export default async function RecursosPage({ searchParams }: PageProps<"/recurso
                   </div>
                 </div>
                 <LinkProducto etiqueta="Dossier" url={p.link_dossier ?? null} productoId={p.id} campo="link_dossier" editor={editor} />
-                <LinkProducto etiqueta="Link de pago" url={p.link_pago} productoId={p.id} campo="link_pago" editor={editor} />
+                <LinksPago productoId={p.id} programa={p.nombre} links={linksDe(p)} reserva={proyecto.link_reserva ?? null} editor={editor} conReserva={p.modo_pago !== "mensual"} />
               </div>
             ))}
           </div>

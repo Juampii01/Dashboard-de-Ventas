@@ -10,6 +10,8 @@ import { coincide } from "@/lib/llamadas";
 import { Cabecera, Contenido, Insignia } from "@/components/ui";
 import { BuscadorUrl } from "@/app/(panel)/closer/llamadas/cliente";
 import { EditorPrograma, InterruptorActivo } from "./cliente";
+import { LinksPago } from "@/components/links-pago";
+import { linksDe } from "@/lib/links-pago";
 import type { Producto } from "@/lib/tipos";
 import { clientesSuyos } from "@/app/(panel)/clientes/cargar";
 
@@ -72,7 +74,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
           programas.length > 0 && (
             <div className="tarjeta -mx-0 overflow-x-auto">
               <table className="tabla">
-                <thead><tr><th>Programa</th><th>Categoría</th><th>Pago</th><th className="text-right">Precio</th><th className="text-right">{mirar ? "Tus clientes" : "Clientes"}</th><th>Activo</th><th></th></tr></thead>
+                <thead><tr><th>Programa</th><th>Categoría</th><th>Pago</th><th className="text-right">Precio</th><th className="text-right">{mirar ? "Tus clientes" : "Clientes"}</th><th>Activo</th><th>Links</th><th></th></tr></thead>
                 <tbody>
                   {programas.map((p) => (
                     <tr key={p.id}>
@@ -82,6 +84,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                       <td className="text-right tabular-nums">{p.precio !== null ? dinero(Number(p.precio), proyecto) : "Personalizado"}</td>
                       <td className="text-right tabular-nums">{clientes(p.id)}</td>
                       <td>{mirar ? (p.activo ? "Sí" : "No") : <InterruptorActivo id={p.id} activo={p.activo} />}</td>
+                      <td className="whitespace-nowrap"><LinksPago productoId={p.id} programa={p.nombre} links={linksDe(p)} reserva={proyecto.link_reserva ?? null} editor={jefe} conReserva={p.modo_pago !== "mensual"} boton="pequeno" /></td>
                       <td className="w-44">{!mirar && <EditorPrograma programa={p} moneda={proyecto.moneda} comisionesRol={eq.comisionesRol} editables={editables} />}</td>
                     </tr>
                   ))}
@@ -101,6 +104,7 @@ export default async function ProgramasPage({ searchParams }: PageProps<"/progra
                       {!mirar && <InterruptorActivo id={p.id} activo={p.activo} />}
                     </div>
                     <div className="text-4xl font-semibold tabular-nums">{p.precio !== null ? dinero(Number(p.precio), proyecto) : <span className="text-2xl text-texto-2">Precio personalizado</span>}</div>
+                    <LinksPago productoId={p.id} programa={p.nombre} links={linksDe(p)} reserva={proyecto.link_reserva ?? null} editor={jefe} conReserva={p.modo_pago !== "mensual"} />
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <Insignia>{pago(p)}</Insignia>
                       {p.backend_offer && <Insignia tono="morado">Back-end</Insignia>}

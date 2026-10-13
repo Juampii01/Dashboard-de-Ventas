@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { exigir, puedeRecursos } from "@/lib/auth";
 import { db, escribir } from "@/lib/datos";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
+import { esHttps, linksValidos } from "@/lib/links-pago";
 
 const TIPOS = ["pdf", "enlace", "guion", "video"] as const;
 const ROLES = ["todos", "caller", "closer"] as const;
@@ -96,5 +97,29 @@ export async function guardarLinkPago(productoId: string, url: string, campo: "l
     if (limpio && !(urlValida(limpio) && limpio.toLowerCase().startsWith("https://"))) throw new ErrorUsuario("Pon un enlace válido que empiece por https://");
     await escribir(db().from("productos").update({ [campo]: limpio || null }).eq("id", productoId).eq("proyecto_id", proyecto.id), "productos");
     revalidatePath("/recursos");
+  });
+}
+
+// Fase 7 (Cristian, 12 oct): varios links de pago por programa y el de Reserva aparte. Los cambia quien edita recursos.
+export async function guardarLinksPago(productoId: string, links: unknown) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeRecursos);
+    const lista = linksValidos(links);
+    const entraron = Array.isArray(links) ? links.filter((x) => x && typeof x === "object" && String((x as { url?: string }).url ?? "").trim()).length : 0;
+    if (entraron > lista.length) throw new ErrorUsuario("Algún link no es válido o está repetido: tienen que empezar por https://");
+    const { error } = await db().from("productos").update({ links_pago: lista }).eq("id", productoId).eq("proyecto_id", proyecto.id);
+    if (error) throw new ErrorUsuario(/links_pago/.test(error.message) ? "Falta aplicar la migración de la base (links de pago)." : error.message);
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function guardarLinkReserva(url: string) {
+  return seguro(async () => {
+    const { proyecto } = await exigir(puedeRecursos);
+    const limpio = url.trim();
+    if (limpio && !esHttps(limpio)) throw new ErrorUsuario("Pon un enlace válido que empiece por https://");
+    const { error } = await db().from("proyectos").update({ link_reserva: limpio || null }).eq("id", proyecto.id);
+    if (error) throw new ErrorUsuario(/link_reserva/.test(error.message) ? "Falta aplicar la migración de la base (links de pago)." : error.message);
+    revalidatePath("/", "layout");
   });
 }
