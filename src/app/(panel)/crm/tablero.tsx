@@ -130,6 +130,10 @@ export function TableroCrm({
   const [soloSinCaller, setSoloSinCaller] = useState(false);
   const [moviendo, setMoviendo] = useState<Record<string, string>>({}); // optimista: leadId -> etapaId
   const [arrastrando, setArrastrando] = useState<string | null>(null);
+  // Velocidad (13 oct 2026): la pestaña pulsada se marca al momento y el tablero se atenúa hasta que llega el nuevo;
+  // las pestañas se precargan al pasar el ratón (o tocarlas) por encima
+  const [yendo, setYendo] = useState<{ a: string; desde: string | undefined } | null>(null);
+  const [precargar, setPrecargar] = useState<Set<string>>(new Set());
   const [sobre, setSobre] = useState<string | null>(null);
   const [verMas, setVerMas] = useState<Record<string, number>>({});
   const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline" | "permisos">(null);
@@ -294,6 +298,9 @@ export function TableroCrm({
     </button>
   );
 
+  const cargandoPipeline = !!yendo && yendo.desde === pipeline?.id && yendo.a !== pipeline?.id;
+  const marcado = cargandoPipeline ? yendo!.a : pipeline?.id;
+  const quiereVer = (id: string) => setPrecargar((s) => (s.has(id) ? s : new Set(s).add(id)));
   return (
     <div className="space-y-4">
       {/* Pipelines */}
@@ -303,6 +310,11 @@ export function TableroCrm({
             <Link
               key={p.id}
               href={`/crm?pipeline=${p.id}`}
+              prefetch={precargar.has(p.id) ? true : false}
+              onMouseEnter={() => quiereVer(p.id)}
+              onFocus={() => quiereVer(p.id)}
+              onTouchStart={() => quiereVer(p.id)}
+              onClick={() => p.id !== pipeline?.id && setYendo({ a: p.id, desde: pipeline?.id })}
               draggable={admin}
               onDragStart={(ev) => ev.dataTransfer.setData(ARRASTRE_PIPELINE, p.id)}
               onDragOver={(ev) => {
@@ -327,11 +339,11 @@ export function TableroCrm({
               }}
               title={admin ? (p.id === pipeline?.id && editar ? "Arrastra para ordenar · doble clic para renombrar" : "Arrastra para ordenar") : undefined}
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
-                p.id === pipeline?.id ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2 hover:text-texto"
+                p.id === marcado ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2 hover:text-texto"
               } ${pipeSobre === p.id ? "ring-2 ring-primario" : ""}`}
             >
               {p.nombre}
-              <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${p.id === pipeline?.id ? "bg-white/20" : "bg-panel-2"}`}>{conteos[p.id] ?? 0}</span>
+              <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${p.id === marcado ? "bg-white/20" : "bg-panel-2"}`}>{conteos[p.id] ?? 0}</span>
             </Link>
           ))}
           {admin && (
@@ -428,6 +440,8 @@ export function TableroCrm({
         />
       )}
 
+      <div className={`relative transition-opacity ${cargandoPipeline ? "pointer-events-none opacity-40" : ""}`} aria-busy={cargandoPipeline}>
+      {cargandoPipeline && <div className="absolute left-1/2 top-10 z-10 -translate-x-1/2 rounded-full bg-panel px-4 py-1.5 text-sm text-texto-2 shadow-panel">Cargando…</div>}
       {!pipeline ? (
         <div className="tarjeta p-10 text-center text-sm text-texto-3">{admin ? "No hay pipelines. Crea el primero con «+ Pipeline»." : "Todavía no hay pipelines."}</div>
       ) : tipo === "closers" && tableroClosers ? (
@@ -544,6 +558,7 @@ export function TableroCrm({
           setSeleccion={setSeleccion}
         />
       )}
+      </div>
 
       {ventana && (
         <VentanaEstado
