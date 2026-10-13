@@ -5,6 +5,7 @@ import type { LeadEntrada } from "@/lib/csv";
 import { enHorario, horarioValido } from "@/lib/horarios";
 import { calcularOferta, normalizarRespuestas } from "@/lib/oferta";
 import { anadirTarjetas } from "@/lib/tarjetas";
+import { mismoNombre } from "@/lib/formato";
 
 // «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
 // se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
@@ -263,8 +264,10 @@ export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id
     const { data } = await db().from("etapas").select("id, pipeline_id").eq("id", proy.etapa_citas_ghl).maybeSingle();
     if (data) return data;
   }
-  const { data: pipe } = await db().from("pipelines").select("id, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal").ilike("nombre", "orgánico").maybeSingle();
-  const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => x.nombre.trim().toLowerCase() === "agendados");
+  // 13 oct: con los nombres de GHL es «0. Agendas orgánico → Agendan»; se siguen aceptando los de antes
+  const { data: pipes } = await db().from("pipelines").select("id, nombre, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal");
+  const pipe = (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas orgánico") || mismoNombre(p.nombre, "Orgánico"));
+  const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan") || mismoNombre(x.nombre, "Agendados"));
   return pipe && etapa ? { pipeline_id: pipe.id, id: etapa.id } : null;
 }
 

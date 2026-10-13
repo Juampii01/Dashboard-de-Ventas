@@ -16,7 +16,7 @@ export const PLANTILLAS_GHL = [
   "email": "{{contact.email}}",
   "phone": "{{contact.phone}}",
   "tags": "{{contact.tag}}",
-  "pipeline": "Biblioteca Recursos",
+  "pipeline": "1. Biblioteca Recursos",
   "customData": {
     "¿En qué situación estás hoy?": "ELIGE_EN_GHL: campo de esa pregunta",
     "¿Cuándo quieres empezar?": "ELIGE_EN_GHL: campo de esa pregunta"

@@ -278,7 +278,7 @@ export function TableroCrm({
         if (ok) ejecutar(() => exigirOk(borrarEtapa(e.id)));
       });
         }}
-        citasGhl={admin && deOrigen ? { marcada: citasGhl === e.id, alCambiar: (si) => ejecutar(() => exigirOk(marcarColumnaCitasGhl(si ? e.id : null)), si ? `Los leads con cita de GHL irán a «${e.nombre}»` : "Los leads con cita de GHL vuelven a ir a «Orgánico → Agendados» (si existe)") } : null}
+        citasGhl={admin && deOrigen ? { marcada: citasGhl === e.id, alCambiar: (si) => ejecutar(() => exigirOk(marcarColumnaCitasGhl(si ? e.id : null)), si ? `Los leads con cita de GHL irán a «${e.nombre}»` : "Los leads con cita de GHL vuelven a ir a «Agendas orgánico → Agendan» (si existe)") } : null}
         onUnir={(estado) => {
           const t = UNIONES[tipo].find((u) => u.v === estado)?.t;
           ejecutar(() => exigirOk(unirEstado(e.id, estado)), estado ? `«${e.nombre}» unida a «${t}»` : `«${e.nombre}» ya no está unida`);

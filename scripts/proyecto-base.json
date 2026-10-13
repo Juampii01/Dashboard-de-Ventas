@@ -6,7 +6,7 @@
     "zona_horaria": "America/New_York",
     "color": "#2f55d4"
   },
-  "_pipelines": "Paso 0 (10 oct 2026): los pipelines de origen como antes del H7 (los botones mueven por el nombre de la columna; en Orgánico la venta va a Low ticket / Grupal / VIP). «Callers» y «Closers» los crea la base sola al crear el proyecto.",
+  "_pipelines": "13 oct 2026 (Cristian): pipelines de origen iguales que GHL (nombres, orden y columnas); «Cerrados» se queda en todos (cerrar soltando). «Callers» y «Closers» los crea la base sola al crear el proyecto.",
   "colores": [
     "#64748b",
     "#2f55d4",
@@ -19,7 +19,20 @@
   ],
   "pipelines": [
     {
-      "nombre": "Webinar 1",
+      "nombre": "0. Agendas orgánico",
+      "columnas": [
+        "Form",
+        "Agendan",
+        "Confirman",
+        "No confirman",
+        "No show",
+        "Cerrados",
+        "No cualifican",
+        "Seguimiento"
+      ]
+    },
+    {
+      "nombre": "1. Biblioteca Recursos",
       "columnas": [
         "Nuevos",
         "Agendados",
@@ -29,36 +42,21 @@
       ]
     },
     {
-      "nombre": "Biblioteca Recursos",
+      "nombre": "2. Webinar 1",
       "columnas": [
-        "Nuevos",
-        "Agendados",
-        "En seguimiento",
-        "Cerrados",
-        "Descartados"
+        "Optin",
+        "Form completo",
+        "Nivel 1",
+        "Nivel 2",
+        "Nivel 3",
+        "Cerrados"
       ]
     },
     {
-      "nombre": "Orgánico",
+      "nombre": "3. DFY AI Services",
       "columnas": [
-        "Nuevos",
-        "Agendados",
-        "En seguimiento",
-        "Membresía",
-        "Grupal",
-        "VIP",
-        "Cerrados",
-        "Descartados"
-      ]
-    },
-    {
-      "nombre": "DFY AI Services",
-      "columnas": [
-        "Nuevos",
-        "Agendados",
-        "En seguimiento",
-        "Cerrados",
-        "Descartados"
+        "Agendado",
+        "Cerrados"
       ]
     }
   ],

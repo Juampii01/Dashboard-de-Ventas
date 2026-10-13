@@ -136,7 +136,7 @@ export async function agendarCita(leadId: string, closerId: string, fechaLocal: 
     await escribir(db().from("leads").update({ estado_caller: "agendado", closer_id: closerId, llamar_en: null, ...(n !== null ? { estrellas_caller: n } : {}) }).eq("id", leadId), "leads");
     const nombreCloser = (closer as unknown as { perfiles: { nombre: string } }).perfiles.nombre;
     await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cita", resultado: "agendada", nota: `Cita con ${nombreCloser}${n ? ` · ${n}★` : ""}${nota ? ` · ${nota}` : ""}` });
-    await moverAColumna(lead, "agendado", ["agendados", "agendado"]);
+    await moverAColumna(lead, "agendado", ["agendados", "agendado", "agendan"]); // «Agendan»: como GHL (13 oct)
     refrescar();
   });
 }

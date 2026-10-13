@@ -6,7 +6,7 @@ import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico,
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
-import { fechaDeGhl } from "@/lib/formato";
+import { fechaDeGhl, mismoNombre } from "@/lib/formato";
 
 // Recibe eventos de los workflows de GHL (acción «Webhook»).
 // Campo `tipo`: lead_nuevo | cita_agendada | cambio_etapa.
@@ -102,13 +102,10 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
 
   try {
     if (tipo === "lead_nuevo") {
-      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
+      const { data: pipes } = await db().from("pipelines").select("id, nombre").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden");
       const pipelineNombre = primero(body, ["pipeline", "customData.pipeline"]);
-      let pipelineId = pipe?.id ?? null;
-      if (pipelineNombre) {
-        const { data: p } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").ilike("nombre", pipelineNombre).maybeSingle();
-        if (p) pipelineId = p.id;
-      }
+      // Sin el número ni tildes: «Biblioteca Recursos» vale para «1. Biblioteca Recursos» (13 oct)
+      const pipelineId = (pipelineNombre ? pipes?.find((p) => mismoNombre(p.nombre, pipelineNombre)) : null)?.id ?? pipes?.[0]?.id ?? null;
       await guardarLeads(proyecto, [aLead(body)], { pipelineId, origen: "ghl", perfilId: null, repartir: true });
     } else if (tipo === "cita_agendada") {
       const lead = await buscarOCrearLead(proyecto, body, true);
@@ -148,9 +145,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       const etapaNombre = primero(body, ["etapa", "pipeline_stage", "pipleline_stage", "stage", "customData.etapa"]);
       const pipelineNombre = primero(body, ["pipeline_name", "pipeline", "customData.pipeline"]);
       if (!etapaNombre) throw new Error("No viene el nombre de la etapa");
-      let q = db().from("etapas").select("id, pipeline_id, pipelines!inner(proyecto_id, nombre, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal").ilike("nombre", etapaNombre);
-      if (pipelineNombre) q = q.ilike("pipelines.nombre", pipelineNombre);
-      const { data: etapa } = await q.limit(1).maybeSingle();
+      const { data: etapas } = await db().from("etapas").select("id, nombre, pipeline_id, pipelines!inner(proyecto_id, nombre, tipo)").eq("pipelines.proyecto_id", proyecto.id).eq("pipelines.tipo", "normal");
+      const etapa = (etapas ?? []).find((e) => {
+        const pipe = (Array.isArray(e.pipelines) ? e.pipelines[0] : e.pipelines) as { nombre: string } | null;
+        return mismoNombre(e.nombre, etapaNombre) && (!pipelineNombre || mismoNombre(pipe?.nombre, pipelineNombre));
+      });
       if (!etapa) throw new Error(`No existe la columna «${etapaNombre}» en la app`);
       await escribir(db().from("leads").update({ etapa_id: etapa.id, pipeline_id: etapa.pipeline_id }).eq("id", lead.id), "leads");
       await escribir(db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cambio_etapa", nota: `GHL: movido a «${etapaNombre}»` }), "actividades");

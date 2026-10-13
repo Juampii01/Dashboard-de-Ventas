@@ -18,6 +18,15 @@
 
 ## 2. Lo que falta (en este orden)
 
+**0 · Ahora, Claude: pipelines de la app iguales que GHL (Cristian, 13 oct)** · objetivo: mismo orden de pipelines, mismas columnas y misma cantidad de leads. Comparación del 13 oct (API de GHL): GHL «0. Agendas órganico» 27 (Form 10 · Agendan 14 · Confirman 0 · No confirman 2 · No show 0 · Cerrados 0 · No cualifican 1 · Seguimiento 0), «1. Biblioteca Recursos» 1.334 (Registrados), «2. Webinar 1» 109 (Optin 8 · Form completo 101 · Nivel 1-3), «3. DFY AI Services» 0 (Agendado); app: Biblioteca 1.343, Orgánico 17, Webinar 1 7, DFY 0.
+- [ ] Nombres y orden como GHL: «0. Agendas orgánico», «1. Biblioteca Recursos», «2. Webinar 1», «3. DFY AI Services»; «Callers» y «Closers» al final. La tilde de «órganico» se corrige en la app y en GHL.
+- [ ] Columnas como GHL en Orgánico, Webinar 1 y DFY; se quitan las que GHL no tiene **salvo «Cerrados»**, que se queda en todos (cerrar soltando). **Biblioteca: columnas sin tocar.**
+- [ ] Leads con cita de GHL → «Agendan» (antes «Orgánico → Agendados»).
+- [ ] Biblioteca: añadir los leads de GHL que faltan. Los 7 de Webinar 1 y los 17 de Orgánico, cada uno en su columna de GHL.
+- [ ] Revisar lo que dependía de los nombres (webhook por nombre de pipeline, plantillas, guía) y probarlo en la app.
+- **Estado (13 oct):** hecho el script `scripts/igualar-ghl.mjs` (simulado: 8 leads cambian de columna, 126 tarjetas 🔗 nuevas, 1.336 ya bien, 0 leads en las columnas que se quitan); **falta lanzarlo con `--confirmar`** (a Claude se lo bloquea el sistema de permisos: lo lanza Cristian). Código listo: el webhook acepta el nombre sin número ni tildes, agendar a mano mueve también a «Agendan», columna de citas por nombre nuevo o viejo, plantilla y guía al día, `proyecto-base.json` con la estructura de GHL (si no, `limpiar-pruebas` borraría las columnas nuevas). Tilde corregida en GHL («0. Agendas orgánico», comprobado por la API).
+- Tras lanzarlo quedarán distintos de GHL (pendiente de Cristian): Biblioteca con 24 leads de prueba/ejemplo que GHL no tiene (+3 llegados hoy) y Webinar 1 con 2 «Test».
+
 **A · Ahora, Cristian (para seguir)**
 - [ ] **Subir el CSV de GHL** (KPIs → Biblioteca → «Subir CSV de leads»): ¿ya no se queda en «Importando…»? (el arreglo de velocidad está puesto, sin probar con tu archivo de 1.282 filas). ¿Quedan al día los leads de la Biblioteca que entraron sin respuestas antes del arreglo?
 - [ ] **Subir el CSV de Webinar 1** (prueba de «varios pipelines»): sus leads que ya estaban en la Biblioteca tienen que salir también en Webinar 1 (con 🔗) sin salir de la Biblioteca, y el Funnel tiene que seguir contando personas (lo compruebo yo en la base).
@@ -36,6 +45,7 @@
 - [ ] Vigilar unos días cuántos leads de la Biblioteca llegan sin respuestas (si tardan más de 1 min en el cuestionario); si son muchos, subir el Wait a 3-5 min.
 
 **C · GHL, al final (juntos)**
+- [ ] **Justo después del bloque 0: que la app lea de GHL** (pipelines y columna de cada lead por la API; el permiso *View Opportunities* ya está puesto). Decidir antes: **¿quién manda si no coinciden?** (hoy «la app es el CRM»), cada cuánto se lee (Vercel Hobby: límite de tareas programadas sin comprobar) y qué workflows sobran (los de citas, quizá el de Biblioteca; Webinar, Orgánico y DFY ya no harían falta).
 - [ ] **Actividad de los leads en GHL** («No activities yet», atribución «CRM Workflows»): la landing no usa formularios de GHL (manda a su `/api/signup` y de ahí al «Inbound Webhook» del workflow viejo), así que GHL no ve ni la visita ni el formulario; por las fechas, seguramente nunca la tuvieron (sin confirmar). Opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo (salen como «ningún paso da este valor»).
 - [ ] Workflows de lead nuevo de **Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV).
 - [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL.
@@ -155,13 +165,14 @@
 ## 5. Cómo entrar y dónde está cada cosa
 
 - **La app publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app; tu acceso: `info@eternity.llc`, contraseña en `scripts/salida/usuarios-creados-2026-10-11-13-38.csv`, fila «Cris y José»).
-- **GHL:** subcuenta **Maestria** (Location ID `ZGWJLBH58RJtl2iGhykp`) · workflows en Automation → carpeta **«1. Dashboard ventas»** (0 Biblioteca, 1 Callers, 2 Closers, 3 Founders, 4 Descubrimiento) · Private Integration **«App Eternity (dashboard)»** · en la app: Administración → **Integraciones GHL** (token, ids de closers, «Últimos eventos») y → **Entradas** («GHL · Biblioteca»).
+- **GHL:** subcuenta **Maestria** (Location ID `ZGWJLBH58RJtl2iGhykp`) · workflows en Automation → carpeta **«1. Dashboard ventas»** (0 Biblioteca, 1 Callers, 2 Closers, 3 Founders, 4 Descubrimiento) · Private Integration **«App Eternity (dashboard)»** (permisos: calendario, contactos, mensajes y, desde el 13 oct, *View Opportunities* para comparar pipelines; mismo token) · en la app: Administración → **Integraciones GHL** (token, ids de closers, «Últimos eventos») y → **Entradas** («GHL · Biblioteca»).
 - **Paneles:** Vercel → proyecto `dashboard-de-ventas` (cuenta `cristianortizmaestria-9940`) · Supabase → proyecto «eternity» (organización «eternitydevzz's Org»; el otro proyecto, «creatuagencia-maestria», no es de esta app) · GitHub → `eternitydevzz/Dashboard-de-ventas`.
 - **Claves:** `scripts/salida/contraseñas.md` (contraseña de la base y `CLAVE_CIFRADO`) y `.env.produccion` (secret de Supabase, para los scripts). Ninguno se sube a GitHub.
 - **Perfiles de prueba en la nube:** closer-test@ y caller-test@eternity.llc (contraseñas en `scripts/salida/usuarios-creados-2026-10-11-13-46.csv`; no cuentan en cifras). Para probar en la nube sin avisar a nadie: añadirlos al proyecto «Test» y quitarlos al acabar.
 - **Para Claude con el navegador:** los clics «por referencia» a veces no llegan a la página (comprobado el 11 oct); pulsar por coordenadas. La app ya no usa ventanas del navegador (`confirm`), son propias (Fase 3). En GHL (12 oct) los clics normales a veces se quedan colgados: funciona pulsar con JavaScript sobre el elemento. GHL tarda 15-25 s en cargar y a veces devuelve 404 en la dirección aunque la página carga.
 - **Proyecto «Test» en la nube** (de Cristian): solo con el CEO; para probar en la nube sin avisar a los directores. Tiene 2 reportes de prueba de caller-test (se dejan: no cuentan en cifras).
 - **Tests:** en GitHub → Actions («Tests»), en cada push. En el Mac no hay base local (sin Docker): se prueba en la app publicada (proyecto «Test»).
+- **Para Claude, navegador (Cristian, 13 oct):** para GHL y la app publicada se usa **siempre Playwright con la extensión «Playwright Bridge»** (el Chrome de Cristian, con sus sesiones abiertas); no el navegador de la app de Claude (no tiene la sesión de GHL).
 - **Para Claude con Playwright:** si la pestaña está en segundo plano, a veces el primer clic no abre la ventana: repetirlo.
 - **Para programar:** toda ventana nueva va dentro de `<Portal>`.
 

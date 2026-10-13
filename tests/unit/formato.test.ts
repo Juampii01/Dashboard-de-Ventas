@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dinero, hoyEnZona, inicioDia, localAIso, porcentaje, proyectoParaMenu, rangoDe } from "@/lib/formato";
+import { dinero, hoyEnZona, inicioDia, localAIso, mismoNombre, porcentaje, proyectoParaMenu, rangoDe } from "@/lib/formato";
 
 const NY = "America/New_York";
 const MAD = "Europe/Madrid";
@@ -104,5 +104,17 @@ describe("Arreglo 28: fecha mal escrita", () => {
     const { ErrorUsuario, seguro } = await import("@/lib/resultado");
     expect(() => localAIso("mañana", "Europe/Madrid")).toThrow(ErrorUsuario);
     expect(await seguro(async () => localAIso("31/12/2026", "Europe/Madrid"))).toEqual({ error: "Fecha no válida." });
+  });
+});
+
+describe("mismoNombre (pipelines como en GHL)", () => {
+  it("vale sin el número, sin tildes y sin mayúsculas", () => {
+    expect(mismoNombre("1. Biblioteca Recursos", "Biblioteca Recursos")).toBe(true);
+    expect(mismoNombre("0. Agendas orgánico", "0. Agendas órganico")).toBe(true);
+    expect(mismoNombre("2. Webinar 1", "webinar 1")).toBe(true);
+  });
+  it("no confunde nombres distintos", () => {
+    expect(mismoNombre("2. Webinar 1", "Webinar 2")).toBe(false);
+    expect(mismoNombre("Nuevos", "")).toBe(false);
   });
 });

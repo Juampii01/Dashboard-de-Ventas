@@ -29,7 +29,7 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 
 | Workflow | Disparador | Acción | A dónde va |
 |---|---|---|---|
-| **0. AP - Biblioteca** | **Opportunity Created · In pipeline is «2. Biblioteca Recursos»** (la crea el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) → **Wait 1 min** (la landing manda primero los datos y después el cuestionario) | Webhook normal con las **6 preguntas en Custom data** (a la izquierda el texto de la pregunta; a la derecha su campo, p. ej. `{{contact.en_qu_situacin_ests_hoy}}`): el Webhook normal no manda los campos personalizados por su cuenta. Sin cabecera. Cambiado el 12 oct | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
+| **0. AP - Biblioteca** | **Opportunity Created · In pipeline is «1. Biblioteca Recursos»** (la crea el workflow de siempre, «AP - Biblioteca de recursos», que no se toca) → **Wait 1 min** (la landing manda primero los datos y después el cuestionario) | Webhook normal con las **6 preguntas en Custom data** (a la izquierda el texto de la pregunta; a la derecha su campo, p. ej. `{{contact.en_qu_situacin_ests_hoy}}`): el Webhook normal no manda los campos personalizados por su cuenta. Sin cabecera. Cambiado el 12 oct | La dirección de la **Entrada «GHL · Biblioteca»** (Administración → Entradas; pipeline Biblioteca Recursos). La dirección ya es secreta: va en la URL. |
 | **1. AP - Cita Callers** | Customer booked appointment · In calendar = «#2 Callers - Maestria» | Webhook normal «Cita (app)» | `/api/webhooks/ghl/<id de Maestria>` |
 | **2. AP - Cita Closers** | ídem · «#3 Closers - Maestria» | ídem (copia del 1) | ídem |
 | **3. AP - Cita Founders** | ídem · «#1 Maestria founders» (el de `codigomaestria.com/agenda`; arreglado el 12 oct: antes vigilaba el de abajo) | ídem (copia del 2) | ídem |
@@ -41,7 +41,7 @@ Todo lo que necesitas copiar está en la app: **Administración → Integracione
 
 **La hora de la cita (fallo arreglado el 11 oct, `f16b240`):** GHL manda `calendar.startTime` **sin zona** («2026-10-14T15:30:00», hora de `calendar.selectedTimezone`). La app la lee en esa zona (o en la del proyecto). El `fecha` de *Custom data* llega como texto («Wednesday, October 14, 2026 9:30 PM») y no se usa.
 
-**Lead con cita → «Orgánico → Agendados»** (decisión de Cristian, 12 oct; publicado en `2947412`): por el webhook o la sincronización, el lead pasa a esa columna; una cita cancelada no lo mueve. Si se renombra el pipeline «Orgánico» o la columna «Agendados», deja de mover.
+**Lead con cita → «0. Agendas orgánico → Agendan»** (antes «Orgánico → Agendados»: renombrados como GHL el 13 oct; decisión de Cristian, 12 oct; publicado en `2947412`): por el webhook o la sincronización, el lead pasa a esa columna; una cita cancelada no lo mueve. La columna va guardada (se elige en su «⋯»): renombrarla no rompe nada.
 
 **Link de agenda de los callers** (`codigomaestria.com/agenda`): lleva a «#1 Maestria founders» (Cristian, 12 oct). La agenda cuenta para quien marcó «Link enviado» (o el caller del lead), sea cual sea el calendario.
 
@@ -77,7 +77,7 @@ Por qué la clave va en la cabecera y no en la URL: la propia documentación de 
 
 - **Disparador:** «Form Submitted» del formulario de la opt-in (o «Contact Created»). ⚠ comprobar cuál usáis hoy.
 - **Raw Body:** el JSON «1 · Lead nuevo» de la app.
-- Cambia `"pipeline"` por el pipeline donde debe entrar (tiene que llamarse igual que en la app: `Webinar 1`, `Biblioteca Recursos`, `Orgánico` o `DFY AI Services`).
+- Cambia `"pipeline"` por el pipeline donde debe entrar (como en la app y en GHL: `0. Agendas orgánico`, `1. Biblioteca Recursos`, `2. Webinar 1` o `3. DFY AI Services`; vale también sin el número ni las tildes).
 - En `customData` pon **una línea por pregunta del formulario**: a la izquierda el texto de la pregunta (tal cual quieres verlo en la ficha) y a la derecha la variable de ese campo (icono de etiqueta → campo personalizado). Son las respuestas que verán callers y closers.
 - **Formulario de la biblioteca** (para que la pestaña KPIs → Biblioteca y la «Oferta» de cada lead salgan bien): usa **exactamente** estos 6 textos a la izquierda (la app también entiende «Situación», «Inversión»… y los campos `quiz_situacion`…, pero así es seguro):
   - `¿En qué situación estás hoy?`
@@ -106,7 +106,7 @@ La app es el CRM principal, así que **normalmente no hace falta**. Úsalo solo 
 
 - **Disparador:** «Pipeline Stage Changed». ⚠ comprobar.
 - **Raw Body:** el JSON «3 · Cambio de etapa».
-- `pipeline` y `etapa`: elige con el selector el nombre del pipeline y de la etapa. Tienen que llamarse **igual** que en la app; si no existe esa columna, el evento sale con error en «Últimos eventos» y no se mueve nada. Solo vale para los pipelines de origen (Webinar 1, Biblioteca…): «Callers» y «Closers» se mueven solos por el resultado de la llamada y el estado de la cita.
+- `pipeline` y `etapa`: elige con el selector el nombre del pipeline y de la etapa. Tienen que llamarse **igual** que en la app (sin contar el número de delante, las tildes ni las mayúsculas); si no existe esa columna, el evento sale con error en «Últimos eventos» y no se mueve nada. Solo vale para los pipelines de origen (Webinar 1, Biblioteca…): «Callers» y «Closers» se mueven solos por el resultado de la llamada y el estado de la cita.
 
 ### Probar cada workflow
 

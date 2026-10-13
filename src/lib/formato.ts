@@ -197,3 +197,10 @@ export function localAIso(local: string, zona: string) {
   t = comoUtc - offsetMin(zona, new Date(t)) * 60_000;
   return new Date(t).toISOString();
 }
+
+// 13 oct 2026: los pipelines se llaman como en GHL («1. Biblioteca Recursos»). Un nombre que llega de GHL vale
+// sin el número de delante, sin tildes y sin mayúsculas («Biblioteca Recursos», «Agendas órganico»…).
+export function mismoNombre(a: string | null | undefined, b: string | null | undefined) {
+  const n = (s: string | null | undefined) => (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/^\d+\.\s*/, "").trim().toLowerCase();
+  return n(a) === n(b);
+}
