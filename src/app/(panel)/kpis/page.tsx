@@ -5,9 +5,8 @@ import { cargarBase, enRango } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
-import { dinero, pct, rangoDe, hoyEnZona, sumarDias, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
+import { dinero, pct, hoyEnZona, sumarDias, ETIQUETA_ROL } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Vacio } from "@/components/ui";
-import { Filtros } from "@/components/filtros";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
 import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamiento } from "./objetivos-cliente";
@@ -16,6 +15,15 @@ import { Embudo } from "@/components/embudo";
 import { TarjetasKpis, type PersonaKpi } from "@/components/tarjetas-kpis";
 import { TarjetaObjetivos } from "@/components/tarjeta-objetivos";
 import { esJefe } from "@/lib/auth";
+import { FileDown } from "lucide-react";
+import { leerPeriodo, rangoNav } from "@/lib/periodos";
+import { cargarAgendas, closersVisibles } from "@/lib/agendas-datos";
+import { metricasAgendas } from "@/lib/metricas-agendas";
+import { panelObjetivos } from "@/lib/objetivos";
+import { PanelObjetivos } from "@/components/barras-objetivos";
+import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
+import { IndividualAgendas, ComparativaAgendas } from "@/components/metricas-agendas-vista";
+import { VistaAgendas } from "@/app/(panel)/closer/vista-agendas";
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
@@ -56,8 +64,11 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const base = await cargarBase(proyecto);
 
   if (vista === "personas") {
-    const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
-    const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
+    // 13 oct (Cristian): se fusiona Agendas → Métricas aquí: misma barra (Individual/Comparativa, closer, producto y
+    // periodo con flechas) y sus métricas de closers. El periodo de la barra vale para toda la página.
+    const per = leerPeriodo(sp);
+    const rango = rangoNav(per.periodo, per.n, proyecto.zona_horaria, per.desde, per.hasta);
+    const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : null);
     const todos = calcularKpis(base, rango, proyecto.zona_horaria);
     const kpis = propio ? { ...todos, callers: todos.callers.filter((c) => c.perfil.id === perfil.id), closers: todos.closers.filter((c) => c.perfil.id === perfil.id) } : todos;
     // Fase 5: tarjetas por persona y embudo del equipo
@@ -121,12 +132,64 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       ],
     }));
     const leadsPeriodo = base.leads.filter((l) => enRango(l.creado_en, rango)).length;
+
+    // Métricas de las agendas (las de Agendas → Métricas). Un caller ve solo las citas que agendó él; un closer, las suyas
+    const agendas = await cargarAgendas(proyecto, !!perfil.es_prueba);
+    const mirar = perfil.rol === "caller";
+    if (mirar) {
+      agendas.citas = agendas.citas.filter((c) => c.agendada_por === perfil.id);
+      const suyos = new Set(agendas.citas.map((c) => c.lead_id));
+      agendas.ventas = agendas.ventas.filter((v) => suyos.has(v.lead_id));
+      const ventas = new Set(agendas.ventas.map((v) => v.id));
+      agendas.pagos = agendas.pagos.filter((x) => ventas.has(x.venta_id));
+    }
+    const vis = closersVisibles(perfil, agendas.gente, str("closer"));
+    const filtrosAg = { productoId: str("producto"), evento: str("evento") };
+    const mAg = metricasAgendas(agendas, rango, { closerIds: vis.ids, ...filtrosAg });
+    const comparativaVisible = jefe && !propio;
+    const porCloser = comparativaVisible
+      ? vis.todos.map((c) => ({ c, m: metricasAgendas(agendas, rango, { closerIds: [c.id], ...filtrosAg }) })).filter(({ c, m }) => !("baja" in c && c.baja) || m.agendadas || m.cash)
+      : [];
+    const panel = jefe ? null : await panelObjetivos(proyecto, perfil); // cada uno ve sus objetivos (como en Agendas)
+    const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]);
+    const filtrosComunes = (
+      <>
+        <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={agendas.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
+        {agendas.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={agendas.eventos.map((e) => ({ v: e, t: e }))} />}
+        <div className="2xl:ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
+      </>
+    );
     return (
       <>
-        <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · ${rango.etiqueta}`} />
+        <Cabecera
+          titulo="KPIs"
+          subtitulo={`${proyecto.nombre} · ${rango.etiqueta}`}
+          acciones={
+            mirar ? undefined : (
+              <a href={`/closer/reporte?${qs}`} className="btn-secundario" title="Descarga un PDF con las métricas de los closers de este periodo">
+                <FileDown className="h-4 w-4" /> Generar reporte
+              </a>
+            )
+          }
+        />
         <Contenido>
           {!propio && pestanas}
-          <Filtros />
+          {panel && <PanelObjetivos panel={panel} dinero={$} celebrar={`${perfil.id}-${hoyEnZona(proyecto.zona_horaria)}`} />}
+          {comparativaVisible ? (
+            <VistaAgendas
+              inicial={str("modo") === "comparativa" ? "comparativa" : "individual"}
+              parametro="modo"
+              filtroIndividual={<FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
+              resto={filtrosComunes}
+              individual={<IndividualAgendas m={mAg} moneda={$} />}
+              comparativa={<ComparativaAgendas filas={porCloser} moneda={$} />}
+            />
+          ) : (
+            <>
+              <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">{filtrosComunes}</div>
+              <IndividualAgendas m={mAg} moneda={$} />
+            </>
+          )}
           {!propio && (
             <Seccion titulo="Embudo del equipo">
               <Embudo
@@ -156,6 +219,16 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           </details>
           <Seccion titulo="¿Cómo se calcula cada número?">
             <ExplicacionKpis />
+            {/* Las de las agendas de los closers (antes en Agendas → Métricas) */}
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-texto-2">
+              <li><b>Agendadas:</b> citas con fecha en el periodo (una cita reagendada no cuenta dos veces).</li>
+              <li><b>Asistencias:</b> citas cerradas, en seguimiento o perdidas (hubo llamada).</li>
+              <li><b>% cierre:</b> cerradas ÷ asistencias. <b>Call/close:</b> cerradas ÷ agendadas.</li>
+              <li><b>Facturación:</b> valor de las ventas de los closers con fecha en el periodo.</li>
+              <li><b>Cash collected:</b> lo cobrado al vender + las cuotas cobradas en el periodo − las devoluciones del periodo.</li>
+              <li><b>Calificados 4★+:</b> asistencias a las que el closer puso 4 o 5 estrellas.</li>
+              <li><b>Closer y Producto</b> filtran solo las métricas de las agendas; el periodo vale para toda la página.</li>
+            </ul>
           </Seccion>
         </Contenido>
       </>

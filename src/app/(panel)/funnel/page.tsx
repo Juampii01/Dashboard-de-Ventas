@@ -18,6 +18,11 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
   const sp = await searchParams;
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
   const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
+  // 13 oct: KPIs → «Por persona» usa la barra de periodo de Agendas (p = dia/semana/mes/anio/rango; «Todo» no existe allí → mes)
+  const enlaceKpis = `/kpis?${new URLSearchParams({
+    vista: "personas",
+    ...(typeof sp.desde === "string" && typeof sp.hasta === "string" ? { p: "rango", desde: sp.desde, hasta: sp.hasta } : { p: periodo === "hoy" ? "dia" : periodo === "semana" ? "semana" : "mes" }),
+  }).toString()}`;
 
   const base = await cargarBase(proyecto);
   const vendedor = base.gente.find((g) => g.id === sp.vendedor) ?? null;
@@ -49,7 +54,7 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
         <CuerpoFunnel m={m} dinero={$} />
 
 
-        <Seccion titulo="KPIs por persona" acciones={<Link href={`/kpis?${new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string" && ["periodo", "desde", "hasta"].includes(e[0]))).toString()}`} className="text-sm text-primario hover:underline">Ver KPIs →</Link>}>
+        <Seccion titulo="KPIs por persona" acciones={<Link href={enlaceKpis} className="text-sm text-primario hover:underline">Ver KPIs →</Link>}>
           <TablasKpis kpis={calcularKpis(base, rango, proyecto.zona_horaria)} dinero={$} />
         </Seccion>
 
