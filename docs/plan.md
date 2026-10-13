@@ -51,6 +51,7 @@
 - [ ] Revisar en Vercel → Settings → Git la conexión con GitHub (el 12 oct 3 commits no llegaron solos).
 
 **B · Claude, después de tus respuestas**
+- [ ] **«Llamadas de GHL» está OCULTO** (Cristian, 13 oct): no sale en el menú de nadie; se retoma más adelante. La página sigue en `/caller/grabadas` y el permiso «Llamadas grabadas» sigue en Administración. Para volver a enseñarlo: `LLAMADAS_GHL_VISIBLE = true` en `src/app/(panel)/layout.tsx`.
 - [ ] **Mejorar velocidad** (para otro momento, Cristian 13 oct): que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y las decisiones pendientes. Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
 - [ ] Zona horaria (según lo que contestes).
 - [ ] Coach IA en directo (según desde dónde se llame; necesita la clave de Deepgram).
