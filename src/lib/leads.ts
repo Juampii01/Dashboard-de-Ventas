@@ -6,6 +6,8 @@ import { enHorario, horarioValido } from "@/lib/horarios";
 import { calcularOferta, normalizarRespuestas } from "@/lib/oferta";
 import { anadirTarjetas } from "@/lib/tarjetas";
 import { mismoNombre } from "@/lib/formato";
+import { descifrar } from "@/lib/cifrado";
+import { pipelinesAgendanGhl } from "@/lib/ghl";
 
 // «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
 // se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
@@ -281,6 +283,24 @@ export async function columnaCitasGhl(proyectoId: string, pipelineNombre?: strin
 
 // Fase 4 (criterio de Claude, 12 oct): con varios pipelines, el lead no sale del suyo (p. ej. Biblioteca): gana su
 // tarjeta en esa columna. Si ese ya es su pipeline principal (o no tiene), se mueve como siempre.
+// La cita no dice su pipeline (sincronización, o workflow sin el campo): se pregunta a GHL en qué pipeline tiene el
+// contacto su oportunidad en «Agendan» y vale si ese pipeline existe en la app con su «Agendan». Nunca rompe la cita:
+// si GHL falla o no hay, `null` y va a la columna de siempre.
+export async function pipelineCitaGhl(proyecto: { id: string; ghl_token?: string | null; ghl_location_id?: string | null }, contactId: string | null | undefined, fetchImpl?: typeof fetch): Promise<string | null> {
+  if (!contactId || !proyecto.ghl_token || !proyecto.ghl_location_id) return null;
+  try {
+    const nombres = await pipelinesAgendanGhl({ token: descifrar(proyecto.ghl_token, "el token de GHL"), locationId: proyecto.ghl_location_id, contactId, fetchImpl });
+    for (const n of nombres) {
+      const c = await columnaCitasGhl(proyecto.id, n);
+      const { data } = c ? await db().from("pipelines").select("nombre").eq("id", c.pipeline_id).maybeSingle() : { data: null };
+      if (data && mismoNombre(data.nombre, n)) return n;
+    }
+  } catch (e) {
+    console.error("[citas] no se pudo leer el pipeline en GHL:", e instanceof Error ? e.message : e);
+  }
+  return null;
+}
+
 export async function moverAAgendadosOrganico(proyectoId: string, leadId: string, pipelineNombre?: string | null) {
   const destino = await columnaCitasGhl(proyectoId, pipelineNombre);
   if (!destino) return;

@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/datos";
 import { descifrar } from "@/lib/cifrado";
-import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave } from "@/lib/leads";
+import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, pipelineCitaGhl, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoDesdeGhl, eventosGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
 import type { Proyecto } from "@/lib/tipos";
 import { ABIERTAS } from "@/lib/llamadas";
@@ -34,6 +34,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
   const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
   // Fase 4: un lead que nace con su cita de GHL entra ya en la columna de citas (su pipeline principal)
   const destinoCitas = await columnaCitasGhl(proyecto.id);
+  const pipelinesCita = new Map<string, string | null>();
 
   for (const c of closers) {
     let eventos;
@@ -75,6 +76,11 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
         continue;
       }
 
+      // 13 oct: el pipeline de esta cita, el que tiene en GHL su oportunidad en «Agendan» (una vez por contacto)
+      if (abierta && ev.contactId && !pipelinesCita.has(ev.contactId)) pipelinesCita.set(ev.contactId, await pipelineCitaGhl(proyecto, ev.contactId, fetchImpl));
+      const pipelineCita = abierta && ev.contactId ? pipelinesCita.get(ev.contactId) ?? null : null;
+      const destinoCita = pipelineCita ? await columnaCitasGhl(proyecto.id, pipelineCita) : destinoCitas;
+
       // Buscar el lead: por el contacto de GHL; si no, con el email o el teléfono del contacto; si no, se crea
       let leadId: string | null = null;
       if (ev.contactId) {
@@ -97,7 +103,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
           await guardarLeads(
             proyecto,
             [{ ghl_contact_id: ev.contactId, nombre: ct?.firstName ?? nombreCompleto.split(/\s+/)[0] ?? "", apellido: ct?.lastName ?? nombreCompleto.split(/\s+/).slice(1).join(" "), email, telefono, etiquetas: [], respuestas: [], creado_en: null }],
-            { ...(abierta && destinoCitas ? { pipelineId: destinoCitas.pipeline_id, etapaId: destinoCitas.id } : { pipelineId: pipe?.id ?? null }), origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
+            { ...(abierta && destinoCita ? { pipelineId: destinoCita.pipeline_id, etapaId: destinoCita.id } : { pipelineId: pipe?.id ?? null }), origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
           );
           const { data } = await db().from("leads").select("id").eq("proyecto_id", proyecto.id).eq("ghl_contact_id", ev.contactId).maybeSingle();
           leadId = data?.id ?? null;
@@ -116,7 +122,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       await db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id);
       if (estado === "pendiente" || estado === "confirmada") {
         await db().from("leads").update({ estado_caller: "agendado", closer_id: c.perfil_id, llamar_en: null }).eq("id", leadId);
-        await moverAAgendadosOrganico(proyecto.id, leadId);
+        await moverAAgendadosOrganico(proyecto.id, leadId, pipelineCita);
       }
       await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: leadId, tipo: "cita", resultado: "agendada", nota: `Cita del calendario de GHL con ${c.perfiles.nombre}` });
       r.nuevas++;

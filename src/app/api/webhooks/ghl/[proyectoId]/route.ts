@@ -2,7 +2,7 @@ import { escribir } from "@/lib/datos";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave, type LeadEntrada } from "@/lib/leads";
+import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, pipelineCitaGhl, telefonoClave, type LeadEntrada } from "@/lib/leads";
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
@@ -109,7 +109,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       await guardarLeads(proyecto, [aLead(body)], { pipelineId, origen: "ghl", perfilId: null, repartir: true });
     } else if (tipo === "cita_agendada") {
       // 13 oct: el workflow de cada calendario dice su pipeline («0. Agendas YT», «0. Agendas IG»…)
-      const pipelineCita = primero(body, ["pipeline", "customData.pipeline"]) || null;
+      // Si el workflow no lo dice, se pregunta a GHL en qué pipeline está su oportunidad en «Agendan»
+      const pipelineCita = primero(body, ["pipeline", "customData.pipeline"]) || (await pipelineCitaGhl(proyecto, aLead(body).ghl_contact_id));
       const lead = await buscarOCrearLead(proyecto, body, true, pipelineCita);
       if (!lead) throw new Error("No se pudo identificar el lead");
       // 11 oct 2026: GHL manda calendar.startTime sin zona ("2026-10-14T15:30:00", hora de calendar.selectedTimezone).
