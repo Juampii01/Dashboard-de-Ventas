@@ -4,6 +4,7 @@ import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { exigir, esJefe, puedeAdmin, getSesion } from "@/lib/auth";
 import { CLAVES_CLOSER } from "@/lib/llamadas";
 import { exigirNivel } from "@/lib/pipelines";
@@ -283,36 +284,40 @@ export async function guardarPermisoPipeline(pipelineId: string, quien: { rol: s
 export async function moverLead(leadId: string, etapaId: string) {
   return seguro(async () => {
     const t = cronometro("moverLead");
-    await exigirSeccion("crm"); // H5
-    t.paso("seccion");
     // Paso H7: cada uno mueve sus leads (el caller los suyos, el closer los suyos; los jefes, todos)
-    const { perfil, proyecto } = await getSesion();
-    const e = await etapaDelProyecto(etapaId, proyecto.id);
+    const { perfil, proyecto } = await exigirSeccion("crm"); // H5
+    t.paso("seccion");
+    // Velocidad (13 oct 2026): las comprobaciones van a la vez y el historial se apunta después de contestar
+    const [e, { data: lead }] = await Promise.all([
+      etapaDelProyecto(etapaId, proyecto.id),
+      db().from("leads").select("id, pipeline_id, etapa_id, etapa_callers_id, estado_caller, caller_id, closer_id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle(),
+    ]);
     if (e.pipelines.tipo === "closers") throw new ErrorUsuario("En «Closers» se mueven citas, no leads.");
-    await exigirNivel(perfil, proyecto.id, e.pipeline_id, "ver"); // Paso 0
-    const { data: lead } = await db().from("leads").select("id, pipeline_id, etapa_id, etapa_callers_id, estado_caller, caller_id, closer_id").eq("id", leadId).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!lead) throw new ErrorUsuario("Lead no encontrado.");
     if (!esJefe(perfil) && lead.caller_id !== perfil.id && lead.closer_id !== perfil.id) throw new ErrorUsuario("Este lead no está asignado a ti.");
     const callers = e.pipelines.tipo === "callers";
+    const otroPipeline = !callers && !!lead.pipeline_id && lead.pipeline_id !== e.pipeline_id;
+    const [, tarjeta] = await Promise.all([
+      exigirNivel(perfil, proyecto.id, e.pipeline_id, "ver"), // Paso 0
+      otroPipeline ? tarjetaDe(leadId, e.pipeline_id) : Promise.resolve(null),
+    ]);
+    t.paso("comprobaciones");
+    const historial = (nota: string) => after(() => registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota }));
     // Fase 4: la tarjeta de este lead en un pipeline que no es el suyo principal
-    if (!callers && lead.pipeline_id && lead.pipeline_id !== e.pipeline_id) {
-      const t = await tarjetaDe(leadId, e.pipeline_id);
-      if (t) {
-        if (t.etapa_id === etapaId) return;
-        await moverTarjeta(leadId, e.pipeline_id, etapaId);
-        await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Su tarjeta de otro pipeline, movida a «${e.nombre}»` });
-        refrescar();
-        return;
-      }
+    if (tarjeta) {
+      if (tarjeta.etapa_id === etapaId) return;
+      await moverTarjeta(leadId, e.pipeline_id, etapaId);
+      historial(`Su tarjeta de otro pipeline, movida a «${e.nombre}»`);
+      t.fin();
+      refrescar();
+      return;
     }
     if ((callers ? lead.etapa_callers_id : lead.etapa_id) === etapaId) return;
     // Una columna unida a un estado solo se alcanza cambiando el estado (su botón o su ventana), para no desincronizar
     if (e.estado_caller && e.estado_caller !== lead.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón para mover el lead ahí.`);
-    t.paso("comprobaciones");
     await escribir(db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).eq("id", leadId), "leads");
     t.paso("guardar");
-    await registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota: `Movido a «${e.nombre}»${callers ? " (Callers)" : ""}` });
-    t.paso("historial");
+    historial(`Movido a «${e.nombre}»${callers ? " (Callers)" : ""}`);
     t.fin();
     refrescar();
   });
