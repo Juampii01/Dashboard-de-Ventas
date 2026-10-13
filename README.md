@@ -11,3 +11,4 @@ App web del equipo de ventas (Next.js + Supabase). Proyecto principal: Maestria.
 - **Cómo está montado GHL en Maestria:** [`docs/GUIA-GHL.md`](docs/GUIA-GHL.md), sección «Cómo está montado en Maestria».
 
 En local (⚠ desde el 12 oct no se usa Docker: los tests de integración irán en GitHub, ver `docs/plan.md`, Fase 7; esto queda como referencia): Docker Desktop abierto, Supabase local y `npm run dev` (puerto 3100 en esta máquina). Tests: `npm test`. Docker va apagado por defecto: se enciende para los tests de integración y se apaga después. Variables: copia `.env.example` como `.env.local`.
+
