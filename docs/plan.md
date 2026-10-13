@@ -29,10 +29,11 @@
 - [ ] **Pendiente de Cristian:** ¿borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan). ¿«No le interesa» del caller debe mover a «No cualifican»? (hoy no mueve en los pipelines de origen). Un lead que llegue por el webhook sin pipeline va ahora a «0. Agendas orgánico» (el primero).
 
 **0b · Ahora, Claude: CRM rápido (Cristian, 13 oct: «cambiar de pipeline va súper lento»)** · medido el 13 oct (registros de Vercel): abrir un pipeline 0,8–1,6 s (servidor 0,57–0,92 s en 9 pasos en fila); mover una card 0,52–0,55 s en el servidor + 0,6–0,9 s rehaciendo el CRM entero. Vercel (iad1) y Supabase (N. Virginia) en la misma zona: no es la distancia.
-- [ ] 1. Servidor del CRM: consultas a la vez (de 9 pasos a ~3) y menos datos por card (sin las respuestas enteras de 1.300 leads).
-- [ ] 2. Cambio de pipeline: la pestaña responde al momento (se marca y el tablero se atenúa mientras carga), se precarga al pasar el ratón por encima y lo visto hace poco sale al instante.
-- [ ] 3. Mover una card: comprobaciones a la vez, historial sin esperar y sin rehacer el CRM entero.
-- [ ] 4. Medir otra vez (mismas pruebas), enseñar el antes y el después y quitar la medición temporal (`src/lib/tiempos.ts`).
+- [x] 1. Servidor del CRM: consultas a la vez (de 9 pasos a ~3) y menos datos por card (sin las respuestas enteras de 1.300 leads).
+- [x] 2. Cambio de pipeline: la pestaña responde al momento (se marca y el tablero se atenúa mientras carga), se precarga al pasar el ratón por encima y lo visto hace poco sale al instante.
+- [x] 3. Mover una card: comprobaciones a la vez, historial sin esperar y sin rehacer el CRM entero.
+- [ ] 4. Medir otra vez en pantalla (con el Chrome de Cristian delante) y quitar la medición temporal (`src/lib/tiempos.ts`): pasa a «Mejorar velocidad» (bloque B).
+- **Hecho (13 oct, `8145977` … `f803237`, tests en verde):** servidor del CRM 0,57–0,92 s → 0,34–0,64 s. Cristian lo sigue sintiendo lento al navegar: el resto (medidas, investigación de cómo lo hacen los SaaS y propuesta A/B/C) está en `docs/Mejorar-velocidad.md`, para hacerlo en otro momento.
 - Pendiente de Cristian: el número de la pestaña «Closers» (14) cuenta solo citas abiertas y el tablero enseña 17; las vistas Lista/Día/Tabla de Agendas conservan sus botones.
 
 **A · Ahora, Cristian (para seguir)**
@@ -44,6 +45,7 @@
 - [ ] Revisar en Vercel → Settings → Git la conexión con GitHub (el 12 oct 3 commits no llegaron solos).
 
 **B · Claude, después de tus respuestas**
+- [ ] **Mejorar velocidad** (para otro momento, Cristian 13 oct): que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y las decisiones pendientes. Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
 - [ ] Zona horaria (según lo que contestes).
 - [ ] Coach IA en directo (según desde dónde se llame; necesita la clave de Deepgram).
 - [ ] Lo que salga de tu visto bueno y de las pruebas con CSV.
@@ -193,6 +195,7 @@
 | `app/docs/plan.md` | Este plan (solo lo que falta) · lo hecho hasta el 13 oct: `git show 607d901:docs/plan.md` |
 | `app/docs/plan-historial-10oct.md` · `plan-historial-11oct.md` | Copias históricas, con todo el detalle de lo hecho (no se tocan). Lo del 11-12 oct (Resend, GHL paso a paso): versión anterior del plan en git, `02aa87f` |
 | `app/docs/GUIA-PUBLICAR.md` · `GUIA-GHL.md` | Cómo publicar y cómo conectar GHL |
+| `app/docs/Mejorar-velocidad.md` | Velocidad de la app: medidas, investigación y propuesta (pendiente, 13 oct) |
 | `app/docs/Arreglar-dashboard.md` | La auditoría (36 puntos) |
 | `app/scripts/` | `preparar-proyecto`, `crear-usuarios`, `limpiar-pruebas`, `igualar-ghl` (simulan sin `--confirmar`) y `seed` (solo local). `igualar-ghl` lo lanza Cristian: `CLAVE_CIFRADO="$(grep 'CLAVE_CIFRADO' scripts/salida/contraseñas.md \| grep -oE '[A-Za-z0-9+/]{43}=' \| head -1)" node --env-file=.env.produccion scripts/igualar-ghl.mjs --confirmar` |
 | `app/scripts/salida/` | Fuera de GitHub: CSV del equipo y de los closers, los 4 de contraseñas, `contraseñas.md` y el CSV de la Biblioteca del 10 oct |
