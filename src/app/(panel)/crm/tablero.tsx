@@ -76,7 +76,8 @@ type Persona = { id: string; nombre: string };
 type FilaPermiso = { pipeline_id: string; rol: string | null; perfil_id: string | null; nivel: string };
 // Uniones de una columna según el pipeline (Paso 0): «Callers», estados del lead; «Closers», Pre-call y Post-call
 const UNIONES: Record<TipoPipeline, { v: string; t: string }[]> = {
-  normal: [],
+  // Fase 7: soltar en la columna unida a «Vendido» abre «Registrar venta» (si se cancela, la tarjeta vuelve)
+  normal: [{ v: "vendido", t: "Vendido: abre «Registrar venta»" }],
   callers: (Object.keys(ETIQUETA_ESTADO_CALLER) as EstadoCaller[]).map((k) => ({ v: k, t: ETIQUETA_ESTADO_CALLER[k] })),
   closers: CLAVES_CLOSER.map((c) => ({ v: c.v, t: c.t })),
 };
