@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { BarChart3, PhoneCall, ScanSearch } from "lucide-react";
 
+// Cristian (13 oct 2026): sin «Métricas»; Agendas abre en «Llamadas» (la página de métricas sigue oculta en /closer)
+export const METRICAS_VISIBLE = false;
+
 const PESTANAS = [
-  { href: "/closer", t: "Métricas", icono: BarChart3 },
+  ...(METRICAS_VISIBLE ? [{ href: "/closer", t: "Métricas", icono: BarChart3 } as const] : []),
   { href: "/closer/llamadas", t: "Llamadas", icono: PhoneCall },
   { href: "/closer/analisis", t: "Análisis", icono: ScanSearch },
-] as const;
+];
 
 // Métricas · Llamadas · Análisis (como la app que usa hoy el equipo)
 export function PestanasAgendas({ activa, mostrarAnalisis = true }: { activa: "/closer" | "/closer/llamadas" | "/closer/analisis"; mostrarAnalisis?: boolean }) {

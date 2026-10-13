@@ -11,11 +11,13 @@ import { dinero, pct, hoyEnZona } from "@/lib/formato";
 import { Cabecera, Contenido, Kpi, Seccion, Anillo } from "@/components/ui";
 import { Embudo } from "@/components/embudo";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
-import { PestanasAgendas } from "./pestanas";
+import { redirect } from "next/navigation";
+import { METRICAS_VISIBLE, PestanasAgendas } from "./pestanas";
 import { VistaAgendas } from "./vista-agendas";
 
 export default async function AgendasMetricasPage({ searchParams }: PageProps<"/closer">) {
   const { perfil, proyecto } = await exigirPagina("agendas"); // H5
+  if (!METRICAS_VISIBLE) redirect("/closer/llamadas"); // Cristian (13 oct): Agendas sin «Métricas»
   const jefe = esJefe(perfil);
   // H5 (caso 1): un caller con «Agendas» ve solo las citas que agendó él (y las ventas de esos leads), solo mirar
   const mirar = perfil.rol === "caller";
