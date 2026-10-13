@@ -154,6 +154,19 @@ describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
     expect(lead).toEqual({ pipeline_id: org!.id, etapa_id: ets!.find((x) => x.nombre === "Agendados")!.id });
     await db.from("pipelines").delete().eq("id", org!.id);
   });
+  it("13 oct (Cristian): la cita va a «Agendan» del pipeline que dice su workflow («pipeline» en Custom Data); sin él, o si no existe, no va ahí", async () => {
+    const { data: yt } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre: "0. Agendas YT", orden: 9 }).select().single();
+    const { data: ets } = await db.from("etapas").insert(["Form", "Agendan"].map((n, i) => ({ pipeline_id: yt!.id, nombre: n, orden: i }))).select();
+    const agendan = ets!.find((x) => x.nombre === "Agendan")!.id;
+    const fila = async (c: string) => (await db.from("leads").select("pipeline_id, etapa_id").eq("ghl_contact_id", c).single()).data;
+    // Nombre sin número ni tildes ni mayúsculas: vale igual
+    expect((await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-yt1`, email: `${e.pref}-yt1@x.test`, fecha: "2026-12-05T15:00:00Z", customData: { pipeline: "agendas yt" } })).status).toBe(200);
+    expect(await fila(`${e.pref}-yt1`)).toEqual({ pipeline_id: yt!.id, etapa_id: agendan });
+    expect((await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-yt2`, email: `${e.pref}-yt2@x.test`, fecha: "2026-12-06T15:00:00Z", customData: { pipeline: "No existe" } })).status).toBe(200);
+    expect((await fila(`${e.pref}-yt2`))!.pipeline_id).not.toBe(yt!.id);
+    expect((await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-yt3`, email: `${e.pref}-yt3@x.test`, fecha: "2026-12-07T15:00:00Z" })).status).toBe(200);
+    expect((await fila(`${e.pref}-yt3`))!.pipeline_id).not.toBe(yt!.id);
+  });
   it("las plantillas son JSON válido una vez rellenadas", async () => {
     const { PLANTILLAS_GHL } = await import("@/lib/plantillas-ghl");
     for (const p of PLANTILLAS_GHL) expect(() => JSON.parse(p.cuerpo), p.clave).not.toThrow();

@@ -257,7 +257,15 @@ export async function guardarLeads(
 // Decisión de Cristian (12 oct 2026): todo lead con una cita que llega de GHL (webhook o sincronización) pasa al
 // pipeline «Orgánico», columna «Agendados». Fase 4: la columna se guarda en el proyecto (`etapa_citas_ghl`, se elige
 // en el «⋯» de la columna), así no depende del nombre. Sin ese dato (base aún sin la migración), se busca por nombre.
-export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id: string; id: string } | null> {
+// 13 oct (Cristian): cada workflow de cita de GHL dice a qué pipeline va («pipeline» en Custom Data: «0. Agendas YT»,
+// «0. Agendas IG»…); la cita va a su columna «Agendan». Sin ese dato, o si no existe, a la columna de siempre.
+export async function columnaCitasGhl(proyectoId: string, pipelineNombre?: string | null): Promise<{ pipeline_id: string; id: string } | null> {
+  if (pipelineNombre?.trim()) {
+    const { data: pipes } = await db().from("pipelines").select("id, nombre, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal");
+    const pipe = (pipes ?? []).find((p) => mismoNombre(p.nombre, pipelineNombre));
+    const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan"));
+    if (pipe && etapa) return { pipeline_id: pipe.id, id: etapa.id };
+  }
   const { data: proy } = await db().from("proyectos").select("*").eq("id", proyectoId).maybeSingle();
   // La elegida en el «⋯»; si no hay ninguna elegida (o la base no tiene el campo), «Orgánico → Agendados» por nombre
   if (proy?.etapa_citas_ghl) {
@@ -273,8 +281,8 @@ export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id
 
 // Fase 4 (criterio de Claude, 12 oct): con varios pipelines, el lead no sale del suyo (p. ej. Biblioteca): gana su
 // tarjeta en esa columna. Si ese ya es su pipeline principal (o no tiene), se mueve como siempre.
-export async function moverAAgendadosOrganico(proyectoId: string, leadId: string) {
-  const destino = await columnaCitasGhl(proyectoId);
+export async function moverAAgendadosOrganico(proyectoId: string, leadId: string, pipelineNombre?: string | null) {
+  const destino = await columnaCitasGhl(proyectoId, pipelineNombre);
   if (!destino) return;
   const { data: lead } = await db().from("leads").select("pipeline_id").eq("id", leadId).maybeSingle();
   if (!lead?.pipeline_id || lead.pipeline_id === destino.pipeline_id) {
