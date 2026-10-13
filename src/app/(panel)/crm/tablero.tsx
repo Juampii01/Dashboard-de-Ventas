@@ -133,7 +133,6 @@ export function TableroCrm({
   // Velocidad (13 oct 2026): la pestaña pulsada se marca al momento y el tablero se atenúa hasta que llega el nuevo;
   // las pestañas se precargan al pasar el ratón (o tocarlas) por encima
   const [yendo, setYendo] = useState<{ a: string; desde: string | undefined } | null>(null);
-  const [precargar, setPrecargar] = useState<Set<string>>(new Set());
   const [sobre, setSobre] = useState<string | null>(null);
   const [verMas, setVerMas] = useState<Record<string, number>>({});
   const [modal, setModal] = useState<null | "importar" | "lead" | "pipeline" | "permisos">(null);
@@ -300,7 +299,7 @@ export function TableroCrm({
 
   const cargandoPipeline = !!yendo && yendo.desde === pipeline?.id && yendo.a !== pipeline?.id;
   const marcado = cargandoPipeline ? yendo!.a : pipeline?.id;
-  const quiereVer = (id: string) => setPrecargar((s) => (s.has(id) ? s : new Set(s).add(id)));
+  const quiereVer = (id: string) => id !== pipeline?.id && router.prefetch(`/crm?pipeline=${id}`);
   return (
     <div className="space-y-4">
       {/* Pipelines */}
@@ -310,7 +309,7 @@ export function TableroCrm({
             <Link
               key={p.id}
               href={`/crm?pipeline=${p.id}`}
-              prefetch={precargar.has(p.id) ? true : false}
+              prefetch={false}
               onMouseEnter={() => quiereVer(p.id)}
               onFocus={() => quiereVer(p.id)}
               onTouchStart={() => quiereVer(p.id)}
