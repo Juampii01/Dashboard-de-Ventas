@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cargarGuion, rolDelGuion } from "@/lib/guiones-datos";
 import { Phone, CalendarCheck, MessageCircle, ShoppingCart, PhoneOff, Users, Inbox, Trophy } from "lucide-react";
 import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
@@ -23,6 +24,7 @@ const PESTANAS = [
 
 export default async function CallerPage({ searchParams }: PageProps<"/caller">) {
   const { perfil, proyecto } = await exigirPagina("cola"); // H5
+  const { guion } = await cargarGuion(proyecto.id, rolDelGuion(perfil.rol)); // Fase 6
   const jefe = esJefe(perfil);
   // H5: a un closer con «Mis leads», sus leads como closer (lo suyo), en forma de cola
   const comoCloser = perfil.rol === "closer";
@@ -166,6 +168,9 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                     rol={perfil.rol}
                     linkAgenda={proyecto.link_agenda}
                     moneda={proyecto.moneda}
+                    guion={guion}
+                    nombreLead={`${seleccionado.nombre} ${seleccionado.apellido}`.trim()}
+                    miNombre={perfil.nombre}
                   />
                 </div>
               </Seccion>

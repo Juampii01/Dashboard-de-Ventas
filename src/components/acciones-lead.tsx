@@ -11,6 +11,8 @@ import { exigirOk } from "@/lib/resultado-cliente";
 import type { Producto } from "@/lib/tipos";
 import { CamposCita } from "@/components/campos-cita";
 import { Desplegable, Pastillas } from "@/components/eleccion";
+import { GuionLlamada, type ResultadoGuion } from "@/components/guion-llamada";
+import type { Guion } from "@/lib/guiones";
 
 type Persona = { id: string; nombre: string };
 
@@ -58,6 +60,9 @@ export function AccionesLead({
   linkAgenda,
   moneda,
   compacto = false,
+  guion,
+  nombreLead = "",
+  miNombre = "",
 }: {
   leadId: string;
   telefono: string | null;
@@ -70,21 +75,25 @@ export function AccionesLead({
   linkAgenda?: string | null; // link del calendario de GHL del proyecto (4.4, 11 oct)
   moneda: string;
   compacto?: boolean;
+  guion?: Guion; // Fase 6: «Llamar» abre el guion (sin él, no hay botón «Llamar»)
+  nombreLead?: string;
+  miNombre?: string;
 }) {
   const { pendiente, error, ok, ejecutar } = useAccion();
-  const [modal, setModal] = useState<null | "luego" | "agendar" | "link" | "venta" | "nota" | "no_interesa">(null);
+  const [modal, setModal] = useState<null | "guion" | "luego" | "agendar" | "link" | "venta" | "nota" | "no_interesa">(null);
   const [nota, setNota] = useState("");
   const telLimpio = (telefono ?? "").replace(/[^\d]/g, "");
-  const productosVisibles = rol === "caller" ? productos.filter((p) => p.vende_caller) : productos;
+  const productosVisibles = rol === "caller" ? [] : productos; // el caller no registra ventas (Cristian, 12 oct)
 
   const boton = "btn-secundario justify-start";
   return (
     <div className="space-y-3">
       <div className={`grid gap-2 ${compacto ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
-        {telefono && (
-          <a href={`tel:${telefono}`} className="btn-primario justify-start">
+        {/* Fase 6 (Cristian, 12 oct): «Llamar» no abre ninguna app: abre el guion de la llamada */}
+        {guion && (
+          <button type="button" className="btn-primario justify-start" onClick={() => setModal("guion")}>
             <PhoneCall className="h-4 w-4" /> Llamar
-          </a>
+          </button>
         )}
         {telLimpio && (
           <a
@@ -128,6 +137,33 @@ export function AccionesLead({
         </button>
       </div>
       <Mensajes error={error} ok={ok} />
+
+      {modal === "guion" && guion && (
+        <GuionLlamada
+          leadId={leadId}
+          nombreLead={nombreLead || "este lead"}
+          telefono={telefono}
+          miNombre={miNombre}
+          guion={guion}
+          resultados={(
+            [
+              { clave: "no_contesta", texto: "No contesta", icono: <PhoneOff className="h-4 w-4 text-texto-3" /> },
+              { clave: "luego", texto: "Llamar luego", icono: <Clock className="h-4 w-4 text-aviso" /> },
+              rol !== "closer" ? { clave: "link", texto: "Link enviado", icono: <Link2 className="h-4 w-4 text-primario" /> } : null,
+              rol !== "caller" ? { clave: "agendar", texto: "Agendar", icono: <CalendarPlus className="h-4 w-4 text-primario" /> } : null,
+              { clave: "no_interesa", texto: "No interesa", icono: <ThumbsDown className="h-4 w-4 text-mal" /> },
+              productosVisibles.length > 0 ? { clave: "venta", texto: "Venta", icono: <ShoppingCart className="h-4 w-4 text-oro" /> } : null,
+            ] as (ResultadoGuion | null)[]
+          ).filter((x): x is ResultadoGuion => !!x)}
+          onResultado={(clave) => {
+            if (clave === "no_contesta") {
+              setModal(null);
+              ejecutar(() => registrarLlamada(leadId, "no_contesta", ""), "Guardado: no contesta");
+            } else setModal(clave as "luego" | "link" | "agendar" | "no_interesa" | "venta");
+          }}
+          onCerrar={() => setModal(null)}
+        />
+      )}
 
       {modal === "luego" && (
         <Modal titulo="Llamar luego" onCerrar={() => setModal(null)}>

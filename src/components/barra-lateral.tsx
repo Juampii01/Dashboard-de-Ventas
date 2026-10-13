@@ -26,6 +26,7 @@ import {
   Landmark,
   UserCheck,
   Gauge,
+  ScrollText,
 } from "lucide-react";
 import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
@@ -50,6 +51,7 @@ const ICONOS = {
   finanzas: Landmark,
   clientes: UserCheck,
   onboarding: ListChecks,
+  guiones: ScrollText,
 };
 
 export type ItemMenu = { href: string; texto: string; icono: keyof typeof ICONOS; exacto?: boolean; insignia?: number };

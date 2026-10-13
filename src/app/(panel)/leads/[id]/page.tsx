@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cargarGuion, rolDelGuion } from "@/lib/guiones-datos";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, Phone, Tag, FileText, History, CalendarDays, ShoppingCart, Compass } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
@@ -80,6 +81,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     etapa: (etapas.data as Etapa[]).find((e) => e.id === x.etapa_id),
   })).filter((x) => x.pipeline);
   const nombreCompleto = `${lead.nombre} ${lead.apellido}`.trim() || "Sin nombre";
+  const { guion } = await cargarGuion(proyecto.id, rolDelGuion(perfil.rol)); // Fase 6
 
   return (
     <>
@@ -200,6 +202,9 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 linkAgenda={proyecto.link_agenda}
                 moneda={proyecto.moneda}
                 compacto
+                guion={guion}
+                nombreLead={nombreCompleto}
+                miNombre={perfil.nombre}
               />
             </Seccion>
 

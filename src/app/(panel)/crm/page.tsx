@@ -65,9 +65,9 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         return [p.id, count ?? 0] as const;
       })
     ),
-    // «Vendido» abre la venta: el caller solo vende lo que vende el caller (low ticket)
+    // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
     perfil.rol === "caller"
-      ? db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).eq("vende_caller", true).order("orden")
+      ? Promise.resolve({ data: [] as Producto[] })
       : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
   ]);
   const etapas = (etapasData.data ?? []) as Etapa[];

@@ -149,7 +149,8 @@ export async function registrarVenta(leadId: string, formData: FormData) {
     const productoId = String(formData.get("producto") ?? "");
     const { data: producto } = await db().from("productos").select("*").eq("id", productoId).eq("proyecto_id", proyecto.id).maybeSingle();
     if (!producto) throw new ErrorUsuario("Elige un producto.");
-    if (perfil.rol === "caller" && !producto.vende_caller) throw new ErrorUsuario("Como caller solo puedes registrar productos que vende el caller (low ticket).");
+    // Cristian (12 oct): el caller no cierra ventas; las registra el closer (o un jefe)
+    if (perfil.rol === "caller") throw new ErrorUsuario("El caller no registra ventas: las cierra el closer.");
   
     const num = (k: string) => {
       const v = leerNumero(formData.get(k));

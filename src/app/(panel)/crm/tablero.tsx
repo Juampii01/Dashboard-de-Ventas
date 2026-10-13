@@ -190,6 +190,10 @@ export function TableroCrm({
     // Paso H7: una columna unida a un estado = su botón (y su ventana si pide datos)
     const unido = etapas.find((e) => e.id === etapaId)?.estado_caller as EstadoCaller | null | undefined;
     if (unido && unido !== lead.estado_caller) {
+      if (unido === "vendido" && !productos.length) {
+        toast("El caller no registra ventas: las cierra el closer.", "error");
+        return;
+      }
       if (unido === "llamar_luego" || unido === "link_enviado" || unido === "agendado" || unido === "no_interesa" || unido === "vendido") {
         setVentana({ lead, destino: unido, etapaId });
         return;
