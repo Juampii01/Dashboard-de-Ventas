@@ -19,7 +19,6 @@ import { Cualificacion } from "./cualificacion";
 import { TableroClosers } from "./tablero-closers";
 import { BuscadorUrl, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl } from "./cliente";
 import type { Producto } from "@/lib/tipos";
-import { etiquetaOrigenGhl } from "@/lib/webhook-ghl";
 
 const TABS = [
   { v: "agendas", t: "Agendas" },
@@ -382,7 +381,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
           <li key={c.id} className="flex flex-wrap items-center gap-4 px-4 py-3">
             <div className="w-36 shrink-0">
               <div className="text-sm font-semibold">{fechaHora(c.fecha, proyecto)}</div>
-              <div className="text-xs text-texto-3">{c.origen === "ghl" ? etiquetaOrigenGhl(c) : `Agendó ${nombrePersona(c.agendada_por)}`}</div>
+              <div className="text-xs text-texto-3">{c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombrePersona(c.agendada_por)}`}</div>
             </div>
             <div className="min-w-48 flex-1">
               <a href={`/leads/${c.lead_id}`} className="font-medium hover:text-primario">{nombreDe(c.leads)}</a>
