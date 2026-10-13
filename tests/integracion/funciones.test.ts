@@ -123,6 +123,8 @@ describe("Pipelines y columnas", () => {
     const etapas = async () => (await db.from("etapas").select("id, nombre, orden").eq("pipeline_id", id).order("orden")).data!;
     let lista = await etapas();
     expect(lista.map((x) => x.nombre)).toEqual(["Nuevos", "Agendados", "Cerrados", "Descartados", "Extra"]); // Paso 0: la llamada se ve en «Callers»
+    // 13 oct: «Cerrados» nace unida a «Vendido» (cerrar soltando)
+    expect((await db.from("etapas").select("estado_caller").eq("pipeline_id", id).eq("nombre", "Cerrados").single()).data!.estado_caller).toBe("vendido");
     const extra = lista.find((x) => x.nombre === "Extra")!;
     await ok(moverEtapa(extra.id, -1));
     lista = await etapas();

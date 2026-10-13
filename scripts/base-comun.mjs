@@ -29,7 +29,7 @@ export async function asegurarProyectoBase(db, { simular = false, log = console.
     if (simular) continue;
     const [pipe] = await must(db.from("pipelines").insert({ proyecto_id: proyecto.id, nombre: p.nombre, orden: i }).select(), `pipeline ${p.nombre}`);
     await must(
-      db.from("etapas").insert(p.columnas.map((nombre, j) => ({ pipeline_id: pipe.id, nombre, orden: j, color: BASE.colores[j % BASE.colores.length] }))),
+      db.from("etapas").insert(p.columnas.map((nombre, j) => ({ pipeline_id: pipe.id, nombre, orden: j, color: BASE.colores[j % BASE.colores.length], ...(nombre === "Cerrados" ? { estado_caller: "vendido" } : {}) }))),
       `columnas ${p.nombre}`
     );
   }

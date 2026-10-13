@@ -80,7 +80,8 @@ export async function crearPipeline(nombre: string) {
     await escribir(db().from("etapas").insert([
       { pipeline_id: data.id, nombre: "Nuevos", orden: 0, color: "#64748b" },
       { pipeline_id: data.id, nombre: "Agendados", orden: 1, color: "#2f55d4" },
-      { pipeline_id: data.id, nombre: "Cerrados", orden: 2, color: "#16a34a" },
+      // Unida a «Vendido»: soltar ahí abre «Registrar venta» (cerrar soltando, como en los demás; arreglado el 13 oct)
+      { pipeline_id: data.id, nombre: "Cerrados", orden: 2, color: "#16a34a", estado_caller: "vendido" },
       { pipeline_id: data.id, nombre: "Descartados", orden: 3, color: "#dc2626" },
     ]), "etapas");
     refrescar();
