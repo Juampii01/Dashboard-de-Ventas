@@ -104,7 +104,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
               {t}
               <span className="rounded-full bg-panel px-2 text-xs tabular-nums text-texto-2">{delRol(r).length}</span>
             </div>
-            {delRol(r).length === 0 ? <p className="py-3 text-center text-xs text-texto-3">Nadie todavía.</p> : <div className="grid gap-2 sm:grid-cols-2">{delRol(r).map(nodo)}</div>}
+            {delRol(r).length === 0 ? <p className="py-3 text-center text-xs text-texto-3">Nadie todavía.</p> : <div className="grid gap-2">{delRol(r).map(nodo)}</div>}
           </div>
         ))}
       </div>

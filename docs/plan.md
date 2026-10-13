@@ -79,11 +79,12 @@
 - [ ] **Lo tiene que lanzar Cristian** (a mí me lo bloquea el sistema de permisos): en la carpeta `app`, `supabase db push` (aplica las 2 migraciones de la Fase 4; la simulación dice que solo faltan esas).
 - [ ] Prueba final («hecha cuando»): subir el CSV de Webinar 1 → sus leads de la Biblioteca salen también en Webinar 1 sin salir de la Biblioteca, y Funnel cuenta personas (comprobar en la base). Workflows de lead nuevo de Webinar, Orgánico y DFY: al final, con GHL.
 
-**Fase 5 · Pantallas más estéticas**
-- [ ] KPIs (Por persona y Objetivos) en tarjetas visuales; al pulsar a alguien, ventana con su información de esa sección y botón para ir a su ficha (Administración/Equipo).
-- [ ] Embudo dibujado en KPIs (Leads → Contactados → Agendados → Asistieron → Cerrados) y el mismo dibujo en Agendas.
-- [ ] Equipo: organigrama más visual; pulsar el nombre abre su perfil.
-- [ ] Onboarding de los closers: seguimiento visual por cliente y pasos editables en el sitio.
+**Fase 5 · Pantallas más estéticas** (hecha por mi parte el 13 oct, `9d01734`, `8043ef6`; falta tu visto bueno)
+- [x] **KPIs → Por persona** en tarjetas glass (`components/tarjetas-kpis.tsx`): por persona 4 números grandes y 3 tasas en barras; al pulsarla, ventana con todo su detalle y «Ver su ficha» (`/equipo?ficha=…`). La tabla de siempre queda plegada en «Ver como tabla (con los totales)». Probado en pantalla con datos reales (6 callers, 4 closers; la ventana de Tomás sale con su detalle y el botón).
+- [x] **KPIs → Objetivos** en tarjetas (`components/tarjeta-objetivos.tsx`): anillo con el avance medio y «X de Y cumplidos»; al pulsarla, sus barras y «Ver su ficha». Sin probar en pantalla.
+- [x] **Embudo dibujado** (`components/embudo.tsx`): en KPIs, Leads → Contactados → Agendados → Asistieron → Cerrados, con el % que pasa de un paso al siguiente; en Agendas, el mismo dibujo con sus pasos (Agendadas → Asistencias → Cerradas). Probado en KPIs (1.117 leads este mes; el resto a 0 porque aún no hay llamadas apuntadas). Aviso: cada paso cuenta lo del periodo, no es la misma tanda de personas.
+- [x] **Equipo → organigrama en árbol**: CEO → directores → Closers y Callers (y «Sin acceso a la app»); **pulsar el nombre abre su ficha**. La vista por áreas sigue debajo. Probado en pantalla (sale un 4.º director, «Thiago», que no está en el plan).
+- [x] **Onboarding de closers**: cada cliente con anillo de % y una línea de pasos (círculo = pulsar para marcar; ✓ verde con la fecha); el CEO y los directores renombran, quitan y añaden puntos ahí mismo. **Sin probar con datos**: todavía no hay clientes.
 - **Hecha cuando:** te enseño cada pantalla y das el visto bueno.
 
 **Fase 6 · Guion de llamadas** (Cristian pide los guiones de caller y de closer al equipo)
