@@ -99,6 +99,9 @@ export type Cita = {
   creado_en: string;
   estrellas_caller: number | null;
   estrellas_closer: number | null;
+  // Origen en GHL (13 oct 2026): opcionales hasta aplicar la migración 20261017100000
+  ghl_calendario?: string | null;
+  canal?: string | null;
 };
 
 export type Producto = {

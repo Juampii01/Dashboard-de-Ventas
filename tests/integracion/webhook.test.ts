@@ -266,3 +266,29 @@ describe("Auditoría 13 oct: reintentos, códigos y validación", () => {
     await reiniciarLimites();
   });
 });
+
+// Pedido de José (Daily 13 oct): cada cita guarda de qué calendario y canal viene (migración 20261017100000)
+describe("Origen de la cita: calendario y canal de GHL", () => {
+  it("guarda calendar.calendarName y el pipeline del workflow, y se ven en la etiqueta", async () => {
+    const c = `${e.pref}-origen`;
+    const r = await enviar({
+      contact_id: c,
+      email: `${c}@x.test`,
+      calendar: { startTime: "2026-12-20T15:30:00", selectedTimezone: "America/New_York", appointmentId: `${c}-apt`, calendarName: "#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA" },
+      customData: { tipo: "cita_agendada", pipeline: "0. Agendas YT" },
+    });
+    expect(r.status).toBe(200);
+    const { data: cita } = await db.from("citas").select("ghl_calendario, canal").eq("ghl_cita_id", `${c}-apt`).single();
+    expect(cita).toEqual({ ghl_calendario: "#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA", canal: "0. Agendas YT" });
+    const { etiquetaOrigenGhl } = await import("@/lib/webhook-ghl");
+    expect(etiquetaOrigenGhl(cita!)).toBe("GHL · Agendas YT · Llamada de Descubrimiento");
+  });
+  it("un reenvío completa el origen de una cita que no lo tenía", async () => {
+    const c = `${e.pref}-origen2`;
+    const base = { tipo: "cita_agendada", contact_id: c, email: `${c}@x.test` };
+    await enviar({ ...base, calendar: { startTime: "2026-12-21T15:00:00Z", appointmentId: `${c}-apt` } });
+    await enviar({ ...base, calendar: { startTime: "2026-12-21T15:00:00Z", appointmentId: `${c}-apt`, calendarName: "#3 Closers - Maestria" } });
+    const { data: cita } = await db.from("citas").select("ghl_calendario").eq("ghl_cita_id", `${c}-apt`).single();
+    expect(cita!.ghl_calendario).toBe("#3 Closers - Maestria");
+  });
+});

@@ -53,3 +53,32 @@ describe("registrar: logs sin datos personales", () => {
     expect(JSON.parse(error.mock.calls[0][0] as string)).toMatchObject({ evento_id: "ev2", resultado: "error", status: 500 });
   });
 });
+
+describe("origen de la cita en GHL (pedido de José, 13 oct)", async () => {
+  const { calendarioCorto, canalCorto, etiquetaOrigenGhl, faltaColumna } = await import("@/lib/webhook-ghl");
+  it("acorta los nombres reales de los calendarios de Maestria", () => {
+    expect(calendarioCorto("#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA")).toBe("Llamada de Descubrimiento");
+    expect(calendarioCorto("#3 Closers - Maestria ")).toBe("Closers");
+    expect(calendarioCorto("#2 Callers - Maestria")).toBe("Callers");
+    expect(calendarioCorto("#1 Maestria founders")).toBe("Maestria founders");
+    expect(calendarioCorto("")).toBeNull();
+    expect(calendarioCorto(null)).toBeNull();
+  });
+  it("acorta el canal (pipeline del workflow)", () => {
+    expect(canalCorto("0. Agendas YT")).toBe("Agendas YT");
+    expect(canalCorto("Agendas IG")).toBe("Agendas IG");
+    expect(canalCorto("  ")).toBeNull();
+  });
+  it("arma la etiqueta que se ve en Llamadas y en el tablero", () => {
+    expect(etiquetaOrigenGhl({ canal: "0. Agendas YT", ghl_calendario: "#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA" })).toBe("GHL · Agendas YT · Llamada de Descubrimiento");
+    expect(etiquetaOrigenGhl({ ghl_calendario: "#3 Closers - Maestria " })).toBe("GHL · Closers");
+    expect(etiquetaOrigenGhl({ canal: "Closers", ghl_calendario: "#3 Closers - Maestria" })).toBe("GHL · Closers"); // sin repetir
+    expect(etiquetaOrigenGhl({})).toBe("GHL · sincronizada");
+  });
+  it("reconoce el error de columna que falta (base sin la migración)", () => {
+    expect(faltaColumna({ code: "PGRST204" })).toBe(true);
+    expect(faltaColumna({ code: "42703" })).toBe(true);
+    expect(faltaColumna({ code: "23505" })).toBe(false);
+    expect(faltaColumna(null)).toBe(false);
+  });
+});

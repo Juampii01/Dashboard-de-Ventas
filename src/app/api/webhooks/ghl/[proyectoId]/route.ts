@@ -7,7 +7,7 @@ import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
 import { fechaDeGhl, mismoNombre } from "@/lib/formato";
-import { PayloadInvalido, estadoDeError, fetchConLimite, leerCuerpo, registrar, tipoConocido, type Rastro } from "@/lib/webhook-ghl";
+import { PayloadInvalido, estadoDeError, faltaColumna, fetchConLimite, leerCuerpo, registrar, tipoConocido, type Rastro } from "@/lib/webhook-ghl";
 
 // Recibe eventos de los workflows de GHL (acción «Webhook»).
 // Campo `tipo`: lead_nuevo | cita_agendada | cambio_etapa. Otro tipo se registra y se ignora (200).
@@ -158,9 +158,13 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
           ? db().from("citas").select("id, fecha").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ghlCitaId).maybeSingle()
           : // Arreglo 19: sin id de GHL, se busca una cita del mismo lead a la misma hora antes de crear otra
             db().from("citas").select("id, fecha").eq("proyecto_id", proyecto.id).eq("lead_id", lead.id).eq("fecha", fecha.toISOString()).neq("estado", "reagendada").limit(1).maybeSingle();
+      // 13 oct (José): se guarda de qué calendario y canal viene, para verlo en Llamadas y en el tablero de closers
+      const origenCita = { ghl_calendario: primero(body, ["calendar.calendarName", "calendar.name", "calendarName"]).slice(0, 200) || null, canal: pipelineCita?.slice(0, 120) || null };
       let { data: yaExiste } = await escribir(buscarCita(), "citas");
       if (!yaExiste) {
-        const nueva = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, ...(await datosAgendaGhl(lead.id)), fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId });
+        const fila = { proyecto_id: proyecto.id, lead_id: lead.id, closer_id: closerId, ...(await datosAgendaGhl(lead.id)), fecha: fecha.toISOString(), origen: "ghl", ghl_cita_id: ghlCitaId };
+        let nueva = await db().from("citas").insert({ ...fila, ...origenCita });
+        if (faltaColumna(nueva.error)) nueva = await db().from("citas").insert(fila); // base sin la migración del origen
         // Dos reintentos a la vez: el segundo choca con el índice único → es la misma cita, no un error
         if (nueva.error?.code === "23505") yaExiste = (await escribir(buscarCita(), "citas")).data;
         else if (nueva.error) throw new Error(`No se pudo guardar en «citas»: ${nueva.error.message}`);
@@ -170,7 +174,10 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
         // «agendado» (un reintento tardío deshacía «vendido» o lo que hubiera marcado el closer), ni se mueve de
         // columna, ni se repite la actividad.
         duplicado = true;
-        await escribir(db().from("citas").update({ fecha: fecha.toISOString(), ...(closerId ? { closer_id: closerId } : {}) }).eq("id", yaExiste.id), "citas");
+        const cambios = { fecha: fecha.toISOString(), ...(closerId ? { closer_id: closerId } : {}) };
+        const conOrigen = await db().from("citas").update({ ...cambios, ...(origenCita.ghl_calendario ? { ghl_calendario: origenCita.ghl_calendario } : {}), ...(origenCita.canal ? { canal: origenCita.canal } : {}) }).eq("id", yaExiste.id);
+        if (faltaColumna(conOrigen.error)) await escribir(db().from("citas").update(cambios).eq("id", yaExiste.id), "citas");
+        else if (conOrigen.error) throw new Error(`No se pudo guardar en «citas»: ${conOrigen.error.message}`);
         if (new Date(yaExiste.fecha).getTime() !== fecha.getTime())
           await escribir(db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: lead.id, tipo: "cita", resultado: "agendada", nota: "Cita movida en el calendario de GHL" }), "actividades");
       } else {

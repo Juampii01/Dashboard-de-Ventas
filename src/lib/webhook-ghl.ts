@@ -39,3 +39,30 @@ export function registrar(r: Rastro) {
   if (r.resultado === "error") console.error(linea);
   else console.info(linea);
 }
+
+// ---------- De qué calendario o canal viene la cita (pedido de José, 13 oct 2026) ----------
+// GHL manda `calendar.calendarName` («#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA») y cada
+// workflow manda en Custom Data `pipeline` («0. Agendas YT»). Antes se tiraba: todas salían como «Calendario GHL».
+
+// «#3 Closers - Maestria » → «Closers» · «#1 Llamada de Descubrimiento | MaestrIA - …» → «Llamada de Descubrimiento»
+export function calendarioCorto(nombre: string | null | undefined) {
+  const s = (nombre ?? "").split("|")[0].replace(/^\s*#\d+\s*/, "").replace(/\s*-\s*maestr[ií]a\s*$/i, "").trim();
+  return s || null;
+}
+
+// «0. Agendas YT» → «Agendas YT»
+export function canalCorto(pipeline: string | null | undefined) {
+  const s = (pipeline ?? "").replace(/^\s*\d+\s*[.)-]\s*/, "").trim();
+  return s || null;
+}
+
+// Lo que se ve en la cita: «GHL · Agendas YT · Llamada de Descubrimiento». Las que trajo la sincronización por API
+// (sin webhook) no tienen el nombre del calendario: «GHL · sincronizada».
+export function etiquetaOrigenGhl(c: { ghl_calendario?: string | null; canal?: string | null }) {
+  const partes = [canalCorto(c.canal), calendarioCorto(c.ghl_calendario)].filter((x): x is string => !!x);
+  const unicas = partes.filter((p, i) => partes.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i);
+  return unicas.length ? `GHL · ${unicas.join(" · ")}` : "GHL · sincronizada";
+}
+
+// La base aún sin la migración 20261017100000 (columnas nuevas): PostgREST dice PGRST204, Postgres 42703
+export const faltaColumna = (e: { code?: string } | null | undefined) => e?.code === "PGRST204" || e?.code === "42703";
