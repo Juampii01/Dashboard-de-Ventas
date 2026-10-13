@@ -206,7 +206,7 @@
 
 **A tener en cuenta:**
 - **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
-- **Sin tests de integración hasta montarlos en GitHub** (Cristian no quiere Docker): mientras tanto, un cambio en webhooks, reparto, comisiones o permisos solo lo vigilan los 204 tests unitarios (12 oct) y la prueba en pantalla. Los 247 de integración son los que pillaron, por ejemplo, el fallo de la hora de las citas.
+- **Tests** (13 oct): ya corren solos en GitHub en cada push (215 unitarios + 247 de integración, en verde). Si un push sale en rojo, mirarlo antes de seguir (GitHub → Actions).
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
