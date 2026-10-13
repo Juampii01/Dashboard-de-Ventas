@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, ScrollText, Check, Link2 } from "lucide-react";
 import { agendarCita, anadirNota, marcarLinkEnviado, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
 import { Modal } from "@/components/modal";
-import { CoachIa } from "@/components/coach";
 import { SelectorEstrellas } from "@/components/estrellas";
 import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
@@ -81,6 +80,15 @@ export function AccionesLead({
   miNombre?: string;
 }) {
   const { pendiente, error, ok, ejecutar } = useAccion();
+  const aviso = useToast();
+  async function copiarLinkAgenda() {
+    try {
+      await navigator.clipboard.writeText(linkAgenda!);
+      aviso("Link de agenda copiado");
+    } catch {
+      aviso(`No se pudo copiar. El link es: ${linkAgenda}`, "error");
+    }
+  }
   const [modal, setModal] = useState<null | "guion" | "luego" | "agendar" | "link" | "venta" | "nota" | "no_interesa">(null);
   const [nota, setNota] = useState("");
   const telLimpio = (telefono ?? "").replace(/[^\d]/g, "");
@@ -111,7 +119,12 @@ export function AccionesLead({
         <button className={boton} disabled={pendiente} onClick={() => ejecutar(() => registrarLlamada(leadId, "no_contesta", ""), "Guardado: no contesta")}>
           <PhoneOff className="h-4 w-4 text-texto-3" /> No contesta
         </button>
-        <CoachIa leadId={leadId} className={boton} />
+        {/* Cristian (13 oct): en lugar de «Coach IA», «Link agenda» copia el link de agenda del proyecto (Administración) */}
+        {linkAgenda && (
+          <button type="button" className={boton} onClick={() => void copiarLinkAgenda()}>
+            <CalendarPlus className="h-4 w-4 text-primario" /> Link agenda
+          </button>
+        )}
         <button className={boton} disabled={pendiente} onClick={() => setModal("luego")}>
           <Clock className="h-4 w-4 text-aviso" /> Llamar luego
         </button>

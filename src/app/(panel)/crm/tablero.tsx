@@ -15,7 +15,6 @@ import {
   Trash2,
   ArrowLeft,
   ArrowRight,
-  UserPlus,
   KeyRound,
 } from "lucide-react";
 import {
@@ -51,9 +50,10 @@ import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
 import type { Etapa, EstadoCaller, Pipeline, Producto, TipoPipeline } from "@/lib/tipos";
 import { confirmar, pedirTexto } from "@/components/dialogos";
 import { Desplegable, Pastillas } from "@/components/eleccion";
-import { ARRASTRE_COLUMNA, ARRASTRE_PIPELINE, reordenar } from "@/lib/orden";
+import { ARRASTRE_COLUMNA, reordenar } from "@/lib/orden";
 import { BarraMasiva, type DestinoMasivo } from "./barra-masiva";
 import { TarjetaCrm, haceDias } from "@/components/tarjeta-crm";
+import { SelectorPipeline } from "./selector-pipeline";
 
 export type LeadTarjeta = {
   id: string;
@@ -89,7 +89,6 @@ export function TableroCrm({
   pipeline,
   etapas: etapasServidor,
   leads: leadsIniciales,
-  conteos,
   callers,
   closers,
   admin,
@@ -108,7 +107,7 @@ export function TableroCrm({
   pipeline: Pipeline | null;
   etapas: Etapa[];
   leads: LeadTarjeta[];
-  conteos: Record<string, number>;
+  conteos?: Record<string, number>; // 13 oct: el selector como GHL ya no enseña el número de cada pipeline
   callers: Persona[];
   closers: Persona[];
   admin: boolean; // crear pipelines y sus permisos (CEO y director con Administración)
@@ -144,7 +143,6 @@ export function TableroCrm({
   const [ordenCols, setOrdenCols] = useState<{ base: Etapa[]; ids: string[] } | null>(null);
   const [ordenPipes, setOrdenPipes] = useState<{ base: Pipeline[]; ids: string[] } | null>(null);
   const [colSobre, setColSobre] = useState<string | null>(null);
-  const [pipeSobre, setPipeSobre] = useState<string | null>(null);
   const etapas = useMemo(
     () => (ordenCols && ordenCols.base === etapasServidor ? ordenCols.ids.map((id) => etapasServidor.find((e) => e.id === id)!).filter(Boolean) : etapasServidor),
     [ordenCols, etapasServidor]
@@ -243,7 +241,6 @@ export function TableroCrm({
   }
 
   function soltarPipeline(desde: string, hasta: string) {
-    setPipeSobre(null);
     if (!admin || desde === hasta) return;
     const ids = reordenar(pipelines.map((p) => p.id), desde, hasta);
     setOrdenPipes({ base: pipelinesServidor, ids });
@@ -304,55 +301,26 @@ export function TableroCrm({
   const quiereVer = (id: string) => setPrecargar((s) => (s.has(id) ? s : new Set(s).add(id)));
   return (
     <div className="space-y-4">
-      {/* Pipelines */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
-          {pipelines.map((p) => (
-            <Link
-              key={p.id}
-              href={`/crm?pipeline=${p.id}`}
-              prefetch={precargar.has(p.id) ? true : false}
-              onMouseEnter={() => quiereVer(p.id)}
-              onFocus={() => quiereVer(p.id)}
-              onTouchStart={() => quiereVer(p.id)}
-              onClick={() => p.id !== pipeline?.id && setYendo({ a: p.id, desde: pipeline?.id })}
-              draggable={admin}
-              onDragStart={(ev) => ev.dataTransfer.setData(ARRASTRE_PIPELINE, p.id)}
-              onDragOver={(ev) => {
-                if (!ev.dataTransfer.types.includes(ARRASTRE_PIPELINE)) return;
-                ev.preventDefault();
-                setPipeSobre(p.id);
-              }}
-              onDragLeave={() => setPipeSobre((s) => (s === p.id ? null : s))}
-              onDrop={(ev) => {
-                const desde = ev.dataTransfer.getData(ARRASTRE_PIPELINE);
-                if (!desde) return;
-                ev.preventDefault();
-                soltarPipeline(desde, p.id);
-              }}
-              onDoubleClick={(ev) => {
-                // Doble clic en el pipeline abierto = renombrarlo (Fase 4)
-                if (p.id !== pipeline?.id || !editar) return;
-                ev.preventDefault();
-                void pedirTexto("Nuevo nombre del pipeline", p.nombre).then((n) => {
-                  if (n) ejecutar(() => exigirOk(renombrarPipeline(p.id, n)), `Pipeline renombrado a «${n}»`);
-                });
-              }}
-              title={admin ? (p.id === pipeline?.id && editar ? "Arrastra para ordenar · doble clic para renombrar" : "Arrastra para ordenar") : undefined}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
-                p.id === marcado ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2 hover:text-texto"
-              } ${pipeSobre === p.id ? "ring-2 ring-primario" : ""}`}
-            >
-              {p.nombre}
-              <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${p.id === marcado ? "bg-white/20" : "bg-panel-2"}`}>{conteos[p.id] ?? 0}</span>
-            </Link>
-          ))}
-          {admin && (
-            <button onClick={() => setModal("pipeline")} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-primario hover:bg-primario-suave">
-              <Plus className="h-4 w-4" /> Pipeline
-            </button>
-          )}
-        </div>
+      {/* Barra de herramientas */}
+      <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
+        {/* Pipeline (13 oct: un desplegable como en GHL, a la izquierda del buscador) */}
+        <SelectorPipeline
+          pipelines={pipelines}
+          actual={pipeline}
+          marcado={marcado}
+          admin={admin}
+          editar={editar}
+          precargar={precargar}
+          quiereVer={quiereVer}
+          alIr={(id) => id !== pipeline?.id && setYendo({ a: id, desde: pipeline?.id })}
+          alReordenar={soltarPipeline}
+          alNuevo={() => setModal("pipeline")}
+          alRenombrar={(p) => {
+            void pedirTexto("Nuevo nombre del pipeline", p.nombre).then((n) => {
+              if (n) ejecutar(() => exigirOk(renombrarPipeline(p.id, n)), `Pipeline renombrado a «${n}»`);
+            });
+          }}
+        />
         {(editar || admin) && pipeline && (
           <div className="flex gap-1">
             {admin && permisos && (
@@ -387,10 +355,6 @@ export function TableroCrm({
             </button>}
           </div>
         )}
-      </div>
-
-      {/* Barra de herramientas */}
-      <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
         <div className="relative min-w-40 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
@@ -409,9 +373,6 @@ export function TableroCrm({
         </div>}
         {jefe && deOrigen && (
           <>
-            <button onClick={() => setModal("lead")} className="btn-secundario">
-              <UserPlus className="h-4 w-4" /> Nuevo lead
-            </button>
             <button onClick={() => setModal("importar")} className="btn-secundario">
               <Upload className="h-4 w-4" /> Subir CSV
             </button>
