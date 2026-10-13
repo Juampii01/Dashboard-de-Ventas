@@ -620,7 +620,7 @@ function Tarjeta({
   const invertir = lead.respuestas.find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta;
   return (
     <TarjetaCrm
-      href={`/leads/${lead.id}`}
+      leadId={lead.id}
       nombre={`${lead.nombre} ${lead.apellido}`.trim()}
       telefono={lead.telefono}
       email={lead.email}

@@ -203,7 +203,7 @@ export function TableroClosers({
                 {col.ventas.map((v) => (
                   <TarjetaCrm
                     key={v.id}
-                    href={`/leads/${v.lead_id}`}
+                    leadId={v.lead_id}
                     nombre={v.nombre}
                     arriba={<span className="shrink-0 text-xs tabular-nums">{v.facturacionTxt}</span>}
                     arrastrable={!soloMirar}
@@ -326,7 +326,7 @@ function TarjetaCita({ c, origen, productos, moneda, soloMirar }: { c: TarjetaCi
   const tel = (c.telefono ?? "").replace(/\D/g, "");
   return (
     <TarjetaCrm
-      href={`/leads/${c.lead_id}`}
+      leadId={c.lead_id}
       nombre={c.nombre}
       telefono={c.telefono}
       arriba={c.closer ? <span className="chip shrink-0 bg-panel-2 text-texto-3">{c.closer}</span> : undefined}

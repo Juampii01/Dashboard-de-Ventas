@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Search, ExternalLink } from "lucide-react";
-import { Modal } from "@/components/modal";
+import { Search } from "lucide-react";
 import { OFERTAS, ETIQUETA_OFERTA, type Oferta } from "@/lib/oferta";
 import { OfertaChip } from "@/components/oferta-chip";
 import { RANGO } from "@/lib/biblioteca";
 import { RepartirLeads } from "@/components/repartir-leads";
-import { TelefonoCopiable } from "@/components/telefono-copiable";
+import { PopupLead } from "@/components/popup-lead";
 
 export type FilaTabla = {
   id: string;
@@ -96,7 +94,7 @@ export function TablaBiblioteca({ filas, callers }: { filas: FilaTabla[]; caller
   return (
     <div className="space-y-3">
       <p className="text-xs text-texto-3">
-        Haz clic en una fila para ver la ficha. Clic en el título de una columna para ordenar; otro clic invierte el orden. «Puede invertir», «Tiempo» y «Cuándo empezar» se ordenan de más a menos listo. Lo de «invertir» lo dice la persona en el formulario: no es dinero comprobado.
+        Haz clic en una fila para ver sus datos. Clic en el título de una columna para ordenar; otro clic invierte el orden. «Puede invertir», «Tiempo» y «Cuándo empezar» se ordenan de más a menos listo. Lo de «invertir» lo dice la persona en el formulario: no es dinero comprobado.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => setSolo("")} className={`chip ${!solo ? "bg-primario text-white" : "bg-panel-2 text-texto-2"}`}>Todos <small className="ml-1 opacity-80">{filas.length}</small></button>
@@ -129,7 +127,7 @@ export function TablaBiblioteca({ filas, callers }: { filas: FilaTabla[]; caller
               <tr key={f.id} tabIndex={0} className="cursor-pointer hover:bg-panel-2" onClick={(e) => !(e.target as HTMLElement).closest("a") && setFicha(f)} onKeyDown={(e) => e.key === "Enter" && setFicha(f)}>
                 <td><OfertaChip oferta={f.oferta} /></td>
                 <td className="whitespace-nowrap font-medium">{f.nombre || "—"}</td>
-                <td className="whitespace-nowrap">{f.telefono ? <TelefonoCopiable telefono={f.telefono} className="text-primario hover:underline" /> : "—"}</td>
+                <td className="whitespace-nowrap">{f.telefono ? f.telefono : "—"}</td>
                 <td className="whitespace-nowrap">{f.pais}</td>
                 <td>{f.email ? <a href={`mailto:${f.email}`} className="text-primario hover:underline">{f.email}</a> : "—"}</td>
                 <td className="whitespace-nowrap tabular-nums">{f.alta ? new Date(f.alta).toLocaleDateString("es-ES") : "—"}</td>
@@ -149,29 +147,7 @@ export function TablaBiblioteca({ filas, callers }: { filas: FilaTabla[]; caller
       </div>
       {visibles.length > limite && <button onClick={() => setLimite((l) => l + POR_PAGINA)} className="w-full rounded-lg py-2 text-sm text-primario hover:bg-panel-2">Ver {Math.min(POR_PAGINA, visibles.length - limite)} más</button>}
 
-      {ficha && (
-        <Modal titulo={ficha.nombre || "Sin nombre"} onCerrar={() => setFicha(null)} ancho="max-w-xl">
-          <div className="space-y-4 text-sm">
-            <div className="flex items-center justify-between gap-2"><OfertaChip oferta={ficha.oferta} /><Link href={`/leads/${ficha.id}`} className="inline-flex items-center gap-1 text-primario hover:underline">Abrir ficha completa <ExternalLink className="h-3.5 w-3.5" /></Link></div>
-            {[
-              { t: "Contacto", d: [["Teléfono", ficha.telefono], ["Email", ficha.email], ["País", ficha.pais], ["Alta", ficha.alta ? new Date(ficha.alta).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : ""], ["Caller", ficha.caller]] },
-              { t: "Compra", d: [["Puede invertir", ficha.inversion], ["Cuándo quiere empezar", ficha.inicio], ["Tiempo por semana", ficha.tiempo]] },
-              { t: "Perfil", d: [["Situación", ficha.situacion], ["Experiencia con AI", ficha.experiencia], ["Objetivo a 90 días", ficha.objetivo]] },
-            ].map((s) => (
-              <section key={s.t}>
-                <h3 className="titulo-seccion mb-2">{s.t}</h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {s.d.map(([k, v]) => <div key={k}><div className="text-[11px] text-texto-3">{k}</div><div>{v || "—"}</div></div>)}
-                </div>
-              </section>
-            ))}
-            <section>
-              <h3 className="titulo-seccion mb-2">Etiquetas CRM</h3>
-              <div className="flex flex-wrap gap-1">{ficha.etiquetas.length ? ficha.etiquetas.map((t) => <span key={t} className="chip bg-panel-2 text-texto-3">{t}</span>) : "—"}</div>
-            </section>
-          </div>
-        </Modal>
-      )}
+      {ficha && <PopupLead leadId={ficha.id} nombre={ficha.nombre} onCerrar={() => setFicha(null)} />}
     </div>
   );
 }
