@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 12 oct 2026, 23:10 (hora de España). Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
+> Al día: 13 oct 2026, 10:20 (hora de España). Lo ya hecho, con detalle, está en `plan-historial-10oct.md`, `plan-historial-11oct.md`, la guía `GUIA-GHL.md` («Cómo está montado en Maestria») y en git (`git log`).
 
 **Índice:** 1. Dónde estamos · 2. Plan por fases · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -12,7 +12,7 @@
 - **Funciona en la nube:** login, emails de acceso (Resend), subida de CSV, leads de la Biblioteca que entran solos **con sus 6 respuestas** (arreglado el 12 oct) y citas de los 4 calendarios de GHL.
 - **Datos de Maestria (base, 12 oct):** 1.274 leads, 1.214 sin caller; 16 citas.
 - **Equipo:** 14 personas reales (CEO, 3 directores, 6 callers, 4 closers) + 2 de prueba. **Acceso enviado a todos.** Han entrado y hecho la bienvenida 9: Cris y José, Juan, Junior, y los 6 callers (Tomás, Felipe, Miguel Angel, Hanna, Lucas, Facundo). **Faltan:** Antonio (director) y los 4 closers (Andrés, Renzo, Cristian Ortiz, José Gómez).
-- **Fases:** 1 casi hecha (falta Antonio) · 2 hecha salvo el «despertar» de Vercel y que lo notes en tu Mac · 3 hecha, falta tu visto bueno con el ancho de tu Mac · Biblioteca sin respuestas: **resuelto** (12 oct) · pendientes nuevos: CSV que se congela y actividad en GHL · siguiente: Fase 4.
+- **Fases:** 1 casi hecha (falta Antonio) · 2 y 3 hechas, falta tu visto bueno en tu Mac · Biblioteca sin respuestas: **resuelto** · **4, 5, 6 y 7: hechas por mi parte el 12-13 oct** (tirada seguida), falta: lanzar las migraciones, tu visto bueno y lo de la lista «Lo que necesito de Cristian» · tests en GitHub en verde.
 - **Falta para terminar:** repartir los leads y un día real con un caller y un closer.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
@@ -67,6 +67,12 @@
 - **Permisos** (sin ellos, se deja en local y se sube al final): 1) commit y push a `main` por bloques (publica en la app del equipo); 2) migraciones en la base de la nube, con copia de seguridad antes; 3) leer la base de la nube; 4) probar en la app publicada (proyecto «Test») creando y borrando datos de prueba; 5) relanzar despliegues de Vercel; 6) añadir librería para arrastrar; 7) workflow de GitHub Actions; 8) Playwright en el Chrome de Cristian.
 - **Respuestas de Cristian (12 oct, 23:45):** 1) tarjeta: lo que yo vea mejor · 2) caller/closer como ahora (de la persona, como en GHL) · 3) **borrar en masa, solo el CEO**; asignar, etiquetas y mover, también los directores · 4) no entendió «exportar» (explicárselo al final) · 5) el «+», que quede bien estético · 6) organigrama, sí · 7) estilo glass · 8) guion de ejemplo, sí · 9) botones de resultado los de ahora, **pero quitar que el caller pueda cerrar venta y que al pulsar «Llamar» se abra algo** · 10) y 11) ok · zona horaria: «que se pueda poner cualquier hora y punto, simplifica» (⚠ confirmar qué quiere decir antes de hacerlo) · **permisos: sí a todo**.
 - **Al final, con Cristian:** GHL (actividad, workflows de Webinar/Orgánico/DFY, ids de callers, avisos por WhatsApp), claves (Fathom, Claude, Deepgram), guiones reales, DFY.
+- **Lo que necesito de Cristian tras la tirada (13 oct):**
+  1. **Lanzar las migraciones** (a mí me lo bloquea el sistema de permisos): en la carpeta `app`, `supabase db push`. Son 5: columna de citas de GHL, varios pipelines, guiones, links de pago (con tus 11 links de Stripe) y «Cerrados» → «Vendido». GitHub ya las aplicó en una base de prueba sin errores.
+  2. **Probar con un CSV** (después de las migraciones): ¿ya no se congela? ¿salen sus leads también en el otro pipeline (🔗)?
+  3. **Visto bueno en pantalla**: CRM (tarjetas, arrastrar columnas y pipelines, barra masiva), KPIs en tarjetas, embudo, organigrama, onboarding de closers, guion al pulsar «Llamar», links de pago.
+  4. **Preguntas:** a) zona horaria: ¿qué es «que se pueda poner cualquier hora»? b) coach IA en directo: ¿desde dónde llaman los callers? c) DFY: ¿links de pago? d) «Thiago» sale como 4.º director: ¿lo diste de alta tú? e) en el móvil no se puede arrastrar: ¿quieres un «Mover a…» solo para el móvil?
+  5. Los guiones reales de caller y closer (y una llamada de prueba de cada uno).
 
 **Fase 4 · CRM como GHL** (hecha por mi parte el 12 oct, `e315403`, `1da4ccd`, `df60450`; falta la migración y tu prueba)
 - [x] **Tarjeta común** (`components/tarjeta-crm.tsx`) en origen, «Callers» y «Closers»: casilla, nombre (abre la ficha), «hace X d», teléfono, email, chips (inversión, oferta, estado, 3 etiquetas, caller y closer); en Closers, la fecha y quién agendó, y sus botones (Registrar, Chat). **Sin «Mover a…»: solo se arrastra** (⚠ en el móvil arrastrar no funciona: en Closers ya no hay otra forma de mover una cita desde el tablero).
@@ -94,9 +100,14 @@
 - [ ] Migración `20261016110000_guiones.sql` (la lanza Cristian con `supabase db push`): sin ella no se guarda ni el guion editado ni lo marcado.
 - [ ] Cargar los guiones reales (los pide Cristian al equipo) y una llamada de prueba de un caller y un closer.
 
-**Fase 7 · Otros** (lo que ya estaba en el plan)
-- [ ] Comprobaciones de la nube (PDF, límite de login, consola), arreglos pequeños, ids de GHL de los callers y llamadas de GHL, claves de Fathom/Claude/Deepgram, avisos por WhatsApp, cerrar moviendo a «Cerrados», cambiar la zona horaria, pruebas con GHL real de lo simulado.
-- [ ] **Programas · varios links de pago** (Cristian, 12 oct): Grupal y VIP necesitan varios links (un pago, dos pagos, tres pagos…); la Membresía sigue con uno. Al pulsar el link se abre una ventana con todos los links de ese programa.
+**Fase 7 · Otros** (lo mío, hecho el 13 oct; lo que depende de Cristian o de GHL, abajo)
+- [x] **Tests en GitHub** (`.github/workflows/tests.yml`, de `fa7855d` en adelante): en cada push a `main`, tipos (`next typegen` + `tsc`), lint, 215 unitarios y **247 de integración** contra un Supabase local que levanta GitHub (aplica todas las migraciones, también las 5 nuevas). **Todo en verde.** Destaparon 2 fallos míos de hoy, ya arreglados: un proyecto sin columna de citas elegida dejaba de mover las citas de GHL, y un lead que nace con su cita no entraba en Orgánico.
+- [x] **Cerrar moviendo la tarjeta**: en un pipeline de origen, una columna se puede unir a «Vendido» (en su «⋯»); soltar ahí abre «Registrar venta» y, si se cancela, vuelve a su sitio; el caller no puede. Migración `20261016130000`: une así las columnas «Cerrados». Sin probar en pantalla.
+- [x] **Comprobaciones de la nube** (13 oct, con la sesión del CEO): el PDF del reporte responde 200 y es un PDF de verdad (3,7 KB); las 20 pantallas responden 200, sin páginas de error, en 0,4-1,8 s; consola sin errores ni avisos en Funnel, Agendas, Callers y Administración. **Sin probar:** el límite de intentos del login (habría que fallar contraseñas a propósito).
+- [ ] **Coach con IA en directo**: no lo empiezo sin saber desde dónde llaman los callers (móvil, WhatsApp, marcador de GHL en el navegador…): si la llamada no pasa por el navegador, la app no puede oírla. Pregunta para Cristian.
+- [ ] **Zona horaria**: Cristian dijo «que se pueda poner cualquier hora y punto, simplifica»; no está claro qué quiere (¿cualquier zona del mundo?, ¿quitar la conversión de horarios?). Pregunta para Cristian.
+- [ ] De Cristian / GHL (al final): ids de GHL de los callers y llamadas de GHL, claves de Fathom/Claude/Deepgram, avisos por WhatsApp, pruebas con GHL real de lo simulado, actividad de los leads en GHL, workflows de Webinar/Orgánico/DFY.
+- [x] **Programas · varios links de pago** (`752f90d`): «Links de pago» abre una ventana con todos los links del programa (Abrir y Copiar en cada uno) y, aparte, el de Reserva; quien edita recursos los cambia ahí («Editar links»). En Programas (tarjetas y lista) y en Links y recursos. La Membresía no lleva el de Reserva. Migración `20261016120000` (trae ya tus 11 links de Stripe para Maestria). Probado en pantalla: la ventana sale; dice «sin links» hasta aplicar la migración.
   - Links de Stripe (los pasó Cristian, 12 oct):
     - **Reserva** · 100 $ (link aparte, vale para cualquier programa; Cristian, 12 oct): https://buy.stripe.com/4gM9AScwe5aA7HEgEnbwk1K
     - **Grupal** · PIF 1.997 $: https://buy.stripe.com/7sYdR867Q32s3ro73Nbwk1L
@@ -110,8 +121,6 @@
     - **VIP** · 650 $ × 8 semanas: https://buy.stripe.com/3cI7sK2VE5aAaTQbk3bwk1T
     - **VIP** · 1.735 $ × 3 meses: https://buy.stripe.com/bJe00i2VE0Uk7HEgEnbwk1U
   - [ ] **DFY:** pendiente decidir si lleva links (precio personalizado).
-- [ ] **Tests en GitHub** (Cristian: de lo último). ⚠ Hasta entonces, los cambios de la Fase 4 (varios pipelines) solo los vigilan los tests unitarios y la prueba en pantalla.
-- [ ] **Segunda versión, de lo último:** coach con IA que escucha la llamada en directo («DI AHORA», transcripción en vivo).
 
 **Al final del todo · lo de Cristian:** pagar Google Workspace (**antes del 2 nov 2026: quedan 21 días a 12 oct**), guardar las claves en su gestor, usuarios de GHL de los callers, claves de Fathom/Claude/Deepgram, Vercel Pro, repartir los leads, ~~mandar los accesos al resto del equipo~~ (hecho el 12 oct) y **día real** con un caller y un closer.
 
