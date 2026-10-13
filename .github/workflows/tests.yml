@@ -1,0 +1,61 @@
+# Tests en GitHub (Fase 7, Cristian 12 oct 2026: sin Docker en el Mac). En cada push a main y en cada PR:
+# 1) tipos, lint y tests unitarios; 2) tests de integración contra un Supabase LOCAL que GitHub levanta aquí
+#    (crean su propio proyecto «test-auto-…» y lo borran: nunca tocan la base de la nube).
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unitarios:
+    name: Tipos, lint y unitarios
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - run: npx vitest run tests/unit
+
+  integracion:
+    name: Integración (Supabase local)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.90.0
+      - name: Arrancar Supabase local (aplica todas las migraciones)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Variables de la base local
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY:-$ANON_KEY}"
+            echo "SUPABASE_SECRET_KEY=${SECRET_KEY:-$SERVICE_ROLE_KEY}"
+            echo "CLAVE_CIFRADO=$(openssl rand -base64 32)"
+            echo "APP_URL=http://localhost:3000"
+          } > .env.local
+      - run: npx vitest run tests/integracion
+      - name: Parar Supabase
+        if: always()
+        run: supabase stop --no-backup
