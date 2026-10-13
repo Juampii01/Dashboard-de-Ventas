@@ -28,6 +28,13 @@
 - **Comparación final (GHL → app):** Agendas orgánico 28 → 27 (falta un «Test» de hoy: Orgánico no tiene workflow) · Biblioteca 1.334 → 1.358 (+24 de prueba o ejemplo que GHL no tiene) · Webinar 1 109 → 111 (+2 «Test» en Optin) · DFY 0 → 0. Columnas: todas iguales salvo Biblioteca (sin tocar) y «Cerrados» de más.
 - [ ] **Pendiente de Cristian:** ¿borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan). ¿«No le interesa» del caller debe mover a «No cualifican»? (hoy no mueve en los pipelines de origen). Un lead que llegue por el webhook sin pipeline va ahora a «0. Agendas orgánico» (el primero).
 
+**0b · Ahora, Claude: CRM rápido (Cristian, 13 oct: «cambiar de pipeline va súper lento»)** · medido el 13 oct (registros de Vercel): abrir un pipeline 0,8–1,6 s (servidor 0,57–0,92 s en 9 pasos en fila); mover una card 0,52–0,55 s en el servidor + 0,6–0,9 s rehaciendo el CRM entero. Vercel (iad1) y Supabase (N. Virginia) en la misma zona: no es la distancia.
+- [ ] 1. Servidor del CRM: consultas a la vez (de 9 pasos a ~3) y menos datos por card (sin las respuestas enteras de 1.300 leads).
+- [ ] 2. Cambio de pipeline: la pestaña responde al momento (se marca y el tablero se atenúa mientras carga), se precarga al pasar el ratón por encima y lo visto hace poco sale al instante.
+- [ ] 3. Mover una card: comprobaciones a la vez, historial sin esperar y sin rehacer el CRM entero.
+- [ ] 4. Medir otra vez (mismas pruebas), enseñar el antes y el después y quitar la medición temporal (`src/lib/tiempos.ts`).
+- Pendiente de Cristian: el número de la pestaña «Closers» (14) cuenta solo citas abiertas y el tablero enseña 17; las vistas Lista/Día/Tabla de Agendas conservan sus botones.
+
 **A · Ahora, Cristian (para seguir)**
 - [ ] **Subir el CSV de GHL** (KPIs → Biblioteca → «Subir CSV de leads»): ¿ya no se queda en «Importando…»? (el arreglo de velocidad está puesto, sin probar con tu archivo de 1.282 filas). ¿Quedan al día los leads de la Biblioteca que entraron sin respuestas antes del arreglo?
 - [ ] **Subir el CSV de Webinar 1** (prueba de «varios pipelines»): sus tarjetas 🔗 ya están desde el 13 oct (las puso `igualar-ghl` leyendo GHL: 104). Falta decidir si el CSV sigue haciendo falta (serviría para probar la subida y las respuestas); si se sube, el Funnel tiene que seguir contando personas (lo compruebo yo en la base).

@@ -48,7 +48,7 @@ import { useToast } from "@/components/toasts";
 import { exigirOk } from "@/lib/resultado-cliente";
 import Papa from "papaparse";
 import { CAMPOS, proponerCampo, type Campo } from "@/lib/csv";
-import type { Etapa, EstadoCaller, Pipeline, Producto, Respuesta, TipoPipeline } from "@/lib/tipos";
+import type { Etapa, EstadoCaller, Pipeline, Producto, TipoPipeline } from "@/lib/tipos";
 import { confirmar, pedirTexto } from "@/components/dialogos";
 import { Desplegable, Pastillas } from "@/components/eleccion";
 import { ARRASTRE_COLUMNA, ARRASTRE_PIPELINE, reordenar } from "@/lib/orden";
@@ -67,7 +67,7 @@ export type LeadTarjeta = {
   estado_caller: string;
   creado_en: string;
   etiquetas: string[];
-  respuestas: Respuesta[];
+  invertir: string | null; // la respuesta de «¿puedes invertir?» (13 oct: la card ya no recibe todas las respuestas)
   oferta?: string | null; // bloque A
   otroPipeline?: boolean; // Fase 4: tarjeta en un pipeline que no es el suyo principal
 };
@@ -617,7 +617,7 @@ function Tarjeta({
   marcada: boolean;
   onMarcar?: () => void;
 }) {
-  const invertir = lead.respuestas.find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta;
+  const invertir = lead.invertir;
   return (
     <TarjetaCrm
       leadId={lead.id}

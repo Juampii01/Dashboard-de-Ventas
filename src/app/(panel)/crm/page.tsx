@@ -3,14 +3,14 @@ import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { calcularNivel, filasPermisoPipeline } from "@/lib/pipelines";
 import { columnaCitasGhl } from "@/lib/leads";
-import { contarTarjetas, tarjetasDelPipeline } from "@/lib/tarjetas";
+import { contarTarjetas } from "@/lib/tarjetas";
 import { cargarCitasVentas, columnasCloser } from "@/lib/tablero-closers";
 import { ABIERTAS } from "@/lib/llamadas";
 import { Cabecera, Contenido } from "@/components/ui";
 import { FiltroUrl } from "@/components/barra-periodo";
 import { Refresco } from "@/components/refresco";
 import { TableroCrm, type LeadTarjeta } from "./tablero";
-import type { Etapa, Pipeline, Producto } from "@/lib/tipos";
+import type { Etapa, Pipeline, Producto, Respuesta } from "@/lib/tipos";
 import { cronometro } from "@/lib/tiempos";
 
 // Un solo CRM para todos (Paso H7) con los pipelines del equipo (Paso 0, como GHL): los de origen (Webinar 1…),
@@ -22,43 +22,62 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
   const { perfil, proyecto } = await exigirPagina("crm"); // H5
   t.paso("sesion+permisos");
   const jefe = esJefe(perfil);
+  const admin = puedeAdmin(perfil);
   const sp = await searchParams;
-  const gente = await equipo(proyecto.id, !!perfil.es_prueba);
-  t.paso("equipo");
+
+  // Velocidad (13 oct 2026): todo lo que no depende del pipeline elegido va a la vez (antes, 9 pasos en fila)
+  const [gente, { todos, filas }, { data: productos }, citasGhl, { data: etapasProyecto }] = await Promise.all([
+    equipo(proyecto.id, !!perfil.es_prueba),
+    (async () => {
+      const { data } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
+      const todos = (data ?? []) as Pipeline[];
+      return { todos, filas: await filasPermisoPipeline(todos.map((p) => p.id)) };
+    })(),
+    // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
+    perfil.rol === "caller"
+      ? Promise.resolve({ data: [] as Producto[] })
+      : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
+    admin ? columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null) : Promise.resolve(null),
+    // Las columnas de todos los pipelines: las del elegido y las de las acciones masivas
+    db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden"),
+  ]);
+  t.paso("equipo+pipelines+productos+citasGhl+etapas");
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
   // Los leads de una persona: los que tiene asignados como caller o como closer
   const deLaPersona = <Q extends { or: (f: string) => Q }>(q: Q) => (persona ? q.or(`caller_id.eq.${persona.id},closer_id.eq.${persona.id}`) : q);
-
-  const { data: pipelinesData } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
-  const todos = (pipelinesData ?? []) as Pipeline[];
-  t.paso("pipelines");
-  const filas = await filasPermisoPipeline(todos.map((p) => p.id));
-  t.paso("permisos-pipeline");
+  const esDeLaPersona = (l: { caller_id: string | null; closer_id: string | null }) => !persona || l.caller_id === persona.id || l.closer_id === persona.id;
   const niveles = Object.fromEntries(todos.map((p) => [p.id, calcularNivel(perfil, p, filas)]));
   const pipelines = todos.filter((p) => niveles[p.id] !== "sin_acceso");
   const pipeline = pipelines.find((p) => p.id === sp.pipeline) ?? pipelines[0] ?? null;
+  const todasEtapas = ((etapasProyecto ?? []) as (Etapa & { pipelines?: unknown })[]).map((e) => {
+    const { pipelines: _fuera, ...etapa } = e; // eslint-disable-line @typescript-eslint/no-unused-vars
+    return etapa as Etapa;
+  });
+  const etapas = pipeline ? todasEtapas.filter((e) => e.pipeline_id === pipeline.id) : [];
 
   // «Closers»: qué citas ve cada uno (como Agendas): el closer las suyas; el caller las que agendó (solo mirar)
   const closersIds = gente.filter((g) => g.rol === "closer").map((g) => g.id);
   const deCloser = !persona ? closersIds : persona.rol === "closer" ? [persona.id] : closersIds;
   const agendadasPor = persona?.rol === "caller" ? persona.id : null;
 
-  const etapasQ = pipeline ? db().from("etapas").select("*").eq("pipeline_id", pipeline.id).order("orden") : Promise.resolve({ data: [] });
-  const leadsQ =
+  // La card solo necesita la respuesta de «invertir» (el popup pide el resto): menos datos que mandar al navegador
+  type Fila = Omit<LeadTarjeta, "invertir"> & { etapa_callers_id: string | null; respuestas: Respuesta[] | null };
+  const CAMPOS = "id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta";
+  const aTarjeta = ({ respuestas, ...l }: Fila): LeadTarjeta & { etapa_callers_id: string | null } => ({
+    ...l,
+    invertir: (respuestas ?? []).find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta ?? null,
+  });
+
+  // Lo del pipeline elegido, también a la vez
+  const [leadsCrudos, conteos, extraLeads, extraPorPipeline, closers] = await Promise.all([
     pipeline && pipeline.tipo !== "closers"
-      ? todas<LeadTarjeta & { etapa_callers_id: string | null }>((a, b) => {
-          let q = db()
-            .from("leads")
-            .select("id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta")
-            .eq("proyecto_id", proyecto.id);
+      ? todas<Fila>((a, b) => {
+          let q = db().from("leads").select(CAMPOS).eq("proyecto_id", proyecto.id);
           // «Callers»: solo los leads con caller (Cristian, 10 oct 2026)
           q = pipeline.tipo === "callers" ? q.not("caller_id", "is", null) : q.eq("pipeline_id", pipeline.id);
           return deLaPersona(q).order("creado_en", { ascending: false }).order("id").range(a, b);
-        })
-      : Promise.resolve([]);
-  const [etapasData, leadsCrudos, conteos, { data: productos }] = await Promise.all([
-    etapasQ,
-    leadsQ,
+        }).then((filas) => filas.map(aTarjeta))
+      : Promise.resolve([]),
     Promise.all(
       pipelines.map(async (p) => {
         if (p.tipo === "closers") {
@@ -71,57 +90,31 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         return [p.id, count ?? 0] as const;
       })
     ),
-    // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
-    perfil.rol === "caller"
-      ? Promise.resolve({ data: [] as Producto[] })
-      : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
+    // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro (con sus datos, en una consulta)
+    pipeline?.tipo === "normal"
+      ? todas<{ etapa_id: string | null; leads: Fila | null }>((a, b) => db().from("tarjetas_extra").select(`etapa_id, leads(${CAMPOS})`).eq("pipeline_id", pipeline.id).order("id").range(a, b).overrideTypes<{ etapa_id: string | null; leads: Fila | null }[], { merge: false }>()).then((filas) =>
+          filas.filter((x) => x.leads && esDeLaPersona(x.leads)).map((x) => ({ ...aTarjeta(x.leads!), etapa_id: x.etapa_id, otroPipeline: true }))
+        )
+      : Promise.resolve([]),
+    jefe && !persona ? contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id)) : Promise.resolve({} as Record<string, number>),
+    pipeline?.tipo === "closers"
+      ? cargarCitasVentas(proyecto.id, deCloser, agendadasPor).then(({ citas, ventas }) =>
+          columnasCloser(etapas, citas, ventas, { proyecto, jefe, nombrePersona: (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—" })
+        )
+      : Promise.resolve(null),
   ]);
-  t.paso(`etapas+leads(${leadsCrudos.length})+conteos(${conteos.length})+productos`);
-  const etapas = (etapasData.data ?? []) as Etapa[];
-  // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro
-  const extra = pipeline?.tipo === "normal" ? await tarjetasDelPipeline(pipeline.id) : [];
-  const extraLeads: (LeadTarjeta & { etapa_callers_id: string | null })[] = [];
-  if (extra.length) {
-    const columnaDe = new Map(extra.map((x) => [x.lead_id, x.etapa_id]));
-    const ids = [...columnaDe.keys()];
-    for (let i = 0; i < ids.length; i += 300) {
-      let q = db()
-        .from("leads")
-        .select("id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta")
-        .in("id", ids.slice(i, i + 300));
-      q = deLaPersona(q);
-      const { data } = await q;
-      for (const l of (data ?? []) as (LeadTarjeta & { etapa_callers_id: string | null })[]) extraLeads.push({ ...l, etapa_id: columnaDe.get(l.id) ?? null, otroPipeline: true });
-    }
-  }
-  t.paso(`tarjetas-extra(${extraLeads.length})`);
-  const extraPorPipeline = jefe && !persona ? await contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id)) : {};
-  t.paso("contar-tarjetas");
+  t.paso(`leads(${leadsCrudos.length})+conteos+extra(${extraLeads.length})+closers`);
+  t.fin();
   // En «Callers» la columna de cada lead es la de su llamada
   const yaEstan = new Set(leadsCrudos.map((l) => l.id));
   const leads: LeadTarjeta[] = [...leadsCrudos, ...extraLeads.filter((l) => !yaEstan.has(l.id))].map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));
 
-  let closers: ReturnType<typeof columnasCloser> | null = null;
-  if (pipeline?.tipo === "closers") {
-    const { citas, ventas } = await cargarCitasVentas(proyecto.id, deCloser, agendadasPor);
-    const nombrePersona = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—";
-    closers = columnasCloser(etapas, citas, ventas, { proyecto, jefe, nombrePersona });
-  }
-
-  t.paso("closers");
   const nivel = pipeline ? niveles[pipeline.id] : "ver";
-  const admin = puedeAdmin(perfil);
-  const citasGhl = admin ? (await columnaCitasGhl(proyecto.id))?.id ?? null : null;
   // Acciones masivas (Fase 4): a qué columnas se pueden mover leads (las libres de los pipelines de origen y «Callers»)
-  const movibles = pipelines.filter((p) => p.tipo !== "closers");
-  const { data: etapasDestino } = jefe && movibles.length
-    ? await db().from("etapas").select("id, pipeline_id, nombre, estado_caller").in("pipeline_id", movibles.map((p) => p.id)).order("orden")
-    : { data: [] };
-  t.paso("citasGhl+destinos");
-  t.fin();
+  const movibles = jefe ? pipelines.filter((p) => p.tipo !== "closers") : [];
   const destinos = movibles.map((p) => ({
     pipeline: p.nombre,
-    etapas: (etapasDestino ?? []).filter((e) => e.pipeline_id === p.id && !e.estado_caller).map((e) => ({ id: e.id as string, nombre: e.nombre as string })),
+    etapas: todasEtapas.filter((e) => e.pipeline_id === p.id && !e.estado_caller).map((e) => ({ id: e.id, nombre: e.nombre })),
   })).filter((d) => d.etapas.length);
   return (
     <>
