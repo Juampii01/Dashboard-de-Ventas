@@ -6,7 +6,7 @@
     "zona_horaria": "America/New_York",
     "color": "#2f55d4"
   },
-  "_pipelines": "13 oct 2026 (Cristian): pipelines de origen iguales que GHL (nombres, orden y columnas); «Cerrados» se queda en todos (cerrar soltando). «Callers» y «Closers» los crea la base sola al crear el proyecto.",
+  "_pipelines": "13 oct 2026 (Cristian): pipelines de origen iguales que GHL (nombres, orden y columnas); «Cerrados» se queda en todos (cerrar soltando). «0. Agendas Callers» de GHL no se crea (Cristian: basta el «Callers» de la app). «Callers» y «Closers» los crea la base sola al crear el proyecto.",
   "colores": [
     "#64748b",
     "#2f55d4",
@@ -19,7 +19,33 @@
   ],
   "pipelines": [
     {
-      "nombre": "0. Agendas orgánico",
+      "nombre": "0. Agendas YT",
+      "columnas": [
+        "Form",
+        "Agendan",
+        "Confirman",
+        "No confirman",
+        "No show",
+        "Cerrados",
+        "No cualifican",
+        "Seguimiento"
+      ]
+    },
+    {
+      "nombre": "0. Agendas Orgánico",
+      "columnas": [
+        "Form",
+        "Agendan",
+        "Confirman",
+        "No confirman",
+        "No show",
+        "Cerrados",
+        "No cualifican",
+        "Seguimiento"
+      ]
+    },
+    {
+      "nombre": "0. Agendas IG",
       "columnas": [
         "Form",
         "Agendan",

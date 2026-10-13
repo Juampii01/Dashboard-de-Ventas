@@ -30,9 +30,10 @@ async function hacer(descripcion, accion) {
 const norm = (s) => (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/^\d+\.\s*/, "").trim().toLowerCase();
 
 // Nombre antiguo de cada pipeline y, por columna nueva, la columna de la app que se renombra (si la hay)
-const ANTES = { "0. Agendas orgánico": "Orgánico", "1. Biblioteca Recursos": "Biblioteca Recursos", "2. Webinar 1": "Webinar 1", "3. DFY AI Services": "DFY AI Services" };
+// Nombres anteriores de cada pipeline en la app (los que no tienen, si no existen, se crean: YT e IG, 13 oct)
+const ANTES = { "0. Agendas Orgánico": ["0. Agendas orgánico", "Orgánico"], "1. Biblioteca Recursos": ["Biblioteca Recursos"], "2. Webinar 1": ["Webinar 1"], "3. DFY AI Services": ["DFY AI Services"] };
 const RENOMBRAR = {
-  "0. Agendas orgánico": { Form: "Nuevos", Agendan: "Agendados", Seguimiento: "En seguimiento", "No cualifican": "Descartados" },
+  "0. Agendas Orgánico": { Form: "Nuevos", Agendan: "Agendados", Seguimiento: "En seguimiento", "No cualifican": "Descartados" },
   "2. Webinar 1": { Optin: "Nuevos" },
   "3. DFY AI Services": { Agendado: "Agendados" },
 };
@@ -46,8 +47,13 @@ const pipes = await must(db.from("pipelines").select("*").eq("proyecto_id", proy
 console.log("1 · Pipelines");
 const destino = {};
 for (const [i, p] of BASE.pipelines.entries()) {
-  const pipe = pipes.find((x) => x.tipo === "normal" && (x.nombre === p.nombre || x.nombre === ANTES[p.nombre]));
-  if (!pipe) throw new Error(`No encuentro el pipeline «${ANTES[p.nombre]}»`);
+  let pipe = pipes.find((x) => x.tipo === "normal" && (x.nombre === p.nombre || (ANTES[p.nombre] ?? []).includes(x.nombre)));
+  if (!pipe) {
+    console.log(`+ Pipeline nuevo «${p.nombre}» (posición ${i + 1})`);
+    pipe = confirmar
+      ? (await must(db.from("pipelines").insert({ proyecto_id: proyecto.id, nombre: p.nombre, orden: i }).select(), `crear ${p.nombre}`))[0]
+      : { id: `nuevo-${i}`, nombre: p.nombre, orden: i, tipo: "normal", nuevo: true };
+  }
   destino[p.nombre] = pipe;
   if (pipe.nombre !== p.nombre || pipe.orden !== i) await hacer(`«${pipe.nombre}» → «${p.nombre}» (posición ${i + 1})`, () => db.from("pipelines").update({ nombre: p.nombre, orden: i }).eq("id", pipe.id));
 }
@@ -62,7 +68,7 @@ console.log("\n2 · Columnas");
 const etapasDe = {};
 for (const [i, p] of BASE.pipelines.entries()) {
   const pipe = destino[p.nombre];
-  const actuales = await must(db.from("etapas").select("*").eq("pipeline_id", pipe.id), "etapas");
+  const actuales = pipe.nuevo ? [] : await must(db.from("etapas").select("*").eq("pipeline_id", pipe.id), "etapas");
   const usadas = new Set();
   const finales = [];
   for (const [orden, nombre] of p.columnas.entries()) {
@@ -75,7 +81,9 @@ for (const [i, p] of BASE.pipelines.entries()) {
         await hacer(`${p.nombre}: «${previa.nombre}» → «${nombre}» (posición ${orden + 1})`, () => db.from("etapas").update({ nombre, orden }).eq("id", previa.id));
     } else {
       console.log(`+ ${p.nombre}: columna nueva «${nombre}» (posición ${orden + 1})`);
-      if (confirmar) finales.push((await must(db.from("etapas").insert({ pipeline_id: pipe.id, nombre, orden, color }).select(), `crear ${nombre}`))[0]);
+      // «Cerrados» nace unida a «Vendido» (cerrar soltando), como en los demás pipelines
+      const vendido = nombre === "Cerrados" ? { estado_caller: "vendido" } : {};
+      if (confirmar) finales.push((await must(db.from("etapas").insert({ pipeline_id: pipe.id, nombre, orden, color, ...vendido }).select(), `crear ${nombre}`))[0]);
       else finales.push({ id: `nueva-${nombre}`, nombre });
     }
   }
@@ -159,7 +167,7 @@ if (resumen.sinLead.length) console.log(`! En GHL pero no en la app (${resumen.s
 if (resumen.sinColumna.length) console.log(`! Columna de GHL que no existe en la app (${resumen.sinColumna.length}):\n   ${resumen.sinColumna.join("\n   ")}`);
 
 // 4 · Leads con cita de GHL → «Agendan» (es la misma columna que «Agendados», renombrada: se comprueba)
-const agendan = etapasDe[destino["0. Agendas orgánico"].id].find((e) => e.nombre === "Agendan");
-console.log(`\n4 · Columna de citas de GHL: ${proyecto.etapa_citas_ghl === agendan?.id ? "ya es «0. Agendas orgánico → Agendan»" : "se pone en «0. Agendas orgánico → Agendan»"}`);
+const agendan = etapasDe[destino["0. Agendas Orgánico"].id].find((e) => e.nombre === "Agendan");
+console.log(`\n4 · Columna de citas de GHL: ${proyecto.etapa_citas_ghl === agendan?.id ? "ya es «0. Agendas Orgánico → Agendan»" : "se pone en «0. Agendas Orgánico → Agendan»"}`);
 if (proyecto.etapa_citas_ghl !== agendan?.id && confirmar) await must(db.from("proyectos").update({ etapa_citas_ghl: agendan.id }).eq("id", proyecto.id), "columna de citas");
 console.log(confirmar ? "\nHecho." : "\nSimulación: no se ha cambiado nada. Añade --confirmar para hacerlo.");
