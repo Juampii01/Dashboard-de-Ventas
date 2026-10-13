@@ -164,7 +164,7 @@ describe("Arreglo 21: citas borradas en GHL", () => {
     expect(p!.ghl_ultimo_resultado).toMatch(/2 canceladas \(borradas en GHL\)/);
   });
 
-  it("12 oct (Cristian): un lead con cita nueva de GHL pasa a «Orgánico → Agendados»; una cancelada no lo mueve", async () => {
+  it("12 oct (Cristian) + Fase 4: con cita nueva de GHL, el lead nuevo nace en «Orgánico → Agendados» y el que ya existía gana su tarjeta allí sin salir de su pipeline; una cancelada no lo mueve", async () => {
     const { data: org } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre: "Orgánico", orden: 5 }).select().single();
     const { data: ets } = await db.from("etapas").insert(["Nuevos", "Agendados"].map((n, i) => ({ pipeline_id: org!.id, nombre: n, orden: i }))).select();
     const agendados = ets!.find((x) => x.nombre === "Agendados")!.id;
@@ -179,7 +179,10 @@ describe("Arreglo 21: citas borradas en GHL", () => {
     await sync();
     const lead = async (filtro: { id?: string; email?: string }) =>
       (await (filtro.id ? db.from("leads").select("pipeline_id, etapa_id").eq("id", filtro.id) : db.from("leads").select("pipeline_id, etapa_id").eq("email", filtro.email!)).single()).data;
-    expect(await lead({ id: e.leads.LeadB })).toEqual({ pipeline_id: org!.id, etapa_id: agendados });
+    const antesB = (await db.from("leads").select("pipeline_id").eq("id", e.leads.LeadB).single()).data!.pipeline_id;
+    expect(antesB).not.toBe(org!.id); // sigue en su pipeline…
+    const { data: tarjeta } = await db.from("tarjetas_extra").select("pipeline_id, etapa_id").eq("lead_id", e.leads.LeadB).single();
+    expect(tarjeta).toEqual({ pipeline_id: org!.id, etapa_id: agendados }); // …y tiene su tarjeta en Orgánico → Agendados
     expect(await lead({ email: `${e.pref}-org@x.test` })).toEqual({ pipeline_id: org!.id, etapa_id: agendados });
     expect((await lead({ email: `${e.pref}-can@x.test` }))!.pipeline_id).not.toBe(org!.id);
   });

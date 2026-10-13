@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/datos";
 import { descifrar } from "@/lib/cifrado";
-import { datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave } from "@/lib/leads";
+import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoDesdeGhl, eventosGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
 import type { Proyecto } from "@/lib/tipos";
 import { ABIERTAS } from "@/lib/llamadas";
@@ -32,6 +32,8 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
 
   const contactos = new Map<string, ContactoGhl | null>();
   const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
+  // Fase 4: un lead que nace con su cita de GHL entra ya en la columna de citas (su pipeline principal)
+  const destinoCitas = await columnaCitasGhl(proyecto.id);
 
   for (const c of closers) {
     let eventos;
@@ -45,6 +47,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       if (!ev.id || !ev.startTime || isNaN(new Date(ev.startTime).getTime())) continue;
       const fecha = new Date(ev.startTime).toISOString();
       const deGhl = estadoDesdeGhl(ev.appointmentStatus);
+      const abierta = !deGhl || deGhl === "confirmada"; // pendiente (sin estado de GHL) o confirmada: solo estas mueven el lead a la columna de citas
 
       // ¿Ya está en la app?
       const { data: existe } = await db().from("citas").select("id, estado, fecha, closer_id").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id).maybeSingle();
@@ -94,7 +97,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
           await guardarLeads(
             proyecto,
             [{ ghl_contact_id: ev.contactId, nombre: ct?.firstName ?? nombreCompleto.split(/\s+/)[0] ?? "", apellido: ct?.lastName ?? nombreCompleto.split(/\s+/).slice(1).join(" "), email, telefono, etiquetas: [], respuestas: [], creado_en: null }],
-            { pipelineId: pipe?.id ?? null, origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
+            { ...(abierta && destinoCitas ? { pipelineId: destinoCitas.pipeline_id, etapaId: destinoCitas.id } : { pipelineId: pipe?.id ?? null }), origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
           );
           const { data } = await db().from("leads").select("id").eq("proyecto_id", proyecto.id).eq("ghl_contact_id", ev.contactId).maybeSingle();
           leadId = data?.id ?? null;

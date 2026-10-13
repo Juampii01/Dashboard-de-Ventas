@@ -18,7 +18,9 @@ const plazos = async (venta: string) => (await db.from("vencimientos").select("n
 
 describe("Membresía mensual", () => {
   it("al venderla queda el cobro del mes siguiente; luego se van creando; con la baja se quitan los que no vencieron", async () => {
-    como(e, e.p.callerA);
+    // 12 oct (Cristian): el caller ya no registra ventas: la registra el closer del lead
+    await db.from("leads").update({ closer_id: e.p.closerA.id }).eq("id", e.leads.LeadA);
+    como(e, e.p.closerA);
     await ok(registrarVenta(e.leads.LeadA, formulario({ producto, facturacion: "47", cash: "47", tipo_pago: "mensual", metodo: "stripe", fecha: "2026-10-11" })));
     const { data: v } = await db.from("ventas").select("id, tipo_pago").eq("lead_id", e.leads.LeadA).single();
     expect(v!.tipo_pago).toBe("mensual");
@@ -32,7 +34,8 @@ describe("Membresía mensual", () => {
   it("al vender, el lead va a la columna con el nombre del producto (p. ej. «Membresía» en Orgánico); si no hay, a «Cerrados»", async () => {
     const col = (await db.from("etapas").insert({ pipeline_id: e.pipeline.id, nombre: "Membresía", orden: 9 }).select("id").single()).data!.id;
     await db.from("leads").update({ pipeline_id: e.pipeline.id, etapa_id: e.etapas.Nuevos }).eq("id", e.leads.LeadB);
-    como(e, e.p.callerB);
+    await db.from("leads").update({ closer_id: e.p.closerB.id }).eq("id", e.leads.LeadB);
+    como(e, e.p.closerB);
     await ok(registrarVenta(e.leads.LeadB, formulario({ producto, facturacion: "47", cash: "47", tipo_pago: "mensual", metodo: "stripe" })));
     expect((await db.from("leads").select("etapa_id").eq("id", e.leads.LeadB).single()).data!.etapa_id).toBe(col);
   });

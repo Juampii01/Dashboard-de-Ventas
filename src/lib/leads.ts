@@ -258,10 +258,10 @@ export async function guardarLeads(
 // en el «⋯» de la columna), así no depende del nombre. Sin ese dato (base aún sin la migración), se busca por nombre.
 export async function columnaCitasGhl(proyectoId: string): Promise<{ pipeline_id: string; id: string } | null> {
   const { data: proy } = await db().from("proyectos").select("*").eq("id", proyectoId).maybeSingle();
-  if (proy && "etapa_citas_ghl" in proy) {
-    if (!proy.etapa_citas_ghl) return null;
+  // La elegida en el «⋯»; si no hay ninguna elegida (o la base no tiene el campo), «Orgánico → Agendados» por nombre
+  if (proy?.etapa_citas_ghl) {
     const { data } = await db().from("etapas").select("id, pipeline_id").eq("id", proy.etapa_citas_ghl).maybeSingle();
-    return data ?? null;
+    if (data) return data;
   }
   const { data: pipe } = await db().from("pipelines").select("id, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal").ilike("nombre", "orgánico").maybeSingle();
   const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => x.nombre.trim().toLowerCase() === "agendados");

@@ -2,7 +2,7 @@ import { escribir } from "@/lib/datos";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave, type LeadEntrada } from "@/lib/leads";
+import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, telefonoClave, type LeadEntrada } from "@/lib/leads";
 import { dentroDelLimite } from "@/lib/limite";
 import { interpretar } from "@/lib/entrada";
 import type { Proyecto } from "@/lib/tipos";
@@ -61,13 +61,15 @@ async function buscarLead(proyectoId: string, e: LeadEntrada) {
   return null;
 }
 
-async function buscarOCrearLead(proyecto: Proyecto, b: Json) {
+// Fase 4: con `conCita`, un lead que no existía nace ya en la columna de citas de GHL (su pipeline principal)
+async function buscarOCrearLead(proyecto: Proyecto, b: Json, conCita = false) {
   const e = aLead(b);
   if (!e.ghl_contact_id && !e.email && telefonoClave(e.telefono).length < 6) throw new Error("No se pudo identificar el lead: no viene email, teléfono ni contacto de GHL");
   const ya = await buscarLead(proyecto.id, e);
   if (ya) return ya;
-  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
-  await guardarLeads(proyecto, [e], { pipelineId: pipe?.id ?? null, origen: "ghl", perfilId: null, repartir: true });
+  const destino = conCita ? await columnaCitasGhl(proyecto.id) : null;
+  const { data: pipe } = destino ? { data: null } : await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
+  await guardarLeads(proyecto, [e], { pipelineId: destino?.pipeline_id ?? pipe?.id ?? null, etapaId: destino?.id, origen: "ghl", perfilId: null, repartir: true });
   return buscarLead(proyecto.id, e);
 }
 
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       }
       await guardarLeads(proyecto, [aLead(body)], { pipelineId, origen: "ghl", perfilId: null, repartir: true });
     } else if (tipo === "cita_agendada") {
-      const lead = await buscarOCrearLead(proyecto, body);
+      const lead = await buscarOCrearLead(proyecto, body, true);
       if (!lead) throw new Error("No se pudo identificar el lead");
       // 11 oct 2026: GHL manda calendar.startTime sin zona ("2026-10-14T15:30:00", hora de calendar.selectedTimezone).
       // Se prueba cada campo por orden y vale el primero que sea una fecha; sin zona, se lee en la del calendario
