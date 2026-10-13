@@ -9,7 +9,7 @@ import { rellenar, resumenMarcas, type Guion, type Marcas } from "@/lib/guiones"
 
 export type ResultadoGuion = { clave: string; texto: string; icono: ReactNode };
 
-// Fase 6 · La llamada siguiendo el guion: al pulsar «Llamar» no se abre ninguna app (Cristian, 12 oct): sale esto.
+// Fase 6 · El guion de la llamada: se abre con el botón «Guion» (Cristian, 13 oct; sin botón «Llamar»).
 // Pasos con su checklist y pistas, objeciones con su respuesta y, al final, los botones de resultado de siempre.
 // Lo marcado se guarda al elegir el resultado (para que el CEO y los directores lo revisen en «Guiones»).
 export function GuionLlamada({
@@ -61,7 +61,7 @@ export function GuionLlamada({
   }
 
   return (
-    <Modal titulo={`Llamada a ${nombreLead}`} onCerrar={onCerrar} ancho="max-w-5xl">
+    <Modal titulo={`Guion · ${nombreLead}`} onCerrar={onCerrar} ancho="max-w-5xl">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-panel-2 px-4 py-3">
           <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, PhoneCall, Check, Link2 } from "lucide-react";
+import { PhoneOff, Clock, CalendarPlus, ThumbsDown, MessageCircle, ShoppingCart, StickyNote, ScrollText, Check, Link2 } from "lucide-react";
 import { agendarCita, anadirNota, marcarLinkEnviado, registrarLlamada, registrarVenta, registrarWhatsapp } from "@/app/(panel)/leads/acciones";
 import { Modal } from "@/components/modal";
 import { CoachIa } from "@/components/coach";
@@ -16,8 +16,6 @@ import type { Guion } from "@/lib/guiones";
 
 type Persona = { id: string; nombre: string };
 
-// Cristian (13 oct): el botón «Llamar» (con el guion) queda para más adelante
-const LLAMAR_ACTIVO = false;
 
 // Ejecuta una acción del servidor: muestra «guardado» en un aviso flotante
 // y, si falla, el error en el aviso y también junto al botón.
@@ -92,11 +90,11 @@ export function AccionesLead({
   return (
     <div className="space-y-3">
       <div className={`grid gap-2 ${compacto ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
-        {/* Fase 6: «Llamar» abría el guion de la llamada. Cristian (13 oct): se quita de Callers y del CRM, será una
-            función futura. Para volver a ponerlo, cambiar LLAMAR_ACTIVO a true. */}
-        {LLAMAR_ACTIVO && guion && (
+        {/* Cristian (13 oct): sin botón «Llamar» (llamar desde la app será una función futura); en su lugar,
+            «Guion» abre el guion de la llamada con sus botones de resultado */}
+        {guion && (
           <button type="button" className="btn-primario justify-start" onClick={() => setModal("guion")}>
-            <PhoneCall className="h-4 w-4" /> Llamar
+            <ScrollText className="h-4 w-4" /> Guion
           </button>
         )}
         {telLimpio && (
