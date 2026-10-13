@@ -31,7 +31,7 @@ export function FichaPersona({
   perfilId: string | null; // su usuario (null = solo está en el organigrama)
   admin: boolean;
   abiertaAlInicio?: boolean;
-  boton?: "lapiz" | "texto";
+  boton?: "lapiz" | "texto" | "nombre"; // «nombre» (Fase 5): el propio nombre abre la ficha (organigrama)
   datos: { areas: Area[]; puestos: Puesto[]; productos: { id: string; nombre: string }[]; rolesQuePuedoDar: Rol[]; puedeComision: boolean };
 }) {
   const [abierta, setAbierta] = useState(abiertaAlInicio);
@@ -64,7 +64,9 @@ export function FichaPersona({
 
   return (
     <>
-      {boton === "texto" ? (
+      {boton === "nombre" ? (
+        <button type="button" className="truncate text-left font-medium hover:text-primario hover:underline" onClick={() => setAbierta(true)} title={`Abrir la ficha de ${titulo}`}>{titulo}</button>
+      ) : boton === "texto" ? (
         <button type="button" className="btn-secundario px-2.5 py-1.5 text-xs" onClick={() => setAbierta(true)} aria-label={`Ficha de ${titulo}`}>Ficha</button>
       ) : (
         <button type="button" className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-texto" onClick={() => setAbierta(true)} title="Ficha" aria-label={`Ficha de ${titulo}`}><Pencil className="h-3.5 w-3.5" /></button>

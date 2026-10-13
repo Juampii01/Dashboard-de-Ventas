@@ -62,6 +62,61 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
     </li>
   );
 
+  // Fase 5: organigrama en árbol (CEO → directores → closers y callers). Pulsar el nombre abre su ficha.
+  const nodo = (m: (typeof miembros)[number]) => (
+    <div key={m.id} className="vidrio flex min-w-0 items-center gap-2.5 rounded-xl border border-borde px-3 py-2 shadow-sm">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primario-suave text-sm font-semibold text-primario">{m.nombre.charAt(0).toUpperCase()}</span>
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-sm">
+          <FichaPersona
+            titulo={m.nombre}
+            m={m}
+            perfilId={m.perfil_id}
+            admin={puedeAdmin(perfil)}
+            boton="nombre"
+            datos={{ areas: eq.areas, puestos: eq.puestos, productos: (productos ?? []).map((p) => ({ id: p.id, nombre: p.nombre })), rolesQuePuedoDar, puedeComision: puedeComisionDe(m.perfil_id) }}
+          />
+          {m.lider && <span title="Líder del área"><Crown className="h-3.5 w-3.5 shrink-0 text-oro" /></span>}
+        </div>
+        <div className="truncate text-xs text-texto-3">{puesto(m.puesto_id) ?? (m.rol ? ROL_TXT[m.rol] : "Sin acceso")}</div>
+      </div>
+    </div>
+  );
+  const delRol = (r: Rol | null) => miembros.filter((m) => (m.rol ?? null) === r).sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const linea = <div className="mx-auto h-6 w-px bg-borde-fuerte" aria-hidden />;
+  const organigrama = (
+    <div className="space-y-0">
+      <div className="flex flex-wrap justify-center gap-3">{delRol("ceo").map(nodo)}</div>
+      {delRol("director").length > 0 && (
+        <>
+          {linea}
+          <div className="rounded-2xl border border-dashed border-borde p-3">
+            <div className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-texto-3">Directores</div>
+            <div className="grid justify-center gap-3 sm:grid-cols-2 lg:grid-cols-3">{delRol("director").map(nodo)}</div>
+          </div>
+        </>
+      )}
+      {linea}
+      <div className="grid gap-4 md:grid-cols-2">
+        {([["closer", "Closers"], ["caller", "Callers"]] as const).map(([r, t]) => (
+          <div key={r} className="rounded-2xl border border-borde bg-panel-2/50 p-3">
+            <div className="mb-2 flex items-center justify-between text-sm font-semibold">
+              {t}
+              <span className="rounded-full bg-panel px-2 text-xs tabular-nums text-texto-2">{delRol(r).length}</span>
+            </div>
+            {delRol(r).length === 0 ? <p className="py-3 text-center text-xs text-texto-3">Nadie todavía.</p> : <div className="grid gap-2 sm:grid-cols-2">{delRol(r).map(nodo)}</div>}
+          </div>
+        ))}
+      </div>
+      {delRol(null).length > 0 && (
+        <div className="mt-4 rounded-2xl border border-dashed border-borde p-3">
+          <div className="mb-2 text-sm font-semibold">Sin acceso a la app</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{delRol(null).map(nodo)}</div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <Cabecera
@@ -76,7 +131,9 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
       />
       <Contenido>
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <Seccion titulo={verInactivos ? "Personas inactivas" : "Organigrama"}>
+          <div className="space-y-5">
+          {!verInactivos && <Seccion titulo="Organigrama">{organigrama}</Seccion>}
+          <Seccion titulo={verInactivos ? "Personas inactivas" : "Por áreas"}>
             <div className="grid gap-4 md:grid-cols-2">
               {eq.areas.map((a) => {
                 const de = miembros.filter((m) => m.area_id === a.id).sort((x, y) => Number(y.lider) - Number(x.lider) || x.nombre.localeCompare(y.nombre));
@@ -95,6 +152,7 @@ export default async function EquipoPage({ searchParams }: PageProps<"/equipo">)
               )}
             </div>
           </Seccion>
+          </div>
           <div className="space-y-5">
             <Seccion titulo="Comisión de cada rol">
               {!jefe && <p className="mb-2 rounded-lg bg-panel-2 px-3 py-2 text-xs text-texto-2">Solo el CEO o el director pueden cambiar comisiones.</p>}
