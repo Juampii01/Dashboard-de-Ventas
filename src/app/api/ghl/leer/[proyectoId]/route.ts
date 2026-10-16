@@ -43,11 +43,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/ghl/lee
   return NextResponse.json({
     ok: true,
     citas: c ? { nuevas: c.nuevas, actualizadas: c.actualizadas, canceladas: c.canceladas, errores: c.errores.length } : { fallo: true },
-    leads: l ? { nuevos: l.nuevos, actualizados: l.actualizados, completados: l.completados, saltadas: l.saltadas, avisos: l.avisos.length, errores: l.errores.length, ...(l.activado ? { activado: true } : {}) } : { fallo: true },
+    leads: l ? { nuevos: l.nuevos, actualizados: l.actualizados, completados: l.completados, avisos: l.avisos.length, errores: l.errores.length } : { fallo: true },
   });
 }
 
-// Leads por API (Cristian, 16 oct 2026): oportunidades nuevas de GHL → su pipeline en la app
+// Leads por API (Cristian, 16-17 oct 2026): contactos nuevos de GHL → su pipeline en la app (por su etiqueta)
 async function leerLeads(proyectoId: string) {
   const { data: proyecto } = await createAdminClient().from("proyectos").select("*").eq("id", proyectoId).single<Proyecto & { ghl_token: string | null; ghl_location_id: string | null }>();
   if (!proyecto?.ghl_token || !proyecto.ghl_location_id) throw new Error("Falta conectar GHL");

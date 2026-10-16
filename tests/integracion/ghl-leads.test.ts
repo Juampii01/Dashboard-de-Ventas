@@ -1,137 +1,141 @@
-// Leads por API (Cristian, 16 oct 2026): las oportunidades nuevas de GHL entran en su pipeline cada 30 s.
-// GHL se simula (sin internet) con la forma real comprobada ese día.
+// Leads por API (Cristian, 16-17 oct 2026): los contactos nuevos de GHL entran cada 30 s en el pipeline de su
+// etiqueta (varias = todos; ninguna = «0. Agendas General»), en la primera columna. GHL se simula (sin internet) con
+// la forma real de POST /contacts/search comprobada el 17 oct.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, crearEscenario, db, type Escenario } from "../apoyo/escenario";
-import { leerLeadsGhl } from "@/lib/ghl-leads";
+import { leerLeadsGhl, pipelinesDeEtiquetas } from "@/lib/ghl-leads";
 import type { Proyecto } from "@/lib/tipos";
 
 let e: Escenario;
-let ops: Record<string, unknown>[] = [];
-const contactos: Record<string, Record<string, unknown> | 500> = {};
-const PIPES = [
-  { id: "pT", name: "Pipeline test", stages: [{ id: "sReg", name: "Registrados" }, { id: "sAg", name: "Agendados" }] },
-  { id: "pG", name: "0. Agendas General", stages: [{ id: "sG", name: "Agendan" }] },
-  { id: "pX", name: "Pipeline que no está en la app", stages: [{ id: "sX", name: "Nuevos" }] },
-];
+let contactos: Record<string, unknown>[] = [];
+let falla: string | null = null; // id de contacto cuyo GET falla (500)
 const CAMPOS = [
   { id: "f1", name: "¿En qué situación estás hoy?" },
   { id: "f2", name: "¿Cuándo quieres empezar?" },
   { id: "f3", name: "utm_source" },
 ];
-const falsoFetch = (async (url: string) => {
+const busquedas: { gt: string }[] = [];
+const falsoFetch = (async (url: string, init?: { body?: string }) => {
   const u = new URL(url);
-  if (u.pathname === "/opportunities/search") {
-    const lim = Number(u.searchParams.get("limit"));
-    const orden = [...ops].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-    return Response.json({ opportunities: orden.slice(0, lim), meta: { total: orden.length } });
+  if (u.pathname === "/contacts/search") {
+    const b = JSON.parse(init?.body ?? "{}");
+    const gt = b.filters[0].value.gt as string;
+    busquedas.push({ gt });
+    const lista = contactos.filter((c) => String(c.dateAdded) > gt).sort((a, b) => String(a.dateAdded).localeCompare(String(b.dateAdded)));
+    return Response.json({ contacts: lista.slice(0, b.pageLimit), total: lista.length });
   }
-  if (u.pathname === "/opportunities/pipelines") return Response.json({ pipelines: PIPES });
   if (/^\/locations\/[^/]+\/customFields$/.test(u.pathname)) return Response.json({ customFields: CAMPOS });
   const m = u.pathname.match(/^\/contacts\/(.+)$/);
   if (m) {
-    const c = contactos[m[1]];
-    if (c === 500) return new Response("{}", { status: 500 });
+    if (m[1] === falla) return new Response("{}", { status: 500 });
+    const c = contactos.find((x) => x.id === m[1]);
     return c ? Response.json({ contact: c }) : new Response("{}", { status: 404 });
   }
   return new Response("{}", { status: 404 });
 }) as unknown as typeof fetch;
 
-const AHORA = new Date("2026-10-16T21:30:00Z");
+const AHORA = new Date("2026-10-17T10:00:00Z");
+const mas = (min: number) => new Date(AHORA.getTime() + min * 60_000);
 const proyecto = async () => (await db.from("proyectos").select("*").eq("id", e.proyecto.id).single()).data as Proyecto & { ghl_location_id: string | null };
 const leer = async (ahora = AHORA) => leerLeadsGhl(await proyecto(), "tok", { fetchImpl: falsoFetch, ahora });
-const leadPorContacto = async (id: string) => (await db.from("leads").select("*").eq("proyecto_id", e.proyecto.id).eq("ghl_contact_id", id).maybeSingle()).data;
-const op = (id: string, pipelineId: string, stage: string, createdAt: string, contactId: string) => ({ id: `${e.pref}-${id}`, pipelineId, pipelineStageId: stage, createdAt, source: "recursos", contactId: `${e.pref}-${contactId}` });
+const leadPorContacto = async (id: string) => (await db.from("leads").select("*").eq("proyecto_id", e.proyecto.id).eq("ghl_contact_id", `${e.pref}-${id}`).maybeSingle()).data;
+const contacto = (id: string, dateAdded: string, extra: Record<string, unknown> = {}) => ({ id: `${e.pref}-${id}`, dateAdded, firstName: id, email: `${e.pref}-${id}@x.test`, source: "recursos", tags: [], customFields: [], ...extra });
+const pipes: Record<string, { id: string; etapas: Record<string, string> }> = {};
 
 beforeAll(async () => {
   e = await crearEscenario();
-  // El pipeline del escenario («Pipeline test») tiene el mismo nombre que uno de GHL
   await db.from("proyectos").update({ ghl_location_id: "loc-1" }).eq("id", e.proyecto.id);
+  for (const [nombre, cols] of [
+    ["1. Biblioteca Recursos", ["Nuevos", "Agendados"]],
+    ["2. Webinar 1", ["Optin", "Form completo"]],
+    ["0. Agendas General", ["Form", "Agendan"]],
+  ] as const) {
+    const { data: p } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre, orden: 5 }).select("id").single();
+    const { data: et } = await db.from("etapas").insert(cols.map((n, i) => ({ pipeline_id: p!.id, nombre: n, orden: i }))).select("id, nombre");
+    pipes[nombre] = { id: p!.id, etapas: Object.fromEntries(et!.map((x) => [x.nombre, x.id])) };
+  }
 });
 afterAll(async () => {
   if (e) await borrarEscenario(e);
 });
 
-describe("Leads nuevos de GHL por la API", () => {
-  it("la primera vez solo marca desde dónde (no mete los de antes)", async () => {
-    ops = [op("viejo", "pT", "sReg", "2026-10-16T20:00:00.000Z", "cViejo")];
-    contactos[`${e.pref}-cViejo`] = { firstName: "Viejo", email: `${e.pref}-viejo@x.test` };
-    const r = await leer();
-    expect(r.activado).toBe(true);
-    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-16T20:00:00+00:00");
-    expect(await leadPorContacto(`${e.pref}-cViejo`)).toBeNull();
+describe("Leads nuevos de GHL por la API (contactos)", () => {
+  it("etiqueta → pipeline; varias, todos; ninguna, General", () => {
+    expect(pipelinesDeEtiquetas(["Biblioteca Recursos"])).toEqual(["1. Biblioteca Recursos"]);
+    expect(pipelinesDeEtiquetas(["webinar1", "form completado", "biblioteca recursos"])).toEqual(["1. Biblioteca Recursos", "2. Webinar 1"]);
+    expect(pipelinesDeEtiquetas(["agenda llamada"])).toEqual(["0. Agendas General"]);
+    expect(pipelinesDeEtiquetas(undefined)).toEqual(["0. Agendas General"]);
   });
 
-  it("las nuevas entran en su pipeline y columna; «0. Agendas …» y los pipelines que no existen se saltan", async () => {
-    contactos[`${e.pref}-cNuevo`] = {
-      firstName: "Nuevo",
-      lastName: "De GHL",
-      email: `${e.pref}-nuevo@x.test`,
-      tags: ["biblioteca recursos"],
-      customFields: [
-        { id: "f1", value: "Tengo un negocio" },
-        { id: "f3", value: "yt" },
-      ],
-    };
-    contactos[`${e.pref}-cAg`] = { firstName: "Cita", email: `${e.pref}-cita@x.test` };
-    contactos[`${e.pref}-cX`] = { firstName: "Otro", email: `${e.pref}-otro@x.test` };
-    contactos[`${e.pref}-cA`] = { firstName: "LeadA", email: `${e.pref}-la@x.test`, customFields: [{ id: "f2", value: "Ya mismo" }] };
-    ops.push(
-      op("nuevo", "pT", "sAg", "2026-10-16T21:10:00.000Z", "cNuevo"),
-      op("cita", "pG", "sG", "2026-10-16T21:11:00.000Z", "cAg"),
-      op("otro", "pX", "sX", "2026-10-16T21:12:00.000Z", "cX"),
-      op("ya", "pT", "sReg", "2026-10-16T21:13:00.000Z", "cA")
+  it("la primera vez empieza ahora: no mete los de antes", async () => {
+    contactos = [contacto("viejo", "2026-10-17T09:00:00.000Z", { tags: ["biblioteca recursos"] })];
+    const r = await leer();
+    expect(r.nuevos).toBe(0);
+    expect(busquedas.at(-1)!.gt).toBe("2026-10-17T09:58:00.000Z");
+    expect(await leadPorContacto("viejo")).toBeNull();
+    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-17T10:00:00+00:00");
+  });
+
+  it("cada contacto nuevo va al pipeline de su etiqueta, en la primera columna, con respuestas y reparto", async () => {
+    contactos.push(
+      contacto("bib", "2026-10-17T10:00:10.000Z", { tags: ["biblioteca recursos"], customFields: [{ id: "f1", value: "Tengo un negocio" }, { id: "f3", value: "yt" }] }),
+      contacto("dos", "2026-10-17T10:00:20.000Z", { tags: ["biblioteca recursos", "webinar1", "form completado"], source: "landing-codigo-maestria" }),
+      contacto("sin", "2026-10-17T10:00:30.000Z", { tags: [] }),
+      // LeadA ya estaba en la app (mismo email): no se duplica ni se mueve de su pipeline; gana su tarjeta en la Biblioteca
+      { id: `${e.pref}-cA`, dateAdded: "2026-10-17T10:00:40.000Z", firstName: "LeadA", email: `${e.pref}-la@x.test`, tags: ["biblioteca recursos"], customFields: [{ id: "f2", value: "Ya mismo" }] }
     );
-    const r = await leer();
-    expect(r).toMatchObject({ nuevos: 1, actualizados: 1, saltadas: 2, errores: [] });
-    expect(r.avisos.join()).toContain("Pipeline que no está en la app");
+    const r = await leer(mas(1));
+    expect(r).toMatchObject({ nuevos: 3, errores: [] });
 
-    const nuevo = await leadPorContacto(`${e.pref}-cNuevo`);
-    expect(nuevo).toMatchObject({ pipeline_id: e.pipeline.id, etapa_id: e.etapas.Agendados, fuente: "recursos", origen: "ghl", creado_en: "2026-10-16T21:10:00+00:00" });
-    expect(nuevo!.respuestas).toEqual([{ pregunta: "¿En qué situación estás hoy?", respuesta: "Tengo un negocio" }]);
-    expect(nuevo!.seguimiento).toEqual({ utm_source: "yt" });
-    const { data: hist } = await db.from("actividades").select("nota").eq("lead_id", nuevo!.id);
-    expect(hist!.map((h) => h.nota)).toContain("Entró desde GHL (API) · Pipeline test");
+    const bib = await leadPorContacto("bib");
+    expect(bib).toMatchObject({ pipeline_id: pipes["1. Biblioteca Recursos"].id, etapa_id: pipes["1. Biblioteca Recursos"].etapas.Nuevos, fuente: "recursos", origen: "ghl", creado_en: "2026-10-17T10:00:10+00:00" });
+    expect(bib!.respuestas).toEqual([{ pregunta: "¿En qué situación estás hoy?", respuesta: "Tengo un negocio" }]);
+    expect(bib!.seguimiento).toEqual({ utm_source: "yt" });
+    const { data: hist } = await db.from("actividades").select("nota").eq("lead_id", bib!.id);
+    expect(hist!.map((h) => h.nota)).toContain("Entró desde GHL (API) · 1. Biblioteca Recursos");
 
-    expect(await leadPorContacto(`${e.pref}-cAg`)).toBeNull();
-    expect(await leadPorContacto(`${e.pref}-cX`)).toBeNull();
-    // LeadA ya estaba (por email): se completa sin moverlo ni duplicarlo
+    // Con dos etiquetas: su pipeline es el primero y en el otro tiene su tarjeta 🔗, en la primera columna
+    const dos = await leadPorContacto("dos");
+    expect(dos).toMatchObject({ pipeline_id: pipes["1. Biblioteca Recursos"].id, fuente: "landing-codigo-maestria" });
+    const { data: tarjetas } = await db.from("tarjetas_extra").select("pipeline_id, etapa_id").eq("lead_id", dos!.id);
+    expect(tarjetas).toEqual([{ pipeline_id: pipes["2. Webinar 1"].id, etapa_id: pipes["2. Webinar 1"].etapas.Optin }]);
+
+    const sin = await leadPorContacto("sin");
+    expect(sin).toMatchObject({ pipeline_id: pipes["0. Agendas General"].id, etapa_id: pipes["0. Agendas General"].etapas.Form });
+
     const { data: a } = await db.from("leads").select("*").eq("id", e.leads.LeadA).single();
-    expect(a).toMatchObject({ ghl_contact_id: `${e.pref}-cA`, etapa_id: e.etapas.Nuevos });
+    expect(a).toMatchObject({ ghl_contact_id: `${e.pref}-cA`, pipeline_id: e.pipeline.id, etapa_id: e.etapas.Nuevos });
     expect(a!.respuestas).toEqual([{ pregunta: "¿Cuándo quieres empezar?", respuesta: "Ya mismo" }]);
-    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-16T21:13:00+00:00");
+    const { data: tA } = await db.from("tarjetas_extra").select("pipeline_id").eq("lead_id", e.leads.LeadA);
+    expect(tA!.map((t) => t.pipeline_id)).toContain(pipes["1. Biblioteca Recursos"].id);
+    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-17T10:00:40+00:00");
   });
 
-  it("no repite las ya vistas", async () => {
-    const r = await leer(new Date(AHORA.getTime() + 30_000));
-    expect(r).toMatchObject({ nuevos: 0, actualizados: 0, saltadas: 0 });
-    const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("proyecto_id", e.proyecto.id).eq("email", `${e.pref}-nuevo@x.test`);
+  it("no repite los ya vistos", async () => {
+    const r = await leer(mas(1.5));
+    expect(r).toMatchObject({ nuevos: 0, actualizados: 0 });
+    const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("proyecto_id", e.proyecto.id).eq("email", `${e.pref}-bib@x.test`);
     expect(count).toBe(1);
   });
 
   it("las respuestas que llegan después se completan durante 10 min", async () => {
-    (contactos[`${e.pref}-cNuevo`] as { customFields: unknown[] }).customFields.push({ id: "f2", value: "Este mes" });
-    const r = await leer(new Date(AHORA.getTime() + 60_000));
-    expect(r.completados).toBe(1);
-    const nuevo = await leadPorContacto(`${e.pref}-cNuevo`);
-    expect(nuevo!.respuestas).toHaveLength(2);
+    (contactos.find((c) => c.id === `${e.pref}-bib`)!.customFields as unknown[]).push({ id: "f2", value: "Este mes" });
+    expect((await leer(mas(2))).completados).toBe(1);
+    expect((await leadPorContacto("bib"))!.respuestas).toHaveLength(2);
     // Pasados los 10 min ya no se relee
-    (contactos[`${e.pref}-cNuevo`] as { customFields: unknown[] }).customFields.push({ id: "f1", value: "Cambiada" });
-    expect((await leer(new Date(AHORA.getTime() + 11 * 60_000))).completados).toBe(0);
+    (contactos.find((c) => c.id === `${e.pref}-bib`)!.customFields as unknown[]).push({ id: "f1", value: "Cambiada" });
+    expect((await leer(mas(12))).completados).toBe(0);
   });
 
-  it("si GHL falla con un contacto, se para ahí y la siguiente lectura sigue desde esa", async () => {
-    contactos[`${e.pref}-cMal`] = 500;
-    contactos[`${e.pref}-cLuego`] = { firstName: "Luego", email: `${e.pref}-luego@x.test` };
-    ops.push(op("mal", "pT", "sReg", "2026-10-16T21:20:00.000Z", "cMal"), op("luego", "pT", "sReg", "2026-10-16T21:21:00.000Z", "cLuego"));
-    const r = await leer(new Date(AHORA.getTime() + 12 * 60_000));
-    expect(r.errores).toHaveLength(1);
-    expect(await leadPorContacto(`${e.pref}-cLuego`)).toBeNull();
-    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-16T21:13:00+00:00");
-
-    contactos[`${e.pref}-cMal`] = { firstName: "Mal", email: `${e.pref}-mal@x.test` };
-    const r2 = await leer(new Date(AHORA.getTime() + 13 * 60_000));
-    expect(r2.nuevos).toBe(2);
-    expect(await leadPorContacto(`${e.pref}-cLuego`)).not.toBeNull();
-    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-16T21:21:00+00:00");
+  it("los que llegan más tarde entran en la lectura siguiente; si GHL falla al releer, no rompe la lectura", async () => {
+    falla = `${e.pref}-luego`;
+    contactos.push(contacto("luego", "2026-10-17T10:13:00.000Z", { tags: ["webinar1"] }));
+    const r = await leer(mas(13));
+    expect(r.nuevos).toBe(1);
+    expect((await leadPorContacto("luego"))!.pipeline_id).toBe(pipes["2. Webinar 1"].id);
+    expect((await proyecto()).ghl_leads_hasta).toBe("2026-10-17T10:13:00+00:00");
+    const r2 = await leer(mas(13.5));
+    expect(r2.errores.join()).toContain("Releer");
+    expect(r2.nuevos).toBe(0);
   });
 });

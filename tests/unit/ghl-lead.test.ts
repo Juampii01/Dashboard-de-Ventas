@@ -28,14 +28,14 @@ describe("leadDeContactoGhl", () => {
         ],
       },
       campos,
-      { fuente: "recursos", creadoEn: "2026-10-16T21:09:08.846Z", oportunidad: "o1", pipeline: "1. Biblioteca Recursos" }
+      { fuente: "recursos", creadoEn: "2026-10-16T21:09:08.846Z" }
     );
     expect(lead).toMatchObject({ ghl_contact_id: "c1", nombre: "Ana", apellido: "Ruiz", email: "ana@x.test", telefono: "+34 600 11 22 33", etiquetas: ["biblioteca recursos"], creado_en: "2026-10-16T21:09:08.846Z" });
     expect(lead.respuestas).toEqual([
       { pregunta: "¿En qué situación estás hoy?", respuesta: "Tengo un negocio" },
       { pregunta: "¿En qué servicio(s) estás interesado?", respuesta: "Agentes, Web" },
     ]);
-    expect(lead.extra).toMatchObject({ fuente: "recursos", seguimiento: { utm_source: "yt" }, datos: { ghl_oportunidad: "o1", ghl_pipeline: "1. Biblioteca Recursos" } });
+    expect(lead.extra).toMatchObject({ fuente: "recursos", seguimiento: { utm_source: "yt" }, datos: { entrada: "GHL (API)" } });
   });
 
   it("solo con el nombre completo, se parte; sin email ni fecha válida, null", () => {

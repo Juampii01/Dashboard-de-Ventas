@@ -13,7 +13,7 @@ export function leadDeContactoGhl(
   contactId: string,
   c: ContactoGhl,
   campos: Map<string, string>,
-  o: { fuente?: string | null; creadoEn?: string | null; oportunidad?: string; pipeline?: string }
+  o: { fuente?: string | null; creadoEn?: string | null }
 ): { lead: LeadEntrada } {
   const respuestas: Respuesta[] = [];
   const seguimiento: Record<string, string> = {};
@@ -40,7 +40,7 @@ export function leadDeContactoGhl(
       etiquetas: (c.tags ?? []).map((t) => String(t).trim()).filter(Boolean),
       respuestas,
       creado_en: creado,
-      extra: { fuente, evento: null, seguimiento, quiz_score: null, datos: { ghl_oportunidad: o.oportunidad ?? null, ghl_pipeline: o.pipeline ?? null } },
+      extra: { fuente, evento: null, seguimiento, quiz_score: null, datos: { entrada: "GHL (API)" } },
     },
   };
 }
