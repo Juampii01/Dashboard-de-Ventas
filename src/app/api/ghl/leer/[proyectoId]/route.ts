@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/ghl/lee
   return NextResponse.json({
     ok: true,
     citas: c ? { nuevas: c.nuevas, actualizadas: c.actualizadas, canceladas: c.canceladas, errores: c.errores.length } : { fallo: true },
-    leads: l ? { nuevos: l.nuevos, actualizados: l.actualizados, completados: l.completados, avisos: l.avisos.length, errores: l.errores.length } : { fallo: true },
+    leads: l ? { nuevos: l.nuevos, actualizados: l.actualizados, completados: l.completados, cambiados: l.cambiados, avisos: l.avisos.length, errores: l.errores.length } : { fallo: true },
   });
 }
 

@@ -19,9 +19,10 @@ const falsoFetch = (async (url: string, init?: { body?: string }) => {
   const u = new URL(url);
   if (u.pathname === "/contacts/search") {
     const b = JSON.parse(init?.body ?? "{}");
+    const campo = b.filters[0].field as "dateAdded" | "dateUpdated";
     const gt = b.filters[0].value.gt as string;
-    busquedas.push({ gt });
-    const lista = contactos.filter((c) => String(c.dateAdded) > gt).sort((a, b) => String(a.dateAdded).localeCompare(String(b.dateAdded)));
+    if (campo === "dateAdded") busquedas.push({ gt });
+    const lista = contactos.filter((c) => typeof c[campo] === "string" && (c[campo] as string) > gt).sort((a, b) => String(a[campo]).localeCompare(String(b[campo])));
     return Response.json({ contacts: lista.slice(0, b.pageLimit), total: lista.length });
   }
   if (/^\/locations\/[^/]+\/customFields$/.test(u.pathname)) return Response.json({ customFields: CAMPOS });
@@ -137,5 +138,31 @@ describe("Leads nuevos de GHL por la API (contactos)", () => {
     const r2 = await leer(mas(13.5));
     expect(r2.errores.join()).toContain("Releer");
     expect(r2.nuevos).toBe(0);
+  });
+
+  it("un contacto que gana una etiqueta después (Biblioteca → Webinar) gana su tarjeta en ese pipeline", async () => {
+    falla = null;
+    const bib = contactos.find((c) => c.id === `${e.pref}-bib`)!;
+    bib.tags = ["biblioteca recursos", "webinar1"];
+    bib.dateUpdated = "2026-10-17T10:20:00.000Z";
+    // Uno de antes que no estaba en la app y se apunta al Webinar: entra como nuevo
+    contactos.push(contacto("antiguo", "2026-10-01T10:00:00.000Z", { tags: ["webinar1"], dateUpdated: "2026-10-17T10:21:00.000Z" }));
+    // Uno que cambia sin etiqueta de pipeline: no se toca
+    contactos.push(contacto("otro", "2026-10-02T10:00:00.000Z", { tags: ["enviado email mkt"], dateUpdated: "2026-10-17T10:22:00.000Z" }));
+    const r = await leer(mas(25));
+    expect(r).toMatchObject({ cambiados: 2, nuevos: 1, errores: [] });
+
+    const lead = await leadPorContacto("bib");
+    expect(lead!.pipeline_id).toBe(pipes["1. Biblioteca Recursos"].id);
+    const { data: t } = await db.from("tarjetas_extra").select("pipeline_id, etapa_id").eq("lead_id", lead!.id);
+    expect(t).toEqual([{ pipeline_id: pipes["2. Webinar 1"].id, etapa_id: pipes["2. Webinar 1"].etapas.Optin }]);
+    const { data: hist } = await db.from("actividades").select("nota").eq("lead_id", lead!.id);
+    expect(hist!.map((h) => h.nota)).toContain("Nueva etiqueta en GHL (API) · ahora también en 2. Webinar 1");
+
+    expect((await leadPorContacto("antiguo"))!.pipeline_id).toBe(pipes["2. Webinar 1"].id);
+    expect(await leadPorContacto("otro")).toBeNull();
+
+    // La lectura siguiente ya no hace nada (ya está en los dos)
+    expect((await leer(mas(25.5))).cambiados).toBe(0);
   });
 });

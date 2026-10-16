@@ -3,8 +3,8 @@ import "server-only";
 // citas, se leen los contactos creados en GHL y cada uno entra en la app según su etiqueta. Se leen contactos, no
 // oportunidades: con el workflow apagado, GHL crea el contacto pero no la oportunidad (comprobado el 16 oct con el
 // test de Cristian). Decisiones de Cristian:
-// · solo los nuevos (lo de antes se trae una vez con scripts/igualar-ghl.mjs); un contacto que gana la etiqueta
-//   después de creado no se ve (aceptado)
+// · los nuevos (lo de antes se trae una vez con scripts/igualar-ghl.mjs) y, desde el 17 oct, también los que
+//   ganan una etiqueta después (p. ej. uno de la Biblioteca que se apunta al Webinar: gana su tarjeta en el Webinar)
 // · etiqueta → pipeline (tabla de abajo); con varias, entra en todos (su tarjeta 🔗 en cada uno); sin ninguna,
 //   a «0. Agendas General»
 // · siempre en la primera columna; los leads nuevos se reparten solos a los callers, como los de la Entrada
@@ -17,7 +17,7 @@ import { mismoNombre } from "@/lib/formato";
 import type { Proyecto } from "@/lib/tipos";
 
 type Fetch = typeof fetch;
-export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; avisos: string[]; errores: string[] };
+export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; cambiados: number; avisos: string[]; errores: string[] };
 
 // Sacado de las 1.622 etiquetas de GHL (17 oct): DFY no tiene etiqueta; el resto, a General
 export const PIPELINE_ETIQUETA: { etiqueta: string; pipeline: string }[] = [
@@ -53,7 +53,7 @@ type PipeApp = { id: string; nombre: string; etapas: { id: string; orden: number
 export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: string | null }, token: string, opciones: { fetchImpl?: Fetch; ahora?: Date } = {}): Promise<ResultadoLeads> {
   const { fetchImpl } = opciones;
   const ahora = (opciones.ahora ?? new Date()).getTime();
-  const r: ResultadoLeads = { nuevos: 0, actualizados: 0, completados: 0, avisos: [], errores: [] };
+  const r: ResultadoLeads = { nuevos: 0, actualizados: 0, completados: 0, cambiados: 0, avisos: [], errores: [] };
   const locationId = proyecto.ghl_location_id;
   // Sin la migración 20261017130000 el campo no viene: no se hace nada
   if (!locationId || !("ghl_leads_hasta" in proyecto)) return r;
@@ -91,7 +91,16 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
     nuevoHasta = Math.max(nuevoHasta, fecha(c));
   }
 
-  // 3 · Los de los últimos 10 min se releen: si GHL tiene ya más respuestas, se completan
+  // 3 · Los que han cambiado en los últimos 30 min y tienen una etiqueta de pipeline que aún no tienen en la app
+  // (sin cursor: si la lectura parase más de 30 min, lo recupera el repaso). Sin etiqueta no se hace nada: General
+  // es solo para los nuevos.
+  try {
+    r.cambiados = await etiquetasNuevas(proyecto, token, locationId, campos, pipesApp, new Set(pendientes.map((c) => c.id)), ahora, fetchImpl, r);
+  } catch (e) {
+    r.errores.push(`Cambiados: ${e instanceof Error ? e.message : e}`);
+  }
+
+  // 4 · Los de los últimos 10 min se releen: si GHL tiene ya más respuestas, se completan
   const hechos = new Set(pendientes.map((c) => c.id));
   const { data: releer } = await db()
     .from("ghl_oportunidades_vistas")
@@ -118,6 +127,50 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
   if (nuevoHasta !== hasta || !proyecto.ghl_leads_hasta) await db().from("proyectos").update({ ghl_leads_hasta: new Date(nuevoHasta).toISOString() }).eq("id", proyecto.id);
   await db().from("ghl_oportunidades_vistas").delete().eq("proyecto_id", proyecto.id).lt("visto_en", new Date(ahora - GUARDAR_VISTOS).toISOString());
   return r;
+}
+
+const VENTANA_CAMBIOS = 30 * MIN;
+async function etiquetasNuevas(
+  proyecto: Proyecto,
+  token: string,
+  locationId: string,
+  campos: Map<string, string>,
+  pipesApp: PipeApp[],
+  yaHechos: Set<string>,
+  ahora: number,
+  fetchImpl: Fetch | undefined,
+  r: ResultadoLeads
+) {
+  const cambiados = (await contactosNuevosGhl({ token, locationId, desde: new Date(ahora - VENTANA_CAMBIOS), limite: 100, campo: "dateUpdated", fetchImpl })).filter(
+    (c) => !yaHechos.has(c.id) && (c.tags ?? []).some((t) => PIPELINE_ETIQUETA.some((x) => x.etiqueta === String(t).trim().toLowerCase()))
+  );
+  if (!cambiados.length) return 0;
+  // Dónde está ya cada uno (pipeline principal + tarjetas 🔗), en 2 consultas
+  const { data: leads, error } = await db().from("leads").select("id, ghl_contact_id, pipeline_id").eq("proyecto_id", proyecto.id).in("ghl_contact_id", cambiados.map((c) => c.id));
+  if (error) throw new Error(error.message);
+  const { data: tarjetas } = leads?.length ? await db().from("tarjetas_extra").select("lead_id, pipeline_id").in("lead_id", leads.map((l) => l.id)) : { data: [] };
+  const dondeEsta = new Map<string, Set<string>>();
+  for (const l of leads ?? []) dondeEsta.set(l.ghl_contact_id as string, new Set([l.pipeline_id, ...(tarjetas ?? []).filter((t) => t.lead_id === l.id).map((t) => t.pipeline_id)].filter(Boolean) as string[]));
+
+  let n = 0;
+  for (const c of cambiados) {
+    const esta = dondeEsta.get(c.id) ?? new Set<string>();
+    const faltan = pipelinesDeEtiquetas(c.tags).filter((nombre) => {
+      const p = pipesApp.find((x) => mismoNombre(x.nombre, nombre));
+      return p && !esta.has(p.id);
+    });
+    if (!faltan.length) continue;
+    const { lead } = leadDeContactoGhl(c.id, c, campos, { fuente: c.source ?? null, creadoEn: c.dateAdded ?? null });
+    await meterEnPipelines(proyecto, lead, faltan, pipesApp, r);
+    // Si ya estaba, que se vea en su historial por qué tiene la tarjeta nueva
+    const ya = (leads ?? []).find((l) => l.ghl_contact_id === c.id);
+    if (ya) {
+      const { error: errHist } = await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: ya.id, perfil_id: null, tipo: "webhook", nota: `Nueva etiqueta en GHL (API) · ahora también en ${faltan.join(", ")}` });
+      if (errHist) console.error("[actividad] no se pudo guardar la etiqueta nueva:", errHist.message);
+    }
+    n++;
+  }
+  return n;
 }
 
 // El primer pipeline crea el lead (con su origen, reparto y nota); los demás le dan su tarjeta 🔗 en silencio.

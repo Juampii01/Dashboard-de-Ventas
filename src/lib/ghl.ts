@@ -115,19 +115,20 @@ export async function pipelinesAgendanGhl(o: { token: string; locationId: string
 
 // Leads por API (Cristian, 16-17 oct 2026): se leen los contactos nuevos (no las oportunidades: sin workflow,
 // GHL no las crea). Preguntas: GET /locations/{id}/customFields → { customFields: [{ id, name }] } · locations/customFields.readonly
-// Contactos creados después de una fecha, los más viejos primero (17 oct, comprobado con la subcuenta real: trae
-// etiquetas, respuestas —customFields— y source; sin workflow, GHL crea el contacto pero no la oportunidad).
-// POST /contacts/search { locationId, pageLimit, sort: dateAdded asc, filters: dateAdded > fecha } · permiso contacts.readonly
-export type ContactoNuevoGhl = ContactoGhl & { id: string; dateAdded?: string };
-export async function contactosNuevosGhl(o: { token: string; locationId: string; desde: Date; limite: number; fetchImpl?: Fetch }): Promise<ContactoNuevoGhl[]> {
+// Contactos creados (o cambiados) después de una fecha, los más viejos primero (17 oct, comprobado con la subcuenta
+// real: trae etiquetas, respuestas —customFields— y source; el filtro y el orden valen con dateAdded y con dateUpdated).
+// POST /contacts/search { locationId, pageLimit, sort: campo asc, filters: campo > fecha } · permiso contacts.readonly
+export type ContactoNuevoGhl = ContactoGhl & { id: string; dateAdded?: string; dateUpdated?: string };
+export async function contactosNuevosGhl(o: { token: string; locationId: string; desde: Date; limite: number; campo?: "dateAdded" | "dateUpdated"; fetchImpl?: Fetch }): Promise<ContactoNuevoGhl[]> {
+  const campo = o.campo ?? "dateAdded";
   const res = await (o.fetchImpl ?? fetch)(`${GHL_BASE}/contacts/search`, {
     method: "POST",
     headers: { Authorization: `Bearer ${o.token}`, Version: "2021-07-28", Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify({
       locationId: o.locationId,
       pageLimit: o.limite,
-      sort: [{ field: "dateAdded", direction: "asc" }],
-      filters: [{ field: "dateAdded", operator: "range", value: { gt: o.desde.toISOString() } }],
+      sort: [{ field: campo, direction: "asc" }],
+      filters: [{ field: campo, operator: "range", value: { gt: o.desde.toISOString() } }],
     }),
     cache: "no-store",
   });
