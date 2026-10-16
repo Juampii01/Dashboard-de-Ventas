@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dentroDelLimite } from "@/lib/limite";
 import { sincronizarCalendarios } from "@/lib/ghl-sync";
+import { leerLeadsGhl } from "@/lib/ghl-leads";
+import { descifrar } from "@/lib/cifrado";
+import type { Proyecto } from "@/lib/tipos";
 
 // Plan GHL, fase 3 (Cristian, 16 oct 2026): el programador de Supabase llama aquí cada 30 s para leer las citas
 // de GHL (migración 20261017120000_leer_ghl_cada_30s.sql). Misma clave que el webhook (la del proyecto, en la
@@ -28,12 +31,25 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/ghl/lee
   }
   // Como mucho una lectura cada 25 s por proyecto (si una tarda, la siguiente no se monta encima)
   if (!(await dentroDelLimite(`ghl-leer:${proyectoId}`, 1, 25_000))) return NextResponse.json({ ok: true, saltada: true });
-  try {
-    const r = await sincronizarCalendarios(proyectoId);
-    if (r.errores.length) console.error("[ghl-leer]", proyectoId, r.errores.slice(0, 3).join(" | "));
-    return NextResponse.json({ ok: true, nuevas: r.nuevas, actualizadas: r.actualizadas, canceladas: r.canceladas, errores: r.errores.length });
-  } catch (e) {
-    console.error("[ghl-leer]", proyectoId, e instanceof Error ? e.message : e);
-    return NextResponse.json({ ok: false, error: "No se pudo leer GHL" }, { status: 500 });
-  }
+  // Citas y leads van por separado: si falla una parte, la otra se lee igual
+  const [citas, leads] = await Promise.allSettled([sincronizarCalendarios(proyectoId), leerLeads(proyectoId)]);
+  if (citas.status === "fulfilled" && citas.value.errores.length) console.error("[ghl-leer] citas", proyectoId, citas.value.errores.slice(0, 3).join(" | "));
+  if (citas.status === "rejected") console.error("[ghl-leer] citas", proyectoId, citas.reason instanceof Error ? citas.reason.message : citas.reason);
+  if (leads.status === "fulfilled" && (leads.value.errores.length || leads.value.avisos.length)) console.error("[ghl-leer] leads", proyectoId, [...leads.value.errores, ...leads.value.avisos].slice(0, 3).join(" | "));
+  if (leads.status === "rejected") console.error("[ghl-leer] leads", proyectoId, leads.reason instanceof Error ? leads.reason.message : leads.reason);
+  if (citas.status === "rejected" && leads.status === "rejected") return NextResponse.json({ ok: false, error: "No se pudo leer GHL" }, { status: 500 });
+  const c = citas.status === "fulfilled" ? citas.value : null;
+  const l = leads.status === "fulfilled" ? leads.value : null;
+  return NextResponse.json({
+    ok: true,
+    citas: c ? { nuevas: c.nuevas, actualizadas: c.actualizadas, canceladas: c.canceladas, errores: c.errores.length } : { fallo: true },
+    leads: l ? { nuevos: l.nuevos, actualizados: l.actualizados, completados: l.completados, saltadas: l.saltadas, avisos: l.avisos.length, errores: l.errores.length, ...(l.activado ? { activado: true } : {}) } : { fallo: true },
+  });
+}
+
+// Leads por API (Cristian, 16 oct 2026): oportunidades nuevas de GHL → su pipeline en la app
+async function leerLeads(proyectoId: string) {
+  const { data: proyecto } = await createAdminClient().from("proyectos").select("*").eq("id", proyectoId).single<Proyecto & { ghl_token: string | null; ghl_location_id: string | null }>();
+  if (!proyecto?.ghl_token || !proyecto.ghl_location_id) throw new Error("Falta conectar GHL");
+  return leerLeadsGhl(proyecto, descifrar(proyecto.ghl_token, "el token de GHL"));
 }

@@ -21,7 +21,20 @@ export type EventoGhl = {
 // Plan GHL (16 oct): `lastAttributionSource` = la última página por la que entró (la de la agenda, con su UTM).
 // Comprobado con contactos reales: `attributionSource` (la primera) suele venir vacío.
 type AtribucionGhl = { url?: string | null; utmSource?: string | null };
-export type ContactoGhl = { id?: string; firstName?: string; lastName?: string; name?: string; email?: string; phone?: string; lastAttributionSource?: AtribucionGhl | null; attributionSource?: AtribucionGhl | null };
+export type ContactoGhl = {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  tags?: string[];
+  source?: string | null;
+  // Respuestas del formulario: { id del campo, valor } (el nombre de la pregunta sale de camposGhl)
+  customFields?: { id: string; value?: unknown }[];
+  lastAttributionSource?: AtribucionGhl | null;
+  attributionSource?: AtribucionGhl | null;
+};
 type Fetch = typeof fetch;
 
 async function llamar(fetchImpl: Fetch, token: string, ruta: string, version: string) {
@@ -80,7 +93,7 @@ export async function estadoCitaGhl(o: { token: string; citaId: string; fetchImp
 // 13 oct (Cristian): los pipelines de GHL donde el contacto tiene una oportunidad en la columna «Agendan»
 // (la más reciente primero). Lo usan las citas que no dicen su pipeline: así van a «Agendan» del mismo pipeline que en GHL.
 type OportunidadGhl = { pipelineId?: string; pipelineStageId?: string; updatedAt?: string; createdAt?: string };
-type PipelineGhl = { id: string; name: string; stages?: { id: string; name: string }[] };
+export type PipelineGhl = { id: string; name: string; stages?: { id: string; name: string }[] };
 export async function pipelinesAgendanGhl(o: { token: string; locationId: string; contactId: string; fetchImpl?: Fetch }): Promise<string[]> {
   const f = o.fetchImpl ?? fetch;
   const [p, s] = await Promise.all([
@@ -98,6 +111,33 @@ export async function pipelinesAgendanGhl(o: { token: string; locationId: string
       return pl && etapa && mismoNombre(etapa.name, "Agendan") ? pl.name : null;
     })
     .filter((x): x is string => !!x);
+}
+
+// Leads por API (Cristian, 16 oct 2026). Comprobado con la subcuenta real ese día:
+// · GET /opportunities/search?location_id&limit&order=added_desc → { opportunities, meta: { startAfter, startAfterId } }
+//   (las más nuevas primero; la página siguiente con startAfter + startAfterId). Un filtro «date» da 400.
+// · GET /opportunities/pipelines?locationId → { pipelines: [{ id, name, stages }] }
+// · GET /locations/{id}/customFields → { customFields: [{ id, name, model }] } · permiso locations/customFields.readonly
+export type OportunidadLeida = { id: string; pipelineId?: string; pipelineStageId?: string; createdAt?: string; source?: string | null; contactId?: string };
+export async function oportunidadesGhl(o: { token: string; locationId: string; limite: number; despuesDe?: { startAfter: number; startAfterId: string } | null; fetchImpl?: Fetch }) {
+  const q = new URLSearchParams({ location_id: o.locationId, limit: String(o.limite), order: "added_desc" });
+  if (o.despuesDe) {
+    q.set("startAfter", String(o.despuesDe.startAfter));
+    q.set("startAfterId", o.despuesDe.startAfterId);
+  }
+  const j = await llamar(o.fetchImpl ?? fetch, o.token, `/opportunities/search?${q}`, "2021-07-28");
+  const ops: OportunidadLeida[] = Array.isArray(j?.opportunities) ? j.opportunities : [];
+  const m = j?.meta;
+  const siguiente = m && m.startAfter != null && m.startAfterId ? { startAfter: Number(m.startAfter), startAfterId: String(m.startAfterId) } : null;
+  return { ops, siguiente };
+}
+export async function pipelinesGhl(o: { token: string; locationId: string; fetchImpl?: Fetch }): Promise<PipelineGhl[]> {
+  const j = await llamar(o.fetchImpl ?? fetch, o.token, `/opportunities/pipelines?locationId=${encodeURIComponent(o.locationId)}`, "2021-07-28");
+  return Array.isArray(j?.pipelines) ? j.pipelines : [];
+}
+export async function camposGhl(o: { token: string; locationId: string; fetchImpl?: Fetch }): Promise<{ id: string; name: string }[]> {
+  const j = await llamar(o.fetchImpl ?? fetch, o.token, `/locations/${encodeURIComponent(o.locationId)}/customFields`, "2021-07-28");
+  return Array.isArray(j?.customFields) ? j.customFields.filter((c: { id?: unknown; name?: unknown }) => typeof c?.id === "string" && typeof c?.name === "string") : [];
 }
 
 // Estado de GHL → estado de la cita en la app. `null` = no se toca (lo decide el closer).

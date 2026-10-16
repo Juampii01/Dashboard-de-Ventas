@@ -30,6 +30,7 @@ export type Proyecto = {
   link_agenda?: string | null; // link del calendario de GHL que el caller manda al lead (11 oct)
   link_reserva?: string | null; // Fase 7: link de Reserva, vale para cualquier programa
   etapa_citas_ghl?: string | null; // Fase 4: columna donde van los leads con cita de GHL (antes, «Orgánico → Agendados» por nombre)
+  ghl_leads_hasta?: string | null; // leads por API (16 oct): fecha de la oportunidad de GHL más nueva ya leída; null = aún sin activar
   ghl_calendarios?: string[]; // plan GHL (16 oct): ids de los calendarios de GHL que lee la app; vacío = por closer, como antes
   color: string;
 };
