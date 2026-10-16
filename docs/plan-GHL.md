@@ -51,7 +51,7 @@
 
 **Fase 1 · Base de datos (la migración la lanza Cristian)**
 - [x] Escrita (`supabase/migrations/20261017110000_citas_canal.sql`, commit `bf84e8c`): citas con `canal`, `ghl_calendario` y `origen_url`; proyecto con `ghl_calendarios` (ya con los 3 ids de Maestria).
-- [ ] Cristian la lanza (`supabase db push`) y compruebo en la base que están las columnas y los 3 calendarios.
+- [x] Cristian la lanzó (16 oct) y lo comprobé en la base.
 
 **Fase 2 · Leer las citas por API (Claude)**
 - [x] La sincronización lee **por calendario** (`0297209`); sin calendarios elegidos, por closer como antes.
@@ -89,10 +89,10 @@
 - [x] GHL: creados «0. Agendas General», «Email», «Biblioteca», «Webinar» y «DFY» (duplicando «0. Agendas Orgánico»: las 8 columnas). Comprobado con la API.
 - [x] GHL: hallazgo. Los 2 workflows de José («2. Agendan llamada», disparador «Customer Booked Appointment» en «0. Calendar Principal», y «2 . WH - FORM AGENDA GENERAL», disparador Inbound Webhook) separan por `utm_source` = youtube, biblioteca, p1, instagram, callers; el resto (email, webinar, dfy, yt, ig, bibliotec) va a «None». Cada rama: oportunidad en su pipeline + ~14 pasos de Email/SMS/Wait. La rama Biblioteca crea la oportunidad en «1. Biblioteca Recursos → Agendado».
 - [x] Copia en borrador **«2. Agendan llamada (NUEVO canales)»**, terminada (16 oct, comprobada recargando): Add Tag → oportunidad «0. Agendas General → Agendan» → condición con YT (`yt,youtube`), Biblioteca («0. Agendas Biblioteca → Agendan»), Píldora 1, IG (`ig,instagram`), Callers, DFY, Email y Webinar (cada una con su oportunidad «0. Agendas X → Agendan» y un «Go to» al primer email de «None», renombrado «NONE Email 1») y «None». Sin el campo «Opportunity source» en las oportunidades nuevas. Sin probar: que GHL cree 2 oportunidades (General + canal).
-- [ ] Copia en borrador **«2 . WH - FORM AGENDA GENERAL (NUEVO canales)»** creada, sin cambios. Decidido (Cristian): YT e IG igual; ramas Email, Webinar y DFY con oportunidad «0. Agendas X → Form» y etiqueta «form llamada email/webinar/dfy»; Biblioteca a «0. Agendas Biblioteca → Form»; oportunidad en «0. Agendas General → Form» para todos. **Primer intento descartado:** al duplicar ramas, el editor de GHL mezcló los valores; no se guardó nada.
-- [ ] Publicar las 2 copias y despublicar las originales (con el visto bueno de Cristian).
+- [x] Copia «2 . WH - FORM AGENDA GENERAL (NUEVO canales)»: YT, IG y Email los hizo Claude; Webinar, DFY, Biblioteca → Form, General → Form y el resto los terminó Cristian (16 oct).
+- [x] Copias publicadas y originales despublicadas (Cristian, 16 oct; no comprobado por Claude).
 
-**Fase 6 · Prueba real (juntos)**
+**Fase 6 · Prueba real (juntos)** · *Aplazada por Cristian (16 oct, sin tiempo). Comprobado ese día a las 20:50 UTC: la lectura automática sigue cada 30 s sin errores.*
 - [ ] Una reserva por cada link (Callers, YouTube, IG, Email, Biblioteca, Webinar, DFY y sin UTM) y comprobar en la app canal, calendario, closer y pipeline.
 - [ ] Medir 2 días el consumo en Vercel → Usage (decide 30 s o 60 s).
 
