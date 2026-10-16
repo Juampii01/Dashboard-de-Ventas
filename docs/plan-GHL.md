@@ -9,7 +9,7 @@
 ## 1. Dónde estamos (16 oct, comprobado)
 
 - **App publicada:** versión `64faa3b` (13 oct, 20:39). GitHub igual (más una línea en blanco del README). El PR #1 de Juampi está deshecho (PR #2).
-- **Vercel:** después del rollback de Juampi, según su documento, **no publica solo** los commits nuevos hasta reactivarlo (no comprobado en el panel).
+- **Vercel:** el rollback de Juampi lo dejó sin publicar solo (comprobado el 16 oct: un commit nuevo quedó «Ready» sin llegar al dominio). **Reactivado el 16 oct** (fase 0).
 - **Base:** las 2 migraciones del PR #1 **no están aplicadas** (las columnas `ghl_calendario` y `canal` no existen: error 42703).
 - **GHL:** José juntó todo en **un calendario, «0. Calendar Principal»** (id `X7qpsbS2ChORZkwO4O3f`, el antiguo «#3 Closers»). Siguen activos «#2 Callers - Maestria» (`GwExej8dLssPn2lprUzf`) y «#1 Maestria founders» (`eYQg0BzILAvnzdwLNXGQ`), y los personales de Cintia y Felipe.
 - **Lo que falla hoy:** las 15 citas desde el 13 oct entraron por el workflow «2. AP - Cita General» y **todas salen como «Orgánico»**. Los workflows «3. Cita IG» y «4. Cita YT» apuntan a calendarios que ya no existen. El canal solo está en el UTM / la página de agenda, y la app no lo guarda.
@@ -30,23 +30,22 @@
 | Lead ya «vendido» que reserva otra llamada | Sigue «vendido»; la cita se crea igual. |
 | Citas que ya hay | Las 15 desde el 13 oct recuperan su canal (está guardado); las 21 anteriores quedan «sin canal». |
 | Ids de GHL de Felipe y Cintia | Los lee Claude en GHL (solo leer) y los pone en la app. |
-| Vercel | Cristian reactiva la publicación automática antes del primer cambio. |
+| Vercel | Publicación automática reactivada por Claude (16 oct, pedido de Cristian). |
 | Workflows de citas | Se despublican **al final**, después de la prueba real (lo hace Cristian). |
 | Del trabajo de Juampi | Se aprovecha la idea de su commit `a1fa7d8` (columnas, etiqueta, recuperar citas viejas), con el canal sacado del UTM. Su revisión del webhook no entra. |
 
 **Pendiente de aclarar antes de la fase 1:**
 - [ ] Qué pipelines «0. Agendas …» faltan: ¿Email, Biblioteca, Webinar y DFY? ¿«Directo» va a «0. Agendas Orgánico»? ¿Se crean también en GHL?
-- [ ] `/agenda-yt` y `/agenda-ig`: GHL **no deja** redirigirlas mientras las páginas existan («This domain and path combination already exists»). ¿Las borra Cristian (como la de callers) y entonces pongo la redirección a `?utm_source=yt` / `ig`?
 - [ ] La errata `utm_source=bibliotec`: la busca Cristian en GHL.
 
 ## 3. Fases (en este orden; cada una se comprueba antes de pasar a la siguiente)
 
 **Fase 0 · Preparar (Cristian y Claude)**
-- [ ] Cristian: reactivar la publicación automática en Vercel (Overview → *re-enable auto-assigning custom domains*).
+- [x] Claude (16 oct, con el visto bueno de Cristian): publicación automática de Vercel reactivada con `vercel promote` del despliegue de `d1f93cf` (mismo código que `64faa3b`, solo cambian documentos). Comprobado: el dominio sirve ese despliegue, `/login` responde 200 en los dos dominios, `autoAssignCustomDomains: true` y `lastRollbackTarget: null`.
 - [x] Claude (16 oct): Mac al día con GitHub (`git pull --rebase`); el commit del plan del 13 oct, listo para subir.
 - [x] Claude (16 oct): ids de GHL puestos en la app. Felipe `gu2tq13mouhgmdLVW1eH` (9 citas) y Cintia `fRvLW0KO59z9R2vY0XSc` (6 citas). Sacados cruzando `assignedUserId` de la API con `closer_email` de los avisos de la misma cita; el método se validó con el id de Cristian, que ya estaba puesto y coincide.
 - [x] Claude (16 oct): «Link agenda» de Maestria cambiado de `/agenda-callers` a `https://codigomaestria.com/agenda?utm_source=callers`.
-- [ ] Redirecciones `/agenda-yt` y `/agenda-ig`: bloqueadas por GHL mientras existan las páginas (ver pendientes). No se guardó nada.
+- [x] `/agenda-yt` y `/agenda-ig` (Cristian, 16 oct): **se quedan como están**, sin redirección (GHL no la deja poner mientras existan). La app las reconoce por la página como YouTube e Instagram, además de `?utm_source=yt` / `ig`.
 - [ ] Cristian / José: cambiar en anuncios, bios y mensajes los links al formato nuevo (lista en el punto 5).
 
 **Fase 1 · Base de datos (la migración la lanza Cristian)**
