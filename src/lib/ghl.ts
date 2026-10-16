@@ -120,6 +120,8 @@ export function estadoDesdeGhl(s: string | undefined): "confirmada" | "cancelada
 export function nuevoEstado(actual: string, deGhl: ReturnType<typeof estadoDesdeGhl>) {
   const abierta = ["pendiente", "confirmacion_pendiente", "confirmada"].includes(actual);
   if (!abierta || !deGhl || deGhl === "invalida") return actual;
-  if (deGhl === "confirmada" && actual === "confirmada") return actual;
+  // 16 oct (Cristian): GHL marca «confirmed» toda reserva del widget, así que no pisa «Confirmación pendiente»,
+  // que lo pone el equipo a mano. Una cancelación o un no show de GHL sí cuentan.
+  if (deGhl === "confirmada" && (actual === "confirmada" || actual === "confirmacion_pendiente")) return actual;
   return deGhl;
 }
