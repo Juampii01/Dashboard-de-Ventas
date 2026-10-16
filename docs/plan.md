@@ -33,7 +33,7 @@
 - [ ] **Sábado 18 oct:** mirar Vercel → Usage (leer GHL cada 30 s; si va a pasar del 50 % de la memoria del mes, bajar a 60 s). Si se pasa del límite gratis, Vercel apaga esa parte hasta 30 días.
 - [ ] **Una reserva real** con el link de callers (prueba aplazada por Cristian el 16 oct): que la cita caiga en su pipeline y en General con su etiqueta, y que GHL cree 2 oportunidades (General + canal).
 - [ ] Equipo: cambiar en anuncios, bios y WhatsApp los links al formato `/agenda?utm_source=…` y buscar la errata `utm_source=bibliotec`.
-- [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa).
+- [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
 
 **3 · Pendiente de Cristian (de antes)**
 - [ ] ¿Borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan).
@@ -58,13 +58,13 @@
 - [ ] Pequeño: en CRM, «Tablero · Lista» casi no marca cuál está elegido.
 - [ ] Vigilar cuántos leads de la Biblioteca llegan sin respuestas; si son muchos, subir el Wait a 3-5 min.
 
-**5 · GHL, al final (juntos)**
-- [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo.
-- [ ] **Leads nuevos de Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV). Se puede hacer como las citas: leerlos por la API.
-- [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL.
-- [ ] Avisos de los reportes por WhatsApp.
-- [ ] Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc` (hoy apunta a `.vercel.app`, que funciona).
-- [ ] Idea: que `/api/signup` de la landing mande también las respuestas directamente a la app.
+**5 · GHL, al final (juntos)** · *Revisado uno a uno el 16 oct a petición de Cristian: los 6 siguen pendientes (prueba en cada punto).*
+- [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo. *Comprobado (API): los 5 últimos leads de la Biblioteca salen en GHL como «Manual», sin página ni UTM.*
+- [ ] **Leads nuevos de Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV). Se puede hacer como las citas: leerlos por la API. *Comprobado (base): de los 311 leads nuevos desde el 13 oct, 306 son de la Biblioteca (por su Entrada) y 5 de «Orgánico» que entraron con su cita; ninguno de Webinar ni DFY.*
+- [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL. *Comprobado (base): ninguno de los 6 callers lo tiene.*
+- [ ] Avisos de los reportes por WhatsApp. *Comprobado (base): la dirección de avisos de GHL del proyecto está vacía; hoy los avisos solo van por email.*
+- [ ] Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc` (hoy apunta a `.vercel.app`, que funciona). *Comprobado en GHL: su paso «B · Webhook (Entrada)» sigue con `dashboard-de-ventas-iota.vercel.app`.*
+- [ ] Idea: que `/api/signup` de la landing mande también las respuestas directamente a la app. *Comprobado (base): las entradas de la Biblioteca llegan desde el workflow de GHL, no desde la landing.*
 
 **6 · Lo de Cristian, al final del todo**
 - [ ] Pagar Google Workspace **antes del 2 nov 2026** (si no, dejan de salir los emails de la app).
