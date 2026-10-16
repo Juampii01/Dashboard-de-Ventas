@@ -37,9 +37,11 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Velocidad (17 oct 2026): getClaims verifica la sesión aquí mismo con la clave pública de Supabase (ES256),
+  // sin preguntar a Supabase en cada petición (medido: ~0,3 s por página con getUser). Si está a punto de
+  // caducar, la renueva igual. Un usuario desactivado se corta igual: getSesion mira perfil.activo en la base.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub;
 
   const ruta = request.nextUrl.pathname;
   const publica = ruta.startsWith("/login") || ruta.startsWith("/api/webhooks") || ruta === "/auth/confirm"; // bloque 6: enlace mágico

@@ -18,13 +18,13 @@ export type Sesion = {
 // Lee el usuario, su perfil y sus proyectos. Una sola vez por petición.
 export const getSesion = cache(async (): Promise<Sesion> => {
   const supabase = await createSessionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // Velocidad (17 oct 2026): verificación local de la sesión (ver src/proxy.ts), sin preguntar a Supabase
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) redirect("/login");
 
   const db = createAdminClient();
-  const { data: perfil } = await db.from("perfiles").select("*").eq("id", user.id).single<Perfil>();
+  const { data: perfil } = await db.from("perfiles").select("*").eq("id", userId).single<Perfil>();
   if (!perfil || !perfil.activo) redirect("/login?error=sin-acceso");
 
   let proyectos: Proyecto[];
