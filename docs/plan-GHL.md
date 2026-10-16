@@ -34,8 +34,9 @@
 | Workflows de citas | Se despublican **al final**, después de la prueba real (lo hace Cristian). |
 | Del trabajo de Juampi | Se aprovecha la idea de su commit `a1fa7d8` (columnas, etiqueta, recuperar citas viejas), con el canal sacado del UTM. Su revisión del webhook no entra. |
 
-**Pendiente de aclarar antes de la fase 1:**
-- [ ] Qué pipelines «0. Agendas …» faltan: ¿Email, Biblioteca, Webinar y DFY? ¿«Directo» va a «0. Agendas Orgánico»? ¿Se crean también en GHL?
+**Pipelines nuevos (Cristian, 16 oct), solo en la app:** «0. Agendas General» (todas las citas, con filtro por canal), «0. Agendas Email», «0. Agendas Biblioteca», «0. Agendas Webinar» y «0. Agendas DFY», con las mismas columnas que los otros «0. Agendas». «Directo» (sin UTM) va a «0. Agendas Orgánico».
+
+**Pendiente:**
 - [ ] La errata `utm_source=bibliotec`: la busca Cristian en GHL.
 
 ## 3. Fases (en este orden; cada una se comprueba antes de pasar a la siguiente)
@@ -49,16 +50,19 @@
 - [ ] Cristian / José: cambiar en anuncios, bios y mensajes los links al formato nuevo (lista en el punto 5).
 
 **Fase 1 · Base de datos (la migración la lanza Cristian)**
-- [ ] Citas: `canal`, `ghl_calendario` y `origen_url` (la página desde la que reservó).
-- [ ] Proyecto: los calendarios de GHL que lee la app (se eligen en Administración → Integraciones).
+- [x] Escrita (`supabase/migrations/20261017110000_citas_canal.sql`, commit `bf84e8c`): citas con `canal`, `ghl_calendario` y `origen_url`; proyecto con `ghl_calendarios` (ya con los 3 ids de Maestria).
+- [ ] Cristian la lanza (`supabase db push`) y compruebo en la base que están las columnas y los 3 calendarios.
 
 **Fase 2 · Leer las citas por API (Claude)**
-- [ ] La sincronización lee **por calendario**, no por closer.
-- [ ] El canal sale del UTM o de la página (`lastAttributionSource` del contacto) y se guarda en la cita la primera vez que se ve.
-- [ ] El closer, por su usuario de GHL (`assignedUserId`).
-- [ ] Antes de dar una cita por cancelada, se comprueba que de verdad no está (para que una lista incompleta de GHL no cancele citas buenas).
-- [ ] Un lead «vendido» no vuelve a «agendado».
-- [ ] Tests.
+- [x] La sincronización lee **por calendario** (`0297209`); sin calendarios elegidos, por closer como antes.
+- [x] El canal sale del UTM o de la página (`lastAttributionSource` del contacto, `src/lib/canal.ts`); UTM desconocido = «otro» (Cristian, 16 oct). La página se guarda sin datos personales (solo ruta y `utm_*`). Una cita de los 2 últimos días sin canal lo gana en la siguiente lectura.
+- [x] El closer, por su usuario de GHL (`assignedUserId`).
+- [x] Antes de cancelar una cita que no viene, se pregunta a GHL una a una (como mucho 25 por lectura); si una lectura falla, no se cancela nada.
+- [x] Un lead «vendido» no vuelve a «agendado».
+- [x] Permiso `calendars.readonly` añadido en GHL a «App Eternity (dashboard)» (Claude, 16 oct; mismo token): ya sale el nombre del calendario.
+- [x] Tests: 230 unitarios y los de integración en GitHub, en verde.
+- [x] **Prueba con datos reales (16 oct, 19:32):** 37 citas; 25 con su calendario («0. Calendar Principal» 15, «#1 Maestria founders» 10); canal en las 7 recientes (yt 2, directo 3, biblioteca 1 —la errata «bibliotec»—, email 1); 0 sin closer (antes 1). Una cita pasó a «cancelada» porque en GHL está cancelada (comprobado).
+- [x] **Fallo encontrado y arreglado (`d41da64`):** el «confirmed» de GHL (lo lleva toda reserva del widget) pasó 3 citas de «Confirmación pendiente» a «Confirmada». Ahora no la pisa (sí una cancelación o un no show). Las 3 devueltas a mano y comprobado con otra lectura: 0 cambios.
 
 **Fase 3 · Que se lea sola cada 30 s (Claude)**
 - [ ] Programador de Supabase → dirección protegida de la app. El botón «Sincronizar» se queda.
