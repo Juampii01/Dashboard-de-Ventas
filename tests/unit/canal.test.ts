@@ -20,6 +20,7 @@ describe("canalDeOrigen", () => {
     expect(canalDeOrigen(null, "bibliotec")).toBe("biblioteca");
     expect(canalDeOrigen(null, "instagram")).toBe("ig");
     expect(canalDeOrigen(null, "youtube")).toBe("yt");
+    expect(canalDeOrigen("https://codigomaestria.com/agenda?utm_source=p1")).toBe("p1"); // Píldora 1 (como en GHL)
   });
 
   it("las páginas viejas cuentan como su canal", () => {

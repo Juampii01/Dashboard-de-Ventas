@@ -2,13 +2,14 @@
 // (`codigomaestria.com/agenda?utm_source=yt`). Las páginas viejas (`/agenda-yt`, `/agenda-ig`) valen igual.
 // Sin UTM = «directo». Un UTM que no es de la lista = «otro» (la página queda guardada en la cita).
 
-export const CANALES = ["callers", "yt", "ig", "email", "biblioteca", "webinar", "dfy", "directo", "otro"] as const;
+export const CANALES = ["callers", "yt", "ig", "p1", "email", "biblioteca", "webinar", "dfy", "directo", "otro"] as const;
 export type Canal = (typeof CANALES)[number];
 
 export const NOMBRE_CANAL: Record<Canal, string> = {
   callers: "Callers",
   yt: "YouTube",
   ig: "Instagram",
+  p1: "Píldora 1",
   email: "Email",
   biblioteca: "Biblioteca",
   webinar: "Webinar",
@@ -24,6 +25,7 @@ export const PIPELINE_CANAL: Record<Canal, string | null> = {
   callers: "0. Agendas Callers",
   yt: "0. Agendas YT",
   ig: "0. Agendas IG",
+  p1: "0. Agendas P1", // Píldora 1 (como en GHL, 16 oct)
   email: "0. Agendas Email",
   biblioteca: "0. Agendas Biblioteca",
   webinar: "0. Agendas Webinar",
@@ -43,6 +45,7 @@ const ALIAS: Record<string, Canal> = {
   youtube: "yt",
   ig: "ig",
   instagram: "ig",
+  p1: "p1",
   email: "email",
   mail: "email",
   biblioteca: "biblioteca",
