@@ -39,9 +39,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
   const porCalendario = (proyecto.ghl_calendarios ?? []).filter((x) => x?.trim());
   let fuentes: Fuente[];
   if (porCalendario.length) {
-    fuentes = await Promise.all(
-      porCalendario.map(async (id) => ({ nombre: id, calendarId: id, userId: null, closerId: null, calendario: (await nombreCalendarioGhl({ token, calendarId: id, fetchImpl })) ?? id }))
-    );
+    fuentes = porCalendario.map((id) => ({ nombre: id, calendarId: id, userId: null, closerId: null, calendario: id }));
   } else {
     if (!closers.length) throw new Error("Ningún closer tiene puesto su calendario de GHL (Administración → Integraciones).");
     fuentes = closers.map((c) => ({ nombre: c.perfiles.nombre, calendarId: c.ghl_calendar_id, userId: c.ghl_user_id, closerId: c.perfil_id, calendario: null }));
@@ -66,23 +64,49 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
     return { canal: canalDeOrigen(a?.url, a?.utmSource), origen_url: limpiarUrl(a?.url) };
   };
 
-  const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
-  // Fase 4: un lead que nace con su cita de GHL entra ya en la columna de citas (su pipeline principal)
-  const destinoCitas = await columnaCitasGhl(proyecto.id);
+  // Plan GHL (fase 3, se lee cada 30 s): lo que no siempre hace falta se pide solo cuando hace falta y una vez
+  const nombres = new Map<string, string>();
+  const nombreCalendario = async (id: string) => {
+    if (!nombres.has(id)) nombres.set(id, (await nombreCalendarioGhl({ token, calendarId: id, fetchImpl })) ?? id);
+    return nombres.get(id)!;
+  };
+  let base: { pipe: { id: string } | null; destinoCitas: Awaited<ReturnType<typeof columnaCitasGhl>> } | null = null;
+  const datosBase = async () => {
+    if (!base) {
+      const { data: pipe } = await db().from("pipelines").select("id").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden").limit(1).maybeSingle();
+      // Fase 4: un lead que nace con su cita de GHL entra ya en la columna de citas (su pipeline principal)
+      base = { pipe, destinoCitas: await columnaCitasGhl(proyecto.id) };
+    }
+    return base;
+  };
   const pipelinesCita = new Map<string, string | null>();
   const vienen = new Set<string>();
   let fallo = false;
 
-  for (const f of fuentes) {
-    let eventos;
-    try {
-      eventos = await eventosGhl({ token, locationId: proyecto.ghl_location_id, calendarId: f.calendarId, userId: f.userId, desde, hasta, fetchImpl });
-    } catch (e) {
+  // Todos los calendarios a la vez; luego, las citas que ya están en la app, en una sola consulta
+  const lecturas = await Promise.all(
+    fuentes.map((f) =>
+      eventosGhl({ token, locationId: proyecto.ghl_location_id!, calendarId: f.calendarId, userId: f.userId, desde, hasta, fetchImpl }).then(
+        (eventos) => ({ f, eventos, error: null as string | null }),
+        (e) => ({ f, eventos: [] as Awaited<ReturnType<typeof eventosGhl>>, error: e instanceof Error ? e.message : "error" })
+      )
+    )
+  );
+  for (const l of lecturas) for (const ev of l.eventos) if (ev.id) vienen.add(ev.id);
+  type CitaApp = { id: string; ghl_cita_id: string; estado: string; fecha: string; closer_id: string | null; canal: string | null; ghl_calendario: string | null; creado_en: string };
+  const enApp = new Map<string, CitaApp>();
+  const ids = [...vienen];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await db().from("citas").select("id, ghl_cita_id, estado, fecha, closer_id, canal, ghl_calendario, creado_en").eq("proyecto_id", proyecto.id).in("ghl_cita_id", ids.slice(i, i + 200));
+    for (const c of (data ?? []) as CitaApp[]) enApp.set(c.ghl_cita_id, c);
+  }
+
+  for (const { f, eventos, error } of lecturas) {
+    if (error) {
       fallo = true;
-      r.errores.push(`${f.nombre}: ${e instanceof Error ? e.message : "error"}`);
+      r.errores.push(`${f.nombre}: ${error}`);
       continue;
     }
-    for (const ev of eventos) if (ev.id) vienen.add(ev.id);
     for (const ev of eventos) {
       if (!ev.id || !ev.startTime || isNaN(new Date(ev.startTime).getTime())) continue;
       const fecha = new Date(ev.startTime).toISOString();
@@ -91,14 +115,15 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       const closerId = f.closerId ?? (ev.assignedUserId ? closerDeUsuario.get(ev.assignedUserId) ?? null : null);
 
       // ¿Ya está en la app?
-      const { data: existe } = await db().from("citas").select("id, estado, fecha, closer_id, canal, ghl_calendario, creado_en").eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id).maybeSingle();
+      const existe = enApp.get(ev.id);
       if (existe) {
-        // Plan GHL: se completa de dónde viene (calendario siempre; canal solo en las de los 2 últimos días: en una
-        // vieja, la última página del contacto ya puede ser otra). No cuenta como «actualizada».
+        // Plan GHL: se completa de dónde viene (calendario siempre; canal solo en las de los últimos 15 min, las que
+        // acaban de entrar por el workflow: en una vieja, la última página del contacto ya puede ser otra).
+        // No cuenta como «actualizada».
         if (f.calendario) {
           const extra: Record<string, string> = {};
-          if (!existe.ghl_calendario) extra.ghl_calendario = f.calendario;
-          if (!existe.canal && ahora.getTime() - new Date(existe.creado_en).getTime() < 2 * DIA) {
+          if (!existe.ghl_calendario) extra.ghl_calendario = await nombreCalendario(f.calendario);
+          if (!existe.canal && ahora.getTime() - new Date(existe.creado_en).getTime() < 15 * 60_000) {
             const o = await origenDe(ev.contactId);
             if (o.canal) Object.assign(extra, { canal: o.canal }, o.origen_url ? { origen_url: o.origen_url } : {});
           }
@@ -131,7 +156,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
       // 13 oct: el pipeline de esta cita, el que tiene en GHL su oportunidad en «Agendan» (una vez por contacto)
       if (abierta && ev.contactId && !pipelinesCita.has(ev.contactId)) pipelinesCita.set(ev.contactId, await pipelineCitaGhl(proyecto, ev.contactId, fetchImpl));
       const pipelineCita = abierta && ev.contactId ? pipelinesCita.get(ev.contactId) ?? null : null;
-      const destinoCita = pipelineCita ? await columnaCitasGhl(proyecto.id, pipelineCita) : destinoCitas;
+      const destinoCita = pipelineCita ? await columnaCitasGhl(proyecto.id, pipelineCita) : (await datosBase()).destinoCitas;
 
       // Buscar el lead: por el contacto de GHL; si no, con el email o el teléfono del contacto; si no, se crea
       let leadId: string | null = null;
@@ -148,7 +173,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
           await guardarLeads(
             proyecto,
             [{ ghl_contact_id: ev.contactId, nombre: ct?.firstName ?? nombreCompleto.split(/\s+/)[0] ?? "", apellido: ct?.lastName ?? nombreCompleto.split(/\s+/).slice(1).join(" "), email, telefono, etiquetas: [], respuestas: [], creado_en: null }],
-            { ...(abierta && destinoCita ? { pipelineId: destinoCita.pipeline_id, etapaId: destinoCita.id } : { pipelineId: pipe?.id ?? null }), origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
+            { ...(abierta && destinoCita ? { pipelineId: destinoCita.pipeline_id, etapaId: destinoCita.id } : { pipelineId: (await datosBase()).pipe?.id ?? null }), origen: "ghl", perfilId: null, repartir: false, notaActividad: "Entró desde el calendario de GHL" }
           );
           const { data } = await db().from("leads").select("id").eq("proyecto_id", proyecto.id).eq("ghl_contact_id", ev.contactId).maybeSingle();
           leadId = data?.id ?? null;
@@ -159,12 +184,14 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
         continue;
       }
       const estado = deGhl ?? "pendiente"; // las inválidas ya salieron antes
-      const origen = f.calendario ? { ghl_calendario: f.calendario, ...(await origenDe(ev.contactId)) } : {};
-      const { error } = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, ...(await datosAgendaGhl(leadId)), fecha, estado, origen: "ghl", ghl_cita_id: ev.id, nota: ev.title ?? null, ...origen });
+      const calendario = f.calendario ? await nombreCalendario(f.calendario) : null;
+      const origen = calendario ? { ghl_calendario: calendario, ...(await origenDe(ev.contactId)) } : {};
+      const { data: creada, error } = await db().from("citas").insert({ proyecto_id: proyecto.id, lead_id: leadId, closer_id: closerId, ...(await datosAgendaGhl(leadId)), fecha, estado, origen: "ghl", ghl_cita_id: ev.id, nota: ev.title ?? null, ...origen }).select("id, ghl_cita_id, estado, fecha, closer_id, canal, ghl_calendario, creado_en").single();
       if (error) {
         r.errores.push(`Cita ${ev.id}: ${error.message}`);
         continue;
       }
+      enApp.set(ev.id, creada as CitaApp); // si sale en otro calendario de esta misma lectura, ya no se crea dos veces
       await db().from("citas_sin_lead").update({ estado: "resuelta" }).eq("proyecto_id", proyecto.id).eq("ghl_cita_id", ev.id);
       if (estado === "pendiente" || estado === "confirmada") {
         // Plan GHL (Cristian, 16 oct): un lead que ya compró sigue «vendido» aunque reserve otra llamada
@@ -174,7 +201,7 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
           await moverAAgendadosOrganico(proyecto.id, leadId, pipelineCita);
         }
       }
-      await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: leadId, tipo: "cita", resultado: "agendada", nota: `Cita del calendario de GHL${f.calendario ? ` «${f.calendario}»` : ` con ${f.nombre}`}` });
+      await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: leadId, tipo: "cita", resultado: "agendada", nota: `Cita del calendario de GHL${calendario ? ` «${calendario}»` : ` con ${f.nombre}`}` });
       r.nuevas++;
     }
 
