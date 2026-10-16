@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   BarChart3,
@@ -70,8 +70,13 @@ export function BarraLateral({
   const ruta = usePathname();
   // Fase 2 (Cristian, 12 oct 2026): el menú ya no precarga todas las pantallas al aparecer (medido: 24 peticiones
   // al servidor en 10 s por cada pantalla abierta); solo la que se señala con el ratón o el dedo, justo antes del clic.
-  const router = useRouter();
-  const precargar = (href: string) => router.prefetch(href);
+  // Velocidad (17 oct 2026): precarga completa (prefetch={true}: la página con sus datos, como las pestañas del CRM);
+  // router.prefetch solo traía la pantalla de «cargando». Lo precargado vale 30 s (staleTimes en next.config.ts).
+  const [precargadas, setPrecargadas] = useState<Set<string>>(() => new Set());
+  const precargar = (href: string) => setPrecargadas((s) => (s.has(href) ? s : new Set(s).add(href)));
+  // Al pulsar, el botón se marca al momento (sin esperar al servidor); vale mientras no cambie la ruta
+  const [yendo, setYendo] = useState<{ a: string; desde: string } | null>(null);
+  const destino = yendo && yendo.desde === ruta ? yendo.a : null;
   const [abierto, setAbierto] = useState(false);
   const [pendiente, iniciar] = useTransition();
 
@@ -122,16 +127,21 @@ export function BarraLateral({
             <ul className="space-y-0.5">
               {g.items.map((it) => {
                 const Icono = ICONOS[it.icono];
-                const activo = ruta === it.href || (!it.exacto && ruta.startsWith(it.href + "/"));
+                const activo = destino
+                  ? destino === it.href
+                  : ruta === it.href || (!it.exacto && ruta.startsWith(it.href + "/"));
                 return (
                   <li key={it.href}>
                     <Link
                       href={it.href}
-                      prefetch={false}
+                      prefetch={precargadas.has(it.href) ? true : false}
                       onMouseEnter={() => precargar(it.href)}
                       onFocus={() => precargar(it.href)}
                       onTouchStart={() => precargar(it.href)}
-                      onClick={() => setAbierto(false)}
+                      onClick={() => {
+                        setAbierto(false);
+                        if (it.href !== ruta) setYendo({ a: it.href, desde: ruta });
+                      }}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 ${
                         activo
                           ? "bg-primario font-medium text-white shadow-[0_6px_18px_-8px_rgb(43_89_209/0.7)]"
@@ -157,7 +167,7 @@ export function BarraLateral({
       <div className="border-t border-borde p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           {/* Bloque 1 de 1.0: tocar tu nombre abre «Mi perfil» */}
-          <Link href="/perfil" prefetch={false} onMouseEnter={() => precargar("/perfil")} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
+          <Link href="/perfil" prefetch={precargadas.has("/perfil") ? true : false} onMouseEnter={() => precargar("/perfil")} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primario-suave text-xs font-semibold text-primario">
               {iniciales(perfil.nombre)}
             </div>
