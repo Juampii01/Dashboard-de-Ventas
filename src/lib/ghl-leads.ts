@@ -5,19 +5,21 @@ import "server-only";
 // test de Cristian). Decisiones de Cristian:
 // · los nuevos (lo de antes se trae una vez con scripts/igualar-ghl.mjs) y, desde el 17 oct, también los que
 //   ganan una etiqueta después (p. ej. uno de la Biblioteca que se apunta al Webinar: gana su tarjeta en el Webinar)
+// · si en GHL cambian los datos de un lead que ya está (nombre, teléfono, respuestas, etiquetas), la app se pone al día
 // · etiqueta → pipeline (tabla de abajo); con varias, entra en todos (su tarjeta 🔗 en cada uno); sin ninguna,
 //   a «0. Agendas General»
 // · siempre en la primera columna; los leads nuevos se reparten solos a los callers, como los de la Entrada
 import { db } from "@/lib/datos";
-import { guardarLeads, type LeadEntrada } from "@/lib/leads";
+import { guardarLeads, telefonoClave, unirRespuestas, type LeadEntrada } from "@/lib/leads";
+import { normalizarRespuestas } from "@/lib/oferta";
 import { camposGhl, contactoGhl, contactosNuevosGhl, type ContactoNuevoGhl } from "@/lib/ghl";
 import { leadDeContactoGhl } from "@/lib/ghl-lead";
 import { PIPELINE_GENERAL } from "@/lib/canal";
 import { mismoNombre } from "@/lib/formato";
-import type { Proyecto } from "@/lib/tipos";
+import type { Proyecto, Respuesta } from "@/lib/tipos";
 
 type Fetch = typeof fetch;
-export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; cambiados: number; avisos: string[]; errores: string[] };
+export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; cambiados: number; puestosAlDia: number; avisos: string[]; errores: string[] };
 
 // Sacado de las 1.622 etiquetas de GHL (17 oct): DFY no tiene etiqueta; el resto, a General
 export const PIPELINE_ETIQUETA: { etiqueta: string; pipeline: string }[] = [
@@ -53,7 +55,7 @@ type PipeApp = { id: string; nombre: string; etapas: { id: string; orden: number
 export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: string | null }, token: string, opciones: { fetchImpl?: Fetch; ahora?: Date } = {}): Promise<ResultadoLeads> {
   const { fetchImpl } = opciones;
   const ahora = (opciones.ahora ?? new Date()).getTime();
-  const r: ResultadoLeads = { nuevos: 0, actualizados: 0, completados: 0, cambiados: 0, avisos: [], errores: [] };
+  const r: ResultadoLeads = { nuevos: 0, actualizados: 0, completados: 0, cambiados: 0, puestosAlDia: 0, avisos: [], errores: [] };
   const locationId = proyecto.ghl_location_id;
   // Sin la migración 20261017130000 el campo no viene: no se hace nada
   if (!locationId || !("ghl_leads_hasta" in proyecto)) return r;
@@ -91,11 +93,12 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
     nuevoHasta = Math.max(nuevoHasta, fecha(c));
   }
 
-  // 3 · Los que han cambiado en los últimos 30 min y tienen una etiqueta de pipeline que aún no tienen en la app
-  // (sin cursor: si la lectura parase más de 30 min, lo recupera el repaso). Sin etiqueta no se hace nada: General
-  // es solo para los nuevos.
+  // 3 · Los contactos que han cambiado en GHL en los últimos 30 min (sin cursor: si la lectura parase más de 30 min,
+  // lo recupera el repaso): si ya están en la app, se ponen al día sus datos; si tienen una etiqueta de pipeline que
+  // aún no tienen en la app, ganan ese pipeline. Sin etiqueta de pipeline y sin estar en la app, nada (General es
+  // solo para los nuevos).
   try {
-    r.cambiados = await etiquetasNuevas(proyecto, token, locationId, campos, pipesApp, new Set(pendientes.map((c) => c.id)), ahora, fetchImpl, r);
+    await cambiosEnGhl(proyecto, token, locationId, campos, pipesApp, new Set(pendientes.map((c) => c.id)), ahora, fetchImpl, r);
   } catch (e) {
     r.errores.push(`Cambiados: ${e instanceof Error ? e.message : e}`);
   }
@@ -130,7 +133,23 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
 }
 
 const VENTANA_CAMBIOS = 30 * MIN;
-async function etiquetasNuevas(
+type LeadApp = { id: string; ghl_contact_id: string; pipeline_id: string | null; nombre: string | null; apellido: string | null; email: string | null; telefono: string | null; etiquetas: string[] | null; respuestas: Respuesta[] | null };
+
+// ¿Trae GHL algo que la app no tiene? Mismas reglas que guardarLeads: nombre y teléfono se ponen al día, el email solo
+// si faltaba (es la clave del lead), las etiquetas y respuestas se suman (no se borra ninguna).
+export function hayCambios(antes: Omit<LeadApp, "id" | "ghl_contact_id" | "pipeline_id">, l: LeadEntrada) {
+  const t = (x: string | null | undefined) => (x ?? "").trim();
+  if (l.nombre && t(l.nombre) !== t(antes.nombre)) return true;
+  if (l.apellido && t(l.apellido) !== t(antes.apellido)) return true;
+  if (l.telefono && telefonoClave(l.telefono) !== telefonoClave(antes.telefono)) return true;
+  if (l.email && !antes.email) return true;
+  const tags = new Set((antes.etiquetas ?? []).map((x) => x.toLowerCase()));
+  if (l.etiquetas.some((x) => !tags.has(x.toLowerCase()))) return true;
+  const previas = normalizarRespuestas(antes.respuestas ?? []);
+  return JSON.stringify(unirRespuestas(previas, l.respuestas)) !== JSON.stringify(previas);
+}
+
+async function cambiosEnGhl(
   proyecto: Proyecto,
   token: string,
   locationId: string,
@@ -141,38 +160,46 @@ async function etiquetasNuevas(
   fetchImpl: Fetch | undefined,
   r: ResultadoLeads
 ) {
-  const cambiados = (await contactosNuevosGhl({ token, locationId, desde: new Date(ahora - VENTANA_CAMBIOS), limite: 100, campo: "dateUpdated", fetchImpl })).filter(
-    (c) => !yaHechos.has(c.id) && (c.tags ?? []).some((t) => PIPELINE_ETIQUETA.some((x) => x.etiqueta === String(t).trim().toLowerCase()))
-  );
-  if (!cambiados.length) return 0;
-  // Dónde está ya cada uno (pipeline principal + tarjetas 🔗), en 2 consultas
-  const { data: leads, error } = await db().from("leads").select("id, ghl_contact_id, pipeline_id").eq("proyecto_id", proyecto.id).in("ghl_contact_id", cambiados.map((c) => c.id));
+  const cambiados = (await contactosNuevosGhl({ token, locationId, desde: new Date(ahora - VENTANA_CAMBIOS), limite: 100, campo: "dateUpdated", fetchImpl })).filter((c) => !yaHechos.has(c.id));
+  if (!cambiados.length) return;
+  // Cómo está cada uno en la app (datos, pipeline principal y tarjetas 🔗), en 2 consultas
+  const { data: filas, error } = await db()
+    .from("leads")
+    .select("id, ghl_contact_id, pipeline_id, nombre, apellido, email, telefono, etiquetas, respuestas")
+    .eq("proyecto_id", proyecto.id)
+    .in("ghl_contact_id", cambiados.map((c) => c.id));
   if (error) throw new Error(error.message);
-  const { data: tarjetas } = leads?.length ? await db().from("tarjetas_extra").select("lead_id, pipeline_id").in("lead_id", leads.map((l) => l.id)) : { data: [] };
-  const dondeEsta = new Map<string, Set<string>>();
-  for (const l of leads ?? []) dondeEsta.set(l.ghl_contact_id as string, new Set([l.pipeline_id, ...(tarjetas ?? []).filter((t) => t.lead_id === l.id).map((t) => t.pipeline_id)].filter(Boolean) as string[]));
+  const leads = (filas ?? []) as LeadApp[];
+  const { data: tarjetas } = leads.length ? await db().from("tarjetas_extra").select("lead_id, pipeline_id").in("lead_id", leads.map((l) => l.id)) : { data: [] };
 
-  let n = 0;
   for (const c of cambiados) {
-    const esta = dondeEsta.get(c.id) ?? new Set<string>();
-    const faltan = pipelinesDeEtiquetas(c.tags).filter((nombre) => {
-      const p = pipesApp.find((x) => mismoNombre(x.nombre, nombre));
-      return p && !esta.has(p.id);
-    });
-    if (!faltan.length) continue;
+    const ya = leads.find((l) => l.ghl_contact_id === c.id);
+    const esta = new Set([ya?.pipeline_id, ...(tarjetas ?? []).filter((t) => t.lead_id === ya?.id).map((t) => t.pipeline_id)].filter(Boolean) as string[]);
+    const conEtiqueta = (c.tags ?? []).some((t) => PIPELINE_ETIQUETA.some((x) => x.etiqueta === String(t).trim().toLowerCase()));
+    const faltan = conEtiqueta
+      ? pipelinesDeEtiquetas(c.tags).filter((nombre) => {
+          const p = pipesApp.find((x) => mismoNombre(x.nombre, nombre));
+          return p && !esta.has(p.id);
+        })
+      : [];
     const { lead } = leadDeContactoGhl(c.id, c, campos, { fuente: c.source ?? null, creadoEn: c.dateAdded ?? null });
-    const g = await meterEnPipelines(proyecto, lead, faltan, pipesApp, r);
-    r.nuevos += g.nuevos;
-    r.actualizados += g.actualizados;
-    // Si ya estaba, que se vea en su historial por qué tiene la tarjeta nueva
-    const ya = (leads ?? []).find((l) => l.ghl_contact_id === c.id);
-    if (ya) {
-      const { error: errHist } = await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: ya.id, perfil_id: null, tipo: "webhook", nota: `Nueva etiqueta en GHL (API) · ahora también en ${faltan.join(", ")}` });
-      if (errHist) console.error("[actividad] no se pudo guardar la etiqueta nueva:", errHist.message);
+
+    if (faltan.length) {
+      const g = await meterEnPipelines(proyecto, lead, faltan, pipesApp, r);
+      r.nuevos += g.nuevos;
+      r.actualizados += g.actualizados;
+      r.cambiados++;
+      // Si ya estaba, que se vea en su historial por qué tiene la tarjeta nueva
+      if (ya) {
+        const { error: errHist } = await db().from("actividades").insert({ proyecto_id: proyecto.id, lead_id: ya.id, perfil_id: null, tipo: "webhook", nota: `Nueva etiqueta en GHL (API) · ahora también en ${faltan.join(", ")}` });
+        if (errHist) console.error("[actividad] no se pudo guardar la etiqueta nueva:", errHist.message);
+      }
+    } else if (ya && hayCambios(ya, lead)) {
+      // Solo se escribe si GHL trae algo nuevo (así no se reescribe cada 30 s durante la media hora)
+      await guardarLeads(proyecto, [{ ...lead, extra: undefined }], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
+      r.puestosAlDia++;
     }
-    n++;
   }
-  return n;
 }
 
 // El primer pipeline crea el lead (con su origen, reparto y nota); los demás le dan su tarjeta 🔗 en silencio.

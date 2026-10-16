@@ -165,4 +165,19 @@ describe("Leads nuevos de GHL por la API (contactos)", () => {
     // La lectura siguiente ya no hace nada (ya está en los dos)
     expect((await leer(mas(25.5))).cambiados).toBe(0);
   });
+
+  it("si en GHL cambian los datos de un lead que ya está, la app se pone al día (y solo escribe si hay algo nuevo)", async () => {
+    const bib = contactos.find((c) => c.id === `${e.pref}-bib`)!;
+    bib.phone = "+34 699 00 11 22";
+    bib.lastName = "Corregido";
+    (bib.customFields as unknown[]).push({ id: "f3", value: "ig" }); // utm: va al seguimiento, no cuenta como respuesta
+    bib.dateUpdated = "2026-10-17T10:30:00.000Z";
+    const r = await leer(mas(31));
+    expect(r).toMatchObject({ puestosAlDia: 1, errores: [] });
+    const lead = await leadPorContacto("bib");
+    expect(lead).toMatchObject({ telefono: "+34 699 00 11 22", apellido: "Corregido" });
+    // Mismo teléfono con otro formato y nada más nuevo: no se reescribe
+    bib.phone = "34699001122";
+    expect((await leer(mas(31.5))).puestosAlDia).toBe(0);
+  });
 });
