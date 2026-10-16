@@ -30,6 +30,7 @@ export type Proyecto = {
   link_agenda?: string | null; // link del calendario de GHL que el caller manda al lead (11 oct)
   link_reserva?: string | null; // Fase 7: link de Reserva, vale para cualquier programa
   etapa_citas_ghl?: string | null; // Fase 4: columna donde van los leads con cita de GHL (antes, «Orgánico → Agendados» por nombre)
+  ghl_calendarios?: string[]; // plan GHL (16 oct): ids de los calendarios de GHL que lee la app; vacío = por closer, como antes
   color: string;
 };
 
@@ -99,6 +100,10 @@ export type Cita = {
   creado_en: string;
   estrellas_caller: number | null;
   estrellas_closer: number | null;
+  // Plan GHL (16 oct): de dónde viene la cita (lib/canal) · calendario de GHL · página desde la que reservó
+  canal?: string | null;
+  ghl_calendario?: string | null;
+  origen_url?: string | null;
 };
 
 export type Producto = {

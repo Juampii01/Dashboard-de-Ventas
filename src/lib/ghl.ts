@@ -16,8 +16,12 @@ export type EventoGhl = {
   startTime?: string;
   appointmentStatus?: string;
   assignedUserId?: string;
+  deleted?: boolean;
 };
-export type ContactoGhl = { id?: string; firstName?: string; lastName?: string; name?: string; email?: string; phone?: string };
+// Plan GHL (16 oct): `lastAttributionSource` = la última página por la que entró (la de la agenda, con su UTM).
+// Comprobado con contactos reales: `attributionSource` (la primera) suele venir vacío.
+type AtribucionGhl = { url?: string | null; utmSource?: string | null };
+export type ContactoGhl = { id?: string; firstName?: string; lastName?: string; name?: string; email?: string; phone?: string; lastAttributionSource?: AtribucionGhl | null; attributionSource?: AtribucionGhl | null };
 type Fetch = typeof fetch;
 
 async function llamar(fetchImpl: Fetch, token: string, ruta: string, version: string) {
@@ -40,6 +44,37 @@ export async function eventosGhl(o: { token: string; locationId: string; calenda
 export async function contactoGhl(o: { token: string; contactId: string; fetchImpl?: Fetch }): Promise<ContactoGhl | null> {
   const j = await llamar(o.fetchImpl ?? fetch, o.token, `/contacts/${encodeURIComponent(o.contactId)}`, "2021-07-28");
   return j?.contact ?? null;
+}
+
+// Plan GHL (16 oct): nombre del calendario. Necesita el permiso calendars.readonly (hoy el token no lo tiene: 401);
+// sin él, null y la cita guarda el id del calendario.
+export async function nombreCalendarioGhl(o: { token: string; calendarId: string; fetchImpl?: Fetch }): Promise<string | null> {
+  try {
+    const j = await llamar(o.fetchImpl ?? fetch, o.token, `/calendars/${encodeURIComponent(o.calendarId)}`, "2021-04-15");
+    return typeof j?.calendar?.name === "string" ? j.calendar.name.trim() || null : null;
+  } catch {
+    return null;
+  }
+}
+
+// Plan GHL (16 oct): una cita que ya no viene en la lista se comprueba una a una antes de cancelarla.
+// «borrada» = GHL dice que no existe (404) o la marca borrada/cancelada · «sigue» = existe y no está cancelada ·
+// «no_se» = GHL falló (no se toca nada).
+export async function estadoCitaGhl(o: { token: string; citaId: string; fetchImpl?: Fetch }): Promise<"borrada" | "sigue" | "no_se"> {
+  try {
+    const res = await (o.fetchImpl ?? fetch)(`${GHL_BASE}/calendars/events/appointments/${encodeURIComponent(o.citaId)}`, {
+      headers: { Authorization: `Bearer ${o.token}`, Version: "2021-04-15", Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (res.status === 404) return "borrada";
+    if (!res.ok) return "no_se";
+    const j = await res.json();
+    const c = j?.appointment ?? j?.event ?? j;
+    if (!c?.id) return "no_se";
+    return c.deleted === true || estadoDesdeGhl(c.appointmentStatus) === "cancelada" ? "borrada" : "sigue";
+  } catch {
+    return "no_se";
+  }
 }
 
 // 13 oct (Cristian): los pipelines de GHL donde el contacto tiene una oportunidad en la columna «Agendan»

@@ -10,12 +10,18 @@ let e: Escenario;
 const llamadas: { url: string; headers: Record<string, string> }[] = [];
 let eventos: Record<string, unknown>[] = [];
 const contactos: Record<string, unknown> = {};
+const nombresCal: Record<string, string> = {}; // sin nombre = 401, como el token real (sin calendars.readonly)
+const citasGhl: Record<string, number | string> = {}; // GET de una cita: 404 o su estado («confirmed» por defecto)
 let rechazar = false;
 const falsoFetch = (async (url: string, init?: { headers?: Record<string, string> }) => {
   llamadas.push({ url, headers: init?.headers ?? {} });
   if (rechazar) return new Response("{}", { status: 401 });
   const u = new URL(url);
   if (u.pathname === "/calendars/events") return Response.json({ events: eventos });
+  const ap = u.pathname.match(/^\/calendars\/events\/appointments\/(.+)$/);
+  if (ap) return citasGhl[ap[1]] === 404 ? new Response("{}", { status: 404 }) : Response.json({ appointment: { id: ap[1], appointmentStatus: citasGhl[ap[1]] ?? "confirmed" } });
+  const cal = u.pathname.match(/^\/calendars\/([^/]+)$/);
+  if (cal) return nombresCal[cal[1]] ? Response.json({ calendar: { id: cal[1], name: nombresCal[cal[1]] } }) : new Response("{}", { status: 401 });
   const m = u.pathname.match(/^\/contacts\/(.+)$/);
   if (m) return contactos[m[1]] ? Response.json({ contact: contactos[m[1]] }) : new Response("{}", { status: 404 });
   return new Response("{}", { status: 404 });
@@ -185,5 +191,55 @@ describe("Arreglo 21: citas borradas en GHL", () => {
     expect(tarjeta).toEqual({ pipeline_id: org!.id, etapa_id: agendados }); // …y tiene su tarjeta en Orgánico → Agendados
     expect(await lead({ email: `${e.pref}-org@x.test` })).toEqual({ pipeline_id: org!.id, etapa_id: agendados });
     expect((await lead({ email: `${e.pref}-can@x.test` }))!.pipeline_id).not.toBe(org!.id);
+  });
+});
+
+describe("Plan GHL (16 oct): por calendario, con el canal del UTM", () => {
+  it("lee los calendarios elegidos: canal, calendario, página sin datos personales, closer por su usuario de GHL; un lead vendido sigue vendido", async () => {
+    await db.from("proyectos").update({ ghl_calendarios: ["cal-principal", "cal-viejo"] }).eq("id", e.proyecto.id);
+    await db.from("miembros_proyecto").update({ ghl_user_id: "u-B" }).eq("proyecto_id", e.proyecto.id).eq("perfil_id", e.p.closerB.id);
+    nombresCal["cal-principal"] = "0. Calendar Principal"; // «cal-viejo» sin nombre (401): se guarda su id
+    contactos[`${e.pref}-cYT`] = { firstName: "Yt", lastName: "Lead", email: `${e.pref}-yt@x.test`, lastAttributionSource: { url: "https://codigomaestria.com/agenda?utm_source=yt", utmSource: "yt" } };
+    contactos[`${e.pref}-cWid`] = { firstName: "Wid", lastName: "Get", email: `${e.pref}-wid@x.test`, lastAttributionSource: { url: `https://api.leadconnectorhq.com/widget/booking/X?email=${e.pref}-wid@x.test&phone=+15550001&utm_source=callers` } };
+    contactos[`${e.pref}-cV`] = { firstName: "Ven", lastName: "Dido", lastAttributionSource: { url: "https://codigomaestria.com/agenda" } };
+    await db.from("leads").update({ estado_caller: "vendido", ghl_contact_id: `${e.pref}-cV` }).eq("id", e.leads.LeadLibre);
+    eventos = [
+      { id: `${e.pref}-k1`, calendarId: "cal-principal", contactId: `${e.pref}-cYT`, assignedUserId: "u-B", startTime: "2026-10-25T10:00:00-04:00", appointmentStatus: "confirmed" },
+      { id: `${e.pref}-k2`, calendarId: "cal-principal", contactId: `${e.pref}-cWid`, assignedUserId: "u-otro", startTime: "2026-10-26T10:00:00-04:00", appointmentStatus: "new" },
+      { id: `${e.pref}-k3`, calendarId: "cal-principal", contactId: `${e.pref}-cV`, assignedUserId: "u-B", startTime: "2026-10-27T10:00:00-04:00", appointmentStatus: "confirmed" },
+    ];
+    // Abiertas de antes que ya no vienen: o1 está borrada en GHL (404); o2 sigue en GHL (en otro calendario)
+    citasGhl[`${e.pref}-o1`] = 404;
+    citasGhl[`${e.pref}-o2`] = "confirmed";
+    const antesO2 = (await cita(`${e.pref}-o2`))!.estado;
+    llamadas.length = 0;
+    const r = await sync();
+    expect(r.errores).toEqual([]);
+    // Cada calendario se lee por su id (no por closer)
+    const leidos = llamadas.filter((l) => new URL(l.url).pathname === "/calendars/events").map((l) => new URL(l.url).searchParams.get("calendarId"));
+    expect(leidos).toEqual(["cal-principal", "cal-viejo"]);
+
+    expect(await cita(`${e.pref}-k1`)).toMatchObject({ canal: "yt", ghl_calendario: "0. Calendar Principal", origen_url: "https://codigomaestria.com/agenda?utm_source=yt", closer_id: e.p.closerB.id, estado: "confirmada" });
+    const k2 = (await cita(`${e.pref}-k2`))!;
+    expect(k2).toMatchObject({ canal: "callers", closer_id: null, origen_url: "https://api.leadconnectorhq.com/widget/booking/X?utm_source=callers" });
+    expect(k2.origen_url).not.toContain("@");
+    expect(await cita(`${e.pref}-k3`)).toMatchObject({ canal: "directo", lead_id: e.leads.LeadLibre });
+    expect((await db.from("leads").select("estado_caller").eq("id", e.leads.LeadLibre).single()).data!.estado_caller).toBe("vendido");
+
+    expect((await cita(`${e.pref}-o1`))!.estado).toBe("cancelada");
+    expect((await cita(`${e.pref}-o2`))!.estado).toBe(antesO2);
+  });
+
+  it("una cita reciente que entró sin canal (por el workflow) lo gana en la siguiente lectura; si una lectura falla, no se cancela nada", async () => {
+    await db.from("citas").update({ canal: null, ghl_calendario: null, origen_url: null }).eq("ghl_cita_id", `${e.pref}-k1`);
+    await sync();
+    expect(await cita(`${e.pref}-k1`)).toMatchObject({ canal: "yt", ghl_calendario: "0. Calendar Principal" });
+
+    citasGhl[`${e.pref}-o2`] = 404;
+    rechazar = true;
+    const r = await sync();
+    rechazar = false;
+    expect(r.canceladas).toBe(0);
+    expect((await cita(`${e.pref}-o2`))!.estado).not.toBe("cancelada");
   });
 });
