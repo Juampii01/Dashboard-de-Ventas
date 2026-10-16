@@ -80,7 +80,9 @@
 - [x] Comprobado en la web (16 oct): Agendas → Lista muestra Directo 3, YouTube 2, Email 1, Biblioteca 1 y «Calendario GHL» 29 (las que aún no tienen canal: fase 5); con canal=yt salen solo las 2 de YouTube. KPIs → Por persona con canal=yt: 2 agendadas. El filtro del CRM sale en cuanto haya leads con etiqueta (fase 5 o la próxima cita).
 
 **Fase 5 · Citas viejas (Claude)**
-- [ ] Recuperar el canal de las 15 citas desde el 13 oct; las 21 anteriores, «sin canal».
+- [x] (16 oct) Canal recuperado en las 16 citas desde el 13 oct (21:00 UTC): 7 ya lo tenían (fase 2), 8 del aviso guardado del workflow (la página con su UTM al reservar) y 1 de la API de GHL (la del 14 oct 23:20, sin aviso: es la última página del contacto, menos segura). Resultado: Callers 9, Directo 3, YouTube 2, Biblioteca 1, Email 1. Las 21 anteriores, sin canal.
+- [x] **Todas las citas** (Cristian: también cerradas, perdidas o canceladas): sus 36 leads tienen tarjeta en «0. Agendas General → Agendan» y en el de su canal (48 tarjetas nuevas: General 36, Callers 8, YT 2, Biblioteca 1, Email 1; los 3 «Directo» ya estaban en Orgánico). No se movió ninguna tarjeta existente. 15 leads con etiqueta «Canal: …». Una segunda pasada no cambia nada.
+- [x] Comprobado en la web: CRM → «0. Agendas General» con 36 en «Agendan» y el filtro «Todos los canales / Biblioteca / Callers / Directo / Email / YouTube».
 
 **Fase 6 · Prueba real (juntos)**
 - [ ] Una reserva por cada link (Callers, YouTube, IG, Email, Biblioteca, Webinar, DFY y sin UTM) y comprobar en la app canal, calendario, closer y pipeline.
