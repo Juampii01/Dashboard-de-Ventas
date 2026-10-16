@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 17 oct 2026, 01:45 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 01:50 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -8,7 +8,7 @@
 
 ## 1. Dónde estamos
 
-- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 231 unitarios y los de integración; en verde el 16 oct).
+- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 233 unitarios y 260 de integración; en verde el 17 oct de madrugada).
 - **Hecho del 10 al 13 oct:** dominio y accesos por email · velocidad (primera parte) · ventanas y selectores propios · Biblioteca con sus 6 respuestas · CRM como GHL (tarjeta común, arrastrar columnas y pipelines, barra masiva, varios pipelines por persona con 🔗) · KPIs en tarjetas, embudos, organigrama, onboarding de closers · botón «Guion» y página Guiones · links de pago · cerrar soltando en «Cerrados» · tests en GitHub · pipelines iguales que GHL · popup del lead · Closers sin botones · selector de pipeline · «Link agenda» · KPIs y Agendas fusionados · «Llamadas de GHL» oculto.
 - **Hecho el 16 oct (detalle en `plan-GHL.md`):**
   - **PR #1 de Juampi deshecho** (PR #2); de él solo se aprovechó la idea de guardar el origen de cada cita.
@@ -17,7 +17,7 @@
   - **Filtro por canal** en Agendas (y su exportación), CRM y KPIs; «GHL · YouTube» en lugar de «Calendario GHL».
   - **Workflows de GHL** («2. Agendan llamada» y «2 . WH - FORM AGENDA GENERAL»): ramas yt/youtube, ig/instagram, email, webinar, dfy; publicados por Cristian.
   - Ids de GHL de Felipe y Cintia puestos · «Link agenda» = `codigomaestria.com/agenda?utm_source=callers` · permiso `calendars.readonly` en GHL.
-- **Hecho el 16-17 oct: leads por API, sin workflows** (detalle en `plan-GHL.md`, apartado 6): cada 30 s la app lee los contactos nuevos de GHL y los mete por su etiqueta (`biblioteca recursos` → Biblioteca, `webinar1` → Webinar 1, sin etiqueta → «0. Agendas General»), en la primera columna; también los que ganan una etiqueta después y los que cambian sus datos. Probado con datos reales: con el workflow de la Biblioteca apagado entraron 6 leads, 0 repetidos.
+- **Hecho el 16-17 oct: leads por API, sin workflows** (detalle en `plan-GHL.md`, apartado 6): cada 30 s la app lee los contactos nuevos de GHL y los mete por su etiqueta (`biblioteca recursos` → Biblioteca, `webinar1` → Webinar 1, sin etiqueta → «0. Agendas General»), en la primera columna; también los que ganan una etiqueta después y los que cambian sus datos. Probado con datos reales: Cristian apagó el workflow de la Biblioteca y entraron solos 7 leads (5 de la Biblioteca y 2 de Webinar, uno real a los 37 s de crearse en GHL), con sus respuestas; 0 repetidos (9 leads desde las 21:00 UTC del 16 oct).
 - **Migraciones:** todas aplicadas en la nube (las últimas, `20261017110000_citas_canal`, `20261017120000_leer_ghl_cada_30s` y `20261017130000_leads_por_api`, el 16 oct, las lanzó Cristian).
 - **Datos de Maestria (16 oct, 22:50):** 1.619 leads (185 con caller); 37 citas (16 con canal; las 21 anteriores al 13 oct, sin canal). Por pipeline (con las tarjetas 🔗): General 36 · Orgánico 49 · Callers 8 · YT 2 · Email 1 · Biblioteca 1 · IG 0 · P1 0 · Webinar 0 · DFY 0 · Biblioteca Recursos 1.604 · Webinar 1 111 · DFY AI Services 0. **Equipo** (dato del 13 oct, no revisado hoy): 14 reales + 2 de prueba; faltaba que entraran Antonio y los 4 closers; un 4.º director, «Thiago», que no estaba en el plan.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
@@ -36,6 +36,14 @@
 - [ ] Equipo: cambiar en anuncios, bios y WhatsApp los links al formato `/agenda?utm_source=…` y buscar la errata `utm_source=bibliotec`.
 - [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
 
+**2b · Leads por API: lo que queda** (detalle en `plan-GHL.md`, apartado 6)
+- [ ] **Repaso único** con `scripts/igualar-ghl.mjs` (lo lanza Cristian): los contactos de antes del 16 oct, 21:09 UTC.
+- [ ] **Ver con datos reales** (cubiertos en los tests, aún no pasados en real): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas (tarjeta 🔗) · uno que gana `webinar1` después · uno que cambia sus datos en GHL · respuestas que llegan tarde.
+- [ ] **Decidir (Cristian):** si alguien corrige en la app el nombre o el teléfono de un lead y luego el contacto cambia en GHL, vuelve el de GHL. ¿Se deja así (corregir también en GHL) o que la app nunca pise lo cambiado en la app?
+- [ ] El test de Webinar de Cristian quedó en «Form completo» (lo metió la primera versión): moverlo a «Optin» si se quiere.
+- [ ] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). Apagar o borrar los demás pasos que mandan a la app (Cristian; los leads no llegan dos veces: la app los une por contacto y email).
+- [ ] Mejora posible: guardar también la fecha de los cambios (hoy se miran los últimos 30 min; si la lectura parase más, esos cambios no se verían). Necesita otra migración.
+
 **3 · Pendiente de Cristian (de antes)**
 - [ ] ¿Borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
@@ -48,7 +56,7 @@
 - [ ] **Visto bueno en pantalla** de lo nuevo: CRM (tarjetas, arrastrar columnas y pipelines, doble clic para renombrar, barra masiva, «+», filtro por canal), KPIs (por persona, objetivos y canal), Agendas (canal), organigrama, onboarding de closers, «Guion» y Guiones, links de pago.
 - [ ] **Contestar:** a) **zona horaria** («que se pueda poner cualquier hora y punto»): ¿cualquier zona del mundo?, ¿quitar la conversión?, ¿otra cosa? b) **coach IA en directo**: ¿desde dónde llaman los callers? c) **DFY**: ¿lleva links de pago? d) **Thiago**: ¿lo diste de alta tú como director? e) **móvil**: ¿un «Mover a…» solo para el móvil? f) **Reserva**: ¿en su apartado o como un link más? g) «Llamar ahora →» de la cola: ¿cambiar a «Ver →»?
 - [ ] **Guiones reales** de caller y closer y una llamada de prueba de cada uno.
-- Avisos: los tests de integración de GitHub fallaron 2 veces el 13 oct por la base de pruebas, sin relación con el cambio (al repetir, en verde). La ventana de «Nuevo lead» quedó en el código sin uso.
+- Avisos: los tests de integración de GitHub fallaron 2 veces el 13 oct por la base de pruebas, sin relación con el cambio (al repetir, en verde). El 16 oct falló 2 veces «Arreglo 26: borrar una venta» (`tests/integracion/arreglos-auditoria.test.ts`), sin tocar ese código; al repetir, en verde: test inestable, mirarlo. La ventana de «Nuevo lead» quedó en el código sin uso.
 
 **4 · Claude, después de tus respuestas**
 - [ ] **«Llamadas de GHL» está OCULTO** (Cristian, 13 oct). Para volver a enseñarlo: `LLAMADAS_GHL_VISIBLE = true` en `src/app/(panel)/layout.tsx`.
@@ -57,7 +65,7 @@
 - [ ] Comprobar en la base que Antonio y los 4 closers han entrado y terminado la bienvenida.
 - [ ] Sin probar todavía: una persona nueva creando su contraseña; «¿No puedes entrar?» con un email real; el límite de intentos del login; arrastrar pipelines; cerrar soltando en «Cerrados»; Objetivos con objetivos puestos; onboarding de closers con clientes; «Guion» visto como caller; la app en el móvil.
 - [ ] Pequeño: en CRM, «Tablero · Lista» casi no marca cuál está elegido.
-- [ ] Vigilar cuántos leads de la Biblioteca llegan sin respuestas; si son muchos, subir el Wait a 3-5 min.
+- [x] ~~Vigilar cuántos leads de la Biblioteca llegan sin respuestas; subir el Wait~~: ya no hay workflow; la API relee las respuestas durante 10 min y pone al día las que cambian.
 
 **5 · GHL, al final (juntos)** · *Revisado uno a uno el 16 oct a petición de Cristian: los 6 siguen pendientes (prueba en cada punto).*
 - [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo. *Comprobado (API): los 5 últimos leads de la Biblioteca salen en GHL como «Manual», sin página ni UTM.*
@@ -156,7 +164,8 @@
 **Pueden hacer daño el primer día:**
 - **Citas de GHL:** se leen cada 30 s por la API; si el programador de Supabase se para (proyecto en pausa, token caducado), no entra ninguna cita: lo avisa Agendas («Última lectura de GHL: hace X», en rojo a los 5 min). Una cita que deja de venir se comprueba una a una en GHL antes de cancelarla.
 - **Leads sin caller:** los ~1.200 están sin repartir y el reparto automático está apagado: hasta que se reparta, los callers no tienen cola.
-- **Solo la Biblioteca entra sola (leads):** un lead nuevo de Webinar, Orgánico o DFY sin cita no llega a la app hasta que se suba un CSV o se lance `scripts/igualar-ghl.mjs` (lo lanza Cristian). Si reserva cita, sí entra (por la API).
+- **Leads por API:** entran solos todos los contactos nuevos de GHL (cada 30 s), por su etiqueta; sin etiqueta, a «0. Agendas General». Si el programador se para, no entra ninguno hasta que vuelva (los nuevos se recuperan solos; los cambios de más de 30 min, con el repaso). Lo de antes del 16 oct, 21:09 UTC, falta traerlo con `scripts/igualar-ghl.mjs`.
+- **GHL puede pisar un cambio hecho en la app:** el nombre y el teléfono de un lead vuelven al de GHL si su contacto cambia allí (pendiente de decidir, 2b). Una etiqueta que se quita en GHL no se quita en la app.
 - **Lead por webhook sin pipeline:** va al primer pipeline, «0. Agendas YT». Hoy no afecta: la Biblioteca entra por su Entrada y las citas ya no entran por webhook.
 - **Móvil:** arrastrar no funciona; en el tablero de Closers no hay otra forma de mover una cita (pendiente de tu respuesta, 2-A).
 - **Velocidad en la nube:** CRM medido el 13 oct: servidor 0,34–0,64 s (hasta ~2 s «en frío» tras un rato sin uso); Cristian lo siente lento al navegar (ver `docs/Mejorar-velocidad.md`).
@@ -165,7 +174,7 @@
 
 **A tener en cuenta:**
 - **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
-- **Tests** (13 oct): corren solos en GitHub en cada push (222 unitarios + 248 de integración, en verde); la base de pruebas falló 2 veces sin motivo y al repetir salió en verde. Si un push sale en rojo, mirarlo antes de seguir (GitHub → Actions).
+- **Tests** (17 oct): corren solos en GitHub en cada push (233 unitarios + 260 de integración, en verde); la base de pruebas falló 2 veces el 13 oct y «borrar una venta» 2 veces el 16 oct, sin motivo, y al repetir salió en verde. Si un push sale en rojo, mirarlo antes de seguir (GitHub → Actions).
 - **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones: pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio). **Leer GHL cada 30 s gasta del plan gratis** (estimado: peticiones ~9 %, memoria 20-40 % del mes; medir el 18 oct); si se pasa un límite, Vercel apaga esa parte hasta 30 días.
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
