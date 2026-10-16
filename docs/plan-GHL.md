@@ -72,9 +72,12 @@
 - [x] Agendas: «Última lectura de GHL: hace X» junto al botón (en rojo si pasan de 5 min). El botón «Sincronizar GHL» se queda.
 
 **Fase 4 · Verlo en la app (Claude)**
-- [ ] Etiqueta del canal en la cita y en el lead (Llamadas, tablero de Closers, popup del lead).
-- [ ] Cada cita a «Agendan» del pipeline de su canal y al general.
-- [ ] Filtro por canal en Agendas, en el CRM y en KPIs.
+- [x] 5 pipelines nuevos creados en Maestria (16 oct, solo en la app): «0. Agendas General», «Email», «Biblioteca», «Webinar» y «DFY», con las 8 columnas de «0. Agendas Orgánico», detrás de «0. Agendas Callers».
+- [x] Cada cita nueva va a «Agendan» del pipeline de su canal y a General (`424371d`); «Otro» o sin pipeline, solo General. El lead lleva la etiqueta «Canal: …». Un lead vendido no se mueve, pero lleva su etiqueta.
+- [x] Con lectura por API, el aviso de cita del workflow solo se guarda (no manda la cita a «Orgánico» antes de saber el canal).
+- [x] «GHL · YouTube» en lugar de «Calendario GHL» en Llamadas y en el tablero de Closers.
+- [x] Filtro por canal: Agendas (y su exportación, con columna «Canal»), CRM (desplegable con las etiquetas «Canal: …») y KPIs → Por persona (citas del canal y ventas de esos leads).
+- [x] Comprobado en la web (16 oct): Agendas → Lista muestra Directo 3, YouTube 2, Email 1, Biblioteca 1 y «Calendario GHL» 29 (las que aún no tienen canal: fase 5); con canal=yt salen solo las 2 de YouTube. KPIs → Por persona con canal=yt: 2 agendadas. El filtro del CRM sale en cuanto haya leads con etiqueta (fase 5 o la próxima cita).
 
 **Fase 5 · Citas viejas (Claude)**
 - [ ] Recuperar el canal de las 15 citas desde el 13 oct; las 21 anteriores, «sin canal».
