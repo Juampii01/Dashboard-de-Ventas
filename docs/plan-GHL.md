@@ -84,6 +84,12 @@
 - [x] **Todas las citas** (Cristian: también cerradas, perdidas o canceladas): sus 36 leads tienen tarjeta en «0. Agendas General → Agendan» y en el de su canal (48 tarjetas nuevas: General 36, Callers 8, YT 2, Biblioteca 1, Email 1; los 3 «Directo» ya estaban en Orgánico). No se movió ninguna tarjeta existente. 15 leads con etiqueta «Canal: …». Una segunda pasada no cambia nada.
 - [x] Comprobado en la web: CRM → «0. Agendas General» con 36 en «Agendan» y el filtro «Todos los canales / Biblioteca / Callers / Directo / Email / YouTube».
 
+**Fase 5b · GHL igual que la app (Cristian, 16 oct)**
+- [x] App: canal «Píldora 1» (`utm_source=p1`, como en GHL) con su pipeline «0. Agendas P1» (`4febbe9`).
+- [x] GHL: creados «0. Agendas General», «Email», «Biblioteca», «Webinar» y «DFY» (duplicando «0. Agendas Orgánico»: las 8 columnas). Comprobado con la API.
+- [x] GHL: hallazgo. Los 2 workflows de José («2. Agendan llamada», disparador «Customer Booked Appointment» en «0. Calendar Principal», y «2 . WH - FORM AGENDA GENERAL», disparador Inbound Webhook) separan por `utm_source` = youtube, biblioteca, p1, instagram, callers; el resto (email, webinar, dfy, yt, ig, bibliotec) va a «None». Cada rama: oportunidad en su pipeline + ~14 pasos de Email/SMS/Wait. La rama Biblioteca crea la oportunidad en «1. Biblioteca Recursos → Agendado».
+- [ ] Decidido por Cristian: ramas `yt` O `youtube` e `ig` O `instagram`; ramas nuevas Email, Webinar y DFY con los mensajes de «None»; Biblioteca a «0. Agendas Biblioteca → Agendan»; toda cita también en General. Hecha una copia en borrador «2. Agendan llamada (NUEVO canales)» (sin cambios todavía). Pendiente: cómo se hacen los cambios (ver chat).
+
 **Fase 6 · Prueba real (juntos)**
 - [ ] Una reserva por cada link (Callers, YouTube, IG, Email, Biblioteca, Webinar, DFY y sin UTM) y comprobar en la app canal, calendario, closer y pipeline.
 - [ ] Medir 2 días el consumo en Vercel → Usage (decide 30 s o 60 s).
