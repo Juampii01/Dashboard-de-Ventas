@@ -68,7 +68,7 @@
 - [x] Dirección `/api/ghl/leer/[proyecto]` (`2194fb0`, `1aaf3be`): misma clave que el webhook (cabecera `x-eternity-secreto`), no pasa por el login, como mucho una lectura cada 25 s. Comprobado en la web: sin clave 401; con clave 200; dos seguidas, la segunda «saltada».
 - [x] **Fallo encontrado y arreglado:** la primera versión tardaba 4-11 s por lectura (demasiada memoria de Vercel cada 30 s). Optimizada (`02bdadc`, `e250551`): calendarios a la vez, citas en una sola consulta, nombres solo si hacen falta, canal solo en citas de los últimos 15 min. Medido en la web: 1,3-3,2 s (desde España, con la red incluida).
 - [x] Migración del programador escrita (`supabase/migrations/20261017120000_leer_ghl_cada_30s.sql`): pg_cron + pg_net cada 30 s, solo en la base de la nube; limpieza diaria del historial.
-- [ ] Cristian la lanza (`supabase db push`) y compruebo que corre (última lectura cada ~30 s).
+- [x] Cristian la lanzó (16 oct, ~20:19). Comprobado: en 100 s, 4 lecturas a 30 s exactos (18:20:09, 18:20:38, 18:21:08, 18:21:38 UTC), sin errores; en Agendas sale «Última lectura de GHL: hace 15 s».
 - [x] Agendas: «Última lectura de GHL: hace X» junto al botón (en rojo si pasan de 5 min). El botón «Sincronizar GHL» se queda.
 
 **Fase 4 · Verlo en la app (Claude)**
