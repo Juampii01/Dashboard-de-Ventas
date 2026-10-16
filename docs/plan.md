@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 13 oct 2026, 20:50 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en la versión anterior de este plan en git: `git show 607d901:docs/plan.md`; lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`.
+> Al día: 16 oct 2026, 23:00 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -8,78 +8,71 @@
 
 ## 1. Dónde estamos
 
-- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo y pasa los **tests en GitHub** (tipos, lint, 222 unitarios y 248 de integración; en verde el 13 oct, último `64faa3b`).
-- **Hecho del 10 al 13 oct:** dominio y accesos por email · velocidad · ventanas y selectores propios · Biblioteca con sus 6 respuestas · CRM como GHL (tarjeta común, arrastrar columnas y pipelines, barra masiva, varios pipelines por persona con 🔗) · KPIs en tarjetas, embudos, organigrama, onboarding de closers · botón «Guion» y página Guiones · links de pago · cerrar soltando en «Cerrados» · tests en GitHub.
-- **Hecho el 13 oct (detalle en el bloque 0 de abajo):** pipelines iguales que GHL (también YT, IG y Callers) y cada cita a su pipeline · popup del lead · Closers sin botones y «No califica» visible · CRM más rápido en el servidor · selector de pipeline como GHL · «Link agenda» · KPIs y Agendas fusionados · «Llamadas de GHL» oculto · campo `pipeline` en los 4 workflows de GHL.
-- **Migraciones:** todas aplicadas en la nube (13 oct, las lanzó Cristian).
-- **Datos de Maestria (13 oct, 20:48):** 1.439 leads (85 con caller); 21 citas. Por pipeline (con las tarjetas 🔗): YT 0 · Orgánico 34 · IG 0 · Agendas Callers 0 · Biblioteca 1.425 · Webinar 1 111 · DFY 0. **Equipo:** 14 reales + 2 de prueba; acceso enviado a todos; falta que entren Antonio y los 4 closers. En el organigrama sale un 4.º director, «Thiago», que no estaba en el plan.
+- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 231 unitarios y los de integración; en verde el 16 oct).
+- **Hecho del 10 al 13 oct:** dominio y accesos por email · velocidad (primera parte) · ventanas y selectores propios · Biblioteca con sus 6 respuestas · CRM como GHL (tarjeta común, arrastrar columnas y pipelines, barra masiva, varios pipelines por persona con 🔗) · KPIs en tarjetas, embudos, organigrama, onboarding de closers · botón «Guion» y página Guiones · links de pago · cerrar soltando en «Cerrados» · tests en GitHub · pipelines iguales que GHL · popup del lead · Closers sin botones · selector de pipeline · «Link agenda» · KPIs y Agendas fusionados · «Llamadas de GHL» oculto.
+- **Hecho el 16 oct (detalle en `plan-GHL.md`):**
+  - **PR #1 de Juampi deshecho** (PR #2); de él solo se aprovechó la idea de guardar el origen de cada cita.
+  - **Citas de GHL solo por API, cada 30 s** (programador de Supabase → `/api/ghl/leer/[proyecto]`), por calendario («0. Calendar Principal», «#2 Callers», «#1 Maestria founders»), con su **canal por UTM** (callers, yt, ig, p1, email, biblioteca, webinar, dfy, directo, otro), su calendario y su closer por el usuario de GHL. Cancelar solo tras comprobar cada cita en GHL. Un lead vendido sigue vendido. «Confirmación pendiente» no la pisa GHL.
+  - **Pipelines nuevos** en la app y en GHL: «0. Agendas General» (todas las citas), Email, Biblioteca, Webinar, DFY y P1 (Píldora 1, solo en la app; en GHL ya existía). Cada cita va a su canal y a General, con la etiqueta «Canal: …».
+  - **Filtro por canal** en Agendas (y su exportación), CRM y KPIs; «GHL · YouTube» en lugar de «Calendario GHL».
+  - **Workflows de GHL** («2. Agendan llamada» y «2 . WH - FORM AGENDA GENERAL»): ramas yt/youtube, ig/instagram, email, webinar, dfy; publicados por Cristian.
+  - Ids de GHL de Felipe y Cintia puestos · «Link agenda» = `codigomaestria.com/agenda?utm_source=callers` · permiso `calendars.readonly` en GHL.
+- **Migraciones:** todas aplicadas en la nube (las últimas, `20261017110000_citas_canal` y `20261017120000_leer_ghl_cada_30s`, el 16 oct, las lanzó Cristian).
+- **Datos de Maestria (16 oct, 22:50):** 1.619 leads (185 con caller); 37 citas (16 con canal; las 21 anteriores al 13 oct, sin canal). Por pipeline (con las tarjetas 🔗): General 36 · Orgánico 49 · Callers 8 · YT 2 · Email 1 · Biblioteca 1 · IG 0 · P1 0 · Webinar 0 · DFY 0 · Biblioteca Recursos 1.604 · Webinar 1 111 · DFY AI Services 0. **Equipo** (dato del 13 oct, no revisado hoy): 14 reales + 2 de prueba; faltaba que entraran Antonio y los 4 closers; un 4.º director, «Thiago», que no estaba en el plan.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
 ---
 
 ## 2. Lo que falta (en este orden)
 
-**0 · Hecho el 13 oct (con commit y cómo se comprobó)**
-- **Pipelines iguales que GHL** (`d9ec22e`, `dc38b47`, `9fdfeb6`): nombres, orden y columnas de GHL: «0. Agendas YT», «0. Agendas Orgánico», «0. Agendas IG», «0. Agendas Callers» (Form · Agendan · Confirman · No confirman · No show · Cerrados · No cualifican · Seguimiento), «1. Biblioteca Recursos» (columnas de la app), «2. Webinar 1», «3. DFY AI Services»; después Closers y Callers. «Cerrados ↔ Vendido» en todos. Script `scripts/igualar-ghl.mjs` (lo lanza Cristian); una 2.ª pasada no cambia nada. Tilde corregida también en GHL.
-- **Cada cita de GHL a «Agendan» de su pipeline** (`9fdfeb6`, `30a40cd`): el workflow manda `pipeline` en Custom Data; si no, y en la sincronización, la app pregunta a GHL dónde tiene la oportunidad en «Agendan»; si no, a Orgánico. **Campo puesto en los 4 workflows** de «1. Dashboard ventas» (Claude con Playwright, comprobado volviendo a abrir cada uno): Cita Callers («#2 Callers - Maestria») → Agendas Callers · Cita General («#1 Llamada de Descubrimiento | MaestrIA - Vende AI Services en USA») → Agendas Orgánico · Cita IG → Agendas IG · Cita YT → Agendas YT.
-- **Popup del lead** (`6aeb97b`, `50654c6`): clic en la card (CRM, Callers, Closers) o en una fila de la Biblioteca → datos, respuestas y «Ver toda la info»; el teléfono se copia (no abre la app Teléfono); cabe siempre en la pantalla.
-- **Closers** (`6f27afe`): cards de cita sin botones (todo arrastrando); «No califica» se ve siempre (así «desaparecieron» Sofía, Arturo y Adrián).
-- **CRM más rápido en el servidor** (`8145977` … `f803237`): 0,57–0,92 s → 0,34–0,64 s; lo visto se guarda 30 s. Cristian lo sigue sintiendo lento: resto en «Mejorar velocidad» (bloque B).
-- **Barra del CRM** (`b36015e`, `c058369`, `7b312ba`): selector de pipeline como GHL a la izquierda del buscador (con «+ Nuevo pipeline» y doble clic para renombrar); sin «Nuevo lead», sin botones de renombrar/borrar pipeline y sin «Sin caller asignado»; «Repartir leads» solo con el icono (en el CRM).
-- **«+ Pipeline»** crea «Cerrados» unida a «Vendido» (`a649b22`).
-- **«Link agenda»** en lugar de «Coach IA» (Callers y ficha, `b36015e`): copia el link de agenda de Maestria, ahora `https://codigomaestria.com/agenda-callers` (también lo manda «Link enviado»).
-- **KPIs y Agendas fusionados** (`351cbbf`, `8f858a7`): Agendas sin «Métricas» (abre en «Llamadas»; oculta con `METRICAS_VISIBLE` en `src/app/(panel)/closer/pestanas.tsx`); KPIs → «Por persona» con la barra de Agendas y todas sus métricas de closers, la comparativa y «Generar reporte». «Ver KPIs →» del Funnel lleva ahí.
-- **«Llamadas de GHL» oculto** en el menú de todos (`ccd66fd`).
-- **Comprobado en la app con la cuenta de CEO.** Sin probar: con usuario caller o closer; abrir el selector y cambiar de pipeline con clics reales; «+ Nuevo pipeline»; copiar con «Link agenda»; las flechas del periodo y el PDF en KPIs; **una cita real** de cada calendario.
+**1 · Ahora: velocidad** (Cristian, 16 oct: «carga súper lento», lo primero)
+- [ ] **Mejorar velocidad:** que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho el 13 oct, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y el orden (medir todas las secciones → lo visto al instante → precarga del menú → servidor más rápido → tiempo real → medir otra vez). Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
+- [ ] **Decidir antes de empezar (Cristian):** ¿A, B o C? · ¿vale ver un dato de hace un momento durante menos de 1 s a cambio de que todo salga al instante? · ¿se toca la comprobación de la sesión?
 
-**0 · Pendiente de Cristian (de lo del 13 oct)**
-- [ ] **Sincronización con GHL sin workflows:** ¿A (la app pregunta cada 10 s, con el programador de Supabase) o B (avisos nativos de una app de GHL)? ¿Quién manda si no coinciden? (propuesta: de GHL se copia lo nuevo y no se pisa lo que el equipo mueve). Datos comprobados: Vercel Hobby solo permite tareas 1 vez al día; Supabase permite cada 10 s; GHL: 100 peticiones / 10 s y 200.000 / día.
-- [ ] **Revisar el cambio de Juampii01 (equipo) en el webhook de GHL** (pull request #1 «fix/ghl-webhook-audit», unido a `main` el 13 oct a las 15:51, merge `ba60ec5`; commits `871deb9` «reintentos idempotentes, códigos de respuesta y logs» y `a1fa7d8` «guardar y mostrar de qué calendario y canal viene cada cita»). Toca `src/app/api/webhooks/ghl/[proyectoId]/route.ts`, `src/lib/webhook-ghl.ts` (nuevo), el tablero de Closers, `tipos.ts` y sus tests. Visto el 13 oct: parte de lo de este día (mantiene el campo `pipeline` y lo guarda como «canal» de la cita). Trae **2 migraciones SIN APLICAR en la nube**: `20261017090000_citas_ghl_sin_id_unicas.sql` (índice para no duplicar citas sin id; antes de aplicarla, comprobar que no hay duplicados con la consulta de su cabecera) y `20261017100000_citas_origen_ghl.sql` (columnas `ghl_calendario` y `canal`); según sus notas, el código funciona sin ellas. Sin comprobar todavía: si Vercel la publicó (el merge es de Juampii01, no de `eternitydevzz`) y sus tests en verde.
-- **Ojo al subir:** el `main` de este Mac va por detrás de GitHub (falta ese cambio). Antes de subir nada: `git pull --rebase origin main`. El commit del plan del 13 oct (20:50) está solo en local, sin subir (Cristian).
+**2 · Canales de las citas: lo que queda** (detalle en `plan-GHL.md`)
+- [ ] **Sábado 18 oct:** mirar Vercel → Usage (leer GHL cada 30 s; si va a pasar del 50 % de la memoria del mes, bajar a 60 s). Si se pasa del límite gratis, Vercel apaga esa parte hasta 30 días.
+- [ ] **Una reserva real** con el link de callers (prueba aplazada por Cristian el 16 oct): que la cita caiga en su pipeline y en General con su etiqueta, y que GHL cree 2 oportunidades (General + canal).
+- [ ] Equipo: cambiar en anuncios, bios y WhatsApp los links al formato `/agenda?utm_source=…` y buscar la errata `utm_source=bibliotec`.
+- [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa).
+
+**3 · Pendiente de Cristian (de antes)**
 - [ ] ¿Borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
 - [ ] El número de la pestaña «Closers» cuenta solo citas abiertas (el tablero enseña también las de «No califica»): ¿que cuente todas?
 - [ ] Las vistas Lista/Día/Tabla de Agendas conservan sus botones (Confirmar, Cerrada…): ¿se dejan?
 - [ ] «Repartir leads» solo con icono también en la tabla de la Biblioteca (KPIs)?
 - [ ] Los 3 documentos borrados en el Mac sin guardar en git (`Arreglar-dashboard.md`, `plan-historial-10oct.md`, `plan-historial-11oct.md`): ¿a propósito? Si sí, se quitan sus menciones; si no, se recuperan.
-- Avisos: los tests de integración de GitHub fallaron 2 veces el 13 oct por la base de pruebas («invalid response from upstream server»), sin relación con el cambio (al repetir, en verde): si sigue, que el test reintente. La ventana de «Nuevo lead» quedó en el código sin uso.
+- [ ] **Subir el CSV de GHL** (KPIs → Biblioteca → «Subir CSV de leads»): ¿ya no se queda en «Importando…»? (sin probar con tu archivo de 1.282 filas).
+- [ ] **Subir el CSV de Webinar 1** (prueba de «varios pipelines»): ¿sigue haciendo falta?
+- [ ] **Visto bueno en pantalla** de lo nuevo: CRM (tarjetas, arrastrar columnas y pipelines, doble clic para renombrar, barra masiva, «+», filtro por canal), KPIs (por persona, objetivos y canal), Agendas (canal), organigrama, onboarding de closers, «Guion» y Guiones, links de pago.
+- [ ] **Contestar:** a) **zona horaria** («que se pueda poner cualquier hora y punto»): ¿cualquier zona del mundo?, ¿quitar la conversión?, ¿otra cosa? b) **coach IA en directo**: ¿desde dónde llaman los callers? c) **DFY**: ¿lleva links de pago? d) **Thiago**: ¿lo diste de alta tú como director? e) **móvil**: ¿un «Mover a…» solo para el móvil? f) **Reserva**: ¿en su apartado o como un link más? g) «Llamar ahora →» de la cola: ¿cambiar a «Ver →»?
+- [ ] **Guiones reales** de caller y closer y una llamada de prueba de cada uno.
+- Avisos: los tests de integración de GitHub fallaron 2 veces el 13 oct por la base de pruebas, sin relación con el cambio (al repetir, en verde). La ventana de «Nuevo lead» quedó en el código sin uso.
 
-**A · Ahora, Cristian (para seguir)**
-- [ ] **Subir el CSV de GHL** (KPIs → Biblioteca → «Subir CSV de leads»): ¿ya no se queda en «Importando…»? (el arreglo de velocidad está puesto, sin probar con tu archivo de 1.282 filas). ¿Quedan al día los leads de la Biblioteca que entraron sin respuestas antes del arreglo?
-- [ ] **Subir el CSV de Webinar 1** (prueba de «varios pipelines»): sus tarjetas 🔗 ya están desde el 13 oct (las puso `igualar-ghl` leyendo GHL: 104). Falta decidir si el CSV sigue haciendo falta (serviría para probar la subida y las respuestas); si se sube, el Funnel tiene que seguir contando personas (lo compruebo yo en la base).
-- [ ] **Visto bueno en pantalla** de lo nuevo: CRM (tarjetas, arrastrar columnas y pipelines, doble clic para renombrar, barra masiva, «+»), KPIs (por persona y objetivos), embudo (KPIs y Agendas), organigrama, onboarding de closers, botón «Guion» y página Guiones, links de pago, y lo de las fases 2 y 3 en tu Mac (velocidad y la barra de filtros con tu ancho de pantalla).
-- [ ] **Contestar:** a) **zona horaria**: dijiste «que se pueda poner cualquier hora y punto, simplifica»: ¿cualquier zona del mundo?, ¿quitar la conversión de los horarios?, ¿otra cosa? b) **coach IA en directo**: ¿desde dónde llaman los callers (móvil, WhatsApp, marcador de GHL en el navegador)? Si la llamada no pasa por el navegador, la app no puede oírla. c) **DFY**: ¿lleva links de pago? d) **Thiago**: ¿lo diste de alta tú como director? e) **móvil**: arrastrar no funciona en el móvil; ¿quieres un «Mover a…» solo para el móvil? f) **Reserva**: ¿vale en su apartado de la ventana o la quieres como un link más de la lista? g) el aviso «Llamar ahora →» de la cola (solo abre el lead): ¿le cambio el texto a «Ver →»?
-- [ ] **Guiones reales** de caller y closer (los pides al equipo) y una llamada de prueba de cada uno siguiendo el guion.
-- [ ] Revisar en Vercel → Settings → Git la conexión con GitHub (el 12 oct 3 commits no llegaron solos).
-
-**B · Claude, después de tus respuestas**
-- [ ] **«Llamadas de GHL» está OCULTO** (Cristian, 13 oct): no sale en el menú de nadie; se retoma más adelante. La página sigue en `/caller/grabadas` y el permiso «Llamadas grabadas» sigue en Administración. Para volver a enseñarlo: `LLAMADAS_GHL_VISIBLE = true` en `src/app/(panel)/layout.tsx`.
-- [ ] **Mejorar velocidad** (para otro momento, Cristian 13 oct): que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y las decisiones pendientes. Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
-- [ ] Zona horaria (según lo que contestes).
-- [ ] Coach IA en directo (según desde dónde se llame; necesita la clave de Deepgram).
+**4 · Claude, después de tus respuestas**
+- [ ] **«Llamadas de GHL» está OCULTO** (Cristian, 13 oct). Para volver a enseñarlo: `LLAMADAS_GHL_VISIBLE = true` en `src/app/(panel)/layout.tsx`.
+- [ ] Zona horaria y coach IA en directo (según tus respuestas; el coach necesita la clave de Deepgram).
 - [ ] Lo que salga de tu visto bueno y de las pruebas con CSV.
 - [ ] Comprobar en la base que Antonio y los 4 closers han entrado y terminado la bienvenida.
-- [ ] Sin probar todavía (lo pruebo cuando haya datos o me digas): una persona nueva creando su contraseña en la bienvenida; «¿No puedes entrar?» con un email real; el límite de intentos del login; arrastrar pipelines; cerrar soltando en «Cerrados»; KPIs → Objetivos con objetivos puestos; onboarding de closers con clientes; el botón «Guion» visto como caller; la app en el móvil.
-- [ ] Pequeño (no tocado): en CRM, «Tablero · Lista» casi no marca cuál está elegido.
-- [ ] Vigilar unos días cuántos leads de la Biblioteca llegan sin respuestas (si tardan más de 1 min en el cuestionario); si son muchos, subir el Wait a 3-5 min.
+- [ ] Sin probar todavía: una persona nueva creando su contraseña; «¿No puedes entrar?» con un email real; el límite de intentos del login; arrastrar pipelines; cerrar soltando en «Cerrados»; Objetivos con objetivos puestos; onboarding de closers con clientes; «Guion» visto como caller; la app en el móvil.
+- [ ] Pequeño: en CRM, «Tablero · Lista» casi no marca cuál está elegido.
+- [ ] Vigilar cuántos leads de la Biblioteca llegan sin respuestas; si son muchos, subir el Wait a 3-5 min.
 
-**C · GHL, al final (juntos)**
-- [ ] **Que la app lea de GHL sola (sin workflows)**: según la respuesta de Cristian (A o B y quién manda, ver bloque 0). El permiso *View Opportunities* ya está puesto; la app ya pregunta a GHL el pipeline de cada cita.
-- [ ] **Actividad de los leads en GHL** («No activities yet», atribución «CRM Workflows»): la landing no usa formularios de GHL (manda a su `/api/signup` y de ahí al «Inbound Webhook» del workflow viejo), así que GHL no ve ni la visita ni el formulario; por las fechas, seguramente nunca la tuvieron (sin confirmar). Opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo (salen como «ningún paso da este valor»).
-- [ ] Workflows de lead nuevo de **Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV).
+**5 · GHL, al final (juntos)**
+- [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo.
+- [ ] **Leads nuevos de Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV). Se puede hacer como las citas: leerlos por la API.
 - [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL.
 - [ ] Avisos de los reportes por WhatsApp.
-- [ ] Pruebas con GHL real de lo que se probó simulado.
-- [ ] Pasar los workflows de GHL a `dashboard.eternity.llc` (hoy apuntan a la dirección `.vercel.app`, que funciona).
-- [ ] Idea: que `/api/signup` de la landing mande también las respuestas directamente a la app (sin depender del Wait de GHL).
+- [ ] Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc` (hoy apunta a `.vercel.app`, que funciona).
+- [ ] Idea: que `/api/signup` de la landing mande también las respuestas directamente a la app.
 
-**D · Lo de Cristian, al final del todo**
+**6 · Lo de Cristian, al final del todo**
 - [ ] Pagar Google Workspace **antes del 2 nov 2026** (si no, dejan de salir los emails de la app).
 - [ ] Claves de Fathom, Claude y Deepgram (las pegas tú en la app).
 - [ ] Usuarios de GHL de los callers.
 - [ ] Guardar las claves en tu gestor de contraseñas y borrar los CSV de contraseñas de `scripts/salida/`.
-- [ ] Vercel Pro.
-- [ ] **Repartir los leads** (los ~1.200 están sin caller; sin reparto, los callers no tienen cola).
+- [ ] Vercel Pro (también reduciría los arranques «en frío»; sin verificar cuánto).
+- [ ] **Repartir los leads** (de 1.619, solo 185 tienen caller; sin reparto, los callers no tienen cola).
 - [ ] **Día real** con un caller y un closer.
 
 **Cómo trabajo:** voy en este orden; cada cosa compila, pasa los tests de GitHub, la pruebo en pantalla y la apunto aquí. **Yo no pego claves ni contraseñas, no creo cuentas y no borro datos en GHL:** eso lo haces tú. Las migraciones de la base las lanzas tú (`cd` a la carpeta `app` y `supabase db push`): a mí me lo bloquea el sistema de permisos.
@@ -118,8 +111,9 @@
 | Onboarding de closers | Sus clientes = a quienes les registró una venta. Los puntos los editan el CEO y los directores. |
 | Cola del caller | La prioridad A/B/C no ordena; primero los «llamar luego» y «link enviado» que ya tocan, luego nuevos, luego «no contesta», y dentro, del más nuevo al más viejo. |
 | Emails | (11 oct) La app manda ella misma los emails con Resend, desde `Eternity <no-reply@eternity.llc>` (dominio raíz, decisión de Cristian): el aviso de cada reporte (al CEO y a los directores) y el enlace mágico que un administrador manda desde la ficha (caduca en 1 h, un solo uso). No se toca el correo de Supabase. El cambio de email lo hace un administrador directamente (no manda email). **Cambiado el 12 oct:** los accesos van por **email**, con un enlace de un solo uso para que cada uno cree su contraseña (Fase 1); primero los 3 directores, que entran solo a familiarizarse. |
-| GHL (12 oct) | Workflows de la app en la carpeta «1. Dashboard ventas», numerados, **siempre publicados** y con un Wait de 999 días al final. Acción **Webhook normal** (no «Custom webhook», que es premium). Primero leads y después agendas. Calendarios: «#2 Callers» y «#3 Closers» = Andrés y Renzo; «#1 Maestria founders» y «#1 Llamada de Descubrimiento» = Cristian y José (dos calendarios distintos, workflows 3 y 4). **Cada lead con cita de GHL va a «Agendan» del pipeline de su workflow** (13 oct: Cita Callers → «0. Agendas Callers», Cita General → «0. Agendas Orgánico», Cita IG → «0. Agendas IG», Cita YT → «0. Agendas YT», campo `pipeline` en Custom Data); sin el campo, al pipeline donde GHL tenga su oportunidad en «Agendan»; si no, a la columna elegida en el «⋯» («0. Agendas Orgánico → Agendan»). Un lead que ya estaba en otro pipeline gana su tarjeta allí sin salir del suyo. El link de agenda de los callers es `https://codigomaestria.com/agenda-callers` (13 oct; lo copia «Link agenda» y lo manda «Link enviado»). Los leads se suben con CSV (lo hace Cristian). |
-| Pipelines como GHL (13 oct) | Los pipelines de origen se llaman, se ordenan y tienen las columnas de GHL: «0. Agendas YT», «0. Agendas Orgánico», «0. Agendas IG» y «0. Agendas Callers» (Form · Agendan · Confirman · No confirman · No show · Cerrados · No cualifican · Seguimiento), «1. Biblioteca Recursos» (columnas de la app sin tocar: Nuevos…), «2. Webinar 1» (Optin · Form completo · Nivel 1-3 · Cerrados) y «3. DFY AI Services» (Agendado · Cerrados); después Closers y Callers (el «Callers» de la app es otro, el de las llamadas). **«Cerrados» se queda en todos** (cerrar soltando) y nace unida a «Vendido» al crear un pipeline. Para el navegador, **siempre Playwright Bridge**. |
+| GHL (16 oct) | **Las citas se leen solo por la API, cada 30 s** (programador de Supabase → `/api/ghl/leer/[proyecto]`, con la clave del proyecto), de los calendarios elegidos en el proyecto (`ghl_calendarios`: «0. Calendar Principal», «#2 Callers», «#1 Maestria founders»). El closer sale de su usuario de GHL. Los avisos de cita de los workflows solo se guardan (no crean nada). Leads: la Biblioteca entra por su Entrada (workflow «0. AP - Biblioteca», Webhook normal); el resto, por CSV (lo hace Cristian). El link de agenda de los callers es `https://codigomaestria.com/agenda?utm_source=callers` (lo copia «Link agenda» y lo manda «Link enviado»). |
+| Pipelines como GHL (13-16 oct) | Los pipelines de origen se llaman, se ordenan y tienen las columnas de GHL: «0. Agendas YT», «Orgánico», «IG», «P1», «Callers», «General», «Email», «Biblioteca», «Webinar» y «DFY» (Form · Agendan · Confirman · No confirman · No show · Cerrados · No cualifican · Seguimiento), «1. Biblioteca Recursos» (columnas de la app: Nuevos…), «2. Webinar 1» y «3. DFY AI Services»; después Closers y Callers. **«Cerrados» se queda en todos** (cerrar soltando) y nace unida a «Vendido» al crear un pipeline. Para el navegador, **siempre Playwright Bridge**. |
+| Canales de las citas (16 oct) | Todo se mide por UTM (`/agenda?utm_source=X`): callers, yt (o youtube), ig (o instagram), p1, email, biblioteca (o la errata bibliotec), webinar, dfy; sin UTM = Directo; uno desconocido = Otro. Las páginas viejas `/agenda-yt` y `/agenda-ig` valen igual. Cada cita va a «Agendan» del pipeline de su canal (Directo → Orgánico; Otro, sin pipeline propio) **y** a «0. Agendas General»; el lead lleva la etiqueta «Canal: …» (solo en la app). Filtro por canal en Agendas, CRM y KPIs. Un lead vendido sigue vendido aunque reserve otra llamada. «Confirmación pendiente» no la pisa el «confirmed» de GHL. |
 | Leads en varios pipelines (12 oct) | Una tarjeta por pipeline, como GHL: el lead tiene su pipeline principal y una tarjeta (🔗) en cada otro por el que entra. Funnel, KPIs y comisiones cuentan personas. |
 | CRM (12-13 oct) | Barra: selector de pipeline como GHL a la izquierda del buscador (con «+ Nuevo pipeline»; renombrar con doble clic), llave de permisos, Tablero/Lista, Subir CSV y «Repartir leads» (solo icono). Sin «Nuevo lead», sin renombrar/borrar pipeline con botones y sin «Sin caller asignado». Se mueve solo arrastrando (sin «Mover a…»). Borrar en masa, solo el CEO (se salta leads con citas o ventas); asignar, etiquetas, mover y exportar, también los directores. |
 | Closers (13 oct) | Card de cita sin botones (ni «Registrar» ni «Chat»): se mueve arrastrando, en el CRM y en Agendas → Pre-call/Post-call. «No califica» se ve siempre en su columna. Las vistas Lista/Día/Tabla de Agendas conservan sus botones (pendiente de Cristian). |
@@ -159,10 +153,10 @@
 ## 4. Riesgos y avisos
 
 **Pueden hacer daño el primer día:**
-- **Citas de GHL:** su lista no va por páginas; si llegara incompleta, la app cancelaría citas buenas (Fase 7; la primera sincronización cuadró). Los workflows de citas están publicados: si alguno se despublica, ningún caller suma agendas de ese calendario.
+- **Citas de GHL:** se leen cada 30 s por la API; si el programador de Supabase se para (proyecto en pausa, token caducado), no entra ninguna cita: lo avisa Agendas («Última lectura de GHL: hace X», en rojo a los 5 min). Una cita que deja de venir se comprueba una a una en GHL antes de cancelarla.
 - **Leads sin caller:** los ~1.200 están sin repartir y el reparto automático está apagado: hasta que se reparta, los callers no tienen cola.
-- **Solo la Biblioteca entra sola:** un lead nuevo de Webinar, Orgánico o DFY no llega a la app hasta que se cree su workflow, se suba un CSV o se lance otra vez `scripts/igualar-ghl.mjs` (lo lanza Cristian; ejemplo: el «Test» de Orgánico del 13 oct). Lo resuelve la lectura desde GHL (bloque C).
-- **Lead por webhook sin pipeline:** va al primer pipeline, que desde el 13 oct es **«0. Agendas YT»** (antes Biblioteca). Hoy no afecta: la Biblioteca entra por su Entrada y las citas dicen su pipeline.
+- **Solo la Biblioteca entra sola (leads):** un lead nuevo de Webinar, Orgánico o DFY sin cita no llega a la app hasta que se suba un CSV o se lance `scripts/igualar-ghl.mjs` (lo lanza Cristian). Si reserva cita, sí entra (por la API).
+- **Lead por webhook sin pipeline:** va al primer pipeline, «0. Agendas YT». Hoy no afecta: la Biblioteca entra por su Entrada y las citas ya no entran por webhook.
 - **Móvil:** arrastrar no funciona; en el tablero de Closers no hay otra forma de mover una cita (pendiente de tu respuesta, 2-A).
 - **Velocidad en la nube:** CRM medido el 13 oct: servidor 0,34–0,64 s (hasta ~2 s «en frío» tras un rato sin uso); Cristian lo siente lento al navegar (ver `docs/Mejorar-velocidad.md`).
 - **Emails:** funcionan (probado el 11 oct). Dependen de que el correo de Google Workspace siga pagado (aviso: antes del 2 nov 2026).
@@ -171,12 +165,12 @@
 **A tener en cuenta:**
 - **GHL:** «Custom webhook» es premium y la subcuenta no tiene saldo (aviso «Payment method is missing» en GHL): se usa el Webhook normal. Los workflows solo funcionan **publicados**.
 - **Tests** (13 oct): corren solos en GitHub en cada push (222 unitarios + 248 de integración, en verde); la base de pruebas falló 2 veces sin motivo y al repetir salió en verde. Si un push sale en rojo, mirarlo antes de seguir (GitHub → Actions).
-- **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones (no comprobado hoy): pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio).
+- **Vercel Hobby** (gratis) es para uso no comercial según sus condiciones: pasar a Pro cuando se pueda. Solo publica commits firmados por `eternitydevzz` (ya configurado en este repositorio). **Leer GHL cada 30 s gasta del plan gratis** (estimado: peticiones ~9 %, memoria 20-40 % del mes; medir el 18 oct); si se pasa un límite, Vercel apaga esa parte hasta 30 días.
 - **Contraseñas en archivos de texto** (`scripts/salida/contraseñas.md`, `usuarios-creados-….csv`, `.env.produccion`): fuera de GitHub, pero en tu Mac sin cifrar. Pasar lo importante a un gestor de contraseñas y borrar los de usuarios cuando estén enviados.
 - **Supabase gratuito:** sin copias de seguridad garantizadas y puede pausarse si no se usa (límites exactos sin comprobar).
 - **Clave de cifrado:** si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 - **Recordatorios de GHL:** si se reagenda en la app una cita que vino de GHL, GHL sigue recordando al lead la hora vieja salvo que se cambie también allí.
-- **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas. Columna de citas por defecto: va guardada («0. Agendas Orgánico → Agendan»); si se borrara, se busca por nombre. Los workflows de citas mandan a la dirección `.vercel.app` (funciona; pasar a `dashboard.eternity.llc`, bloque C). Las citas de prueba que siguen en GHL vuelven en cada sincronización.
+- **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas. El canal de una cita es la última página por la que entró el contacto: se guarda al leerla (en 30 s) y no cambia después.
 - **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil), y solo se atribuyen si el caller tiene su id de GHL puesto (hoy ninguno).
 - **Post-call:** mover una cita «reagendada» puede contar la misma reunión dos veces; sacar una venta de su columna la borra con sus cobros y comisiones (pide confirmación).
 - **Citas:** un lead puede tener dos citas a horas distintas.
@@ -202,10 +196,11 @@
 
 | Dónde | Qué |
 |---|---|
-| `app/docs/plan.md` | Este plan (solo lo que falta) · lo hecho hasta el 13 oct: `git show 607d901:docs/plan.md` |
+| `app/docs/plan.md` | Este plan (solo lo que falta) · lo hecho hasta el 13 oct: `git show 607d901:docs/plan.md` y `333a636` |
+| `app/docs/plan-GHL.md` | Canales de las citas y lectura de GHL por API (16 oct): decisiones, fases, datos comprobados y la lista de links por canal |
 | `app/docs/plan-historial-10oct.md` · `plan-historial-11oct.md` | Copias históricas, con todo el detalle de lo hecho (no se tocan). Lo del 11-12 oct (Resend, GHL paso a paso): versión anterior del plan en git, `02aa87f` |
 | `app/docs/GUIA-PUBLICAR.md` · `GUIA-GHL.md` | Cómo publicar y cómo conectar GHL |
-| `app/docs/Mejorar-velocidad.md` | Velocidad de la app: medidas, investigación y propuesta (pendiente, 13 oct) |
+| `app/docs/Mejorar-velocidad.md` | Velocidad de la app: medidas, investigación y propuesta (**lo siguiente**, 16 oct) |
 | `app/docs/Arreglar-dashboard.md` | La auditoría (36 puntos) |
 | `app/scripts/` | `preparar-proyecto`, `crear-usuarios`, `limpiar-pruebas`, `igualar-ghl` (simulan sin `--confirmar`) y `seed` (solo local). `igualar-ghl` lo lanza Cristian: `CLAVE_CIFRADO="$(grep 'CLAVE_CIFRADO' scripts/salida/contraseñas.md \| grep -oE '[A-Za-z0-9+/]{43}=' \| head -1)" node --env-file=.env.produccion scripts/igualar-ghl.mjs --confirmar` |
 | `app/scripts/salida/` | Fuera de GitHub: CSV del equipo y de los closers, los 4 de contraseñas, `contraseñas.md` y el CSV de la Biblioteca del 10 oct |
