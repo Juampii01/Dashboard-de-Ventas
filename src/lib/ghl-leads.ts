@@ -161,7 +161,9 @@ async function etiquetasNuevas(
     });
     if (!faltan.length) continue;
     const { lead } = leadDeContactoGhl(c.id, c, campos, { fuente: c.source ?? null, creadoEn: c.dateAdded ?? null });
-    await meterEnPipelines(proyecto, lead, faltan, pipesApp, r);
+    const g = await meterEnPipelines(proyecto, lead, faltan, pipesApp, r);
+    r.nuevos += g.nuevos;
+    r.actualizados += g.actualizados;
     // Si ya estaba, que se vea en su historial por qué tiene la tarjeta nueva
     const ya = (leads ?? []).find((l) => l.ghl_contact_id === c.id);
     if (ya) {
