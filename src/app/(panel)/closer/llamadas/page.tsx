@@ -111,7 +111,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
             <span><b className="text-aviso">{contadores.pendientes}</b> pendientes</span>
             <span><b className="text-ok">{contadores.cerradas}</b> cerradas</span>
             <span><b className="text-mal">{contadores.perdidas}</b> perdidas <span className="text-xs text-texto-3">(este mes)</span></span>
-            {!mirar && <SincronizarGhl conectado={ghlConectado} ultima={pg?.ghl_sincronizado_en ? fechaHora(pg.ghl_sincronizado_en, proyecto) : null} />}
+            {!mirar && <SincronizarGhl conectado={ghlConectado} ultima={pg?.ghl_sincronizado_en ? fechaHora(pg.ghl_sincronizado_en, proyecto) : null} haceSegundos={pg?.ghl_sincronizado_en ? Math.max(0, Math.round((ahora - new Date(pg.ghl_sincronizado_en).getTime()) / 1000)) : null} />}
           </div>
         }
       />

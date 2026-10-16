@@ -136,7 +136,15 @@ export function BuscadorUrl({ placeholder }: { placeholder: string }) {
 }
 
 // «Sincronizar GHL»: botón y sincronización automática al abrir (si han pasado más de 10 minutos)
-export function SincronizarGhl({ conectado, ultima }: { conectado: boolean; ultima: string | null }) {
+// Plan GHL, fase 3 (16 oct): la app lee GHL sola cada 30 s; se ve cuándo fue la última lectura y, si hace más de
+// 5 minutos, sale en rojo (el programador o GHL no van). Se calcula en el servidor al abrir la página.
+function UltimaLectura({ s }: { s: number | null }) {
+  if (s === null) return null;
+  const txt = s < 60 ? `hace ${s} s` : s < 3600 ? `hace ${Math.round(s / 60)} min` : `hace ${Math.round(s / 3600)} h`;
+  return <span className={`text-xs ${s > 300 ? "font-semibold text-mal" : "text-texto-3"}`} title="La app lee las citas de GHL sola cada 30 segundos">Última lectura de GHL: {txt}</span>;
+}
+
+export function SincronizarGhl({ conectado, ultima, haceSegundos = null }: { conectado: boolean; ultima: string | null; haceSegundos?: number | null }) {
   const router = useRouter();
   const toast = useToast();
   const [cargando, iniciar] = useTransition();
@@ -161,9 +169,12 @@ export function SincronizarGhl({ conectado, ultima }: { conectado: boolean; ulti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conectado]);
   return (
-    <button className="btn-secundario border-oro/40 text-oro" disabled={cargando} onClick={() => lanzar(false)} title={conectado ? (ultima ? `Última: ${ultima}` : "Nunca sincronizado") : "Conecta GHL en Administración → Integraciones"}>
-      <RefreshCw className={`h-4 w-4 ${cargando ? "animate-spin" : ""}`} /> {cargando ? "Sincronizando…" : "Sincronizar GHL"}
-    </button>
+    <>
+      {conectado && <UltimaLectura s={haceSegundos} />}
+      <button className="btn-secundario border-oro/40 text-oro" disabled={cargando} onClick={() => lanzar(false)} title={conectado ? (ultima ? `Última: ${ultima}` : "Nunca sincronizado") : "Conecta GHL en Administración → Integraciones"}>
+        <RefreshCw className={`h-4 w-4 ${cargando ? "animate-spin" : ""}`} /> {cargando ? "Sincronizando…" : "Sincronizar GHL"}
+      </button>
+    </>
   );
 }
 
