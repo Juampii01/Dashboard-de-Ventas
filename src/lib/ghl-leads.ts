@@ -46,10 +46,16 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
   // Sin la migración 20261017130000 el campo no viene: no se hace nada
   if (!locationId || !("ghl_leads_hasta" in proyecto)) return r;
 
-  // Primera vez: solo se marca desde dónde (lo anterior entra con el repaso único)
+  // Primera vez: solo se marca desde dónde (lo anterior entra con el repaso único). Las de ese momento quedan como
+  // vistas: si no, el margen de 2 min de la lectura siguiente las metería.
   if (!proyecto.ghl_leads_hasta) {
-    const { ops } = await oportunidadesGhl({ token, locationId, limite: 1, fetchImpl });
+    const { ops } = await oportunidadesGhl({ token, locationId, limite: 20, fetchImpl });
     const desde = ops[0]?.createdAt && fecha(ops[0]) ? new Date(fecha(ops[0])).toISOString() : new Date(ahora).toISOString();
+    const vistas = ops.filter((o) => o.id).map((o) => ({ proyecto_id: proyecto.id, opp_id: o.id, contact_id: null, n_respuestas: 0, visto_en: new Date(ahora).toISOString() }));
+    if (vistas.length) {
+      const { error } = await db().from("ghl_oportunidades_vistas").upsert(vistas);
+      if (error) throw new Error(`No se pudo guardar ghl_oportunidades_vistas: ${error.message}`);
+    }
     await db().from("proyectos").update({ ghl_leads_hasta: desde }).eq("id", proyecto.id);
     return { ...r, activado: true };
   }
