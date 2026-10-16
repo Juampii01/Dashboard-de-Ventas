@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 16 oct 2026, 23:00 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 01:45 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -17,7 +17,8 @@
   - **Filtro por canal** en Agendas (y su exportación), CRM y KPIs; «GHL · YouTube» en lugar de «Calendario GHL».
   - **Workflows de GHL** («2. Agendan llamada» y «2 . WH - FORM AGENDA GENERAL»): ramas yt/youtube, ig/instagram, email, webinar, dfy; publicados por Cristian.
   - Ids de GHL de Felipe y Cintia puestos · «Link agenda» = `codigomaestria.com/agenda?utm_source=callers` · permiso `calendars.readonly` en GHL.
-- **Migraciones:** todas aplicadas en la nube (las últimas, `20261017110000_citas_canal` y `20261017120000_leer_ghl_cada_30s`, el 16 oct, las lanzó Cristian).
+- **Hecho el 16-17 oct: leads por API, sin workflows** (detalle en `plan-GHL.md`, apartado 6): cada 30 s la app lee los contactos nuevos de GHL y los mete por su etiqueta (`biblioteca recursos` → Biblioteca, `webinar1` → Webinar 1, sin etiqueta → «0. Agendas General»), en la primera columna; también los que ganan una etiqueta después y los que cambian sus datos. Probado con datos reales: con el workflow de la Biblioteca apagado entraron 6 leads, 0 repetidos.
+- **Migraciones:** todas aplicadas en la nube (las últimas, `20261017110000_citas_canal`, `20261017120000_leer_ghl_cada_30s` y `20261017130000_leads_por_api`, el 16 oct, las lanzó Cristian).
 - **Datos de Maestria (16 oct, 22:50):** 1.619 leads (185 con caller); 37 citas (16 con canal; las 21 anteriores al 13 oct, sin canal). Por pipeline (con las tarjetas 🔗): General 36 · Orgánico 49 · Callers 8 · YT 2 · Email 1 · Biblioteca 1 · IG 0 · P1 0 · Webinar 0 · DFY 0 · Biblioteca Recursos 1.604 · Webinar 1 111 · DFY AI Services 0. **Equipo** (dato del 13 oct, no revisado hoy): 14 reales + 2 de prueba; faltaba que entraran Antonio y los 4 closers; un 4.º director, «Thiago», que no estaba en el plan.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
@@ -60,11 +61,11 @@
 
 **5 · GHL, al final (juntos)** · *Revisado uno a uno el 16 oct a petición de Cristian: los 6 siguen pendientes (prueba en cada punto).*
 - [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo. *Comprobado (API): los 5 últimos leads de la Biblioteca salen en GHL como «Manual», sin página ni UTM.*
-- [ ] **Leads nuevos de Webinar, Orgánico y DFY** (hoy solo entra sola la Biblioteca; el resto, por CSV). Se puede hacer como las citas: leerlos por la API. *Comprobado (base): de los 311 leads nuevos desde el 13 oct, 306 son de la Biblioteca (por su Entrada) y 5 de «Orgánico» que entraron con su cita; ninguno de Webinar ni DFY.*
+- [x] **Leads nuevos de todas las fuentes por la API** (16-17 oct, `plan-GHL.md` apartado 6). Falta: el **repaso único** con `scripts/igualar-ghl.mjs` (lo de antes del 16 oct, 21:09 UTC) y ver en real los casos de General y de dos etiquetas.
 - [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL. *Comprobado (base): ninguno de los 6 callers lo tiene.*
 - [ ] Avisos de los reportes por WhatsApp. *Comprobado (base): la dirección de avisos de GHL del proyecto está vacía; hoy los avisos solo van por email.*
-- [ ] Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc` (hoy apunta a `.vercel.app`, que funciona). *Comprobado en GHL: su paso «B · Webhook (Entrada)» sigue con `dashboard-de-ventas-iota.vercel.app`.*
-- [ ] Idea: que `/api/signup` de la landing mande también las respuestas directamente a la app. *Comprobado (base): las entradas de la Biblioteca llegan desde el workflow de GHL, no desde la landing.*
+- [x] ~~Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc`~~: ya no hace falta, Cristian lo apagó el 16 oct (los leads entran por la API).
+- [x] ~~Idea: que `/api/signup` mande las respuestas a la app~~: ya no hace falta, la API trae las respuestas del contacto.
 
 **6 · Lo de Cristian, al final del todo**
 - [ ] Pagar Google Workspace **antes del 2 nov 2026** (si no, dejan de salir los emails de la app).

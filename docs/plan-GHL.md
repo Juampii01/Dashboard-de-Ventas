@@ -2,7 +2,7 @@
 
 > Creado el 16 oct 2026. **Objetivo:** que cada cita que entra diga **de qué calendario y de qué canal viene** (Callers, YouTube, IG, Email, Biblioteca, Webinar, DFY o Directo), con etiqueta y filtro en la app. Las citas se leen **solo con la API de GHL** (sin workflows de citas). El plan general sigue en `plan.md`.
 
-**Índice:** 1. Dónde estamos · 2. Decisiones · 3. Fases · 4. Riesgos · 5. Datos comprobados
+**Índice:** 1. Dónde estamos · 2. Decisiones · 3. Fases · 4. Riesgos · 5. Datos comprobados · 6. Leads por API (16-17 oct)
 
 ---
 
@@ -139,3 +139,42 @@
 | `?utm_source=bibliotec` | — | Llegó así 1 vez: probablemente una errata en algún link |
 
 **Límites oficiales:** GHL 100 peticiones / 10 s y 200.000 / día ([FAQ GHL](https://marketplace.gohighlevel.com/docs/oauth/Faqs)) · Vercel Hobby: 1.000.000 peticiones, 4 h de CPU y 360 GB-hora de memoria al mes; tareas propias de Vercel solo 1 vez al día ([Hobby](https://vercel.com/docs/plans/hobby), [tareas](https://vercel.com/docs/cron-jobs/usage-and-pricing)) · Supabase Cron admite «30 seconds» con Postgres 15.1.1.61 o más nuevo ([Supabase](https://supabase.com/docs/guides/cron/quickstart)).
+
+---
+
+## 6. Leads por API (16-17 oct)
+
+**Qué hace:** en la misma lectura de cada 30 s (`/api/ghl/leer/[proyecto]`, código en `src/lib/ghl-leads.ts`), la app lee de GHL los **contactos** (no las oportunidades) y los mete en su pipeline sin workflows. Citas y leads van por separado: si falla una parte, la otra se lee igual.
+
+**Decisiones de Cristian:**
+
+| Tema | Decisión |
+|---|---|
+| Qué se lee | Los contactos **nuevos** · los que **ganan una etiqueta** después (p. ej. Biblioteca → Webinar) · los que **cambian sus datos** |
+| Etiqueta → pipeline | `biblioteca recursos` → «1. Biblioteca Recursos» · `webinar1` → «2. Webinar 1» · **sin ninguna → «0. Agendas General»** (solo los nuevos) · DFY no tiene etiqueta en GHL (revisadas las 1.622 el 17 oct) |
+| Varias etiquetas | Entra en todos: su pipeline es el primero y en los demás tiene su tarjeta 🔗 |
+| Columna | Siempre la primera (Biblioteca «Nuevos», Webinar «Optin», General «Form») |
+| Lo anterior | Se trae una vez con `scripts/igualar-ghl.mjs` (lo lanza Cristian) |
+| Reparto | Como la Entrada: se reparte a los callers si el reparto automático está encendido (el 17 oct, **apagado**) |
+| Workflows | Cristian apagó el de la Biblioteca el 16 oct; los leads ya no dependen de ninguno |
+
+**Cómo funciona:**
+- **Nuevos:** `POST /contacts/search` con `dateAdded` posterior a `proyectos.ghl_leads_hasta` (menos 2 min de margen); los ya vistos se guardan 3 días en `ghl_oportunidades_vistas` (su `opp_id` es el id del contacto). Como mucho 30 por lectura.
+- **Cambiados:** la misma búsqueda con `dateUpdated` de los últimos 30 min. Si ganó una etiqueta de pipeline que no tiene en la app, gana ese pipeline (con nota «Nueva etiqueta en GHL (API)»). Si cambió sus datos, se ponen al día: nombre, apellido y teléfono se cambian; el email solo si faltaba; etiquetas y respuestas se suman (no se borra nada). Solo escribe si hay algo nuevo.
+- **Respuestas:** los campos personalizados del contacto con el nombre de su pregunta (`/locations/{id}/customFields`); `utm_*` va al seguimiento. Los de los últimos 10 min se releen por si llegan tarde.
+- Permisos: los 7 de solo leer de la integración privada (contactos, oportunidades, calendarios, citas, conversaciones, campos y usuarios).
+
+**Comprobado con datos reales (16 oct por la noche):** con el workflow apagado entraron por la API el test de Webinar de Cristian y 5 leads de la Biblioteca, con sus respuestas y su oferta; 0 repetidos (8 leads desde las 21:00 UTC). Commits `918df7a` a `1f1e850`. Tests: `tests/integracion/ghl-leads.test.ts` (8) y `tests/unit/ghl-lead.test.ts` (2).
+
+**Me equivoqué (16 oct):** dije que sin workflow GHL no creaba la oportunidad; la crea ~2 min después del contacto y yo miré antes. La solución por contactos es mejor igualmente: no depende de ningún workflow.
+
+**Pendiente:**
+- [ ] Repaso único con `scripts/igualar-ghl.mjs` (los contactos anteriores al 16 oct, 21:09 UTC).
+- [ ] Ver con datos reales: un contacto sin etiqueta → General · uno con dos etiquetas · uno que gana `webinar1` · respuestas que llegan tarde (cubiertos en tests, no vistos en real).
+- [ ] El test de Webinar quedó en «Form completo» (lo metió la primera versión, que usaba la columna del mismo nombre): moverlo a «Optin» si se quiere.
+- [ ] Reparto automático apagado: sin él los leads nuevos no tienen caller.
+
+**Riesgos:**
+- **GHL puede pisar un cambio hecho en la app:** si el equipo corrige en la app el nombre o el teléfono y luego el contacto cambia en GHL por cualquier cosa (un email, una etiqueta), vuelve el de GHL. Para evitarlo, corregir también en GHL.
+- **Si la lectura se para más de 30 min**, los cambios de ese rato no se ven (los nuevos sí, tienen fecha guardada): lo arregla el repaso.
+- Una etiqueta que se quita en GHL no se quita en la app.
