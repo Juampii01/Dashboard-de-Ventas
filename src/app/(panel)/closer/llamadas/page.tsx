@@ -19,6 +19,7 @@ import { Cualificacion } from "./cualificacion";
 import { TableroClosers } from "./tablero-closers";
 import { BuscadorUrl, CrearLlamada, FilaSinUnir, ImportarCitas, SincronizarGhl } from "./cliente";
 import type { Producto } from "@/lib/tipos";
+import { CANALES, NOMBRE_CANAL, SIN_CANAL, origenCitaGhl } from "@/lib/canal";
 
 const TABS = [
   { v: "agendas", t: "Agendas" },
@@ -78,7 +79,10 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
   const invalidas = (sinUnir ?? []).filter((x) => x.estado === "invalida");
   const prods = (productos.data ?? []) as Producto[];
   const utm = str("utm");
-  const citas = citasTodas.filter((c) => coincide(q, nombreDe(c.leads), c.leads?.email, c.leads?.telefono) && (!utm || (c.leads?.seguimiento?.utm_source || "Sin UTM") === utm));
+  const canal = str("canal");
+  const citas = citasTodas.filter(
+    (c) => coincide(q, nombreDe(c.leads), c.leads?.email, c.leads?.telefono) && (!utm || (c.leads?.seguimiento?.utm_source || "Sin UTM") === utm) && (!canal || (c.canal ?? SIN_CANAL) === canal)
+  );
   const utms = [...new Set(citasTodas.map((c) => c.leads?.seguimiento?.utm_source || "Sin UTM"))].sort();
   const ventas = ventasTodas;
   const partes = partirCloser(etapasCl);
@@ -129,6 +133,8 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
         <div className="tarjeta flex flex-wrap items-center gap-2 p-2.5">
           <BuscadorUrl placeholder="Buscar por nombre, email o teléfono…" />
           {jefe && <FiltroUrl nombre="closer" etiqueta="Closer" todos="Todos los closers" opciones={vis.todos.map((c) => ({ v: c.id, t: c.nombre }))} />}
+          {/* Fase 4 (plan GHL): canal de la cita, por el UTM de la página donde reservó */}
+          <FiltroUrl nombre="canal" etiqueta="Canal" todos="Todos los canales" opciones={[...CANALES.map((c) => ({ v: c as string, t: NOMBRE_CANAL[c] })), { v: SIN_CANAL, t: "Sin canal" }]} />
           <FiltroUrl nombre="utm" etiqueta="UTM" todos="Todas las UTM" opciones={utms.map((u) => ({ v: u, t: u }))} />
           {!mirar && <div className="ml-auto flex flex-wrap gap-2">
             <CrearLlamada closers={(jefe ? vis.todos : vis.closers).map((c) => ({ id: c.id, nombre: c.nombre }))} soyCloser={jefe ? null : perfil.id} />
@@ -381,7 +387,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
           <li key={c.id} className="flex flex-wrap items-center gap-4 px-4 py-3">
             <div className="w-36 shrink-0">
               <div className="text-sm font-semibold">{fechaHora(c.fecha, proyecto)}</div>
-              <div className="text-xs text-texto-3">{c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombrePersona(c.agendada_por)}`}</div>
+              <div className="text-xs text-texto-3">{c.origen === "ghl" ? origenCitaGhl(c) : `Agendó ${nombrePersona(c.agendada_por)}`}</div>
             </div>
             <div className="min-w-48 flex-1">
               <a href={`/leads/${c.lead_id}`} className="font-medium hover:text-primario">{nombreDe(c.leads)}</a>

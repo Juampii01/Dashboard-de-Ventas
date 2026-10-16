@@ -53,6 +53,7 @@ import { ARRASTRE_COLUMNA, reordenar } from "@/lib/orden";
 import { BarraMasiva, type DestinoMasivo } from "./barra-masiva";
 import { TarjetaCrm, haceDias } from "@/components/tarjeta-crm";
 import { SelectorPipeline } from "./selector-pipeline";
+import { PREFIJO_ETIQUETA } from "@/lib/canal";
 
 export type LeadTarjeta = {
   id: string;
@@ -152,10 +153,14 @@ export function TableroCrm({
 
   const nombrePorId = useMemo(() => Object.fromEntries([...callers, ...closers].map((p) => [p.id, p.nombre])), [callers, closers]);
 
+  // Fase 4 (plan GHL): filtro por canal con la etiqueta «Canal: …» que pone la app a cada lead con cita de GHL
+  const [canal, setCanal] = useState("");
+  const canales = useMemo(() => [...new Set(leadsIniciales.flatMap((l) => l.etiquetas.filter((e) => e.startsWith(PREFIJO_ETIQUETA))))].sort(), [leadsIniciales]);
   const leads = useMemo(() => {
     const t = q.trim().toLowerCase();
     return leadsIniciales
       .map((l) => (moviendo[l.id] ? { ...l, etapa_id: moviendo[l.id] } : l))
+      .filter((l) => !canal || l.etiquetas.includes(canal))
       .filter(
         (l) =>
           !t ||
@@ -163,7 +168,7 @@ export function TableroCrm({
           (l.email ?? "").includes(t) ||
           (l.telefono ?? "").replace(/\s/g, "").includes(t.replace(/\s/g, ""))
       );
-  }, [leadsIniciales, moviendo, q]);
+  }, [leadsIniciales, moviendo, q, canal]);
 
   const toast = useToast();
   function ejecutar(fn: () => Promise<unknown>, mensaje?: string) {
@@ -328,6 +333,12 @@ export function TableroCrm({
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
         </div>
+        {(canales.length > 0 || canal) && (
+          <Desplegable aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value)} className="campo w-auto min-w-40" title="Canal de la cita (por el UTM de la página donde reservó)">
+            <option value="">Todos los canales</option>
+            {canales.map((c) => <option key={c} value={c}>{c.slice(PREFIJO_ETIQUETA.length)}</option>)}
+          </Desplegable>
+        )}
         {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
           <button onClick={() => setVista("tablero")} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${vista === "tablero" ? "bg-panel text-texto shadow-sm" : "text-texto-3"}`}>
             <LayoutGrid className="h-4 w-4" /> Tablero

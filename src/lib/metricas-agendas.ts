@@ -7,6 +7,7 @@
 // · Calificados 4★+: asistencias con 4 o 5 estrellas del closer.
 import { porcentaje } from "@/lib/formato";
 import { enRango } from "@/lib/periodos";
+import { SIN_CANAL } from "@/lib/canal";
 
 export type CitaM = {
   id: string;
@@ -17,6 +18,7 @@ export type CitaM = {
   estado: string;
   estrellas_caller: number | null;
   estrellas_closer: number | null;
+  canal?: string | null; // plan GHL, fase 4
 };
 export type VentaM = {
   id: string;
@@ -36,7 +38,8 @@ type RangoM = { desde: Date | null; hasta: Date | null };
 export const ASISTIDAS = ["cerrada", "seguimiento", "perdida"];
 const ABIERTAS = ["pendiente", "confirmada", "confirmacion_pendiente"];
 
-export type FiltrosAgendas = { closerIds: string[]; productoId?: string | null; evento?: string | null };
+// canal (plan GHL, fase 4): solo las citas de ese canal, y las ventas de los leads con una cita de ese canal
+export type FiltrosAgendas = { closerIds: string[]; productoId?: string | null; evento?: string | null; canal?: string | null };
 
 function media(xs: number[]) {
   return xs.length ? Math.round((xs.reduce((s, x) => s + x, 0) / xs.length) * 10) / 10 : null;
@@ -50,9 +53,12 @@ export function metricasAgendas(
   const leadPorId = new Map(datos.leads.map((l) => [l.id, l]));
   const delEvento = (leadId: string) => !f.evento || leadPorId.get(leadId)?.evento === f.evento;
   const closers = new Set(f.closerIds);
+  const delCanalCita = (c: CitaM) => !f.canal || (c.canal ?? SIN_CANAL) === f.canal;
+  const leadsDelCanal = f.canal ? new Set(datos.citas.filter(delCanalCita).map((c) => c.lead_id)) : null;
+  const delCanal = (leadId: string) => !leadsDelCanal || leadsDelCanal.has(leadId);
 
-  const citas = datos.citas.filter((c) => c.estado !== "reagendada" && c.closer_id && closers.has(c.closer_id) && enRango(c.fecha, rango) && delEvento(c.lead_id));
-  const reagendadas = datos.citas.filter((c) => c.estado === "reagendada" && c.closer_id && closers.has(c.closer_id) && enRango(c.fecha, rango) && delEvento(c.lead_id)).length;
+  const citas = datos.citas.filter((c) => c.estado !== "reagendada" && c.closer_id && closers.has(c.closer_id) && enRango(c.fecha, rango) && delEvento(c.lead_id) && delCanalCita(c));
+  const reagendadas = datos.citas.filter((c) => c.estado === "reagendada" && c.closer_id && closers.has(c.closer_id) && enRango(c.fecha, rango) && delEvento(c.lead_id) && delCanalCita(c)).length;
   const cuenta = (e: string) => citas.filter((c) => c.estado === e).length;
   const asistencias = citas.filter((c) => ASISTIDAS.includes(c.estado));
   const cerradas = cuenta("cerrada");
@@ -63,7 +69,7 @@ export function metricasAgendas(
   const noCalifica = cuenta("no_califica");
   const pendientes = citas.filter((c) => ABIERTAS.includes(c.estado)).length;
 
-  const ventasCloser = datos.ventas.filter((v) => v.vendedor_id && closers.has(v.vendedor_id) && (!f.productoId || v.producto_id === f.productoId) && delEvento(v.lead_id));
+  const ventasCloser = datos.ventas.filter((v) => v.vendedor_id && closers.has(v.vendedor_id) && (!f.productoId || v.producto_id === f.productoId) && delEvento(v.lead_id) && delCanal(v.lead_id));
   const ventas = ventasCloser.filter((v) => enRango(v.fecha, rango));
   const facturacion = ventas.reduce((s, v) => s + Number(v.facturacion), 0);
   const idsVentas = new Set(ventasCloser.map((v) => v.id));

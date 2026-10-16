@@ -82,6 +82,13 @@ describe("métricas de agendas", () => {
     const ev = metricasAgendas(datos, R, { closerIds: ["A"], evento: "MC oct" });
     expect(ev.agendadas).toBe(2); // citas de L1 y L2 (los demás leads no tienen evento)
   });
+  it("filtro por canal (plan GHL): citas de ese canal y ventas de sus leads; «sin_canal» = citas sin canal", () => {
+    const conCanal = { ...datos, citas: datos.citas.map((c) => (c.id === "1" ? { ...c, canal: "yt" } : c.id === "2" ? { ...c, canal: "callers" } : c)) };
+    const yt = metricasAgendas(conCanal, R, { closerIds: ["A"], canal: "yt" });
+    expect(yt).toMatchObject({ agendadas: 1, cerradas: 1, ventas: 2 }); // la cita 1 es de L1, que tiene las ventas v1 y v2
+    expect(metricasAgendas(conCanal, R, { closerIds: ["A"], canal: "callers" })).toMatchObject({ agendadas: 1, ventas: 0 });
+    expect(metricasAgendas(conCanal, R, { closerIds: ["A"], canal: "sin_canal" }).agendadas).toBe(4);
+  });
   it("agendas por fuente (pipeline y UTM)", () => {
     const m = metricasAgendas(datos, R, { closerIds: ["A"] });
     expect(m.porPipeline).toEqual([{ nombre: "Sin pipeline", n: 3 }, { nombre: "Webinar 1", n: 2 }, { nombre: "Biblioteca", n: 1 }]);

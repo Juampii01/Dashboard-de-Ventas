@@ -9,7 +9,7 @@ import type { Perfil, Proyecto } from "@/lib/tipos";
 export async function cargarAgendas(proyecto: Proyecto, conPrueba = false) {
   const pid = proyecto.id;
   const [citasT, ventasT, pagosT, leads, pipelines, productos, gente, prueba] = await Promise.all([
-    todas<CitaM>((a, b) => db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, estrellas_caller, estrellas_closer").eq("proyecto_id", pid).order("id").range(a, b)),
+    todas<CitaM>((a, b) => db().from("citas").select("id, lead_id, closer_id, agendada_por, fecha, estado, estrellas_caller, estrellas_closer, canal").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<VentaM>((a, b) => db().from("ventas").select("id, lead_id, vendedor_id, producto_id, facturacion, cash_collected, fecha, devuelto, devuelto_en").eq("proyecto_id", pid).order("id").range(a, b)),
     todas<PagoM>((a, b) => db().from("pagos").select("venta_id, importe, fecha, ventas!inner(proyecto_id)").eq("ventas.proyecto_id", pid).order("id").range(a, b)),
     todas<LeadM>((a, b) => db().from("leads").select("id, pipeline_id, evento, seguimiento").eq("proyecto_id", pid).order("id").range(a, b)),

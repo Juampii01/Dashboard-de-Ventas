@@ -107,6 +107,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/webhook
       // Sin el número ni tildes: «Biblioteca Recursos» vale para «1. Biblioteca Recursos» (13 oct)
       const pipelineId = (pipelineNombre ? pipes?.find((p) => mismoNombre(p.nombre, pipelineNombre)) : null)?.id ?? pipes?.[0]?.id ?? null;
       await guardarLeads(proyecto, [aLead(body)], { pipelineId, origen: "ghl", perfilId: null, repartir: true });
+    } else if (tipo === "cita_agendada" && (proyecto.ghl_calendarios ?? []).length) {
+      // Plan GHL, fase 4 (16 oct): el proyecto lee sus citas por la API cada 30 s (con su canal, su calendario y su
+      // closer). El aviso del workflow solo se guarda: si creara la cita, la mandaría a «Orgánico» antes de saber el canal.
+      if (evento) await db().from("webhook_eventos").update({ procesado: true, error: "Ignorado: las citas se leen por la API" }).eq("id", evento.id);
+      return NextResponse.json({ ok: true, ignorado: true });
     } else if (tipo === "cita_agendada") {
       // 13 oct: el workflow de cada calendario dice su pipeline («0. Agendas YT», «0. Agendas IG»…)
       // Si el workflow no lo dice, se pregunta a GHL en qué pipeline está su oportunidad en «Agendan»

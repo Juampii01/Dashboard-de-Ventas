@@ -171,4 +171,13 @@ describe("Formato de las plantillas de GUIA-GHL (clave en cabecera)", () => {
     const { PLANTILLAS_GHL } = await import("@/lib/plantillas-ghl");
     for (const p of PLANTILLAS_GHL) expect(() => JSON.parse(p.cuerpo), p.clave).not.toThrow();
   });
+
+  it("plan GHL, fase 4: si el proyecto lee sus citas por la API, el aviso de cita del workflow solo se guarda", async () => {
+    await db.from("proyectos").update({ ghl_calendarios: ["cal-x"] }).eq("id", e.proyecto.id);
+    const r = await enviar({ tipo: "cita_agendada", contact_id: `${e.pref}-api1`, email: `${e.pref}-api1@x.test`, fecha: "2026-12-01T15:00:00Z" });
+    await db.from("proyectos").update({ ghl_calendarios: [] }).eq("id", e.proyecto.id);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true, ignorado: true });
+    expect((await db.from("leads").select("id").eq("proyecto_id", e.proyecto.id).eq("ghl_contact_id", `${e.pref}-api1`)).data).toHaveLength(0);
+  });
 });

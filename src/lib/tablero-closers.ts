@@ -4,6 +4,7 @@ import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia } 
 import { CLAVES_CLOSER, SUB_POSTCALL, claveNatural, repartirCloser } from "@/lib/llamadas";
 import type { ColumnaC } from "@/app/(panel)/closer/llamadas/tablero-closers";
 import type { Cita, Etapa, Lead, Proyecto } from "@/lib/tipos";
+import { origenCitaGhl } from "@/lib/canal";
 
 // Datos del tablero «Closers» (Paso 0): lo usan el CRM y Agendas → Llamadas (Pre-call y Post-call).
 type LeadCita = Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "email" | "seguimiento">;
@@ -61,7 +62,7 @@ export function columnasCloser(
           nombre: nombreDe(c.leads),
           telefono: c.leads?.telefono ?? null,
           fechaTxt: fechaHora(c.fecha, proyecto),
-          quien: c.origen === "ghl" ? "Calendario GHL" : `Agendó ${nombrePersona(c.agendada_por)}`,
+          quien: c.origen === "ghl" ? origenCitaGhl(c) : `Agendó ${nombrePersona(c.agendada_por)}`,
           nota: c.nota,
           closer: jefe ? nombrePersona(c.closer_id) : null,
           pasada: new Date(c.fecha).getTime() < ahora,

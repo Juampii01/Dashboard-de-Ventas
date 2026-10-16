@@ -24,6 +24,7 @@ import { PanelObjetivos } from "@/components/barras-objetivos";
 import { BarraPeriodo, FiltroUrl } from "@/components/barra-periodo";
 import { IndividualAgendas, ComparativaAgendas } from "@/components/metricas-agendas-vista";
 import { VistaAgendas } from "@/app/(panel)/closer/vista-agendas";
+import { CANALES, NOMBRE_CANAL, SIN_CANAL } from "@/lib/canal";
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
@@ -144,7 +145,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       agendas.pagos = agendas.pagos.filter((x) => ventas.has(x.venta_id));
     }
     const vis = closersVisibles(perfil, agendas.gente, str("closer"));
-    const filtrosAg = { productoId: str("producto"), evento: str("evento") };
+    const filtrosAg = { productoId: str("producto"), evento: str("evento"), canal: str("canal") || null };
     const mAg = metricasAgendas(agendas, rango, { closerIds: vis.ids, ...filtrosAg });
     const comparativaVisible = jefe && !propio;
     const porCloser = comparativaVisible
@@ -155,6 +156,8 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     const filtrosComunes = (
       <>
         <FiltroUrl nombre="producto" etiqueta="Producto" todos="Todos los productos" opciones={agendas.productos.map((x) => ({ v: x.id, t: x.nombre }))} />
+        {/* Fase 4 (plan GHL): canal de la cita, por el UTM de la página donde reservó */}
+        <FiltroUrl nombre="canal" etiqueta="Canal" todos="Todos los canales" opciones={[...CANALES.map((c) => ({ v: c as string, t: NOMBRE_CANAL[c] })), { v: SIN_CANAL, t: "Sin canal" }]} />
         {agendas.eventos.length > 0 && <FiltroUrl nombre="evento" etiqueta="Evento" todos="Todos los eventos" opciones={agendas.eventos.map((e) => ({ v: e, t: e }))} />}
         <div className="2xl:ml-auto"><BarraPeriodo etiqueta={rango.etiqueta} /></div>
       </>
