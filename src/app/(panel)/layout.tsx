@@ -4,6 +4,7 @@ import { BarraLateral, type ItemMenu } from "@/components/barra-lateral";
 import { ProveedorToasts } from "@/components/toasts";
 import { Dialogos } from "@/components/dialogos";
 import { AvisosEnVivo } from "@/components/avisos-en-vivo";
+import { Bienvenida, PrecargaMenu } from "@/components/bienvenida";
 import { db } from "@/lib/datos";
 import { proyectoParaMenu } from "@/lib/formato";
 import { seccionesPermitidas, SECCIONES, type Seccion } from "@/lib/permisos";
@@ -70,6 +71,9 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       : []),
   ].filter((g) => g.items.length > 0);
 
+  // Velocidad (17 oct 2026): todas las secciones de esta persona, para precargarlas (y para la bienvenida)
+  const rutas = [...menu.flatMap((g) => g.items.map((it) => it.href)), "/perfil"];
+
   return (
     <ProveedorToasts>
       <div className="flex min-h-screen">
@@ -78,6 +82,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       </div>
       <Dialogos />
       <AvisosEnVivo proyectoId={proyecto.id} />
+      <PrecargaMenu rutas={rutas} />
+      <Bienvenida nombre={perfil.nombre.split(" ")[0]} rutas={rutas} />
     </ProveedorToasts>
   );
 }

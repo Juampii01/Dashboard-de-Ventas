@@ -33,6 +33,7 @@ import { cerrarSesion } from "@/app/login/acciones";
 import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
 import type { Perfil } from "@/lib/tipos";
 import { Desplegable } from "@/components/eleccion";
+import { CLAVE_ENTRADA } from "@/components/bienvenida";
 
 const ICONOS = {
   funnel: BarChart3,
@@ -130,16 +131,6 @@ export function BarraLateral({
         </div>
       </div>
 
-      {/* Velocidad (17 oct 2026): Next solo precarga los enlaces que se ven; los últimos del menú (Finanzas, Clientes,
-          Administración) quedaban por debajo (medido). Esta copia invisible, siempre «a la vista», los precarga también */}
-      {/* Cada enlace en el mismo píxel (17 oct, medido: en fila quedaban fuera del recorte y no se precargaban) */}
-      <div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0">
-        {menu.flatMap((g) => g.items).map((it) => (
-          <Link key={it.href} href={it.href} prefetch={true} tabIndex={-1} className="absolute inset-0 block overflow-hidden">
-            {it.texto}
-          </Link>
-        ))}
-      </div>
       <nav className="mt-5 flex-1 space-y-5 overflow-y-auto px-3">
         {menu.map((g) => (
           <div key={g.grupo}>
@@ -202,7 +193,17 @@ export function BarraLateral({
             <Sun className="hidden h-4 w-4 dark:block" />
             <Moon className="h-4 w-4 dark:hidden" />
           </button>
-          <form action={cerrarSesion}>
+          {/* Al cerrar sesión, la próxima entrada vuelve a tener su bienvenida (17 oct 2026) */}
+          <form
+            action={cerrarSesion}
+            onSubmit={() => {
+              try {
+                sessionStorage.removeItem(CLAVE_ENTRADA);
+              } catch {
+                // sin sessionStorage no hay nada que reiniciar
+              }
+            }}
+          >
             <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-mal" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut className="h-4 w-4" />
             </button>
