@@ -29,7 +29,9 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
     // Velocidad (13 oct 2026): lo visitado o precargado (p. ej. una pestaña del CRM) vale 30 s (antes, nada o 5 min):
     // para no enseñar datos viejos de otros; los cambios propios lo refrescan al momento
-    staleTimes: { static: 30, dynamic: 30 },
+    // 17 oct 2026 (Cristian): 5 min. No enseña datos viejos: los cambios propios (revalidatePath) y los avisos
+    // en vivo de los demás (avisos-en-vivo.tsx → refrescarTodo) borran todo lo guardado al momento
+    staleTimes: { static: 300, dynamic: 300 },
   },
   async headers() {
     return [{ source: "/(.*)", headers: cabeceras }];

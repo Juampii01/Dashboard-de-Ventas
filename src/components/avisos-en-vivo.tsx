@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { refrescarTodo } from "@/app/(panel)/acciones-globales";
 
 // Velocidad (17 oct 2026), tiempo real: escucha el canal privado del proyecto (avisos de la base, sin datos;
 // migración 20261017150000_avisos_en_vivo) y, cuando alguien cambia leads, citas, tarjetas o ventas, vuelve a
@@ -11,7 +11,6 @@ import { createBrowserClient } from "@supabase/ssr";
 const ESPERA_MS = 1500;
 
 export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
-  const router = useRouter();
   useEffect(() => {
     const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
     let temporizador: ReturnType<typeof setTimeout> | null = null;
@@ -21,7 +20,8 @@ export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
     const refrescar = () => {
       if (document.visibilityState === "visible") {
         pendiente = false;
-        router.refresh();
+        // Todo lo guardado (las secciones se guardan 5 min): así ninguna enseña datos de antes del cambio
+        void refrescarTodo().catch((e) => console.warn("[avisos en vivo] refrescar", e));
       } else {
         pendiente = true;
       }
@@ -49,6 +49,6 @@ export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
       document.removeEventListener("visibilitychange", alVolver);
       void supabase.removeChannel(canal);
     };
-  }, [proyectoId, router]);
+  }, [proyectoId]);
   return null;
 }

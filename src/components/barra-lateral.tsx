@@ -70,10 +70,10 @@ export function BarraLateral({
   const ruta = usePathname();
   // Fase 2 (Cristian, 12 oct 2026): el menú ya no precarga todas las pantallas al aparecer (medido: 24 peticiones
   // al servidor en 10 s por cada pantalla abierta); solo la que se señala con el ratón o el dedo, justo antes del clic.
-  // Velocidad (17 oct 2026): precarga completa (prefetch={true}: la página con sus datos, como las pestañas del CRM);
-  // router.prefetch solo traía la pantalla de «cargando». Lo precargado vale 30 s (staleTimes en next.config.ts).
-  const [precargadas, setPrecargadas] = useState<Set<string>>(() => new Set());
-  const precargar = (href: string) => setPrecargadas((s) => (s.has(href) ? s : new Set(s).add(href)));
+  // Velocidad (17 oct 2026, Cristian: «me sigue cargando lento al cambiar de sección»): ahora sí se precargan todas
+  // las secciones del menú al abrir la app, completas (prefetch={true}: la página con sus datos), y se guardan 5 min
+  // (staleTimes en next.config.ts); el 12 oct se repetían porque caducaban al momento. Los cambios las borran al
+  // instante (revalidatePath y avisos-en-vivo.tsx), así que no enseñan datos viejos.
   // Al pulsar, el botón se marca al momento (sin esperar al servidor); vale mientras no cambie la ruta
   const [yendo, setYendo] = useState<{ a: string; desde: string } | null>(null);
   const destino = yendo && yendo.desde === ruta ? yendo.a : null;
@@ -134,10 +134,7 @@ export function BarraLateral({
                   <li key={it.href}>
                     <Link
                       href={it.href}
-                      prefetch={precargadas.has(it.href) ? true : false}
-                      onMouseEnter={() => precargar(it.href)}
-                      onFocus={() => precargar(it.href)}
-                      onTouchStart={() => precargar(it.href)}
+                      prefetch={true}
                       onClick={() => {
                         setAbierto(false);
                         if (it.href !== ruta) setYendo({ a: it.href, desde: ruta });
@@ -167,7 +164,7 @@ export function BarraLateral({
       <div className="border-t border-borde p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           {/* Bloque 1 de 1.0: tocar tu nombre abre «Mi perfil» */}
-          <Link href="/perfil" prefetch={precargadas.has("/perfil") ? true : false} onMouseEnter={() => precargar("/perfil")} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
+          <Link href="/perfil" prefetch={true} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primario-suave text-xs font-semibold text-primario">
               {iniciales(perfil.nombre)}
             </div>

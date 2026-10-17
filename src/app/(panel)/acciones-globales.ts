@@ -7,6 +7,13 @@ import { COOKIE_PROYECTO, getSesion } from "@/lib/auth";
 
 const UN_ANO = 60 * 60 * 24 * 365;
 
+// Velocidad (17 oct 2026): lo llama avisos-en-vivo.tsx cuando otro cambia algo del proyecto. Borra todo lo guardado
+// en el navegador (no solo la página actual, como router.refresh) y trae de nuevo la página que se está viendo.
+export async function refrescarTodo() {
+  await getSesion(); // solo con sesión
+  revalidatePath("/", "layout");
+}
+
 export async function cambiarTema() {
   const jar = await cookies();
   const actual = jar.get("eternity_tema")?.value === "claro" ? "claro" : "oscuro";
