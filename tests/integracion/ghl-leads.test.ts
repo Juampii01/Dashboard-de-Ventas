@@ -180,4 +180,22 @@ describe("Leads nuevos de GHL por la API (contactos)", () => {
     bib.phone = "34699001122";
     expect((await leer(mas(31.5))).puestosAlDia).toBe(0);
   });
+
+  it("GHL no pisa lo que el equipo cambió en la app (Cristian, 17 oct); lo nuevo sí llega", async () => {
+    const lead = await leadPorContacto("bib");
+    await db.from("leads").update({ apellido: "CambioApp", telefono: "+1 555 000 9999" }).eq("id", lead!.id);
+    const bib = contactos.find((c) => c.id === `${e.pref}-bib`)!;
+    bib.lastName = "Otro en GHL";
+    bib.phone = "+34 600 00 00 01";
+    bib.tags = [...(bib.tags as string[]), "prueba api"];
+    bib.dateUpdated = "2026-10-17T10:35:00.000Z";
+    const r = await leer(mas(36));
+    expect(r).toMatchObject({ puestosAlDia: 1, errores: [] });
+    const ahora = await leadPorContacto("bib");
+    expect(ahora).toMatchObject({ apellido: "CambioApp", telefono: "+1 555 000 9999" });
+    expect(ahora!.etiquetas).toContain("prueba api");
+    // Sin nada nuevo más que su nombre o teléfono, no se escribe
+    bib.dateUpdated = "2026-10-17T10:36:00.000Z";
+    expect((await leer(mas(37))).puestosAlDia).toBe(0);
+  });
 });

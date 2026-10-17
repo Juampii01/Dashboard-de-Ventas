@@ -5,12 +5,13 @@ import "server-only";
 // test de Cristian). Decisiones de Cristian:
 // · los nuevos (lo de antes se trae una vez con scripts/igualar-ghl.mjs) y, desde el 17 oct, también los que
 //   ganan una etiqueta después (p. ej. uno de la Biblioteca que se apunta al Webinar: gana su tarjeta en el Webinar)
-// · si en GHL cambian los datos de un lead que ya está (nombre, teléfono, respuestas, etiquetas), la app se pone al día
+// · si en GHL cambian los datos de un lead que ya está, la app se pone al día sin pisar lo suyo: nombre, apellido y
+//   teléfono solo si en la app están vacíos; respuestas y etiquetas nuevas se suman
 // · etiqueta → pipeline (tabla de abajo); con varias, entra en todos (su tarjeta 🔗 en cada uno); sin ninguna,
 //   a «0. Agendas General»
 // · siempre en la primera columna; los leads nuevos se reparten solos a los callers, como los de la Entrada
 import { db } from "@/lib/datos";
-import { guardarLeads, telefonoClave, unirRespuestas, type LeadEntrada } from "@/lib/leads";
+import { guardarLeads, unirRespuestas, type LeadEntrada } from "@/lib/leads";
 import { normalizarRespuestas } from "@/lib/oferta";
 import { camposGhl, contactoGhl, contactosNuevosGhl, type ContactoNuevoGhl } from "@/lib/ghl";
 import { leadDeContactoGhl } from "@/lib/ghl-lead";
@@ -119,7 +120,9 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
       if (!c) continue;
       const { lead } = leadDeContactoGhl(v.contact_id as string, c, campos, {});
       if (lead.respuestas.length <= (v.n_respuestas ?? 0)) continue;
-      await guardarLeads(proyecto, [{ ...lead, extra: undefined }], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
+      const antes = await yaExiste(proyecto.id, lead);
+      if (!antes) continue;
+      await guardarLeads(proyecto, [sinPisar(lead, antes)], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
       await db().from("ghl_oportunidades_vistas").update({ n_respuestas: lead.respuestas.length }).eq("proyecto_id", proyecto.id).eq("opp_id", v.opp_id);
       r.completados++;
     } catch (e) {
@@ -135,13 +138,20 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
 const VENTANA_CAMBIOS = 30 * MIN;
 type LeadApp = { id: string; ghl_contact_id: string; pipeline_id: string | null; nombre: string | null; apellido: string | null; email: string | null; telefono: string | null; etiquetas: string[] | null; respuestas: Respuesta[] | null };
 
-// ¿Trae GHL algo que la app no tiene? Mismas reglas que guardarLeads: nombre y teléfono se ponen al día, el email solo
-// si faltaba (es la clave del lead), las etiquetas y respuestas se suman (no se borra ninguna).
+// Cristian, 17 oct (tras probarlo con su contacto de test): GHL no pisa lo que ya tiene la app. Nombre, apellido y
+// teléfono solo se rellenan si en la app están vacíos; el email, solo si faltaba (es la clave del lead); etiquetas y
+// respuestas se suman (no se borra ninguna).
+type DatosApp = { nombre: string | null; apellido: string | null; telefono: string | null };
+const vacio = (x: string | null | undefined) => !(x ?? "").trim();
+export function sinPisar(l: LeadEntrada, antes: DatosApp): LeadEntrada {
+  return { ...l, extra: undefined, nombre: vacio(antes.nombre) ? l.nombre : "", apellido: vacio(antes.apellido) ? l.apellido : "", telefono: vacio(antes.telefono) ? l.telefono : null };
+}
+
+// ¿Trae GHL algo que la app no tiene? (las mismas reglas: si no, no se escribe)
 export function hayCambios(antes: Omit<LeadApp, "id" | "ghl_contact_id" | "pipeline_id">, l: LeadEntrada) {
-  const t = (x: string | null | undefined) => (x ?? "").trim();
-  if (l.nombre && t(l.nombre) !== t(antes.nombre)) return true;
-  if (l.apellido && t(l.apellido) !== t(antes.apellido)) return true;
-  if (l.telefono && telefonoClave(l.telefono) !== telefonoClave(antes.telefono)) return true;
+  if (l.nombre?.trim() && vacio(antes.nombre)) return true;
+  if (l.apellido?.trim() && vacio(antes.apellido)) return true;
+  if (l.telefono?.trim() && vacio(antes.telefono)) return true;
   if (l.email && !antes.email) return true;
   const tags = new Set((antes.etiquetas ?? []).map((x) => x.toLowerCase()));
   if (l.etiquetas.some((x) => !tags.has(x.toLowerCase()))) return true;
@@ -196,7 +206,7 @@ async function cambiosEnGhl(
       }
     } else if (ya && hayCambios(ya, lead)) {
       // Solo se escribe si GHL trae algo nuevo (así no se reescribe cada 30 s durante la media hora)
-      await guardarLeads(proyecto, [{ ...lead, extra: undefined }], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
+      await guardarLeads(proyecto, [sinPisar(lead, ya)], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
       r.puestosAlDia++;
     }
   }
@@ -207,7 +217,7 @@ async function cambiosEnGhl(
 async function meterEnPipelines(proyecto: Proyecto, lead: LeadEntrada, nombres: string[], pipesApp: PipeApp[], r: ResultadoLeads) {
   let nuevos = 0;
   let actualizados = 0;
-  let existe = await yaExiste(proyecto.id, lead);
+  let existe: DatosApp | null = await yaExiste(proyecto.id, lead);
   for (const nombre of nombres) {
     const pipe = pipesApp.find((p) => mismoNombre(p.nombre, nombre));
     if (!pipe) {
@@ -215,7 +225,7 @@ async function meterEnPipelines(proyecto: Proyecto, lead: LeadEntrada, nombres: 
       continue;
     }
     const primera = [...(pipe.etapas ?? [])].sort((a, b) => a.orden - b.orden)[0]?.id ?? null;
-    const g = await guardarLeads(proyecto, [existe ? { ...lead, extra: undefined } : lead], {
+    const g = await guardarLeads(proyecto, [existe ? sinPisar(lead, existe) : lead], {
       pipelineId: pipe.id,
       etapaId: primera,
       origen: "ghl",
@@ -225,15 +235,17 @@ async function meterEnPipelines(proyecto: Proyecto, lead: LeadEntrada, nombres: 
     });
     nuevos += g.insertados;
     actualizados += g.actualizados;
-    existe = true;
+    existe ??= { nombre: lead.nombre, apellido: lead.apellido, telefono: lead.telefono };
   }
   return { nuevos, actualizados };
 }
 
-async function yaExiste(proyectoId: string, l: LeadEntrada) {
+// El lead de la app con ese contacto (o email), con lo que GHL no debe pisar; null si no está
+async function yaExiste(proyectoId: string, l: LeadEntrada): Promise<DatosApp | null> {
+  const sel = "nombre, apellido, telefono";
   const [porGhl, porEmail] = await Promise.all([
-    l.ghl_contact_id ? db().from("leads").select("id").eq("proyecto_id", proyectoId).eq("ghl_contact_id", l.ghl_contact_id).limit(1) : null,
-    l.email ? db().from("leads").select("id").eq("proyecto_id", proyectoId).eq("email", l.email).limit(1) : null,
+    l.ghl_contact_id ? db().from("leads").select(sel).eq("proyecto_id", proyectoId).eq("ghl_contact_id", l.ghl_contact_id).limit(1) : null,
+    l.email ? db().from("leads").select(sel).eq("proyecto_id", proyectoId).eq("email", l.email).limit(1) : null,
   ]);
-  return !!(porGhl?.data?.length || porEmail?.data?.length);
+  return ((porGhl?.data?.[0] ?? porEmail?.data?.[0]) as DatosApp | undefined) ?? null;
 }
