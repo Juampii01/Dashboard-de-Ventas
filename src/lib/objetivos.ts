@@ -276,9 +276,7 @@ export function calcularRacha(base: Base, filas: FilaObjetivo[], p: Perfil, zona
 export async function panelObjetivos(proyecto: { id: string; zona_horaria: string }, p: Perfil) {
   const zona = proyecto.zona_horaria;
   const hoy = hoyEnZona(zona);
-  const t0 = performance.now(); // medición temporal (velocidad, 17 oct 2026)
   const datos = await cargarObjetivos(proyecto.id, hoy);
-  const t1 = performance.now();
   // Velocidad (17 oct 2026): sin ningún objetivo puesto, el resultado es vacío; no hace falta leer actividades, citas ni ventas
   if (datos.filas.length === 0) return { mios: [], racha: null, equipo: [] };
   const inicios = [rangoDe("semana", zona).desde!, rangoDe("mes", zona).desde!, ...datos.lanzamientos.filter((l) => l.inicio <= hoy && hoy <= l.fin).map((l) => rangoDe("rango", zona, l.inicio, l.fin).desde!)];
@@ -290,7 +288,6 @@ export async function panelObjetivos(proyecto: { id: string; zona_horaria: strin
     p.rol === "caller" || p.rol === "closer" ? baseDePersona(proyecto.id, p, desdePersona) : null,
     hayEquipo ? baseDelEquipo(proyecto.id, desde) : null,
   ]);
-  console.log(`[tiempos] objetivos · cargar ${Math.round(t1 - t0)} · persona+equipo(${hayEquipo ? "sí" : "no"}, diarios ${hayDiarios ? "sí" : "no"}) ${Math.round(performance.now() - t1)}`);
   return {
     mios: basePersona ? calcularAvances(basePersona, datos, [p], zona).get(p.id) ?? [] : [],
     racha: basePersona && hayDiarios ? calcularRacha(basePersona, datos.filas, p, zona) : null,

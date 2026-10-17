@@ -11,37 +11,33 @@ import { FiltroUrl } from "@/components/barra-periodo";
 import { Refresco } from "@/components/refresco";
 import { TableroCrm, type LeadTarjeta } from "./tablero";
 import type { Etapa, Pipeline, Producto, Respuesta } from "@/lib/tipos";
-import { cronometro } from "@/lib/tiempos";
 
 // Un solo CRM para todos (Paso H7) con los pipelines del equipo (Paso 0, como GHL): los de origen (Webinar 1…),
 // «Callers» (los leads con caller, por el resultado de su llamada) y «Closers» (Pre-call y Post-call juntos).
 // Cada pipeline tiene sus permisos: Editar (también columnas), Ver (mueve sus tarjetas) o Sin acceso.
 // Director y CEO ven todo (con filtro por persona); el caller y el closer, «Mi CRM» con lo suyo.
 export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
-  const t = cronometro("crm");
   const { perfil, proyecto } = await exigirPagina("crm"); // H5
-  t.paso("sesion+permisos");
   const jefe = esJefe(perfil);
   const admin = puedeAdmin(perfil);
   const sp = await searchParams;
 
   // Velocidad (13 oct 2026): todo lo que no depende del pipeline elegido va a la vez (antes, 9 pasos en fila)
   const [gente, { todos, filas }, { data: productos }, citasGhl, { data: etapasProyecto }] = await Promise.all([
-    t.medir("equipo", equipo(proyecto.id, !!perfil.es_prueba)),
-    t.medir("pipelines", (async () => {
+    equipo(proyecto.id, !!perfil.es_prueba),
+    (async () => {
       const { data } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
       const todos = (data ?? []) as Pipeline[];
       return { todos, filas: await filasPermisoPipeline(todos.map((p) => p.id)) };
-    })()),
+    })(),
     // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
     perfil.rol === "caller"
       ? Promise.resolve({ data: [] as Producto[] })
-      : t.medir("productos", db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden")),
-    admin ? t.medir("citasGhl", columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null)) : Promise.resolve(null),
+      : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
+    admin ? columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null) : Promise.resolve(null),
     // Las columnas de todos los pipelines: las del elegido y las de las acciones masivas
-    t.medir("etapas", db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden")),
+    db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden"),
   ]);
-  t.paso("equipo+pipelines+productos+citasGhl+etapas");
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
   // Los leads de una persona: los que tiene asignados como caller o como closer
   const deLaPersona = <Q extends { or: (f: string) => Q }>(q: Q) => (persona ? q.or(`caller_id.eq.${persona.id},closer_id.eq.${persona.id}`) : q);
@@ -70,24 +66,21 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
 
   // Velocidad (17 oct 2026): los números de las pestañas en una consulta (función crm_conteos, migración
   // 20261017140000). Si la función aún no existe o falla, se cuenta como antes (una consulta por pipeline).
-  const conteosRpc = t.medir(
-    "crm_conteos",
-    Promise.resolve(db().rpc("crm_conteos", { p_proyecto: proyecto.id, p_persona: persona?.id ?? null })).then(({ data, error }) =>
-      error || !data ? null : new Map((data as { pipeline_id: string; leads: number; tarjetas: number }[]).map((r) => [r.pipeline_id, r]))
-    )
+  const conteosRpc = Promise.resolve(db().rpc("crm_conteos", { p_proyecto: proyecto.id, p_persona: persona?.id ?? null })).then(({ data, error }) =>
+    error || !data ? null : new Map((data as { pipeline_id: string; leads: number; tarjetas: number }[]).map((r) => [r.pipeline_id, r]))
   );
 
   // Lo del pipeline elegido, también a la vez
   const [leadsCrudos, conteos, extraLeads, extraPorPipeline, closers] = await Promise.all([
     pipeline && pipeline.tipo !== "closers"
-      ? t.medir("leads", todas<Fila>((a, b) => {
+      ? todas<Fila>((a, b) => {
           let q = db().from("leads").select(CAMPOS).eq("proyecto_id", proyecto.id);
           // «Callers»: solo los leads con caller (Cristian, 10 oct 2026)
           q = pipeline.tipo === "callers" ? q.not("caller_id", "is", null) : q.eq("pipeline_id", pipeline.id);
           return deLaPersona(q).order("creado_en", { ascending: false }).order("id").range(a, b);
-        }).then((filas) => filas.map(aTarjeta)))
+        }).then((filas) => filas.map(aTarjeta))
       : Promise.resolve([]),
-    t.medir("conteos", Promise.all(
+    Promise.all(
       pipelines.map(async (p) => {
         if (p.tipo === "closers") {
           let q = db().from("citas").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id).in("estado", [...ABIERTAS]).in("closer_id", deCloser.length ? deCloser : ["00000000-0000-0000-0000-000000000000"]);
@@ -100,12 +93,12 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         const { count } = await deLaPersona(p.tipo === "callers" ? base.not("caller_id", "is", null) : base.eq("pipeline_id", p.id));
         return [p.id, count ?? 0] as const;
       })
-    )),
+    ),
     // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro (con sus datos, en una consulta)
     pipeline?.tipo === "normal"
-      ? t.medir("extra", todas<{ etapa_id: string | null; leads: Fila | null }>((a, b) => db().from("tarjetas_extra").select(`etapa_id, leads(${CAMPOS})`).eq("pipeline_id", pipeline.id).order("id").range(a, b).overrideTypes<{ etapa_id: string | null; leads: Fila | null }[], { merge: false }>()).then((filas) =>
+      ? todas<{ etapa_id: string | null; leads: Fila | null }>((a, b) => db().from("tarjetas_extra").select(`etapa_id, leads(${CAMPOS})`).eq("pipeline_id", pipeline.id).order("id").range(a, b).overrideTypes<{ etapa_id: string | null; leads: Fila | null }[], { merge: false }>()).then((filas) =>
           filas.filter((x) => x.leads && esDeLaPersona(x.leads)).map((x) => ({ ...aTarjeta(x.leads!), etapa_id: x.etapa_id, otroPipeline: true }))
-        ))
+        )
       : Promise.resolve([]),
     jefe && !persona
       ? conteosRpc.then((rapido) => {
@@ -119,8 +112,6 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         )
       : Promise.resolve(null),
   ]);
-  t.paso(`leads(${leadsCrudos.length})+conteos+extra(${extraLeads.length})+closers`);
-  t.fin();
   // En «Callers» la columna de cada lead es la de su llamada
   const yaEstan = new Set(leadsCrudos.map((l) => l.id));
   const leads: LeadTarjeta[] = [...leadsCrudos, ...extraLeads.filter((l) => !yaEstan.has(l.id))].map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));

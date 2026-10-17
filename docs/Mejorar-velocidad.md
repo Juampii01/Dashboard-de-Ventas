@@ -83,7 +83,29 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 |---|---|---|
 | `9f9c423` | Sesión con `getClaims()` en `src/proxy.ts` y `src/lib/sesion.ts` (verificación local con la clave ES256 de Supabase; antes, `getUser()` dos veces por página) | Peaje fijo de cada petición 370 → 188 ms; las 17 secciones, −100 a −370 ms (p. ej. Equipo 803 → 429, Perfil 432 → 284) |
 | `96764ef` | Menú lateral: `prefetch={true}` al pasar el ratón (la página con sus datos) y el botón se marca al pulsar | Con el ratón ~1,5 s antes: 83–175 ms hasta ver la página; vuelta en <30 s: 77–119 ms; clic de golpe sin precarga: 662–710 ms |
-| `2413348` | Callers: guion, equipo y objetivos a la vez · medición temporal por consulta en el CRM (`t.medir`) | Callers sin mejora (997 → 977 ms): su espera está en otro sitio, sin medir |
+| `2413348` | Callers: guion, equipo y objetivos a la vez · medición temporal por consulta en el CRM (`t.medir`) | Callers sin mejora (997 → 977 ms): su espera estaba en los objetivos |
+| `3e271b0` | CRM: los números de las pestañas en una consulta (función `crm_conteos`, migración `20261017140000`), con plan B si no existe | Conteos 222–1.023 → 107–228 ms; servidor 392–1.221 → 339–452 ms |
+| `fb61232` | Objetivos de caller y closer: consultas a la vez (6 en fila → 3 tandas) y sin cálculo si no hay ningún objetivo puesto | Callers: servidor 526–543 → 301–451 ms; objetivos 382–396 → 173–238 ms |
+| `71d96bb` | **Tiempo real**: la base avisa (sin datos, una vez por sentencia, solo si algo cambia) al canal privado `proyecto:<id>` al cambiar leads, citas, tarjetas o ventas; `src/components/avisos-en-vivo.tsx` refresca la página (espera 1,5 s para juntar avisos; oculta, al volver). Migración `20261017150000`; CSP con `wss://` | Probado en «Test» con 2 pestañas: visible, se ve solo a los **3,6 s**; oculta, al volver a la vista en 1,3 s |
+| (este) | Fuera la medición temporal (`src/lib/tiempos.ts` y sus usos) | — |
+
+**Migraciones:** las 2 lanzadas por Claude (`supabase db push`, a petición de Cristian) el 17 oct a las 12:1x; la de avisos creó el permiso de `realtime.messages`.
+
+**Final (17 oct, mismo método que la línea base: mediana de 3, desde el Chrome de Cristian):**
+
+| Sección | Antes | Después | | Sección | Antes | Después |
+|---|---|---|---|---|---|---|
+| Peaje fijo (proxy) | 370 | 196 | | Equipo | 803 | 340 |
+| Callers | 1.072 | 436 | | Clientes | 707 | 502 |
+| Funnel | 1.027 | 631 | | Ranking | 694 | 513 |
+| Finanzas | 925 | 508 | | Ventas | 635 | 511 |
+| CRM | 913 | 472 | | Guiones | 527 | 369 |
+| Admin | 874 | 550 | | Onboarding closers | 457 | 307 |
+| KPIs | 802 | 527 | | Reportes | 449 | 287 |
+| Programas | 712 | 451 | | Perfil | 432 | 231 |
+| Recursos | 406 | 363 | | Agendas | 399 | 327 |
+
+**Mejoras para después:** bajar la espera del tiempo real de 1,5 a 0,5 s · la tabla de la Biblioteca (KPIs) se pide en cada visita (~0,9 s) · un clic de golpe sin pasar el ratón sigue esperando al servidor (~0,3–0,6 s) · nivel B (guardado en disco) solo si al recargar se sigue notando lento.
 
 **Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
 
@@ -95,4 +117,5 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 
 - Con **Playwright Bridge** (el Chrome real de Cristian): no cambiar el tamaño de la pestaña (`browser_resize` deja un tamaño falso que no se puede quitar: el 13 oct hizo que el popup «no bajara»); probar tamaños en una pestaña nueva y cerrarla. Esperar ~2,5 s tras cargar antes de pulsar con JavaScript. Un ratón simulado (`dispatchEvent("mouseover")`) **no** llega a los `onMouseEnter` de React: para probar la precarga, llamar al manejador directamente.
 - Medir en pantalla solo con la pestaña **visible** (`document.visibilityState === "visible"`); si no, los números no valen.
-- Los tiempos del servidor: `vercel logs --project dashboard-de-ventas --since 10m -n 200 --no-branch -j | grep -o '\[tiempos\][^"]*'`.
+- Los tiempos del servidor: la medición `[tiempos]` se quitó el 17 oct; para volver a medir, recuperar `src/lib/tiempos.ts` de git (`git show fb61232:src/lib/tiempos.ts`).
+- Si una pestaña se recarga entera tras un aviso, suele ser que se publicó una versión nueva (Next recarga al cambiar de versión), no el tiempo real (comprobado el 17 oct).

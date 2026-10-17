@@ -14,7 +14,6 @@ import { guardarLeads, primeraEtapa } from "@/lib/leads";
 import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 import { moverTarjeta, tarjetaDe } from "@/lib/tarjetas";
-import { cronometro } from "@/lib/tiempos";
 
 const refrescar = () => revalidatePath("/", "layout");
 
@@ -284,10 +283,8 @@ export async function guardarPermisoPipeline(pipelineId: string, quien: { rol: s
 // ---------- Mover y asignar leads ----------
 export async function moverLead(leadId: string, etapaId: string) {
   return seguro(async () => {
-    const t = cronometro("moverLead");
     // Paso H7: cada uno mueve sus leads (el caller los suyos, el closer los suyos; los jefes, todos)
     const { perfil, proyecto } = await exigirSeccion("crm"); // H5
-    t.paso("seccion");
     // Velocidad (13 oct 2026): las comprobaciones van a la vez y el historial se apunta después de contestar
     const [e, { data: lead }] = await Promise.all([
       etapaDelProyecto(etapaId, proyecto.id),
@@ -302,14 +299,12 @@ export async function moverLead(leadId: string, etapaId: string) {
       exigirNivel(perfil, proyecto.id, e.pipeline_id, "ver"), // Paso 0
       otroPipeline ? tarjetaDe(leadId, e.pipeline_id) : Promise.resolve(null),
     ]);
-    t.paso("comprobaciones");
     const historial = (nota: string) => after(() => registrarActividad({ proyecto_id: proyecto.id, lead_id: leadId, perfil_id: perfil.id, tipo: "cambio_etapa", nota }));
     // Fase 4: la tarjeta de este lead en un pipeline que no es el suyo principal
     if (tarjeta) {
       if (tarjeta.etapa_id === etapaId) return;
       await moverTarjeta(leadId, e.pipeline_id, etapaId);
       historial(`Su tarjeta de otro pipeline, movida a «${e.nombre}»`);
-      t.fin();
       refrescar();
       return;
     }
@@ -317,9 +312,7 @@ export async function moverLead(leadId: string, etapaId: string) {
     // Una columna unida a un estado solo se alcanza cambiando el estado (su botón o su ventana), para no desincronizar
     if (e.estado_caller && e.estado_caller !== lead.estado_caller) throw new ErrorUsuario(`«${e.nombre}» está unida a un estado: usa su botón para mover el lead ahí.`);
     await escribir(db().from("leads").update(callers ? { etapa_callers_id: etapaId } : { etapa_id: etapaId, pipeline_id: e.pipeline_id }).eq("id", leadId), "leads");
-    t.paso("guardar");
     historial(`Movido a «${e.nombre}»${callers ? " (Callers)" : ""}`);
-    t.fin();
     refrescar();
   });
 }
