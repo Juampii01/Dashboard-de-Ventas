@@ -123,7 +123,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
         <PestanasAgendas activa="/closer/llamadas" />
         <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
           {tabsVisibles.map((t, i) => (
-            <Link key={t.v} href={baseQs({ tab: t.v, sub: null, vista: null, conc: null, cual: null })} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${tab === t.v ? "bg-primario-suave font-medium text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
+            <Link prefetch={true} key={t.v} href={baseQs({ tab: t.v, sub: null, vista: null, conc: null, cual: null })} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${tab === t.v ? "bg-primario-suave font-medium text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
               <span className="font-mono text-[10px] text-oro">0{i + 1}</span> {t.t}
               {t.v === "precall" && <span className="rounded-full bg-panel-2 px-1.5 text-[11px] tabular-nums">{citasTodas.filter((c) => esPrecall(c, ahora)).length}</span>}
             </Link>

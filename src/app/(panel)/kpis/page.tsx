@@ -44,7 +44,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
         { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
       ].map((p) => (
-        <Link key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
+        <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
           {p.t}
         </Link>
       ))}

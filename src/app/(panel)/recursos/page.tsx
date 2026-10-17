@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FileText, Link2, ScrollText, Video, FolderOpen, Package, Search, ExternalLink } from "lucide-react";
 import { puedeRecursos } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
@@ -64,7 +65,7 @@ export default async function RecursosPage({ searchParams }: PageProps<"/recurso
           acciones={
             <div className="flex flex-wrap gap-1 text-sm">
               {[["", "Todos"], ["pdf", "PDF"], ["enlace", "Enlaces"], ["guion", "Guiones"], ["video", "Vídeos"]].map(([v, t]) => (
-                <a key={v} href={`/recursos?${new URLSearchParams({ ...(v ? { tipo: v } : {}), ...(q ? { q } : {}) })}`} className={`rounded-md px-2.5 py-1 ${tipo === v ? "bg-primario-suave text-primario" : "text-texto-2 hover:bg-panel-2"}`}>{t}</a>
+                <Link prefetch={true} key={v} href={`/recursos?${new URLSearchParams({ ...(v ? { tipo: v } : {}), ...(q ? { q } : {}) })}`} className={`rounded-md px-2.5 py-1 ${tipo === v ? "bg-primario-suave text-primario" : "text-texto-2 hover:bg-panel-2"}`}>{t}</Link>
               ))}
             </div>
           }

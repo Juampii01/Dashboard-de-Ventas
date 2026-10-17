@@ -121,7 +121,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
           <div className="tarjeta flex max-h-[calc(100vh-280px)] min-h-96 flex-col overflow-hidden">
             <div className="flex gap-1 border-b border-borde p-2">
               {PESTANAS.map((p) => (
-                <Link key={p.v} href={`/caller?${new URLSearchParams({ ...(jefe ? { caller: caller.id } : {}), vista: p.v })}`} className={`flex-1 rounded-md px-2 py-1.5 text-center text-xs font-medium ${pestana === p.v ? "bg-primario-suave text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
+                <Link prefetch={true} key={p.v} href={`/caller?${new URLSearchParams({ ...(jefe ? { caller: caller.id } : {}), vista: p.v })}`} className={`flex-1 rounded-md px-2 py-1.5 text-center text-xs font-medium ${pestana === p.v ? "bg-primario-suave text-primario" : "text-texto-2 hover:bg-panel-2"}`}>
                   {p.t}
                 </Link>
               ))}

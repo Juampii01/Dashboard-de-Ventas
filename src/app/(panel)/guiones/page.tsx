@@ -33,7 +33,7 @@ export default async function GuionesPage({ searchParams }: PageProps<"/guiones"
       <Contenido>
         <div className="tarjeta flex gap-1 p-1.5" role="tablist">
           {(["caller", "closer"] as const).map((r) => (
-            <Link key={r} href={`/guiones?rol=${r}`} role="tab" aria-selected={rol === r} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${rol === r ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
+            <Link prefetch={true} key={r} href={`/guiones?rol=${r}`} role="tab" aria-selected={rol === r} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${rol === r ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
               Guion del {r}
             </Link>
           ))}

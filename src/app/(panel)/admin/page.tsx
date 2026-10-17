@@ -123,7 +123,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       <Contenido>
         <div className="flex flex-wrap gap-1 rounded-xl border border-borde bg-panel p-1">
           {PESTANAS.map((p) => (
-            <Link key={p.v} href={`/admin?tab=${p.v}`} className={`rounded-lg px-3 py-1.5 text-sm ${tab === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>{p.t}</Link>
+            <Link prefetch={true} key={p.v} href={`/admin?tab=${p.v}`} className={`rounded-lg px-3 py-1.5 text-sm ${tab === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>{p.t}</Link>
           ))}
         </div>
 

@@ -54,7 +54,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
           <div className="flex flex-wrap items-center gap-2">
             {VISTAS.map((x) => {
               const I = x.icono;
-              return <Link key={x.v} href={url({ ver: ver === x.v ? null : x.v })} className={ver === x.v ? "btn-primario" : "btn-secundario"}><I className="h-4 w-4" /> {x.t}</Link>;
+              return <Link prefetch={true} key={x.v} href={url({ ver: ver === x.v ? null : x.v })} className={ver === x.v ? "btn-primario" : "btn-secundario"}><I className="h-4 w-4" /> {x.t}</Link>;
             })}
             {!suyos && <NuevoCliente productos={(prods.data ?? []) as Producto[]} vendedores={gente.filter((g) => g.rol !== "ceo").map((g) => ({ id: g.id, nombre: g.nombre }))} moneda={proyecto.moneda} />}
           </div>
