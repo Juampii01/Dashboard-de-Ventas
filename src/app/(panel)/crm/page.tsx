@@ -2,8 +2,8 @@ import { esJefe, puedeAdmin } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
 import { cronometro } from "@/lib/tiempos"; // MEDICIÓN TEMPORAL (17 oct 2026)
-import { calcularNivel, filasPermisoPipeline } from "@/lib/pipelines";
-import { columnaCitasGhl } from "@/lib/leads";
+import { calcularNivel, type FilaPermisoPipeline } from "@/lib/pipelines";
+import { columnaCitasGhl, columnaCitasPorNombre } from "@/lib/leads";
 import { contarTarjetas } from "@/lib/tarjetas";
 import { cargarCitasVentas, columnasCloser } from "@/lib/tablero-closers";
 import { ABIERTAS } from "@/lib/llamadas";
@@ -26,18 +26,27 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
   const sp = await searchParams;
 
   // Velocidad (13 oct 2026): todo lo que no depende del pipeline elegido va a la vez (antes, 9 pasos en fila)
-  const [gente, { todos, filas }, { data: productos }, citasGhl, { data: etapasProyecto }] = await Promise.all([
+  const [gente, todos, filas, { data: productos }, { data: etapasProyecto }] = await Promise.all([
     t.medir("equipo", equipo(proyecto.id, !!perfil.es_prueba)),
-    t.medir("pipelines", (async () => {
-      const { data } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
-      const todos = (data ?? []) as Pipeline[];
-      return { todos, filas: await filasPermisoPipeline(todos.map((p) => p.id)) };
-    })()),
+    t.medir("pipelines", db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden").then(({ data }) => (data ?? []) as Pipeline[])),
+    // Velocidad (17 oct 2026): los permisos de los pipelines del proyecto, a la vez (antes, después de los pipelines)
+    t.medir(
+      "permisos",
+      db()
+        .from("permisos_pipeline")
+        .select("pipeline_id, rol, perfil_id, nivel, pipelines!inner(proyecto_id)")
+        .eq("pipelines.proyecto_id", proyecto.id)
+        .then(({ data }) =>
+          ((data ?? []) as (FilaPermisoPipeline & { pipelines?: unknown })[]).map((f) => {
+            const { pipelines: _fuera, ...fila } = f; // eslint-disable-line @typescript-eslint/no-unused-vars
+            return fila as FilaPermisoPipeline;
+          })
+        )
+    ),
     // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
     perfil.rol === "caller"
       ? Promise.resolve({ data: [] as Producto[] })
       : t.medir("productos", db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden")),
-    admin ? t.medir("citasGhl", columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null)) : Promise.resolve(null),
     // Las columnas de todos los pipelines: las del elegido y las de las acciones masivas
     t.medir("etapas", db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden")),
   ]);
@@ -54,6 +63,16 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
     return etapa as Etapa;
   });
   const etapas = pipeline ? todasEtapas.filter((e) => e.pipeline_id === pipeline.id) : [];
+  // Velocidad (17 oct 2026): la columna de las citas de GHL con lo ya cargado (antes, 2–3 consultas más en fila; misma
+  // regla que columnaCitasGhl). Si la elegida no está entre las columnas de este proyecto, se pregunta como antes.
+  const elegida = proyecto.etapa_citas_ghl ?? null;
+  const citasGhl = !admin
+    ? null
+    : elegida
+      ? todasEtapas.some((e) => e.id === elegida)
+        ? elegida
+        : ((await columnaCitasGhl(proyecto.id))?.id ?? null)
+      : (columnaCitasPorNombre(todos.filter((p) => p.tipo === "normal").map((p) => ({ id: p.id, nombre: p.nombre, etapas: todasEtapas.filter((e) => e.pipeline_id === p.id) })))?.id ?? null);
 
   // «Closers»: qué citas ve cada uno (como Agendas): el closer las suyas; el caller las que agendó (solo mirar)
   const closersIds = gente.filter((g) => g.rol === "closer").map((g) => g.id);

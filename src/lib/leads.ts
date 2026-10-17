@@ -274,11 +274,17 @@ export async function columnaCitasGhl(proyectoId: string, pipelineNombre?: strin
     const { data } = await db().from("etapas").select("id, pipeline_id").eq("id", proy.etapa_citas_ghl).maybeSingle();
     if (data) return data;
   }
-  // 17 oct (Cristian): un solo pipeline de agendas, «0. Agendas General → Agendan»; se siguen aceptando los de antes
   const { data: pipes } = await db().from("pipelines").select("id, nombre, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal");
-  const pipe =
-    (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas General")) ?? (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas orgánico") || mismoNombre(p.nombre, "Orgánico"));
-  const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan") || mismoNombre(x.nombre, "Agendados"));
+  return columnaCitasPorNombre((pipes ?? []) as PipelineConEtapas[]);
+}
+
+// La columna de las citas por nombre, de los pipelines «normal» del proyecto con sus columnas (sin consultar nada:
+// la usa también el CRM con lo que ya ha cargado; velocidad, 17 oct 2026)
+// 17 oct (Cristian): un solo pipeline de agendas, «0. Agendas General → Agendan»; se siguen aceptando los de antes
+export type PipelineConEtapas = { id: string; nombre: string; etapas: { id: string; nombre: string }[] };
+export function columnaCitasPorNombre(pipes: PipelineConEtapas[]): { pipeline_id: string; id: string } | null {
+  const pipe = pipes.find((p) => mismoNombre(p.nombre, "Agendas General")) ?? pipes.find((p) => mismoNombre(p.nombre, "Agendas orgánico") || mismoNombre(p.nombre, "Orgánico"));
+  const etapa = (pipe?.etapas ?? []).find((x) => mismoNombre(x.nombre, "Agendan") || mismoNombre(x.nombre, "Agendados"));
   return pipe && etapa ? { pipeline_id: pipe.id, id: etapa.id } : null;
 }
 
