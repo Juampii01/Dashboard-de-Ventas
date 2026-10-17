@@ -1,7 +1,7 @@
 import { Users, Wallet, Flame, BookOpen } from "lucide-react";
 import { db, equipo } from "@/lib/datos";
-import { cargarBiblioteca, resumenDeLaBiblioteca } from "@/lib/biblioteca-datos";
-import { paisDeTelefono } from "@/lib/biblioteca";
+import { cargarBiblioteca, cargarResumenBiblioteca } from "@/lib/biblioteca-datos";
+import { paisDeTelefono, resumenBiblioteca } from "@/lib/biblioteca";
 import { respuestasBiblioteca, type Oferta } from "@/lib/oferta";
 import { dinero, pct as formatoPct } from "@/lib/formato";
 import { Kpi, Seccion, Vacio } from "@/components/ui";
@@ -54,17 +54,18 @@ export async function filasDeBiblioteca(proyecto: Proyecto): Promise<{ filas: Fi
 }
 
 export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
-  const [r, { data: productos }, { data: pipes }] = await Promise.all([
-    resumenDeLaBiblioteca(proyecto.id),
+  const [leads, { data: productos }, { data: pipes }] = await Promise.all([
+    cargarResumenBiblioteca(proyecto.id),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
   ]);
   const pipelines = (pipes ?? []) as Pipeline[];
+  const r = resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
   const prod = (n: string) => ((productos ?? []) as Producto[]).find((p) => p.nombre.toLowerCase() === n.toLowerCase());
   const barras = (xs: { t: string; n: number; pct: number }[]) => xs.map((x) => ({ t: x.t, n: x.n, pct: x.pct }));
   const csv = <ActualizarCsv pipelines={pipelines} pipelineId={pipelines.find((p) => p.nombre.toLowerCase().includes("biblioteca"))?.id} />;
 
-  if (!r.total)
+  if (!leads.length)
     return (
       <Seccion titulo="Biblioteca" acciones={csv}>
         <Vacio icono={BookOpen} texto="Todavía no hay leads del formulario de la biblioteca. Súbelos con «Actualizar con CSV»." />
@@ -131,7 +132,7 @@ export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
       </Seccion>
 
       <Seccion titulo="Todos los leads por oferta">
-        <TablaBibliotecaDiferida total={r.total} />
+        <TablaBibliotecaDiferida total={leads.length} />
       </Seccion>
     </div>
   );

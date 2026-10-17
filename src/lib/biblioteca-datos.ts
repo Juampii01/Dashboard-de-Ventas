@@ -1,7 +1,6 @@
 import "server-only";
 import { db, todas } from "@/lib/datos";
-import { calcularOferta, esDeBiblioteca, normalizarRespuestas, type Oferta } from "@/lib/oferta";
-import { filasDeGrupos, resumenBiblioteca, resumenDeFilas, type GrupoBiblioteca } from "@/lib/biblioteca";
+import { calcularOferta, esDeBiblioteca, normalizarRespuestas } from "@/lib/oferta";
 import type { Respuesta } from "@/lib/tipos";
 
 // Bloque A: los leads de la Biblioteca de un proyecto, con lo que enseña su tabla
@@ -58,18 +57,4 @@ export async function recalcularOfertas(leads: FilaBiblioteca[]) {
     );
   }
   return cambiar.length;
-}
-
-// Velocidad (17 oct 2026): el resumen de KPIs → Biblioteca con lo pesado hecho en la base (biblioteca_filas, migración
-// 20261017160000): llegan las personas agrupadas por lo que respondieron. Si la función no existe o falla, se calcula
-// como antes, con todos los leads (plan B). Las cuentas son las mismas en los dos casos (resumenDeFilas).
-export async function resumenDeLaBiblioteca(proyectoId: string) {
-  // DESACTIVADO (17 oct 2026): con los datos reales no salía igual (faltaban personas). Hasta arreglarlo, como antes.
-  const usarBase = false as boolean;
-  if (usarBase) {
-    const { data, error } = await db().rpc("biblioteca_filas", { p_proyecto: proyectoId });
-    if (!error && data) return resumenDeFilas(filasDeGrupos(data as GrupoBiblioteca[]));
-  }
-  const leads = await cargarResumenBiblioteca(proyectoId);
-  return resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
 }

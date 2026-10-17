@@ -69,21 +69,8 @@ const pct = (n: number, total: number) => (total ? Math.round((n / total) * 1000
 
 // Todas las cifras del resumen y de la escalera de ofertas
 export function resumenBiblioteca(leads: LeadBiblioteca[]) {
-  return resumenDeFilas(leads.map((l) => ({ r: respuestasBiblioteca(l.respuestas), pais: paisDeTelefono(l.telefono), oferta: l.oferta ?? ofertaDe(respuestasBiblioteca(l.respuestas)) })));
-}
-
-// Velocidad (17 oct 2026): las filas agrupadas que devuelve la base (función biblioteca_filas) → las de cada persona
-export type GrupoBiblioteca = RespuestasBiblioteca & { pais: string; oferta: Oferta | null; n: number };
-export function filasDeGrupos(grupos: GrupoBiblioteca[]) {
-  return grupos.flatMap(({ pais, oferta, n, ...r }) => {
-    const fila = { r, pais, oferta: oferta ?? ofertaDe(r) };
-    return Array.from({ length: Number(n) }, () => fila);
-  });
-}
-
-// Las cuentas y porcentajes, a partir de lo que respondió cada persona (iguales vengan de donde vengan las filas)
-export function resumenDeFilas(filas: { r: RespuestasBiblioteca; pais: string; oferta: Oferta }[]) {
-  const total = filas.length;
+  const total = leads.length;
+  const filas = leads.map((l) => ({ r: respuestasBiblioteca(l.respuestas), pais: paisDeTelefono(l.telefono), oferta: l.oferta ?? ofertaDe(respuestasBiblioteca(l.respuestas)) }));
   const reparto = (clave: keyof RespuestasBiblioteca) =>
     OPCIONES[clave].map((o) => {
       const n = filas.filter((f) => f.r[clave] === o.v).length;
