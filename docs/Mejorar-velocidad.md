@@ -75,6 +75,22 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 - Hoy lo visitado se guarda 30 s (`staleTimes`): si otro mueve un lead, se puede tardar hasta 30 s en verlo (salvo recargar). ¿Vale 30 s o más corto?
 - ¿Se toca la comprobación de la sesión (punto 3)?
 
+## 7 bis. Decidido y hecho el 17 oct 2026
+
+**Decisiones de Cristian:** nivel **A** (B solo después y si hace falta) · vale ver <1 s un dato de hace un momento, lo visitado se guarda **30 s** · **sí** se toca la sesión, con cuidado · la sesión, **lo primero** (las medidas decían que era el mayor peaje).
+
+| Commit | Qué | Medido (mediana, desde el Chrome de Cristian en España) |
+|---|---|---|
+| `9f9c423` | Sesión con `getClaims()` en `src/proxy.ts` y `src/lib/sesion.ts` (verificación local con la clave ES256 de Supabase; antes, `getUser()` dos veces por página) | Peaje fijo de cada petición 370 → 188 ms; las 17 secciones, −100 a −370 ms (p. ej. Equipo 803 → 429, Perfil 432 → 284) |
+| `96764ef` | Menú lateral: `prefetch={true}` al pasar el ratón (la página con sus datos) y el botón se marca al pulsar | Con el ratón ~1,5 s antes: 83–175 ms hasta ver la página; vuelta en <30 s: 77–119 ms; clic de golpe sin precarga: 662–710 ms |
+| `2413348` | Callers: guion, equipo y objetivos a la vez · medición temporal por consulta en el CRM (`t.medir`) | Callers sin mejora (997 → 977 ms): su espera está en otro sitio, sin medir |
+
+**Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
+
+**CRM en el servidor (17 oct, 5 visitas):** sesión+permisos 79–299 · 1.ª tanda 97–219 · **conteos por pipeline 233–652 y `contarTarjetas` 224–647** (lo más lento) · total 430–966 ms; el navegador ve 722–1.934 ms.
+
+**Encontrado (pendiente):** la tabla de la Biblioteca (KPIs) se vuelve a pedir en cada visita (~0,9 s, `biblioteca-tabla-diferida.tsx`) · en Finanzas, sus 8 pestañas se precargan solas al aparecer (comportamiento de antes, no de este cambio).
+
 ## 8. Avisos para quien lo retome
 
 - Con **Playwright Bridge** (el Chrome real de Cristian): no cambiar el tamaño de la pestaña (`browser_resize` deja un tamaño falso que no se puede quitar: el 13 oct hizo que el popup «no bajara»); probar tamaños en una pestaña nueva y cerrarla. Esperar ~2,5 s tras cargar antes de pulsar con JavaScript. Un ratón simulado (`dispatchEvent("mouseover")`) **no** llega a los `onMouseEnter` de React: para probar la precarga, llamar al manejador directamente.
