@@ -110,6 +110,13 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 - `5ba3f9b`: precarga completa de las pestañas de KPIs, Finanzas, Admin, Agendas, Clientes, Callers, Guiones y Recursos (Recursos usaba `<a>` y recargaba la página entera). Los filtros (días, estados, tabla/tarjetas) no se precargan. Medido con Chrome visible: 11 de 12 pestañas en 33–140 ms sin pedir nada al servidor (antes, 265–778 ms solo de servidor); KPIs → Por persona, 205 ms.
 - Para medir con Playwright Bridge: tras cada `goto` la pestaña queda oculta; hay que llamar a `page.bringToFront()` antes de cada clic.
 
+**Tercera vuelta (17 oct, Cristian: «revisa que no haya más pantallas con estos problemas» y «el modo dark/light va súper lento»):**
+- `2f0a87c` y `f281bd2`: los periodos (Hoy/Semana/Mes/Todo de Funnel, Mi Funnel, Ventas y Ranking; Día/Semana/Mes/Año y flechas de la barra de periodo de KPIs, Finanzas y Agendas) pasan de botones con `router.replace` a enlaces precargados, y se marcan al pulsar. Funnel: 32–80 ms (antes ~0,5 s de servidor + pintado); «Todo» no era más lento que «Mes» en el servidor (528 frente a 530 ms).
+- `d6280d5`: el tema claro/oscuro cambia en el navegador (1–16 ms, 0 peticiones). Antes era una acción de servidor con `revalidatePath`, que además borraba todo lo precargado.
+- `41af667`: filtros precargados en Agendas (estado, vista, Pipeline/Tabla), Clientes (estado, Tabla/Tarjetas), Programas y los días de Objetivos. **No** los días del calendario de Agendas (~35 enlaces).
+- `9e86920` y `bdc8f28`: copia invisible del menú (cada enlace en el mismo píxel) para que se precarguen también Finanzas, Clientes y Administración, que quedaban por debajo de lo visible del menú (medido: y=775–892 con el menú hasta y=751). Medido: 16 de 16 precargadas; menú de golpe: 30–236 ms.
+- Sin arreglar (no se pueden precargar con sentido): desplegables (closer, producto, vendedor), buscadores y «Fechas» personalizadas. Las flechas ◀ ▶ pulsadas muy seguidas esperan al servidor (~1 s) porque el periodo siguiente aún no está precargado.
+
 **Mejoras para después:** bajar la espera del tiempo real de 1,5 a 0,5 s · la tabla de la Biblioteca (KPIs) se pide en cada visita (~0,9 s) · un clic de golpe sin pasar el ratón sigue esperando al servidor (~0,3–0,6 s) · nivel B (guardado en disco) solo si al recargar se sigue notando lento.
 
 **Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
