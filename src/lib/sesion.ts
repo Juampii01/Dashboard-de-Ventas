@@ -38,20 +38,19 @@ export function cronometroTemporal() {
 // El perfil y los proyectos de una persona (también lo usa el login, para ir directo a su sección; 17 oct 2026)
 export async function sesionDe(userId: string): Promise<Sesion> {
   const db = createAdminClient();
-  const { data: perfil } = await db.from("perfiles").select("*").eq("id", userId).single<Perfil>();
+  // Velocidad (17 oct 2026): las 3 consultas a la vez (antes, perfil y después sus proyectos; medido 41–100 ms en
+  // todas las páginas). Se piden los dos tipos de proyectos y se usa el que toca según el rol: mismo resultado y orden.
+  const [{ data: perfil }, { data: todos }, { data: suyos }] = await Promise.all([
+    db.from("perfiles").select("*").eq("id", userId).single<Perfil>(),
+    db.from("proyectos").select("*").order("creado_en"),
+    db.from("miembros_proyecto").select("proyectos(*)").eq("perfil_id", userId),
+  ]);
   if (!perfil || !perfil.activo) redirect("/login?error=sin-acceso");
 
-  let proyectos: Proyecto[];
-  if (perfil.rol === "ceo") {
-    const { data } = await db.from("proyectos").select("*").order("creado_en");
-    proyectos = (data ?? []) as Proyecto[];
-  } else {
-    const { data } = await db
-      .from("miembros_proyecto")
-      .select("proyectos(*)")
-      .eq("perfil_id", perfil.id);
-    proyectos = ((data ?? []) as unknown as { proyectos: Proyecto }[]).map((m) => m.proyectos);
-  }
+  const proyectos: Proyecto[] =
+    perfil.rol === "ceo"
+      ? ((todos ?? []) as Proyecto[])
+      : ((suyos ?? []) as unknown as { proyectos: Proyecto }[]).map((m) => m.proyectos);
   if (proyectos.length === 0) redirect("/login?error=sin-proyecto");
 
   const elegido = (await cookies()).get(COOKIE_PROYECTO)?.value;
