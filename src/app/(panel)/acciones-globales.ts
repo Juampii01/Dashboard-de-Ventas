@@ -4,6 +4,7 @@ import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { COOKIE_PROYECTO, getSesion } from "@/lib/auth";
+import { createSessionClient } from "@/lib/supabase/server";
 
 const UN_ANO = 60 * 60 * 24 * 365;
 
@@ -12,6 +13,14 @@ const UN_ANO = 60 * 60 * 24 * 365;
 export async function refrescarTodo() {
   await getSesion(); // solo con sesión
   revalidatePath("/", "layout");
+}
+
+// Sesión para el tiempo real (17 oct 2026). El navegador NO renueva la sesión (si lo hacía a la vez que el servidor,
+// una renovación invalidaba la otra y podía sacar a la persona de la app): la pide aquí, ya renovada por el proxy.
+export async function tokenTiempoReal(): Promise<string | null> {
+  const supabase = await createSessionClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
 export async function cambiarProyecto(proyectoId: string) {

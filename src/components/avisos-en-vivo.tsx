@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { refrescarTodo } from "@/app/(panel)/acciones-globales";
+import { createClient } from "@supabase/supabase-js";
+import { refrescarTodo, tokenTiempoReal } from "@/app/(panel)/acciones-globales";
 
 // Velocidad (17 oct 2026), tiempo real: escucha el canal privado del proyecto (avisos de la base, sin datos;
 // migración 20261017150000_avisos_en_vivo) y, cuando alguien cambia leads, citas, tarjetas o ventas, vuelve a
@@ -10,9 +10,31 @@ import { refrescarTodo } from "@/app/(panel)/acciones-globales";
 // que vuelva a estar a la vista. Si el canal no conecta, la app sigue igual que antes (sin tiempo real).
 const ESPERA_MS = 1500;
 
+// 17 oct 2026: la sesión la da el servidor (tokenTiempoReal), ya renovada por el proxy. Con `accessToken`, el cliente
+// del navegador no renueva ni borra la sesión (antes, createBrowserClient la renovaba a la vez que el servidor: dos
+// renovaciones con el mismo token, errores 400 y riesgo de sacar a la persona). El tiempo real pide el token en cada
+// latido (~25 s): se guarda en la pestaña y solo se pide de nuevo cuando le quedan menos de 5 min.
+const MARGEN_MS = 5 * 60_000;
+let guardado: { token: string; caduca: number } | null = null;
+function caducidad(token: string) {
+  try {
+    const carga = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return (JSON.parse(atob(carga)) as { exp: number }).exp * 1000;
+  } catch {
+    return 0;
+  }
+}
+async function tokenDeSesion() {
+  if (guardado && guardado.caduca - Date.now() > MARGEN_MS) return guardado.token;
+  const token = await tokenTiempoReal().catch(() => null);
+  if (!token) return guardado?.token ?? "";
+  guardado = { token, caduca: caducidad(token) };
+  return token;
+}
+
 export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
   useEffect(() => {
-    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { accessToken: tokenDeSesion });
     let temporizador: ReturnType<typeof setTimeout> | null = null;
     let pendiente = false;
     let vivo = true;
@@ -36,7 +58,7 @@ export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
     document.addEventListener("visibilitychange", alVolver);
 
     const canal = supabase.channel(`proyecto:${proyectoId}`, { config: { private: true } });
-    void supabase.realtime.setAuth().then(() => {
+    void tokenDeSesion().then((token) => supabase.realtime.setAuth(token)).then(() => {
       if (!vivo) return;
       canal.on("broadcast", { event: "cambio" }, alAviso).subscribe((estado, error) => {
         if (estado === "CHANNEL_ERROR" || estado === "TIMED_OUT") console.warn("[avisos en vivo]", estado, error?.message ?? "");
