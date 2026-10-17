@@ -21,11 +21,15 @@ export type FilaBiblioteca = {
 };
 
 export async function cargarBiblioteca(proyectoId: string) {
+  const t0 = performance.now(); // MEDICIÓN TEMPORAL (17 oct 2026): se quita al acabar
   const filas = await todas<FilaBiblioteca>((a, b) =>
     db().from("leads").select("id, nombre, apellido, email, telefono, creado_en, etiquetas, respuestas, fuente, oferta, caller_id, closer_id, estado_caller").eq("proyecto_id", proyectoId).order("id").range(a, b)
   );
+  const t1 = performance.now();
   const deBiblioteca = filas.filter((l) => esDeBiblioteca(l));
-  await recalcularOfertas(deBiblioteca);
+  const t2 = performance.now();
+  const cambiadas = await recalcularOfertas(deBiblioteca);
+  console.log(`[tiempos] biblioteca · cargar ${filas.length} leads ${Math.round(t1 - t0)} · filtrar ${Math.round(t2 - t1)} (${deBiblioteca.length}) · ofertas ${Math.round(performance.now() - t2)} (escritas ${cambiadas})`);
   return deBiblioteca;
 }
 
