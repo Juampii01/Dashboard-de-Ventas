@@ -9,7 +9,7 @@
 ## 1. Dónde estamos
 
 - **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 233 unitarios y 261 de integración; en verde el 17 oct de madrugada).
-- **Migraciones:** todas aplicadas en la nube (la última, `20261017170000_quitar_biblioteca_filas`, el 17 oct).
+- **Migraciones:** todas aplicadas en la nube (la última, `20261017180000_ghl_espejo`, el 17 oct, la lanzó Cristian).
 - **Datos de Maestria (16 oct, 22:50):** 1.619 leads (185 con caller); 37 citas (16 con canal; las 21 anteriores al 13 oct, sin canal). Por pipeline (con las tarjetas 🔗): General 36 · Orgánico 49 · Callers 8 · YT 2 · Email 1 · Biblioteca 1 · IG 0 · P1 0 · Webinar 0 · DFY 0 · Biblioteca Recursos 1.604 · Webinar 1 111 · DFY AI Services 0. **Equipo** (dato del 13 oct, no revisado hoy): 14 reales + 2 de prueba; faltaba que entraran Antonio y los 4 closers; un 4.º director, «Thiago», que no estaba en el plan.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
 
@@ -24,6 +24,7 @@
 - [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
 
 **3 · Pendiente de Cristian (de antes)**
+- [ ] **«Kiki»** (17 oct, 18:09 UTC): etiqueta «regalo 1» pero **sin oportunidad en GHL**, así que la app lo dejó en «0. Agendas General → Form» (regla «sin oportunidad ni etiqueta de pipeline → General»). ¿Es una prueba? ¿Va a Webinar 1?
 - [ ] **Leads de prueba** (17 oct): Cristian borró 13 de las 17 seguras (con «TEST» de anoche) y también **Galo Enrique Castrillon**, que era dudoso (nombre real; ¿a propósito? sigue en GHL). **Quedan:** «Prueba» y «(example) jordan Smith» (Biblioteca) y los 2 «Test» (Webinar 1). **Sin decidir:** Juanito y Pablillodddd (Orgánico, 1 cita cada uno, ya no están en GHL: se borran uno a uno desde su ficha) · Jorge Socorro, Albar y Alex (solo su email lleva «test»/«prueba»: parecen reales).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
 - [ ] El número de la pestaña «Closers» cuenta solo citas abiertas (el tablero enseña también las de «No califica»): ¿que cuente todas?

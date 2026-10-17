@@ -2,7 +2,7 @@
 
 > Creado el 16 oct 2026. **Objetivo:** que cada cita que entra diga **de qué calendario y de qué canal viene** (Callers, YouTube, IG, Email, Biblioteca, Webinar, DFY o Directo), con etiqueta y filtro en la app. Las citas se leen **solo con la API de GHL** (sin workflows de citas). El plan general sigue en `plan.md`.
 
-**Índice:** 1. Dónde estamos · 2. Decisiones · 3. Fases · 4. Riesgos · 5. Datos comprobados · 6. Leads por API (16-17 oct)
+**Índice:** 1. Dónde estamos · 2. Decisiones · 3. Fases · 4. Riesgos · 5. Datos comprobados · 6. Leads por API (16-17 oct) · 7. Espejo de «2. Webinar 1» (17 oct)
 
 ---
 
@@ -182,3 +182,18 @@
 - **Permiso `contacts.write`:** la app no lo usa; si la clave se filtrara, con él se pueden cambiar contactos de GHL (Cristian decidió dejarlo, 17 oct).
 - **Si la lectura se para más de 30 min**, los cambios de ese rato no se ven (los nuevos sí, tienen fecha guardada): lo arregla el repaso.
 - Una etiqueta que se quita en GHL no se quita en la app.
+
+---
+
+## 7. Espejo de «2. Webinar 1» (17 oct)
+
+**Por qué:** Cristian cambió en GHL las columnas de Webinar 1 (Regalo 1…7) y entraron leads en «Regalo 1» con solo la etiqueta `regalo 1`: la regla por etiqueta los mandó a General → Form (22) o no los movió (los de Biblioteca).
+
+**Decisiones de Cristian:** el pipeline y la columna los decide la **oportunidad de GHL** (la etiqueta queda de plan B; sin oportunidad ni etiqueta de pipeline, General) · **solo Webinar 1** (en Biblioteca las columnas de GHL no son las de la app) · columnas **como GHL + «Cerrados»** al final (se quitaron Nivel 1-3, vacías) · los que estaban mal en General, a Webinar 1.
+
+**Cómo funciona** (`src/lib/ghl-espejo.ts`, en la lectura de cada 30 s, antes de los contactos): lee las columnas y todas las oportunidades del pipeline en GHL (3 llamadas); crea en la app las columnas que falten, en el orden de GHL (las que solo tiene la app, al final; no borra ninguna); cada oportunidad nueva o que cambió de columna en GHL pone a su lead en esa columna (si no está en la app, lo crea con su contacto y reparto; si su pipeline es otro, le da su tarjeta 🔗). La tabla `ghl_espejo` guarda la última columna de GHL de cada oportunidad: la app **solo mueve cuando cambia en GHL**, así no deshace lo que mueva el equipo (p. ej. a «Cerrados»). Un contacto sin etiqueta de pipeline que ya está en la app no va a General.
+
+**Comprobado con datos reales (17 oct, ~19:05 UTC):** columnas de la app = las de GHL + Cerrados; **149 oportunidades en GHL, las 149 en la app y en la misma columna** (Regalo 1: 33 · Optin: 11 · Form completo: 105), 0 diferencias. 22 que la API había metido en General (sin cita) pasaron a Webinar 1 → Regalo 1. Copia: `scripts/salida/copia-webinar-17oct.json`. Commit `e1e6da9`; tests en `tests/integracion/ghl-espejo.test.ts` (3).
+
+**Pendiente:** ver en real que una oportunidad que GHL mueve (p. ej. a Regalo 2) se mueve en la app · «Kiki» (etiqueta `regalo 1` sin oportunidad: sigue en General) · coste: cada lectura lee todas las oportunidades de Webinar 1 (2 llamadas por cada 100); con muchas, revisar.
+
