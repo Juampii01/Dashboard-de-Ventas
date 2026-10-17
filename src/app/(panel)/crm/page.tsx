@@ -1,7 +1,6 @@
 import { esJefe, puedeAdmin } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, todas, equipo } from "@/lib/datos";
-import { cronometro } from "@/lib/tiempos"; // MEDICIÓN TEMPORAL (17 oct 2026)
 import { calcularNivel, type FilaPermisoPipeline } from "@/lib/pipelines";
 import { columnaCitasGhl, columnaCitasPorNombre } from "@/lib/leads";
 import { contarTarjetas } from "@/lib/tarjetas";
@@ -18,21 +17,17 @@ import type { Etapa, Pipeline, Producto, Respuesta } from "@/lib/tipos";
 // Cada pipeline tiene sus permisos: Editar (también columnas), Ver (mueve sus tarjetas) o Sin acceso.
 // Director y CEO ven todo (con filtro por persona); el caller y el closer, «Mi CRM» con lo suyo.
 export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
-  const t = cronometro("crm");
   const { perfil, proyecto } = await exigirPagina("crm"); // H5
-  t.paso("sesion+permisos");
   const jefe = esJefe(perfil);
   const admin = puedeAdmin(perfil);
   const sp = await searchParams;
 
   // Velocidad (13 oct 2026): todo lo que no depende del pipeline elegido va a la vez (antes, 9 pasos en fila)
   const [gente, todos, filas, { data: productos }, { data: etapasProyecto }] = await Promise.all([
-    t.medir("equipo", equipo(proyecto.id, !!perfil.es_prueba)),
-    t.medir("pipelines", db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden").then(({ data }) => (data ?? []) as Pipeline[])),
+    equipo(proyecto.id, !!perfil.es_prueba),
+    db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden").then(({ data }) => (data ?? []) as Pipeline[]),
     // Velocidad (17 oct 2026): los permisos de los pipelines del proyecto, a la vez (antes, después de los pipelines)
-    t.medir(
-      "permisos",
-      db()
+    db()
         .from("permisos_pipeline")
         .select("pipeline_id, rol, perfil_id, nivel, pipelines!inner(proyecto_id)")
         .eq("pipelines.proyecto_id", proyecto.id)
@@ -41,16 +36,14 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
             const { pipelines: _fuera, ...fila } = f; // eslint-disable-line @typescript-eslint/no-unused-vars
             return fila as FilaPermisoPipeline;
           })
-        )
-    ),
+        ),
     // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
     perfil.rol === "caller"
       ? Promise.resolve({ data: [] as Producto[] })
-      : t.medir("productos", db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden")),
+      : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
     // Las columnas de todos los pipelines: las del elegido y las de las acciones masivas
-    t.medir("etapas", db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden")),
+    db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden"),
   ]);
-  t.paso("tanda1");
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
   // Los leads de una persona: los que tiene asignados como caller o como closer
   const deLaPersona = <Q extends { or: (f: string) => Q }>(q: Q) => (persona ? q.or(`caller_id.eq.${persona.id},closer_id.eq.${persona.id}`) : q);
@@ -89,19 +82,19 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
 
   // Velocidad (17 oct 2026): los números de las pestañas en una consulta (función crm_conteos, migración
   // 20261017140000). Si la función aún no existe o falla, se cuenta como antes (una consulta por pipeline).
-  const conteosRpc = t.medir("crm_conteos", Promise.resolve(db().rpc("crm_conteos", { p_proyecto: proyecto.id, p_persona: persona?.id ?? null })).then(({ data, error }) =>
+  const conteosRpc = Promise.resolve(db().rpc("crm_conteos", { p_proyecto: proyecto.id, p_persona: persona?.id ?? null })).then(({ data, error }) =>
     error || !data ? null : new Map((data as { pipeline_id: string; leads: number; tarjetas: number }[]).map((r) => [r.pipeline_id, r]))
-  ));
+  );
 
   // Lo del pipeline elegido, también a la vez
   const [leadsCrudos, conteos, extraLeads, extraPorPipeline, closers] = await Promise.all([
     pipeline && pipeline.tipo !== "closers"
-      ? t.medir("leads", todas<Fila>((a, b) => {
+      ? todas<Fila>((a, b) => {
           let q = db().from("leads").select(CAMPOS).eq("proyecto_id", proyecto.id);
           // «Callers»: solo los leads con caller (Cristian, 10 oct 2026)
           q = pipeline.tipo === "callers" ? q.not("caller_id", "is", null) : q.eq("pipeline_id", pipeline.id);
           return deLaPersona(q).order("creado_en", { ascending: false }).order("id").range(a, b);
-        }).then((filas) => filas.map(aTarjeta)))
+        }).then((filas) => filas.map(aTarjeta))
       : Promise.resolve([]),
     Promise.all(
       pipelines.map(async (p) => {
@@ -135,8 +128,6 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         )
       : Promise.resolve(null),
   ]);
-  t.paso(`tanda2 leads=${leadsCrudos.length} extra=${extraLeads.length}`);
-  t.fin();
   // En «Callers» la columna de cada lead es la de su llamada
   const yaEstan = new Set(leadsCrudos.map((l) => l.id));
   const leads: LeadTarjeta[] = [...leadsCrudos, ...extraLeads.filter((l) => !yaEstan.has(l.id))].map(({ etapa_callers_id, ...l }) => (pipeline?.tipo === "callers" ? { ...l, etapa_id: etapa_callers_id } : l));
