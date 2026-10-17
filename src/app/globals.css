@@ -226,7 +226,7 @@ body {
   to { opacity: 1; transform: none; }
 }
 .entrada-logo { animation: entrada-latido 1.6s ease-in-out infinite; }
-.entrada-barra { animation: entrada-barra 2.8s ease-in-out forwards; }
+.entrada-barra { animation: entrada-barra 0.8s ease-in-out forwards; } /* 17 oct 2026: dura lo que tarda en cargar (antes 2,8 s) */
 .entrada-texto { animation: entrada-aparece 0.6s ease-out both; }
 
 /* Barra de carga arriba mientras un filtro trae datos nuevos (Fase 2, 12 oct 2026) */

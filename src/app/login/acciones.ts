@@ -6,6 +6,8 @@ import { anotar, bloqueado, dentroDelLimite } from "@/lib/limite";
 import { db } from "@/lib/datos";
 import { mandarEnlace } from "@/lib/acceso";
 import { createSessionClient } from "@/lib/supabase/server";
+import { sesionDe } from "@/lib/sesion";
+import { rutaInicio } from "@/lib/permisos";
 
 export async function iniciarSesion(_prev: { error: string; email?: string }, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -21,12 +23,15 @@ export async function iniciarSesion(_prev: { error: string; email?: string }, fo
   }
 
   const supabase = await createSessionClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     await Promise.all([anotar(`login:email:${email}`), anotar(`login:ip:${ip}`)]);
     return { error: "Email o contraseña incorrectos.", email };
   }
-  redirect("/");
+  // Velocidad (17 oct 2026): directo a su sección (antes, a «/», que volvía a mandarla: una ida y vuelta más).
+  // Sin onboarding hecho, el panel la manda a /onboarding igual que antes.
+  const { perfil, proyecto } = await sesionDe(data.user.id);
+  redirect(await rutaInicio(perfil, proyecto.id));
 }
 
 export async function cerrarSesion() {

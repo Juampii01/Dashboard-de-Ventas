@@ -22,7 +22,11 @@ export const getSesion = cache(async (): Promise<Sesion> => {
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
   if (!userId) redirect("/login");
+  return sesionDe(userId);
+});
 
+// El perfil y los proyectos de una persona (también lo usa el login, para ir directo a su sección; 17 oct 2026)
+export async function sesionDe(userId: string): Promise<Sesion> {
   const db = createAdminClient();
   const { data: perfil } = await db.from("perfiles").select("*").eq("id", userId).single<Perfil>();
   if (!perfil || !perfil.activo) redirect("/login?error=sin-acceso");
@@ -43,4 +47,4 @@ export const getSesion = cache(async (): Promise<Sesion> => {
   const elegido = (await cookies()).get(COOKIE_PROYECTO)?.value;
   const proyecto = proyectos.find((p) => p.id === elegido) ?? proyectos[0];
   return { perfil, proyectos, proyecto };
-});
+}
