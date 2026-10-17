@@ -8,7 +8,7 @@
 
 ## 1. Dónde estamos
 
-- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 233 unitarios y 260 de integración; en verde el 17 oct de madrugada).
+- **App publicada:** https://dashboard.eternity.llc (también https://dashboard-de-ventas-iota.vercel.app). Cada commit a `main` se publica solo (reactivado el 16 oct tras el rollback de Juampi) y pasa los **tests en GitHub** (tipos, lint, 233 unitarios y 261 de integración; en verde el 17 oct de madrugada).
 - **Hecho del 10 al 13 oct:** dominio y accesos por email · velocidad (primera parte) · ventanas y selectores propios · Biblioteca con sus 6 respuestas · CRM como GHL (tarjeta común, arrastrar columnas y pipelines, barra masiva, varios pipelines por persona con 🔗) · KPIs en tarjetas, embudos, organigrama, onboarding de closers · botón «Guion» y página Guiones · links de pago · cerrar soltando en «Cerrados» · tests en GitHub · pipelines iguales que GHL · popup del lead · Closers sin botones · selector de pipeline · «Link agenda» · KPIs y Agendas fusionados · «Llamadas de GHL» oculto.
 - **Hecho el 16 oct (detalle en `plan-GHL.md`):**
   - **PR #1 de Juampi deshecho** (PR #2); de él solo se aprovechó la idea de guardar el origen de cada cita.
@@ -38,8 +38,9 @@
 
 **2b · Leads por API: lo que queda** (detalle en `plan-GHL.md`, apartado 6)
 - [ ] **Repaso único** con `scripts/igualar-ghl.mjs` (lo lanza Cristian): los contactos de antes del 16 oct, 21:09 UTC.
-- [ ] **Ver con datos reales** (cubiertos en los tests, aún no pasados en real): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas (tarjeta 🔗) · uno que gana `webinar1` después · uno que cambia sus datos en GHL · respuestas que llegan tarde.
-- [ ] **Decidir (Cristian):** si alguien corrige en la app el nombre o el teléfono de un lead y luego el contacto cambia en GHL, vuelve el de GHL. ¿Se deja así (corregir también en GHL) o que la app nunca pise lo cambiado en la app?
+- [x] **Test real** (17 oct, con el contacto de test de Cristian): un contacto que gana una etiqueta gana su tarjeta 🔗 y un dato cambiado en GHL llega a la app, en menos de 75 s.
+- [x] **«No pisar»** (Cristian, 17 oct, tras ver el riesgo en el test real): GHL solo rellena nombre, apellido y teléfono si en la app están vacíos (`1fc0a73`).
+- [ ] **Ver con datos reales** (cubiertos en los tests): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas al crearse · respuestas que llegan tarde.
 - [ ] El test de Webinar de Cristian quedó en «Form completo» (lo metió la primera versión): moverlo a «Optin» si se quiere.
 - [ ] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). Apagar o borrar los demás pasos que mandan a la app (Cristian; los leads no llegan dos veces: la app los une por contacto y email).
 - [ ] Mejora posible: guardar también la fecha de los cambios (hoy se miran los últimos 30 min; si la lectura parase más, esos cambios no se verían). Necesita otra migración.
@@ -165,7 +166,7 @@
 - **Citas de GHL:** se leen cada 30 s por la API; si el programador de Supabase se para (proyecto en pausa, token caducado), no entra ninguna cita: lo avisa Agendas («Última lectura de GHL: hace X», en rojo a los 5 min). Una cita que deja de venir se comprueba una a una en GHL antes de cancelarla.
 - **Leads sin caller:** los ~1.200 están sin repartir y el reparto automático está apagado: hasta que se reparta, los callers no tienen cola.
 - **Leads por API:** entran solos todos los contactos nuevos de GHL (cada 30 s), por su etiqueta; sin etiqueta, a «0. Agendas General». Si el programador se para, no entra ninguno hasta que vuelva (los nuevos se recuperan solos; los cambios de más de 30 min, con el repaso). Lo de antes del 16 oct, 21:09 UTC, falta traerlo con `scripts/igualar-ghl.mjs`.
-- **GHL puede pisar un cambio hecho en la app:** el nombre y el teléfono de un lead vuelven al de GHL si su contacto cambia allí (pendiente de decidir, 2b). Una etiqueta que se quita en GHL no se quita en la app.
+- **GHL y la app:** GHL ya no pisa nombre, apellido ni teléfono de la app (solo rellena vacíos). Una etiqueta que se quita en GHL no se quita en la app. La integración de GHL tiene también permiso de **editar contactos** (`contacts.write`; la app no lo usa; Cristian decidió dejarlo el 17 oct).
 - **Lead por webhook sin pipeline:** va al primer pipeline, «0. Agendas YT». Hoy no afecta: la Biblioteca entra por su Entrada y las citas ya no entran por webhook.
 - **Móvil:** arrastrar no funciona; en el tablero de Closers no hay otra forma de mover una cita (pendiente de tu respuesta, 2-A).
 - **Velocidad en la nube:** CRM medido el 13 oct: servidor 0,34–0,64 s (hasta ~2 s «en frío» tras un rato sin uso); Cristian lo siente lento al navegar (ver `docs/Mejorar-velocidad.md`).

@@ -160,21 +160,25 @@
 
 **Cómo funciona:**
 - **Nuevos:** `POST /contacts/search` con `dateAdded` posterior a `proyectos.ghl_leads_hasta` (menos 2 min de margen); los ya vistos se guardan 3 días en `ghl_oportunidades_vistas` (su `opp_id` es el id del contacto). Como mucho 30 por lectura.
-- **Cambiados:** la misma búsqueda con `dateUpdated` de los últimos 30 min. Si ganó una etiqueta de pipeline que no tiene en la app, gana ese pipeline (con nota «Nueva etiqueta en GHL (API)»). Si cambió sus datos, se ponen al día: nombre, apellido y teléfono se cambian; el email solo si faltaba; etiquetas y respuestas se suman (no se borra nada). Solo escribe si hay algo nuevo.
+- **Cambiados:** la misma búsqueda con `dateUpdated` de los últimos 30 min. Si ganó una etiqueta de pipeline que no tiene en la app, gana ese pipeline (con nota «Nueva etiqueta en GHL (API)»). Si cambió sus datos, se ponen al día **sin pisar lo de la app** (Cristian, 17 oct): nombre, apellido y teléfono solo si en la app están vacíos; el email solo si faltaba; etiquetas y respuestas se suman (no se borra nada). Solo escribe si hay algo nuevo.
 - **Respuestas:** los campos personalizados del contacto con el nombre de su pregunta (`/locations/{id}/customFields`); `utm_*` va al seguimiento. Los de los últimos 10 min se releen por si llegan tarde.
-- Permisos: los 7 de solo leer de la integración privada (contactos, oportunidades, calendarios, citas, conversaciones, campos y usuarios).
+- Permisos: los 7 de solo leer de la integración privada (contactos, oportunidades, calendarios, citas, conversaciones, campos y usuarios) **más «Edit Contacts» (`contacts.write`)**, puesto para el test del 17 oct y que Cristian decidió dejar (la app no lo usa).
 
 **Comprobado con datos reales (16 oct por la noche):** con el workflow apagado entraron por la API el test de Webinar de Cristian y 5 leads de la Biblioteca, con sus respuestas y su oferta; 0 repetidos (8 leads desde las 21:00 UTC). Commits `918df7a` a `1f1e850`. Tests: `tests/integracion/ghl-leads.test.ts` (8) y `tests/unit/ghl-lead.test.ts` (2).
+
+**Test real (17 oct, 01:47-01:54, con el contacto de test de Webinar de Cristian, por la API):** 1) en GHL se le añadió `biblioteca recursos` y se le puso apellido: en menos de 75 s la app le dio su tarjeta 🔗 en «1. Biblioteca Recursos» (con la nota «Nueva etiqueta en GHL (API)») y el mismo apellido que GHL. 2) Riesgo: se cambió el apellido en la app y en GHL solo una etiqueta: la app volvió al de GHL → decidido «no pisar» (`1fc0a73`). 3) Se dejó el contacto como estaba en GHL y en la app (quedan, a propósito, la tarjeta 🔗 y la nota). Visto también: quitar una etiqueta en GHL no la quita en la app.
 
 **Me equivoqué (16 oct):** dije que sin workflow GHL no creaba la oportunidad; la crea ~2 min después del contacto y yo miré antes. La solución por contactos es mejor igualmente: no depende de ningún workflow.
 
 **Pendiente:**
 - [ ] Repaso único con `scripts/igualar-ghl.mjs` (los contactos anteriores al 16 oct, 21:09 UTC).
-- [ ] Ver con datos reales: un contacto sin etiqueta → General · uno con dos etiquetas · uno que gana `webinar1` · respuestas que llegan tarde (cubiertos en tests, no vistos en real).
+- [x] Visto en real (17 oct): uno que gana una etiqueta · uno que cambia sus datos · el riesgo de pisar (arreglado).
+- [ ] Ver con datos reales: un contacto sin etiqueta → General · uno con dos etiquetas al crearse · respuestas que llegan tarde · «no pisar» ya publicado (cubiertos en tests).
 - [ ] El test de Webinar quedó en «Form completo» (lo metió la primera versión, que usaba la columna del mismo nombre): moverlo a «Optin» si se quiere.
 - [ ] Reparto automático apagado: sin él los leads nuevos no tienen caller.
 
 **Riesgos:**
-- **GHL puede pisar un cambio hecho en la app:** si el equipo corrige en la app el nombre o el teléfono y luego el contacto cambia en GHL por cualquier cosa (un email, una etiqueta), vuelve el de GHL. Para evitarlo, corregir también en GHL.
+- ~~GHL puede pisar un cambio hecho en la app~~: confirmado en el test real del 17 oct y arreglado: GHL solo rellena nombre, apellido y teléfono si en la app están vacíos. Lo que sí: un dato que el equipo deje vacío en la app se volverá a rellenar desde GHL.
+- **Permiso `contacts.write`:** la app no lo usa; si la clave se filtrara, con él se pueden cambiar contactos de GHL (Cristian decidió dejarlo, 17 oct).
 - **Si la lectura se para más de 30 min**, los cambios de ese rato no se ven (los nuevos sí, tienen fecha guardada): lo arregla el repaso.
 - Una etiqueta que se quita en GHL no se quita en la app.
