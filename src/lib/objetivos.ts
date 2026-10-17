@@ -192,18 +192,27 @@ async function baseDePersona(proyectoId: string, p: Perfil, desde: Date): Promis
   let actividades: Base["actividades"] = [];
   let citas: Base["citas"] = [];
   let ventas: VentaFila[] = [];
+  // Velocidad (17 oct 2026): lo que no depende de otra consulta va a la vez (antes, todo en fila)
   if (p.rol === "caller") {
-    actividades = await todas((a, b) => db().from("actividades").select("lead_id, perfil_id, tipo, resultado, creado_en").eq("proyecto_id", proyectoId).eq("perfil_id", p.id).in("tipo", ["llamada", "whatsapp"]).gte("creado_en", d).order("id").range(a, b));
-    const suyas = await todas<Base["citas"][number]>((a, b) => db().from("citas").select(COLS_CITA).eq("proyecto_id", proyectoId).eq("agendada_por", p.id).gte("creado_en", d).order("id").range(a, b));
+    const [acts, suyas, propias] = await Promise.all([
+      todas<Base["actividades"][number]>((a, b) => db().from("actividades").select("lead_id, perfil_id, tipo, resultado, creado_en").eq("proyecto_id", proyectoId).eq("perfil_id", p.id).in("tipo", ["llamada", "whatsapp"]).gte("creado_en", d).order("id").range(a, b)),
+      todas<Base["citas"][number]>((a, b) => db().from("citas").select(COLS_CITA).eq("proyecto_id", proyectoId).eq("agendada_por", p.id).gte("creado_en", d).order("id").range(a, b)),
+      todas<VentaFila>((a, b) => db().from("ventas").select(COLS_VENTA).eq("proyecto_id", proyectoId).eq("vendedor_id", p.id).order("id").range(a, b)),
+    ]);
+    actividades = acts;
     const leads = [...new Set(suyas.map((c) => c.lead_id))];
     // Todas las citas y ventas de sus agendados (asistencia y cierre) + su low ticket
-    citas = await porTrozos(leads, (t) => db().from("citas").select(COLS_CITA).in("lead_id", t));
-    const deSusLeads = await porTrozos<VentaFila>(leads, (t) => db().from("ventas").select(COLS_VENTA).in("lead_id", t));
-    const propias = await todas<VentaFila>((a, b) => db().from("ventas").select(COLS_VENTA).eq("proyecto_id", proyectoId).eq("vendedor_id", p.id).order("id").range(a, b));
+    const [deSusCitas, deSusLeads] = await Promise.all([
+      porTrozos<Base["citas"][number]>(leads, (t) => db().from("citas").select(COLS_CITA).in("lead_id", t)),
+      porTrozos<VentaFila>(leads, (t) => db().from("ventas").select(COLS_VENTA).in("lead_id", t)),
+    ]);
+    citas = deSusCitas;
     ventas = [...new Map([...deSusLeads, ...propias].map((v) => [v.id, v])).values()];
   } else {
-    citas = await todas((a, b) => db().from("citas").select(COLS_CITA).eq("proyecto_id", proyectoId).eq("closer_id", p.id).gte("fecha", d).order("id").range(a, b));
-    ventas = await todas<VentaFila>((a, b) => db().from("ventas").select(COLS_VENTA).eq("proyecto_id", proyectoId).eq("vendedor_id", p.id).order("id").range(a, b));
+    [citas, ventas] = await Promise.all([
+      todas<Base["citas"][number]>((a, b) => db().from("citas").select(COLS_CITA).eq("proyecto_id", proyectoId).eq("closer_id", p.id).gte("fecha", d).order("id").range(a, b)),
+      todas<VentaFila>((a, b) => db().from("ventas").select(COLS_VENTA).eq("proyecto_id", proyectoId).eq("vendedor_id", p.id).order("id").range(a, b)),
+    ]);
   }
   const pagos = await porTrozos<{ importe: number; fecha: string; venta_id: string }>(ventas.map((v) => v.id), (t) => db().from("pagos").select("importe, fecha, venta_id").in("venta_id", t));
   return {
@@ -270,6 +279,8 @@ export async function panelObjetivos(proyecto: { id: string; zona_horaria: strin
   const t0 = performance.now(); // medición temporal (velocidad, 17 oct 2026)
   const datos = await cargarObjetivos(proyecto.id, hoy);
   const t1 = performance.now();
+  // Velocidad (17 oct 2026): sin ningún objetivo puesto, el resultado es vacío; no hace falta leer actividades, citas ni ventas
+  if (datos.filas.length === 0) return { mios: [], racha: null, equipo: [] };
   const inicios = [rangoDe("semana", zona).desde!, rangoDe("mes", zona).desde!, ...datos.lanzamientos.filter((l) => l.inicio <= hoy && hoy <= l.fin).map((l) => rangoDe("rango", zona, l.inicio, l.fin).desde!)];
   const desde = new Date(Math.min(...inicios.map((x) => x.getTime())));
   const hayDiarios = datos.filas.some((f) => f.periodo === "dia");
