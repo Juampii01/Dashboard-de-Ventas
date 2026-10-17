@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 17 oct 2026, 11:45 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 12:15 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -36,16 +36,6 @@
 - [ ] Equipo: cambiar en anuncios, bios y WhatsApp los links al formato `/agenda?utm_source=…` y buscar la errata `utm_source=bibliotec`.
 - [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
 
-**2b · Leads por API: lo que queda** (detalle en `plan-GHL.md`, apartado 6)
-- [ ] **Repaso único** con `scripts/igualar-ghl.mjs` (lo lanza Cristian): los contactos de antes del 16 oct, 21:09 UTC.
-- [x] **Test real** (17 oct, con el contacto de test de Cristian): un contacto que gana una etiqueta gana su tarjeta 🔗 y un dato cambiado en GHL llega a la app, en menos de 75 s.
-- [x] **«No pisar»** (Cristian, 17 oct, tras ver el riesgo en el test real): GHL solo rellena nombre, apellido y teléfono si en la app están vacíos (`1fc0a73`).
-- [ ] **Ver con datos reales** (cubiertos en los tests): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas al crearse · respuestas que llegan tarde.
-- [x] ~~El test de Webinar de Cristian quedó en «Form completo»~~: borrado por Cristian el 17 oct.
-- [ ] **«Fff» tiene 2 citas confirmadas** el 17 oct (17:00 y 20:00 UTC, las dos con Felipe), reservadas con 1 min de diferencia por YouTube: no es de nuestras pruebas; Cristian decidió no borrarlo. Que el equipo vea si reservó dos veces sin querer.
-- [x] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). *Comprobado el 17 oct: desde el 16 oct a las 21:10 UTC no llega a la app ningún aviso de GHL (ni con la reserva de «Fff» a las 01:52, que entró por la API).* No mirado en GHL si los 4 viejos «AP - Cita» siguen publicados (no mandan nada a la app).
-- [ ] Mejora posible: guardar también la fecha de los cambios (hoy se miran los últimos 30 min; si la lectura parase más, esos cambios no se verían). Necesita otra migración.
-
 **3 · Pendiente de Cristian (de antes)**
 - [ ] **Leads de prueba** (17 oct): Cristian borró 13 de las 17 seguras (con «TEST» de anoche) y también **Galo Enrique Castrillon**, que era dudoso (nombre real; ¿a propósito? sigue en GHL: volvería con el repaso). **Quedan:** «Prueba» y «(example) jordan Smith» (Biblioteca) y los 2 «Test» (Webinar 1). **Sin decidir:** Juanito y Pablillodddd (Orgánico, 1 cita cada uno, ya no están en GHL: se borran uno a uno desde su ficha) · Jorge Socorro, Albar y Alex (solo su email lleva «test»/«prueba»: parecen reales).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
@@ -69,14 +59,7 @@
 - [ ] Pequeño: en CRM, «Tablero · Lista» casi no marca cuál está elegido.
 - [x] ~~Vigilar cuántos leads de la Biblioteca llegan sin respuestas; subir el Wait~~: ya no hay workflow; la API relee las respuestas durante 10 min y pone al día las que cambian.
 
-**5 · GHL, al final (juntos)** · *Revisado de nuevo el 17 oct con datos de ese día. Cristian quitó del plan la actividad de los leads en GHL y los avisos por WhatsApp (todo se mira en la app; los avisos, por email).*
-- [x] **Leads nuevos de todas las fuentes por la API** (16-17 oct, `plan-GHL.md` apartado 6). Falta: el **repaso único** con `scripts/igualar-ghl.mjs` (lo de antes del 16 oct, 21:09 UTC) y ver en real los casos de General y de dos etiquetas.
-- [x] **Ids de GHL de los callers** (17 oct, con la API de usuarios, emparejados por email): puestos a Miguel Angel Toledo, Lucas Gonzalez Diaz y Tomás Ponce (comprobado en la base).
-- [ ] **Hanna Marlene Moya Gutierrez y Facundo Fruhwald** no tienen usuario en GHL con su email: sin él, sus llamadas de GHL no se atribuyen (Cristian, bloque 6).
-- [x] ~~Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc`~~: ya no hace falta, Cristian lo apagó el 16 oct (los leads entran por la API).
-- [x] ~~Idea: que `/api/signup` mande las respuestas a la app~~: ya no hace falta, la API trae las respuestas del contacto.
-
-**6 · Lo de Cristian, al final del todo**
+**5 · Lo de Cristian, al final del todo**
 - [ ] Pagar Google Workspace **antes del 2 nov 2026** (si no, dejan de salir los emails de la app).
 - [ ] Claves de Fathom, Claude y Deepgram (las pegas tú en la app).
 - [ ] Usuarios de GHL de **Hanna y Facundo** (los otros 3 callers ya tienen su id puesto).
