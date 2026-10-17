@@ -43,7 +43,7 @@
 - [ ] **Ver con datos reales** (cubiertos en los tests): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas al crearse · respuestas que llegan tarde.
 - [x] ~~El test de Webinar de Cristian quedó en «Form completo»~~: borrado por Cristian el 17 oct.
 - [ ] **«Fff» tiene 2 citas confirmadas** el 17 oct (17:00 y 20:00 UTC, las dos con Felipe), reservadas con 1 min de diferencia por YouTube: no es de nuestras pruebas; Cristian decidió no borrarlo. Que el equipo vea si reservó dos veces sin querer.
-- [ ] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). Apagar o borrar los demás pasos que mandan a la app (Cristian; los leads no llegan dos veces: la app los une por contacto y email).
+- [x] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). *Comprobado el 17 oct: desde el 16 oct a las 21:10 UTC no llega a la app ningún aviso de GHL (ni con la reserva de «Fff» a las 01:52, que entró por la API).* No mirado en GHL si los 4 viejos «AP - Cita» siguen publicados (no mandan nada a la app).
 - [ ] Mejora posible: guardar también la fecha de los cambios (hoy se miran los últimos 30 min; si la lectura parase más, esos cambios no se verían). Necesita otra migración.
 
 **3 · Pendiente de Cristian (de antes)**
@@ -69,18 +69,17 @@
 - [ ] Pequeño: en CRM, «Tablero · Lista» casi no marca cuál está elegido.
 - [x] ~~Vigilar cuántos leads de la Biblioteca llegan sin respuestas; subir el Wait~~: ya no hay workflow; la API relee las respuestas durante 10 min y pone al día las que cambian.
 
-**5 · GHL, al final (juntos)** · *Revisado uno a uno el 16 oct a petición de Cristian: los 6 siguen pendientes (prueba en cada punto).*
-- [ ] **Actividad de los leads en GHL** («No activities yet»): la landing no usa formularios de GHL; opciones: código de seguimiento externo de GHL en la landing, o arreglar los UTM en «Create contact» del workflow viejo. *Comprobado (API): los 5 últimos leads de la Biblioteca salen en GHL como «Manual», sin página ni UTM.*
+**5 · GHL, al final (juntos)** · *Revisado de nuevo el 17 oct con datos de ese día. Cristian quitó del plan la actividad de los leads en GHL y los avisos por WhatsApp (todo se mira en la app; los avisos, por email).*
 - [x] **Leads nuevos de todas las fuentes por la API** (16-17 oct, `plan-GHL.md` apartado 6). Falta: el **repaso único** con `scripts/igualar-ghl.mjs` (lo de antes del 16 oct, 21:09 UTC) y ver en real los casos de General y de dos etiquetas.
-- [ ] Ids de GHL de los callers (sin ellos, sus llamadas de GHL no se atribuyen) y llamadas de GHL. *Comprobado (base): ninguno de los 6 callers lo tiene.*
-- [ ] Avisos de los reportes por WhatsApp. *Comprobado (base): la dirección de avisos de GHL del proyecto está vacía; hoy los avisos solo van por email.*
+- [x] **Ids de GHL de los callers** (17 oct, con la API de usuarios, emparejados por email): puestos a Miguel Angel Toledo, Lucas Gonzalez Diaz y Tomás Ponce (comprobado en la base).
+- [ ] **Hanna Marlene Moya Gutierrez y Facundo Fruhwald** no tienen usuario en GHL con su email: sin él, sus llamadas de GHL no se atribuyen (Cristian, bloque 6).
 - [x] ~~Pasar el workflow «0. AP - Biblioteca» a `dashboard.eternity.llc`~~: ya no hace falta, Cristian lo apagó el 16 oct (los leads entran por la API).
 - [x] ~~Idea: que `/api/signup` mande las respuestas a la app~~: ya no hace falta, la API trae las respuestas del contacto.
 
 **6 · Lo de Cristian, al final del todo**
 - [ ] Pagar Google Workspace **antes del 2 nov 2026** (si no, dejan de salir los emails de la app).
 - [ ] Claves de Fathom, Claude y Deepgram (las pegas tú en la app).
-- [ ] Usuarios de GHL de los callers.
+- [ ] Usuarios de GHL de **Hanna y Facundo** (los otros 3 callers ya tienen su id puesto).
 - [ ] Guardar las claves en tu gestor de contraseñas y borrar los CSV de contraseñas de `scripts/salida/`.
 - [ ] Vercel Pro (también reduciría los arranques «en frío»; sin verificar cuánto).
 - [ ] **Repartir los leads** (de 1.619, solo 185 tienen caller; sin reparto, los callers no tienen cola).
@@ -183,7 +182,7 @@
 - **Clave de cifrado:** si se pierde, hay que volver a pegar el token de GHL y las claves de Fathom.
 - **Recordatorios de GHL:** si se reagenda en la app una cita que vino de GHL, GHL sigue recordando al lead la hora vieja salvo que se cambie también allí.
 - **GHL:** algunas variables no están documentadas; puede que director y CEO tengan que ser contactos de GHL para recibir avisos (sin comprobar); la app no puede lanzar llamadas. El canal de una cita es la última página por la que entró el contacto: se guarda al leerla (en 30 s) y no cambia después.
-- **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil), y solo se atribuyen si el caller tiene su id de GHL puesto (hoy ninguno).
+- **Llamadas de los callers:** solo cuentan las hechas desde GHL (no WhatsApp ni su móvil), y solo se atribuyen si el caller tiene su id de GHL puesto (17 oct: 3 de 5; faltan Hanna y Facundo).
 - **Post-call:** mover una cita «reagendada» puede contar la misma reunión dos veces; sacar una venta de su columna la borra con sus cobros y comisiones (pide confirmación).
 - **Citas:** un lead puede tener dos citas a horas distintas.
 - **Onboarding de closers:** si dos closers le venden al mismo cliente, comparten la checklist.
