@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
@@ -13,47 +14,65 @@ export function BarraPeriodo({ etiqueta, porDefecto = "mes", conActualizar = tru
   const ruta = usePathname();
   const params = useSearchParams();
   const [cargando, iniciar] = useTransition();
-  const periodo = params.get("p") ?? porDefecto;
+  // Velocidad (17 oct 2026): el periodo pulsado se marca al momento (vale mientras no cambie la dirección)
+  const [yendo, setYendo] = useState<{ a: string; desde: string } | null>(null);
+  const periodo = (yendo && yendo.desde === params.toString() ? yendo.a : null) ?? params.get("p") ?? porDefecto;
   const n = Number(params.get("n") ?? 0) || 0;
   const [verFechas, setVerFechas] = useState(periodo === "rango");
 
-  function poner(cambios: Record<string, string | null>) {
+  function conCambios(cambios: Record<string, string | null>) {
     const p = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(cambios)) {
       if (v === null || v === "") p.delete(k);
       else p.set(k, v);
     }
-    iniciar(() => router.replace(`${ruta}?${p.toString()}`, { scroll: false }));
+    return `${ruta}?${p.toString()}`;
+  }
+  function poner(cambios: Record<string, string | null>) {
+    iniciar(() => router.replace(conCambios(cambios), { scroll: false }));
   }
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${cargando ? "opacity-70" : ""}`}>
       <BarraCarga activa={cargando} />
       <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
-        {PERIODOS_NAV.map((x) => (
-          <button
-            key={x.v}
-            type="button"
-            onClick={() => {
-              if (x.v === "rango") return setVerFechas(true);
-              setVerFechas(false);
-              poner({ p: x.v, n: null, desde: null, hasta: null });
-            }}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${periodo === x.v ? "bg-primario text-white shadow-sm" : "text-texto-2 hover:text-texto"}`}
-          >
-            {x.t}
-          </button>
-        ))}
+        {/* Velocidad (17 oct 2026): enlaces con precarga completa (antes, botones que esperaban al servidor al pulsar);
+            «Personalizado» sigue siendo un botón: abre las fechas */}
+        {PERIODOS_NAV.map((x) => {
+          const clase = `rounded-md px-3 py-1.5 text-sm transition-colors ${periodo === x.v ? "bg-primario text-white shadow-sm" : "text-texto-2 hover:text-texto"}`;
+          if (x.v === "rango")
+            return (
+              <button key={x.v} type="button" onClick={() => setVerFechas(true)} className={clase}>
+                {x.t}
+              </button>
+            );
+          return (
+            <Link
+              key={x.v}
+              href={conCambios({ p: x.v, n: null, desde: null, hasta: null })}
+              prefetch={true}
+              replace
+              scroll={false}
+              onClick={() => {
+                setVerFechas(false);
+                if (x.v !== periodo) setYendo({ a: x.v, desde: params.toString() });
+              }}
+              className={clase}
+            >
+              {x.t}
+            </Link>
+          );
+        })}
       </div>
       {periodo !== "rango" && (
         <div className="flex items-center rounded-lg border border-borde bg-panel">
-          <button type="button" className="p-2 text-texto-2 hover:text-texto" aria-label="Periodo anterior" onClick={() => poner({ n: String(n - 1) })}>
+          <Link href={conCambios({ n: String(n - 1) })} prefetch={true} replace scroll={false} className="p-2 text-texto-2 hover:text-texto" aria-label="Periodo anterior">
             <ChevronLeft className="h-4 w-4" />
-          </button>
+          </Link>
           <span className="min-w-32 px-1 text-center text-sm font-medium">{etiqueta}</span>
-          <button type="button" className="p-2 text-texto-2 hover:text-texto" aria-label="Periodo siguiente" onClick={() => poner({ n: String(n + 1) })}>
+          <Link href={conCambios({ n: String(n + 1) })} prefetch={true} replace scroll={false} className="p-2 text-texto-2 hover:text-texto" aria-label="Periodo siguiente">
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       )}
       {periodo === "rango" && <span className="text-sm font-medium">{etiqueta}</span>}
