@@ -17,12 +17,16 @@ export type Sesion = {
 
 // Lee el usuario, su perfil y sus proyectos. Una sola vez por petición.
 export const getSesion = cache(async (): Promise<Sesion> => {
+  const t0 = performance.now(); // MEDICIÓN TEMPORAL (17 oct 2026): se quita al acabar
   const supabase = await createSessionClient();
   // Velocidad (17 oct 2026): verificación local de la sesión (ver src/proxy.ts), sin preguntar a Supabase
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
   if (!userId) redirect("/login");
-  return sesionDe(userId);
+  const t1 = performance.now();
+  const s = await sesionDe(userId);
+  console.log(`[tiempos] sesion · claims ${Math.round(t1 - t0)} · perfil+proyectos ${Math.round(performance.now() - t1)}`);
+  return s;
 });
 
 // El perfil y los proyectos de una persona (también lo usa el login, para ir directo a su sección; 17 oct 2026)
