@@ -14,6 +14,7 @@ import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio, Avatar } from "@/co
 import { AccionesLead } from "@/components/acciones-lead";
 import { Refresco } from "@/components/refresco";
 import type { Lead, Producto } from "@/lib/tipos";
+import { cronometro } from "@/lib/tiempos";
 
 const PESTANAS = [
   { v: "llamar", t: "Por llamar" },
@@ -23,14 +24,16 @@ const PESTANAS = [
 ];
 
 export default async function CallerPage({ searchParams }: PageProps<"/caller">) {
+  const t = cronometro("caller"); // medición temporal (velocidad, 17 oct 2026)
   const { perfil, proyecto } = await exigirPagina("cola"); // H5
+  t.paso("sesion+permisos");
   const jefe = esJefe(perfil);
   // H5: a un closer con «Mis leads», sus leads como closer (lo suyo), en forma de cola
   const comoCloser = perfil.rol === "closer";
   // Velocidad (17 oct 2026): guion y equipo a la vez (antes, uno detrás de otro)
   const [{ guion }, gente, sp] = await Promise.all([
-    cargarGuion(proyecto.id, rolDelGuion(perfil.rol)), // Fase 6
-    equipo(proyecto.id, !!perfil.es_prueba),
+    t.medir("guion", cargarGuion(proyecto.id, rolDelGuion(perfil.rol))), // Fase 6
+    t.medir("equipo", equipo(proyecto.id, !!perfil.es_prueba)),
     searchParams,
   ]);
   const callers = gente.filter((g) => g.rol === "caller");
@@ -49,14 +52,16 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
   const hoy = rangoDe("hoy", proyecto.zona_horaria);
   // Velocidad (17 oct 2026): los objetivos van con el resto de consultas (antes, después)
   const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring, panel] = await Promise.all([
-    todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq(comoCloser ? "closer_id" : "caller_id", caller.id).order("id").range(a, b)),
+    t.medir("leads", todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq(comoCloser ? "closer_id" : "caller_id", caller.id).order("id").range(a, b))),
     db().from("actividades").select("tipo, resultado").eq("perfil_id", caller.id).eq("proyecto_id", proyecto.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("citas").select("id", { count: "exact", head: true }).eq("agendada_por", caller.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("ventas").select("id", { count: "exact", head: true }).eq("vendedor_id", caller.id).gte("fecha", hoy.desde!.toISOString()),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
     db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
-    panelObjetivos(proyecto, caller), // objetivos del caller que se está viendo, su racha y el del equipo (H3-H4)
+    t.medir("objetivos", panelObjetivos(proyecto, caller)), // objetivos del caller que se está viendo, su racha y el del equipo (H3-H4)
   ]);
+  t.paso(`datos(${leads.length})`);
+  t.fin();
   const pesos = (scoring.data?.pesos ?? null) as Pesos | null; // priorización con IA (V2-11)
   const acts = actsHoy.data ?? [];
   const llamadas = acts.filter((a) => a.tipo === "llamada").length;
