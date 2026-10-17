@@ -26,6 +26,12 @@
 
 ## 2. Lo que falta (en este orden)
 
+**0 · Ahora: un solo pipeline de agendas, «0. Agendas General»** (Cristian, 17 oct; solo en la app, GHL no se toca)
+- [ ] La app deja de mandar cada cita a su pipeline de canal: todas van solo a «0. Agendas General» (columna «Agendan»); el canal se ve por la etiqueta «Canal: …» y el filtro.
+- [ ] En General, el filtro de canales enseña **siempre todos** (Callers, YouTube, Instagram, P1, Email, Biblioteca, Webinar, DFY, Directo, Otro y «Sin canal»).
+- [ ] Pasar a General los leads de los 9 pipelines de canal (Callers, YT, Orgánico, IG, P1, Email, Biblioteca, Webinar, DFY). Si ya estaba en General, **se queda la columna de General** (decisión de Cristian; ojo: 21 leads que el equipo movió en «Orgánico» a No confirman, No show, Seguimiento… vuelven a verse en «Agendan» de General). Si no estaba, entra en la columna del mismo nombre. Copia de lo de antes en un archivo para poder deshacerlo.
+- [ ] Comprobar que los 9 pipelines quedan vacíos; **Cristian los borra** desde el CRM.
+
 **1 · Ahora: velocidad** (Cristian, 16 oct: «carga súper lento», lo primero) · *17 oct: Cristian la lleva en otra sesión (ya hay commits: `3e271b0` números del CRM en una consulta, `14ec216`, `fb61232`, `71d96bb` tiempo real). Lo de esa sesión se apunta allí.*
 - [ ] **Mejorar velocidad:** que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho el 13 oct, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y el orden (medir todas las secciones → lo visto al instante → precarga del menú → servidor más rápido → tiempo real → medir otra vez). Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
 - [ ] **Decidir antes de empezar (Cristian):** ¿A, B o C? · ¿vale ver un dato de hace un momento durante menos de 1 s a cambio de que todo salga al instante? · ¿se toca la comprobación de la sesión?
