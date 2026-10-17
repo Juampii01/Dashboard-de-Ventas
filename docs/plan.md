@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 17 oct 2026, 01:50 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 11:45 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -17,7 +17,7 @@
   - **Filtro por canal** en Agendas (y su exportación), CRM y KPIs; «GHL · YouTube» en lugar de «Calendario GHL».
   - **Workflows de GHL** («2. Agendan llamada» y «2 . WH - FORM AGENDA GENERAL»): ramas yt/youtube, ig/instagram, email, webinar, dfy; publicados por Cristian.
   - Ids de GHL de Felipe y Cintia puestos · «Link agenda» = `codigomaestria.com/agenda?utm_source=callers` · permiso `calendars.readonly` en GHL.
-- **Hecho el 16-17 oct: leads por API, sin workflows** (detalle en `plan-GHL.md`, apartado 6): cada 30 s la app lee los contactos nuevos de GHL y los mete por su etiqueta (`biblioteca recursos` → Biblioteca, `webinar1` → Webinar 1, sin etiqueta → «0. Agendas General»), en la primera columna; también los que ganan una etiqueta después y los que cambian sus datos. Probado con datos reales: Cristian apagó el workflow de la Biblioteca y entraron solos 7 leads (5 de la Biblioteca y 2 de Webinar, uno real a los 37 s de crearse en GHL), con sus respuestas; 0 repetidos (9 leads desde las 21:00 UTC del 16 oct).
+- **Hecho el 16-17 oct: leads por API, sin workflows** (detalle en `plan-GHL.md`, apartado 6): cada 30 s la app lee los contactos nuevos de GHL y los mete por su etiqueta (`biblioteca recursos` → Biblioteca, `webinar1` → Webinar 1, sin etiqueta → «0. Agendas General»), en la primera columna; también los que ganan una etiqueta después y los que cambian sus datos. Probado con datos reales: Cristian apagó el workflow de la Biblioteca y entraron solos 7 leads (5 de la Biblioteca y 2 de Webinar, uno real a los 37 s de crearse en GHL), con sus respuestas; 0 repetidos. **Noche del 16 al 17 oct (21:00-09:22 UTC): 29 contactos nuevos en GHL y los 29 en la app** (24 Biblioteca, 3 Webinar, 1 de YouTube con cita; entre 8 y 45 s después de crearse en GHL), comprobado uno a uno.
 - **Migraciones:** todas aplicadas en la nube (las últimas, `20261017110000_citas_canal`, `20261017120000_leer_ghl_cada_30s` y `20261017130000_leads_por_api`, el 16 oct, las lanzó Cristian).
 - **Datos de Maestria (16 oct, 22:50):** 1.619 leads (185 con caller); 37 citas (16 con canal; las 21 anteriores al 13 oct, sin canal). Por pipeline (con las tarjetas 🔗): General 36 · Orgánico 49 · Callers 8 · YT 2 · Email 1 · Biblioteca 1 · IG 0 · P1 0 · Webinar 0 · DFY 0 · Biblioteca Recursos 1.604 · Webinar 1 111 · DFY AI Services 0. **Equipo** (dato del 13 oct, no revisado hoy): 14 reales + 2 de prueba; faltaba que entraran Antonio y los 4 closers; un 4.º director, «Thiago», que no estaba en el plan.
 - **«Terminado»** = el equipo real entra en la app (ordenador o móvil), los leads de GHL llegan solos, los avisos de los reportes llegan, y un caller y un closer trabajan un día real sin problemas.
@@ -26,7 +26,7 @@
 
 ## 2. Lo que falta (en este orden)
 
-**1 · Ahora: velocidad** (Cristian, 16 oct: «carga súper lento», lo primero)
+**1 · Ahora: velocidad** (Cristian, 16 oct: «carga súper lento», lo primero) · *17 oct: Cristian la lleva en otra sesión (ya hay commits: `3e271b0` números del CRM en una consulta, `14ec216`, `fb61232`, `71d96bb` tiempo real). Lo de esa sesión se apunta allí.*
 - [ ] **Mejorar velocidad:** que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho el 13 oct, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y el orden (medir todas las secciones → lo visto al instante → precarga del menú → servidor más rápido → tiempo real → medir otra vez). Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
 - [ ] **Decidir antes de empezar (Cristian):** ¿A, B o C? · ¿vale ver un dato de hace un momento durante menos de 1 s a cambio de que todo salga al instante? · ¿se toca la comprobación de la sesión?
 
@@ -41,12 +41,13 @@
 - [x] **Test real** (17 oct, con el contacto de test de Cristian): un contacto que gana una etiqueta gana su tarjeta 🔗 y un dato cambiado en GHL llega a la app, en menos de 75 s.
 - [x] **«No pisar»** (Cristian, 17 oct, tras ver el riesgo en el test real): GHL solo rellena nombre, apellido y teléfono si en la app están vacíos (`1fc0a73`).
 - [ ] **Ver con datos reales** (cubiertos en los tests): un contacto sin etiqueta → «0. Agendas General → Form» · uno con dos etiquetas al crearse · respuestas que llegan tarde.
-- [ ] El test de Webinar de Cristian quedó en «Form completo» (lo metió la primera versión): moverlo a «Optin» si se quiere.
+- [x] ~~El test de Webinar de Cristian quedó en «Form completo»~~: borrado por Cristian el 17 oct.
+- [ ] **«Fff» tiene 2 citas confirmadas** el 17 oct (17:00 y 20:00 UTC, las dos con Felipe), reservadas con 1 min de diferencia por YouTube: no es de nuestras pruebas; Cristian decidió no borrarlo. Que el equipo vea si reservó dos veces sin querer.
 - [ ] Workflows de GHL: el de la Biblioteca, **apagado** (Cristian, 16 oct). Apagar o borrar los demás pasos que mandan a la app (Cristian; los leads no llegan dos veces: la app los une por contacto y email).
 - [ ] Mejora posible: guardar también la fecha de los cambios (hoy se miran los últimos 30 min; si la lectura parase más, esos cambios no se verían). Necesita otra migración.
 
 **3 · Pendiente de Cristian (de antes)**
-- [ ] ¿Borrar los 24 leads de prueba de Biblioteca y los 2 «Test» de Webinar? (entre los 24 hay 4 que parecen reales: David, Aneudy, Thiago, Juan).
+- [ ] **Leads de prueba** (17 oct): Cristian borró 13 de las 17 seguras (con «TEST» de anoche) y también **Galo Enrique Castrillon**, que era dudoso (nombre real; ¿a propósito? sigue en GHL: volvería con el repaso). **Quedan:** «Prueba» y «(example) jordan Smith» (Biblioteca) y los 2 «Test» (Webinar 1). **Sin decidir:** Juanito y Pablillodddd (Orgánico, 1 cita cada uno, ya no están en GHL: se borran uno a uno desde su ficha) · Jorge Socorro, Albar y Alex (solo su email lleva «test»/«prueba»: parecen reales).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
 - [ ] El número de la pestaña «Closers» cuenta solo citas abiertas (el tablero enseña también las de «No califica»): ¿que cuente todas?
 - [ ] Las vistas Lista/Día/Tabla de Agendas conservan sus botones (Confirmar, Cerrada…): ¿se dejan?
