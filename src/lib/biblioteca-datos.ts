@@ -21,16 +21,23 @@ export type FilaBiblioteca = {
 };
 
 export async function cargarBiblioteca(proyectoId: string) {
-  const t0 = performance.now(); // MEDICIÓN TEMPORAL (17 oct 2026): se quita al acabar
   const filas = await todas<FilaBiblioteca>((a, b) =>
     db().from("leads").select("id, nombre, apellido, email, telefono, creado_en, etiquetas, respuestas, fuente, oferta, caller_id, closer_id, estado_caller").eq("proyecto_id", proyectoId).order("id").range(a, b)
   );
-  const t1 = performance.now();
   const deBiblioteca = filas.filter((l) => esDeBiblioteca(l));
-  const t2 = performance.now();
-  const cambiadas = await recalcularOfertas(deBiblioteca);
-  console.log(`[tiempos] biblioteca · cargar ${filas.length} leads ${Math.round(t1 - t0)} · filtrar ${Math.round(t2 - t1)} (${deBiblioteca.length}) · ofertas ${Math.round(performance.now() - t2)} (escritas ${cambiadas})`);
+  await recalcularOfertas(deBiblioteca);
   return deBiblioteca;
+}
+
+// Velocidad (17 oct 2026): para el resumen de la página (KPIs → Biblioteca), solo las columnas que usa y sin repasar
+// las ofertas (medido: 68 ms por visita para 0 cambios). Las repasa la tabla, que se pide en la misma visita
+// justo después de pintar (cargarBiblioteca), así que la regla de las ofertas se sigue aplicando.
+export type FilaResumenBiblioteca = Pick<FilaBiblioteca, "id" | "telefono" | "etiquetas" | "respuestas" | "fuente" | "oferta">;
+export async function cargarResumenBiblioteca(proyectoId: string) {
+  const filas = await todas<FilaResumenBiblioteca>((a, b) =>
+    db().from("leads").select("id, telefono, etiquetas, respuestas, fuente, oferta").eq("proyecto_id", proyectoId).order("id").range(a, b)
+  );
+  return filas.filter((l) => esDeBiblioteca(l));
 }
 
 // Pone al día la oferta (y el nombre único de las preguntas) de los que no la tengan bien: así los leads que ya

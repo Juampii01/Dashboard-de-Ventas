@@ -1,6 +1,6 @@
 import { Users, Wallet, Flame, BookOpen } from "lucide-react";
 import { db, equipo } from "@/lib/datos";
-import { cargarBiblioteca } from "@/lib/biblioteca-datos";
+import { cargarBiblioteca, cargarResumenBiblioteca } from "@/lib/biblioteca-datos";
 import { paisDeTelefono, resumenBiblioteca } from "@/lib/biblioteca";
 import { respuestasBiblioteca, type Oferta } from "@/lib/oferta";
 import { dinero, pct as formatoPct } from "@/lib/formato";
@@ -55,7 +55,7 @@ export async function filasDeBiblioteca(proyecto: Proyecto): Promise<{ filas: Fi
 
 export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
   const [leads, { data: productos }, { data: pipes }] = await Promise.all([
-    cargarBiblioteca(proyecto.id),
+    cargarResumenBiblioteca(proyecto.id),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
     db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
   ]);
