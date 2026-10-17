@@ -27,19 +27,19 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
 
   // Velocidad (13 oct 2026): todo lo que no depende del pipeline elegido va a la vez (antes, 9 pasos en fila)
   const [gente, { todos, filas }, { data: productos }, citasGhl, { data: etapasProyecto }] = await Promise.all([
-    equipo(proyecto.id, !!perfil.es_prueba),
-    (async () => {
+    t.medir("equipo", equipo(proyecto.id, !!perfil.es_prueba)),
+    t.medir("pipelines", (async () => {
       const { data } = await db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).order("orden");
       const todos = (data ?? []) as Pipeline[];
       return { todos, filas: await filasPermisoPipeline(todos.map((p) => p.id)) };
-    })(),
+    })()),
     // «Vendido» abre la venta: el caller no registra ventas (Cristian, 12 oct)
     perfil.rol === "caller"
       ? Promise.resolve({ data: [] as Producto[] })
-      : db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
-    admin ? columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null) : Promise.resolve(null),
+      : t.medir("productos", db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden")),
+    admin ? t.medir("citasGhl", columnaCitasGhl(proyecto.id).then((c) => c?.id ?? null)) : Promise.resolve(null),
     // Las columnas de todos los pipelines: las del elegido y las de las acciones masivas
-    db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden"),
+    t.medir("etapas", db().from("etapas").select("*, pipelines!inner(proyecto_id)").eq("pipelines.proyecto_id", proyecto.id).order("orden")),
   ]);
   t.paso("equipo+pipelines+productos+citasGhl+etapas");
   const persona = jefe ? gente.find((g) => g.id === sp.persona && (g.rol === "caller" || g.rol === "closer")) ?? null : perfil;
@@ -71,14 +71,14 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
   // Lo del pipeline elegido, también a la vez
   const [leadsCrudos, conteos, extraLeads, extraPorPipeline, closers] = await Promise.all([
     pipeline && pipeline.tipo !== "closers"
-      ? todas<Fila>((a, b) => {
+      ? t.medir("leads", todas<Fila>((a, b) => {
           let q = db().from("leads").select(CAMPOS).eq("proyecto_id", proyecto.id);
           // «Callers»: solo los leads con caller (Cristian, 10 oct 2026)
           q = pipeline.tipo === "callers" ? q.not("caller_id", "is", null) : q.eq("pipeline_id", pipeline.id);
           return deLaPersona(q).order("creado_en", { ascending: false }).order("id").range(a, b);
-        }).then((filas) => filas.map(aTarjeta))
+        }).then((filas) => filas.map(aTarjeta)))
       : Promise.resolve([]),
-    Promise.all(
+    t.medir("conteos", Promise.all(
       pipelines.map(async (p) => {
         if (p.tipo === "closers") {
           let q = db().from("citas").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id).in("estado", [...ABIERTAS]).in("closer_id", deCloser.length ? deCloser : ["00000000-0000-0000-0000-000000000000"]);
@@ -89,14 +89,14 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         const { count } = await deLaPersona(p.tipo === "callers" ? base.not("caller_id", "is", null) : base.eq("pipeline_id", p.id));
         return [p.id, count ?? 0] as const;
       })
-    ),
+    )),
     // Fase 4: en un pipeline de origen salen también sus tarjetas de leads cuyo pipeline principal es otro (con sus datos, en una consulta)
     pipeline?.tipo === "normal"
-      ? todas<{ etapa_id: string | null; leads: Fila | null }>((a, b) => db().from("tarjetas_extra").select(`etapa_id, leads(${CAMPOS})`).eq("pipeline_id", pipeline.id).order("id").range(a, b).overrideTypes<{ etapa_id: string | null; leads: Fila | null }[], { merge: false }>()).then((filas) =>
+      ? t.medir("extra", todas<{ etapa_id: string | null; leads: Fila | null }>((a, b) => db().from("tarjetas_extra").select(`etapa_id, leads(${CAMPOS})`).eq("pipeline_id", pipeline.id).order("id").range(a, b).overrideTypes<{ etapa_id: string | null; leads: Fila | null }[], { merge: false }>()).then((filas) =>
           filas.filter((x) => x.leads && esDeLaPersona(x.leads)).map((x) => ({ ...aTarjeta(x.leads!), etapa_id: x.etapa_id, otroPipeline: true }))
-        )
+        ))
       : Promise.resolve([]),
-    jefe && !persona ? contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id)) : Promise.resolve({} as Record<string, number>),
+    jefe && !persona ? t.medir("contarTarjetas", contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id))) : Promise.resolve({} as Record<string, number>),
     pipeline?.tipo === "closers"
       ? cargarCitasVentas(proyecto.id, deCloser, agendadasPor).then(({ citas, ventas }) =>
           columnasCloser(etapas, citas, ventas, { proyecto, jefe, nombrePersona: (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—" })

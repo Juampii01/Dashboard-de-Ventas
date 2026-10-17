@@ -24,12 +24,15 @@ const PESTANAS = [
 
 export default async function CallerPage({ searchParams }: PageProps<"/caller">) {
   const { perfil, proyecto } = await exigirPagina("cola"); // H5
-  const { guion } = await cargarGuion(proyecto.id, rolDelGuion(perfil.rol)); // Fase 6
   const jefe = esJefe(perfil);
   // H5: a un closer con «Mis leads», sus leads como closer (lo suyo), en forma de cola
   const comoCloser = perfil.rol === "closer";
-  const sp = await searchParams;
-  const gente = await equipo(proyecto.id, !!perfil.es_prueba);
+  // Velocidad (17 oct 2026): guion y equipo a la vez (antes, uno detrás de otro)
+  const [{ guion }, gente, sp] = await Promise.all([
+    cargarGuion(proyecto.id, rolDelGuion(perfil.rol)), // Fase 6
+    equipo(proyecto.id, !!perfil.es_prueba),
+    searchParams,
+  ]);
   const callers = gente.filter((g) => g.rol === "caller");
   const caller = jefe ? callers.find((c) => c.id === sp.caller) ?? callers[0] : perfil;
   const pestana = typeof sp.vista === "string" ? sp.vista : "llamar";
@@ -44,15 +47,16 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
   }
 
   const hoy = rangoDe("hoy", proyecto.zona_horaria);
-  const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring] = await Promise.all([
+  // Velocidad (17 oct 2026): los objetivos van con el resto de consultas (antes, después)
+  const [leads, actsHoy, citasHoy, ventasHoy, productos, scoring, panel] = await Promise.all([
     todas<Lead>((a, b) => db().from("leads").select("*").eq("proyecto_id", proyecto.id).eq(comoCloser ? "closer_id" : "caller_id", caller.id).order("id").range(a, b)),
     db().from("actividades").select("tipo, resultado").eq("perfil_id", caller.id).eq("proyecto_id", proyecto.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("citas").select("id", { count: "exact", head: true }).eq("agendada_por", caller.id).gte("creado_en", hoy.desde!.toISOString()),
     db().from("ventas").select("id", { count: "exact", head: true }).eq("vendedor_id", caller.id).gte("fecha", hoy.desde!.toISOString()),
     db().from("productos").select("*").eq("proyecto_id", proyecto.id).eq("activo", true).order("orden"),
     db().from("scoring_ia").select("pesos").eq("proyecto_id", proyecto.id).maybeSingle(),
+    panelObjetivos(proyecto, caller), // objetivos del caller que se está viendo, su racha y el del equipo (H3-H4)
   ]);
-  const panel = await panelObjetivos(proyecto, caller); // objetivos del caller que se está viendo, su racha y el del equipo (H3-H4)
   const pesos = (scoring.data?.pesos ?? null) as Pesos | null; // priorización con IA (V2-11)
   const acts = actsHoy.data ?? [];
   const llamadas = acts.filter((a) => a.tipo === "llamada").length;

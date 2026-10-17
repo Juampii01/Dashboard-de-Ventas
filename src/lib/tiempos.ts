@@ -8,6 +8,14 @@ export function cronometro(que: string) {
   let antes = t0;
   const pasos: string[] = [];
   return {
+    // Mide una consulta suelta dentro de un Promise.all: «nombre=ms» en el registro
+    medir<T>(nombre: string, p: Promise<T> | PromiseLike<T>): Promise<T> {
+      const t = performance.now();
+      return Promise.resolve(p).then((v) => {
+        pasos.push(`${nombre}=${Math.round(performance.now() - t)}`);
+        return v;
+      });
+    },
     paso(nombre: string) {
       const ahora = performance.now();
       pasos.push(`${nombre} ${Math.round(ahora - antes)}`);
