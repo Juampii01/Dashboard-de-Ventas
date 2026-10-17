@@ -28,7 +28,7 @@ import {
   Gauge,
   ScrollText,
 } from "lucide-react";
-import { cambiarProyecto, cambiarTema } from "@/app/(panel)/acciones-globales";
+import { cambiarProyecto } from "@/app/(panel)/acciones-globales";
 import { cerrarSesion } from "@/app/login/acciones";
 import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
 import type { Perfil } from "@/lib/tipos";
@@ -53,6 +53,16 @@ const ICONOS = {
   onboarding: ListChecks,
   guiones: ScrollText,
 };
+
+// Velocidad (17 oct 2026, Cristian: «al poner modo dark o light va súper lento»): el tema cambia al momento en el
+// navegador, sin llamar al servidor (antes, una acción que regeneraba toda la app y borraba todo lo precargado).
+// La cookie es la misma de antes: el servidor la lee al cargar (src/app/layout.tsx).
+function cambiarTemaAlInstante() {
+  const html = document.documentElement;
+  const oscuro = !html.classList.contains("dark");
+  html.classList.toggle("dark", oscuro);
+  document.cookie = `eternity_tema=${oscuro ? "oscuro" : "claro"}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax${location.protocol === "https:" ? "; secure" : ""}`;
+}
 
 export type ItemMenu = { href: string; texto: string; icono: keyof typeof ICONOS; exacto?: boolean; insignia?: number };
 
@@ -174,7 +184,7 @@ export function BarraLateral({
             </div>
           </Link>
           <button
-            onClick={() => iniciar(() => cambiarTema())}
+            onClick={cambiarTemaAlInstante}
             className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-texto"
             title="Cambiar tema claro / oscuro"
             aria-label="Cambiar tema"

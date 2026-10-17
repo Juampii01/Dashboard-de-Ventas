@@ -14,13 +14,6 @@ export async function refrescarTodo() {
   revalidatePath("/", "layout");
 }
 
-export async function cambiarTema() {
-  const jar = await cookies();
-  const actual = jar.get("eternity_tema")?.value === "claro" ? "claro" : "oscuro";
-  jar.set("eternity_tema", actual === "claro" ? "oscuro" : "claro", { path: "/", maxAge: UN_ANO, sameSite: "lax" });
-  revalidatePath("/", "layout");
-}
-
 export async function cambiarProyecto(proyectoId: string) {
   return seguro(async () => {
     const { proyectos } = await getSesion();
