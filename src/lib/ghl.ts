@@ -138,6 +138,27 @@ export async function contactosNuevosGhl(o: { token: string; locationId: string;
   const j = await res.json();
   return Array.isArray(j?.contacts) ? j.contacts.filter((c: { id?: unknown }) => typeof c?.id === "string") : [];
 }
+// Espejo de pipelines (17 oct). Comprobado con la subcuenta real: /opportunities/search acepta pipeline_id y pagina
+// con startAfter + startAfterId (meta).
+export type OportunidadGhl2 = { id: string; contactId?: string; pipelineId?: string; pipelineStageId?: string; createdAt?: string };
+export async function pipelinesGhl(o: { token: string; locationId: string; fetchImpl?: Fetch }): Promise<PipelineGhl[]> {
+  const j = await llamar(o.fetchImpl ?? fetch, o.token, `/opportunities/pipelines?locationId=${encodeURIComponent(o.locationId)}`, "2021-07-28");
+  return Array.isArray(j?.pipelines) ? j.pipelines : [];
+}
+export async function oportunidadesDePipelineGhl(o: { token: string; locationId: string; pipelineId: string; maxPaginas?: number; fetchImpl?: Fetch }): Promise<OportunidadGhl2[]> {
+  const todas: OportunidadGhl2[] = [];
+  let despues = "";
+  for (let i = 0; i < (o.maxPaginas ?? 20); i++) {
+    const q = `location_id=${encodeURIComponent(o.locationId)}&pipeline_id=${encodeURIComponent(o.pipelineId)}&limit=100${despues}`;
+    const j = await llamar(o.fetchImpl ?? fetch, o.token, `/opportunities/search?${q}`, "2021-07-28");
+    const ops: OportunidadGhl2[] = Array.isArray(j?.opportunities) ? j.opportunities : [];
+    todas.push(...ops.filter((x) => x?.id));
+    const m = j?.meta;
+    if (!ops.length || !m?.startAfterId || m.startAfter == null) break;
+    despues = `&startAfter=${encodeURIComponent(String(m.startAfter))}&startAfterId=${encodeURIComponent(String(m.startAfterId))}`;
+  }
+  return todas;
+}
 export async function camposGhl(o: { token: string; locationId: string; fetchImpl?: Fetch }): Promise<{ id: string; name: string }[]> {
   const j = await llamar(o.fetchImpl ?? fetch, o.token, `/locations/${encodeURIComponent(o.locationId)}/customFields`, "2021-07-28");
   return Array.isArray(j?.customFields) ? j.customFields.filter((c: { id?: unknown; name?: unknown }) => typeof c?.id === "string" && typeof c?.name === "string") : [];

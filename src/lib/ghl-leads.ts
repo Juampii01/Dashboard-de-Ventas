@@ -15,12 +15,13 @@ import { guardarLeads, unirRespuestas, type LeadEntrada } from "@/lib/leads";
 import { normalizarRespuestas } from "@/lib/oferta";
 import { camposGhl, contactoGhl, contactosNuevosGhl, type ContactoNuevoGhl } from "@/lib/ghl";
 import { leadDeContactoGhl } from "@/lib/ghl-lead";
+import { espejoGhl, type ResultadoEspejo } from "@/lib/ghl-espejo";
 import { PIPELINE_GENERAL } from "@/lib/canal";
 import { mismoNombre } from "@/lib/formato";
 import type { Proyecto, Respuesta } from "@/lib/tipos";
 
 type Fetch = typeof fetch;
-export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; cambiados: number; puestosAlDia: number; avisos: string[]; errores: string[] };
+export type ResultadoLeads = { nuevos: number; actualizados: number; completados: number; cambiados: number; puestosAlDia: number; espejo?: Omit<ResultadoEspejo, "avisos" | "errores">; avisos: string[]; errores: string[] };
 
 // Sacado de las 1.622 etiquetas de GHL (17 oct): DFY no tiene etiqueta; el resto, a General
 export const PIPELINE_ETIQUETA: { etiqueta: string; pipeline: string }[] = [
@@ -83,6 +84,17 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
   const { data: pipesFilas } = await db().from("pipelines").select("id, nombre, etapas(id, orden)").eq("proyecto_id", proyecto.id).eq("tipo", "normal");
   const pipesApp = (pipesFilas ?? []) as PipeApp[];
 
+  // 1b · Espejo de GHL (17 oct): en «2. Webinar 1», mismas columnas y misma columna que su oportunidad. Va antes de
+  // los contactos: así uno que solo tiene la oportunidad (p. ej. etiqueta «regalo 1») no acaba en General.
+  try {
+    const e = await espejoGhl(proyecto, token, campos, { fetchImpl });
+    r.espejo = { nuevos: e.nuevos, anadidos: e.anadidos, movidos: e.movidos, columnas: e.columnas };
+    r.avisos.push(...e.avisos);
+    r.errores.push(...e.errores);
+  } catch (e) {
+    r.errores.push(`Espejo: ${e instanceof Error ? e.message : e}`);
+  }
+
   // 2 · Cada contacto a los pipelines de sus etiquetas. En orden: si algo falla, se para ahí y la siguiente lectura
   // sigue desde ese contacto.
   let nuevoHasta = hasta;
@@ -91,7 +103,11 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
     if (!tieneEtiquetaDePipeline(c.tags) && ahora - fecha(c) < ESPERA_SIN_ETIQUETA) break;
     const { lead } = leadDeContactoGhl(c.id, c, campos, { fuente: c.source ?? null, creadoEn: c.dateAdded ?? null });
     try {
-      const g = await meterEnPipelines(proyecto, lead, pipelinesDeEtiquetas(c.tags), pipesApp, r);
+      // Sin etiqueta de pipeline y ya en la app (p. ej. por el espejo o por su cita): no va a General, solo sus datos
+      const antes = tieneEtiquetaDePipeline(c.tags) ? null : await yaExiste(proyecto.id, lead);
+      const g = antes
+        ? await guardarLeads(proyecto, [sinPisar(lead, antes)], { pipelineId: null, origen: "ghl", perfilId: null, repartir: false }).then((x) => ({ nuevos: 0, actualizados: x.actualizados }))
+        : await meterEnPipelines(proyecto, lead, pipelinesDeEtiquetas(c.tags), pipesApp, r);
       r.nuevos += g.nuevos;
       r.actualizados += g.actualizados;
     } catch (e) {

@@ -26,6 +26,7 @@ const falsoFetch = (async (url: string, init?: { body?: string }) => {
     return Response.json({ contacts: lista.slice(0, b.pageLimit), total: lista.length });
   }
   if (/^\/locations\/[^/]+\/customFields$/.test(u.pathname)) return Response.json({ customFields: CAMPOS });
+  if (u.pathname === "/opportunities/pipelines") return Response.json({ pipelines: [] }); // el espejo (17 oct) se prueba aparte
   const m = u.pathname.match(/^\/contacts\/(.+)$/);
   if (m) {
     if (m[1] === falla) return new Response("{}", { status: 500 });
