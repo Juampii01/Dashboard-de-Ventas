@@ -8,9 +8,8 @@ import { useEffect, useState } from "react";
 // Velocidad (17 oct 2026, Cristian: «todos deberían tener esa pantalla de carga; cargará en segundo plano la app»).
 // Al abrir la app en una pestaña (o tras iniciar sesión), una capa con la marca tapa la app mientras se precargan
 // TODAS las secciones del menú (PrecargaMenu, abajo). La barra avanza según las que ya están; se quita cuando están
-// todas, como mínimo a los 0,8 s y como máximo a los 3 s. Una vez por pestaña (sessionStorage); el script de
-// src/app/layout.tsx la esconde antes de pintar si esta pestaña ya la vio. Cerrar sesión o ir al login la reinicia.
-export const CLAVE_ENTRADA = "eternity_entrada";
+// todas, como mínimo a los 0,8 s y como máximo a los 3 s. Sale en cada carga completa (pestaña nueva o recarga:
+// Cristian, 17 oct), porque al recargar se pierde todo lo precargado; al moverse dentro de la app no vuelve a salir.
 const MINIMO_MS = 800;
 const MAXIMO_MS = 3000;
 
@@ -22,25 +21,14 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    let yaVista = false;
-    try {
-      yaVista = !!sessionStorage.getItem(CLAVE_ENTRADA);
-      sessionStorage.setItem(CLAVE_ENTRADA, "1");
-    } catch {
-      yaVista = false; // sin sessionStorage (modo privado estricto): se enseña cada vez, no rompe nada
-    }
     const t0 = performance.now();
     const faltan = new Set(pendientes);
     let acabada = false;
-    const acabar = (inmediato = false) => {
+    const acabar = () => {
       if (acabada) return;
       acabada = true;
-      setTimeout(() => setVisible(false), inmediato ? 0 : Math.max(0, MINIMO_MS - (performance.now() - t0)));
+      setTimeout(() => setVisible(false), Math.max(0, MINIMO_MS - (performance.now() - t0)));
     };
-    if (yaVista) {
-      acabar(true);
-      return;
-    }
     // Cada precarga terminada es una petición «?_rsc=» a la ruta de una sección
     const mirar = (entradas: PerformanceEntryList) => {
       for (const e of entradas) {

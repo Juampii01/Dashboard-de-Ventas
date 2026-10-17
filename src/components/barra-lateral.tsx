@@ -33,7 +33,6 @@ import { cerrarSesion } from "@/app/login/acciones";
 import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
 import type { Perfil } from "@/lib/tipos";
 import { Desplegable } from "@/components/eleccion";
-import { CLAVE_ENTRADA } from "@/components/bienvenida";
 
 const ICONOS = {
   funnel: BarChart3,
@@ -193,17 +192,7 @@ export function BarraLateral({
             <Sun className="hidden h-4 w-4 dark:block" />
             <Moon className="h-4 w-4 dark:hidden" />
           </button>
-          {/* Al cerrar sesión, la próxima entrada vuelve a tener su bienvenida (17 oct 2026) */}
-          <form
-            action={cerrarSesion}
-            onSubmit={() => {
-              try {
-                sessionStorage.removeItem(CLAVE_ENTRADA);
-              } catch {
-                // sin sessionStorage no hay nada que reiniciar
-              }
-            }}
-          >
+          <form action={cerrarSesion}>
             <button className="rounded-md p-1.5 text-texto-3 hover:bg-panel-2 hover:text-mal" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut className="h-4 w-4" />
             </button>

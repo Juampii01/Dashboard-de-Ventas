@@ -215,9 +215,7 @@ body,
   animation: caer-celebracion 2.6s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
 }
 
-/* Pantalla de entrada (Fase 1, Cristian 12 oct 2026; desde el 17 oct, una capa al abrir la app: bienvenida.tsx).
-   .sin-entrada la pone un script en <head> si esta pestaña ya la vio: así no se ve ni un instante */
-.sin-entrada #entrada { display: none; }
+/* Pantalla de entrada (Fase 1, Cristian 12 oct 2026; desde el 17 oct, una capa al abrir la app: bienvenida.tsx) */
 @keyframes entrada-latido {
   0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primario) 35%, transparent); }
   50% { transform: scale(1.06); box-shadow: 0 0 0 18px color-mix(in srgb, var(--primario) 0%, transparent); }

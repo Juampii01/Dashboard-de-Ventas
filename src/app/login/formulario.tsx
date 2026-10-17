@@ -1,20 +1,11 @@
 "use client";
 
 import { sinVaciar } from "@/components/sin-vaciar";
-import { useActionState, useEffect, useState } from "react";
-import { CLAVE_ENTRADA } from "@/components/bienvenida";
+import { useActionState, useState } from "react";
 import { iniciarSesion, pedirEnlace } from "./acciones";
 
 export function FormularioLogin() {
   const [estado, accion, enviando] = useActionState(iniciarSesion, { error: "", email: "" });
-  // Velocidad (17 oct 2026): quien llega al login (también si caducó su sesión) vuelve a tener su bienvenida al entrar
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem(CLAVE_ENTRADA);
-    } catch {
-      // sin sessionStorage no hay nada que reiniciar
-    }
-  }, []);
   return (
     <form onSubmit={sinVaciar(accion)} className="space-y-4">
       <div>
