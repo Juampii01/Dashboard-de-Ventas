@@ -79,12 +79,12 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
           <>
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex rounded-lg border border-borde bg-panel p-0.5">
-                {[...ESTADOS_CLIENTE.map((x) => [x.v, `${x.t}s`]), ["todos", "Todos"]].map(([v, t]) => <Link key={v} href={url({ estado: v === "activo" ? null : v })} className={`rounded-md px-3 py-1.5 text-sm ${estado === v ? "bg-primario text-white" : "text-texto-2"}`}>{t} <span className="text-xs opacity-70">{v === "todos" ? d.filas.length : d.filas.filter((f) => f.ficha.estado === v).length}</span></Link>)}
+                {[...ESTADOS_CLIENTE.map((x) => [x.v, `${x.t}s`]), ["todos", "Todos"]].map(([v, t]) => <Link prefetch={true} key={v} href={url({ estado: v === "activo" ? null : v })} className={`rounded-md px-3 py-1.5 text-sm ${estado === v ? "bg-primario text-white" : "text-texto-2"}`}>{t} <span className="text-xs opacity-70">{v === "todos" ? d.filas.length : d.filas.filter((f) => f.ficha.estado === v).length}</span></Link>)}
               </div>
               <BuscadorUrl placeholder="Buscar por nombre, email o teléfono…" />
               <div className="ml-auto flex rounded-lg border border-borde bg-panel p-0.5">
-                <Link href={url({ vista: null })} className={`rounded-md px-3 py-1.5 text-sm ${s("vista") !== "cards" ? "bg-primario text-white" : "text-texto-2"}`}>Tabla</Link>
-                <Link href={url({ vista: "cards" })} className={`rounded-md px-3 py-1.5 text-sm ${s("vista") === "cards" ? "bg-primario text-white" : "text-texto-2"}`}>Tarjetas</Link>
+                <Link prefetch={true} href={url({ vista: null })} className={`rounded-md px-3 py-1.5 text-sm ${s("vista") !== "cards" ? "bg-primario text-white" : "text-texto-2"}`}>Tabla</Link>
+                <Link prefetch={true} href={url({ vista: "cards" })} className={`rounded-md px-3 py-1.5 text-sm ${s("vista") === "cards" ? "bg-primario text-white" : "text-texto-2"}`}>Tarjetas</Link>
               </div>
             </div>
             {lista.length === 0 ? (

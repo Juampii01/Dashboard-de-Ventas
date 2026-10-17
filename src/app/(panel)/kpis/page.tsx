@@ -272,7 +272,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <form className="mb-4 flex flex-wrap items-center gap-2 text-sm" action="/kpis">
             <input type="hidden" name="vista" value="objetivos" />
             {saltos.map((x) => (
-              <Link key={x.t} href={x.f === hoy ? "/kpis?vista=objetivos" : `/kpis?vista=objetivos&ver=${x.f}`} className={`rounded-full px-3 py-1 ${ver === x.f ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>{x.t}</Link>
+              <Link prefetch={true} key={x.t} href={x.f === hoy ? "/kpis?vista=objetivos" : `/kpis?vista=objetivos&ver=${x.f}`} className={`rounded-full px-3 py-1 ${ver === x.f ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>{x.t}</Link>
             ))}
             <label className="flex items-center gap-1.5 text-texto-2">o el día <input type="date" name="ver" max={hoy} defaultValue={ver} className="campo w-auto py-1" aria-label="Ver el avance de este día" /></label>
             <button className="btn-secundario px-2.5 py-1 text-xs">Ver</button>
