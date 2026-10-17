@@ -6,17 +6,21 @@ import { useEffect, useState } from "react";
 
 // Velocidad (17 oct 2026, Cristian: «todos deberían tener esa pantalla de carga; cargará en segundo plano la app»).
 // Al abrir la app en una pestaña (o tras iniciar sesión), una capa con la marca tapa la app mientras se precargan
-// TODAS las secciones del menú (PrecargaMenu, abajo). La barra avanza según las que ya están; se quita cuando están
-// todas, como mínimo a los 0,8 s y como máximo a los 3 s. Sale en cada carga completa (pestaña nueva o recarga:
+// TODAS las secciones del menú (copia invisible en barra-lateral.tsx). La barra avanza con cada petición que llega y
+// se llena entera antes de entrar; se quita cuando están todas, como mínimo a los 0,8 s y como máximo a los 3 s
+// (más ~0,3 s para que se vea la barra llena: Cristian, 17 oct, «la barrita debería cargar entera antes de iniciar»). Sale en cada carga completa (pestaña nueva o recarga:
 // Cristian, 17 oct), porque al recargar se pierde todo lo precargado; al moverse dentro de la app no vuelve a salir.
 const MINIMO_MS = 800;
 const MAXIMO_MS = 3000;
+const LLENAR_MS = 300; // lo que tarda la barra en llenarse (su transición) antes de quitar la capa
 
 export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] }) {
   const ruta = usePathname();
   // La sección en la que se entra ya está cargada: no hace falta esperarla
   const [pendientes] = useState(() => [...new Set(rutas)].filter((r) => r !== ruta));
-  const [hechas, setHechas] = useState(0);
+  // Peticiones llegadas: cada sección son 2 (su esquema y sus datos)
+  const [llegadas, setLlegadas] = useState(0);
+  const [llena, setLlena] = useState(false);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -26,7 +30,11 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
     const acabar = () => {
       if (acabada) return;
       acabada = true;
-      setTimeout(() => setVisible(false), Math.max(0, MINIMO_MS - (performance.now() - t0)));
+      // Primero la barra llena (y se ve), después entra a la app
+      setTimeout(() => {
+        setLlena(true);
+        setTimeout(() => setVisible(false), LLENAR_MS);
+      }, Math.max(0, MINIMO_MS - LLENAR_MS - (performance.now() - t0)));
     };
     // Cada sección precarga 2 peticiones «?_rsc=»: primero su esquema y después sus datos (medido el 17 oct; contar
     // solo la primera quitaba la bienvenida antes de tener los datos). Está lista cuando han llegado las dos.
@@ -38,10 +46,8 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
         if (!faltan.has(r)) continue;
         const n = (vistas.get(r) ?? 0) + 1;
         vistas.set(r, n);
-        if (n >= 2) {
-          faltan.delete(r);
-          setHechas(pendientes.length - faltan.size);
-        }
+        setLlegadas((x) => x + 1);
+        if (n >= 2) faltan.delete(r);
       }
       if (faltan.size === 0) acabar();
     };
@@ -56,7 +62,7 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
   }, [pendientes]);
 
   if (!visible) return null;
-  const avance = pendientes.length ? Math.round((hechas / pendientes.length) * 100) : 100;
+  const avance = llena || !pendientes.length ? 100 : Math.min(95, Math.round((llegadas / (pendientes.length * 2)) * 100));
   return (
     <div id="entrada" className="fondo-app fixed inset-0 z-[100] flex items-center justify-center p-4" role="status" aria-live="polite">
       <div className="tarjeta w-full max-w-sm p-8 text-center">
