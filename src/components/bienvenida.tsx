@@ -24,6 +24,11 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // TEMPORAL (17 oct 2026), solo para medir con y sin capa en las mismas condiciones; se quita después
+    if (location.search.includes("sinbienvenida=1")) {
+      const id = setTimeout(() => setVisible(false), 0);
+      return () => clearTimeout(id);
+    }
     const t0 = performance.now();
     const faltan = new Set(pendientes);
     let acabada = false;
