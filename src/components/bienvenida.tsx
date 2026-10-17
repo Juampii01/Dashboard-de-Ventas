@@ -7,11 +7,11 @@ import { useEffect, useState } from "react";
 // Velocidad (17 oct 2026, Cristian: «todos deberían tener esa pantalla de carga; cargará en segundo plano la app»).
 // Al abrir la app en una pestaña (o tras iniciar sesión), una capa con la marca tapa la app mientras se precargan
 // TODAS las secciones del menú (copia invisible en barra-lateral.tsx). La barra avanza con cada petición que llega y
-// se llena entera antes de entrar; se quita cuando están todas, como mínimo a los 0,8 s y como máximo a los 3 s
+// se llena entera antes de entrar; se quita cuando están todas, como mínimo a los 0,8 s y como máximo a los 5 s
 // (más ~0,3 s para que se vea la barra llena: Cristian, 17 oct, «la barrita debería cargar entera antes de iniciar»). Sale en cada carga completa (pestaña nueva o recarga:
 // Cristian, 17 oct), porque al recargar se pierde todo lo precargado; al moverse dentro de la app no vuelve a salir.
 const MINIMO_MS = 800;
-const MAXIMO_MS = 3000;
+const MAXIMO_MS = 5000; // 17 oct (Cristian): antes 3 s; la precarga completa tarda ~3,7–4 s (medido)
 const LLENAR_MS = 300; // lo que tarda la barra en llenarse (su transición) antes de quitar la capa
 
 export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] }) {
