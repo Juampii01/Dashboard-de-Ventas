@@ -105,6 +105,11 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 | Programas | 712 | 451 | | Perfil | 432 | 231 |
 | Recursos | 406 | 363 | | Agendas | 399 | 327 |
 
+**Segunda vuelta (17 oct, Cristian: «me sigue cargando lento al cambiar entre secciones» y «revisa también las subsecciones»):**
+- `631bbc4`: todas las secciones del menú se precargan al abrir la app y se guardan **5 min** (antes 30 s; decisión de Cristian). Los avisos en vivo llaman a `refrescarTodo` (`revalidatePath`), que borra todo lo guardado: `router.refresh` solo borraba la página actual. Medido: 26 peticiones en los primeros 10 s y 0 en los 50 s siguientes (no vuelve lo del 12 oct). Cambio de sección con Chrome visible: 0,6–1,6 s → ~0,25–0,55 s (con 200 ms de espera del script dentro), sin grises. **Finanzas, Clientes y Admin no se precargan** (abajo en el menú, fuera de la vista; sin verificar la causa).
+- `5ba3f9b`: precarga completa de las pestañas de KPIs, Finanzas, Admin, Agendas, Clientes, Callers, Guiones y Recursos (Recursos usaba `<a>` y recargaba la página entera). Los filtros (días, estados, tabla/tarjetas) no se precargan. Medido con Chrome visible: 11 de 12 pestañas en 33–140 ms sin pedir nada al servidor (antes, 265–778 ms solo de servidor); KPIs → Por persona, 205 ms.
+- Para medir con Playwright Bridge: tras cada `goto` la pestaña queda oculta; hay que llamar a `page.bringToFront()` antes de cada clic.
+
 **Mejoras para después:** bajar la espera del tiempo real de 1,5 a 0,5 s · la tabla de la Biblioteca (KPIs) se pide en cada visita (~0,9 s) · un clic de golpe sin pasar el ratón sigue esperando al servidor (~0,3–0,6 s) · nivel B (guardado en disco) solo si al recargar se sigue notando lento.
 
 **Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
