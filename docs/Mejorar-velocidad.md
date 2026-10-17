@@ -123,6 +123,13 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 - Alguien nuevo descarga ~486 KB (418 de código, 12 de estilos, 51 de fuentes, 5 de imágenes; medido en el CRM); después se guardan 1 año. Normal para la app; no se toca.
 - Arranque en frío: sin forma de medirlo en los registros de Vercel. Hipótesis (sin verificar): la lectura de GHL cada 30 s (desde el 16 oct) ya mantiene despierto el servidor; el arranque de ~1,6–2 s se midió el 13 oct, antes de eso. Comprobarlo la primera vez del día.
 
+**Quinta vuelta: bienvenida para todos (17 oct, Cristian: «todos deberían tener esa pantalla de carga»):**
+- `5ad2f1c` (estado final): capa de bienvenida del panel (`src/components/bienvenida.tsx`) en **cada carga completa** (pestaña nueva o recarga). Tapa la app mientras se precargan todas las secciones; cada sección cuenta como lista cuando llegan sus **2 peticiones** (esquema `/_tree` y datos). Mínimo 0,8 s, máximo **3 s** (decisión de Cristian, aunque la precarga completa tarda ~3,7 s). El login y el enlace de acceso van directos a la sección.
+- Medido: 16 de 16 secciones precargadas; primer clic justo al quitarse, 137–369 ms.
+- **Lección (medida, causa sin entender):** con la copia invisible de la precarga **fuera del menú** (en el layout del panel), Next solo pedía los esquemas y casi nunca los datos (1 de 17; primer clic 0,8–3 s). Dentro del menú (`barra-lateral.tsx`) se completa. Hubo un revert intermedio (`0609adf`) para aislarlo.
+- `1d57ba3`: **arreglo de seguridad de sesión.** El tiempo real usaba `createBrowserClient`, que renovaba la sesión a la vez que el servidor (errores `refresh_token` 400, riesgo de sacar a la persona). Ahora usa `accessToken` con la sesión que da el servidor (`tokenTiempoReal`), guardada hasta 5 min antes de caducar. Medido: 0 peticiones de sesión del navegador y el canal entra bien.
+- **Pendiente:** en el **móvil**, el menú está escondido a un lado y la precarga invisible va dentro del menú: probablemente no precarga (sin probar en un móvil).
+
 **Mejoras para después:** bajar la espera del tiempo real de 1,5 a 0,5 s · la tabla de la Biblioteca (KPIs) se pide en cada visita (~0,9 s) · un clic de golpe sin pasar el ratón sigue esperando al servidor (~0,3–0,6 s) · nivel B (guardado en disco) solo si al recargar se sigue notando lento.
 
 **Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
