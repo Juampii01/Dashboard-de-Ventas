@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 17 oct 2026, 12:15 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 12:30 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -37,18 +37,16 @@
 - [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
 
 **3 · Pendiente de Cristian (de antes)**
-- [ ] **Leads de prueba** (17 oct): Cristian borró 13 de las 17 seguras (con «TEST» de anoche) y también **Galo Enrique Castrillon**, que era dudoso (nombre real; ¿a propósito? sigue en GHL: volvería con el repaso). **Quedan:** «Prueba» y «(example) jordan Smith» (Biblioteca) y los 2 «Test» (Webinar 1). **Sin decidir:** Juanito y Pablillodddd (Orgánico, 1 cita cada uno, ya no están en GHL: se borran uno a uno desde su ficha) · Jorge Socorro, Albar y Alex (solo su email lleva «test»/«prueba»: parecen reales).
+- [ ] **Leads de prueba** (17 oct): Cristian borró 13 de las 17 seguras (con «TEST» de anoche) y también **Galo Enrique Castrillon**, que era dudoso (nombre real; ¿a propósito? sigue en GHL). **Quedan:** «Prueba» y «(example) jordan Smith» (Biblioteca) y los 2 «Test» (Webinar 1). **Sin decidir:** Juanito y Pablillodddd (Orgánico, 1 cita cada uno, ya no están en GHL: se borran uno a uno desde su ficha) · Jorge Socorro, Albar y Alex (solo su email lleva «test»/«prueba»: parecen reales).
 - [ ] ¿«No le interesa» del caller mueve a «No cualifican»? (hoy no mueve en los pipelines de origen).
 - [ ] El número de la pestaña «Closers» cuenta solo citas abiertas (el tablero enseña también las de «No califica»): ¿que cuente todas?
 - [ ] Las vistas Lista/Día/Tabla de Agendas conservan sus botones (Confirmar, Cerrada…): ¿se dejan?
 - [ ] «Repartir leads» solo con icono también en la tabla de la Biblioteca (KPIs)?
 - [ ] Los 3 documentos borrados en el Mac sin guardar en git (`Arreglar-dashboard.md`, `plan-historial-10oct.md`, `plan-historial-11oct.md`): ¿a propósito? Si sí, se quitan sus menciones; si no, se recuperan.
-- [ ] **Subir el CSV de GHL** (KPIs → Biblioteca → «Subir CSV de leads»): ¿ya no se queda en «Importando…»? (sin probar con tu archivo de 1.282 filas).
-- [ ] **Subir el CSV de Webinar 1** (prueba de «varios pipelines»): ¿sigue haciendo falta?
 - [ ] **Visto bueno en pantalla** de lo nuevo: CRM (tarjetas, arrastrar columnas y pipelines, doble clic para renombrar, barra masiva, «+», filtro por canal), KPIs (por persona, objetivos y canal), Agendas (canal), organigrama, onboarding de closers, «Guion» y Guiones, links de pago.
 - [ ] **Contestar:** a) **zona horaria** («que se pueda poner cualquier hora y punto»): ¿cualquier zona del mundo?, ¿quitar la conversión?, ¿otra cosa? b) **coach IA en directo**: ¿desde dónde llaman los callers? c) **DFY**: ¿lleva links de pago? d) **Thiago**: ¿lo diste de alta tú como director? e) **móvil**: ¿un «Mover a…» solo para el móvil? f) **Reserva**: ¿en su apartado o como un link más? g) «Llamar ahora →» de la cola: ¿cambiar a «Ver →»?
 - [ ] **Guiones reales** de caller y closer y una llamada de prueba de cada uno.
-- Avisos: los tests de integración de GitHub fallaron 2 veces el 13 oct por la base de pruebas, sin relación con el cambio (al repetir, en verde). El 16 oct falló 2 veces «Arreglo 26: borrar una venta» (`tests/integracion/arreglos-auditoria.test.ts`), sin tocar ese código; al repetir, en verde: test inestable, mirarlo. La ventana de «Nuevo lead» quedó en el código sin uso.
+- Aviso: la ventana de «Nuevo lead» quedó en el código sin uso.
 
 **4 · Claude, después de tus respuestas**
 - [ ] **«Llamadas de GHL» está OCULTO** (Cristian, 13 oct). Para volver a enseñarlo: `LLAMADAS_GHL_VISIBLE = true` en `src/app/(panel)/layout.tsx`.
