@@ -29,6 +29,12 @@ export const getSesion = cache(async (): Promise<Sesion> => {
   return s;
 });
 
+// MEDICIÓN TEMPORAL (17 oct 2026): cronómetro para el layout del panel (fuera del componente por la regla de pureza)
+export function cronometroTemporal() {
+  const t0 = performance.now();
+  return () => Math.round(performance.now() - t0);
+}
+
 // El perfil y los proyectos de una persona (también lo usa el login, para ir directo a su sección; 17 oct 2026)
 export async function sesionDe(userId: string): Promise<Sesion> {
   const db = createAdminClient();

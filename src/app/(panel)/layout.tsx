@@ -8,15 +8,16 @@ import { Bienvenida } from "@/components/bienvenida";
 import { db } from "@/lib/datos";
 import { proyectoParaMenu } from "@/lib/formato";
 import { seccionesPermitidas, SECCIONES, type Seccion } from "@/lib/permisos";
+import { cronometroTemporal } from "@/lib/sesion";
 
 // Cristian (13 oct 2026): «Llamadas de GHL» oculto en el menú para todos; se retomará más adelante (ver plan).
 // La página sigue existiendo (/caller/grabadas); para volver a enseñarla, poner true.
 const LLAMADAS_GHL_VISIBLE = false;
 
 export default async function PanelLayout({ children }: LayoutProps<"/">) {
-  const t0 = performance.now(); // MEDICIÓN TEMPORAL (17 oct 2026): se quita al acabar
+  const reloj = cronometroTemporal(); // MEDICIÓN TEMPORAL (17 oct 2026): se quita al acabar
   const { perfil, proyectos, proyecto } = await getSesion();
-  const t1 = performance.now();
+  const tSesion = reloj();
 
   // Onboarding obligatorio la primera vez (la página /onboarding está fuera de este layout)
   if (!perfil.onboarding_completo) redirect("/onboarding");
@@ -36,7 +37,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
     vencidos = count ?? 0;
   }
   const secciones = await seccionesPermitidas(perfil, proyecto.id);
-  console.log(`[tiempos] panel · sesion ${Math.round(t1 - t0)} · aviso+permisos ${Math.round(performance.now() - t1)} · rol ${perfil.rol}`);
+  console.log(`[tiempos] panel · sesion ${tSesion} · aviso+permisos ${reloj() - tSesion} · rol ${perfil.rol}`);
   const tiene = (x: Seccion) => secciones.has(x);
   const empresa: ItemMenu[] = SECCIONES.filter((s) => secciones.has(s.v)).map((s) => ({ href: `/${s.v}`, texto: s.t, icono: s.v }));
   const menu: { grupo: string; items: ItemMenu[] }[] = [
