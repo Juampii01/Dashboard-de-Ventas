@@ -131,8 +131,8 @@ export function BarraLateral({
       </div>
 
       {/* Velocidad (17 oct 2026): Next solo precarga los enlaces que se ven; los últimos del menú (Finanzas, Clientes,
-          Administración) quedaban por debajo (medido). Esta copia invisible, siempre «a la vista», los precarga también */}
-      {/* Cada enlace en el mismo píxel (17 oct, medido: en fila quedaban fuera del recorte y no se precargaban) */}
+          Administración) quedaban por debajo (medido). Esta copia invisible, cada enlace en el mismo píxel, los precarga.
+          Va aquí, dentro del menú: medido el 17 oct, fuera del menú (en el panel) la precarga dejaba de completarse */}
       <div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0">
         {menu.flatMap((g) => g.items).map((it) => (
           <Link key={it.href} href={it.href} prefetch={true} tabIndex={-1} className="absolute inset-0 block overflow-hidden">
