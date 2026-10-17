@@ -18,7 +18,7 @@
 ## 2. Lo que falta (en este orden)
 
 **2 · Canales de las citas: lo que queda** (detalle en `plan-GHL.md`)
-- [ ] **Sábado 18 oct:** mirar Vercel → Usage (leer GHL cada 30 s; si va a pasar del 50 % de la memoria del mes, bajar a 60 s). Si se pasa del límite gratis, Vercel apaga esa parte hasta 30 días.
+- [ ] **Vercel: la CPU se pasará del límite gratis** (mirado el 17 oct, 21:20, en Vercel → Usage y Observability). Últimas ~22 h (16 oct 21:00 – 17 oct 19:17 UTC): 25K invocaciones · 3,6 GB-h de memoria · **23 min de CPU** · 143 MB de Fast Origin Transfer. A ese ritmo, en 30 días: invocaciones ~81 % de 1M · memoria ~32 % de 360 GB-h · Fast Origin ~46 % de 10 GB · **CPU ~12 h de 4 h (≈300 %)**. En las últimas 12 h, la lectura de GHL gastó **3 min de CPU** (1.500 llamadas: ~3 h al mes, ~75 % del límite ella sola); el resto, el uso de la app (CRM 56 s, KPIs 50 s, Llamadas 40 s…). Ojo: hoy hubo mucho uso de pruebas (velocidad). Opciones: Vercel Pro (16 h de CPU; además Hobby es para uso no comercial) · leer GHL cada 60 s y el espejo cada 5 min · llevar la lectura de GHL a Supabase. **Decide Cristian.** Hasta 30 días acumulados: 140K invocaciones, 14,7 GB-h, 1 h 24 min de CPU (35 % de 4 h).
 - [ ] **Una reserva real** con el link de callers (prueba aplazada por Cristian el 16 oct): que la cita caiga en su pipeline y en General con su etiqueta, y que GHL cree 2 oportunidades (General + canal).
 - [ ] Equipo: cambiar en anuncios, bios y WhatsApp los links al formato `/agenda?utm_source=…` y buscar la errata `utm_source=bibliotec`.
 - [ ] Despublicar en GHL los 4 workflows viejos «1-4. AP - Cita …» (la app ya ignora sus avisos; no corre prisa). *Comprobado en GHL el 16 oct: siguen «Published».*
