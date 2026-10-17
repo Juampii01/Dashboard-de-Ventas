@@ -274,9 +274,10 @@ export async function columnaCitasGhl(proyectoId: string, pipelineNombre?: strin
     const { data } = await db().from("etapas").select("id, pipeline_id").eq("id", proy.etapa_citas_ghl).maybeSingle();
     if (data) return data;
   }
-  // 13 oct: con los nombres de GHL es «0. Agendas orgánico → Agendan»; se siguen aceptando los de antes
+  // 17 oct (Cristian): un solo pipeline de agendas, «0. Agendas General → Agendan»; se siguen aceptando los de antes
   const { data: pipes } = await db().from("pipelines").select("id, nombre, etapas(id, nombre)").eq("proyecto_id", proyectoId).eq("tipo", "normal");
-  const pipe = (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas orgánico") || mismoNombre(p.nombre, "Orgánico"));
+  const pipe =
+    (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas General")) ?? (pipes ?? []).find((p) => mismoNombre(p.nombre, "Agendas orgánico") || mismoNombre(p.nombre, "Orgánico"));
   const etapa = ((pipe?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan") || mismoNombre(x.nombre, "Agendados"));
   return pipe && etapa ? { pipeline_id: pipe.id, id: etapa.id } : null;
 }

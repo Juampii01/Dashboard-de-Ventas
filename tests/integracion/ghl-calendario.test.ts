@@ -203,7 +203,7 @@ describe("Plan GHL (16 oct): por calendario, con el canal del UTM", () => {
     contactos[`${e.pref}-cWid`] = { firstName: "Wid", lastName: "Get", email: `${e.pref}-wid@x.test`, lastAttributionSource: { url: `https://api.leadconnectorhq.com/widget/booking/X?email=${e.pref}-wid@x.test&phone=+15550001&utm_source=callers` } };
     contactos[`${e.pref}-cV`] = { firstName: "Ven", lastName: "Dido", lastAttributionSource: { url: "https://codigomaestria.com/agenda" } };
     await db.from("leads").update({ estado_caller: "vendido", ghl_contact_id: `${e.pref}-cV` }).eq("id", e.leads.LeadLibre);
-    // Fase 4: los pipelines «0. Agendas YT» y «0. Agendas General», con su «Agendan»
+    // Los pipelines «0. Agendas YT» (de antes; ya no recibe citas) y «0. Agendas General», con su «Agendan»
     const agendanDe: Record<string, string> = {};
     for (const [i, nombre] of ["0. Agendas YT", "0. Agendas General"].entries()) {
       const { data: pl } = await db.from("pipelines").insert({ proyecto_id: e.proyecto.id, nombre, orden: 20 + i }).select().single();
@@ -236,13 +236,14 @@ describe("Plan GHL (16 oct): por calendario, con el canal del UTM", () => {
     expect((await cita(`${e.pref}-o1`))!.estado).toBe("cancelada");
     expect((await cita(`${e.pref}-o2`))!.estado).toBe(antesO2);
 
-    // Fase 4: el lead de YouTube nace en «0. Agendas YT → Agendan», tiene su tarjeta en General y la etiqueta del canal
+    // Cristian, 17 oct: un solo pipeline de agendas. El lead de YouTube nace en «0. Agendas General → Agendan» con la
+    // etiqueta del canal, y ya no va a «0. Agendas YT» aunque exista
     const { data: ly } = await db.from("leads").select("id, etapa_id, etiquetas").eq("ghl_contact_id", `${e.pref}-cYT`).single();
-    expect(ly!.etapa_id).toBe(agendanDe["0. Agendas YT"]);
+    expect(ly!.etapa_id).toBe(agendanDe["0. Agendas General"]);
     expect(ly!.etiquetas).toContain("Canal: YouTube");
     const { data: tg } = await db.from("tarjetas_extra").select("etapa_id").eq("lead_id", ly!.id);
-    expect(tg!.map((x) => x.etapa_id)).toContain(agendanDe["0. Agendas General"]);
-    // Callers no tiene pipeline aquí: solo General
+    expect(tg!.map((x) => x.etapa_id)).not.toContain(agendanDe["0. Agendas YT"]);
+    // Callers: también solo General
     const { data: lw } = await db.from("leads").select("etapa_id, etiquetas").eq("ghl_contact_id", `${e.pref}-cWid`).single();
     expect(lw!.etapa_id).toBe(agendanDe["0. Agendas General"]);
     expect(lw!.etiquetas).toContain("Canal: Callers");

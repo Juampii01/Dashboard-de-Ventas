@@ -53,7 +53,7 @@ import { ARRASTRE_COLUMNA, reordenar } from "@/lib/orden";
 import { BarraMasiva, type DestinoMasivo } from "./barra-masiva";
 import { TarjetaCrm, haceDias } from "@/components/tarjeta-crm";
 import { SelectorPipeline } from "./selector-pipeline";
-import { PREFIJO_ETIQUETA } from "@/lib/canal";
+import { CANALES, PIPELINE_GENERAL, PREFIJO_ETIQUETA, SIN_CANAL, etiquetaCanal } from "@/lib/canal";
 
 export type LeadTarjeta = {
   id: string;
@@ -155,12 +155,17 @@ export function TableroCrm({
 
   // Fase 4 (plan GHL): filtro por canal con la etiqueta «Canal: …» que pone la app a cada lead con cita de GHL
   const [canal, setCanal] = useState("");
-  const canales = useMemo(() => [...new Set(leadsIniciales.flatMap((l) => l.etiquetas.filter((e) => e.startsWith(PREFIJO_ETIQUETA))))].sort(), [leadsIniciales]);
+  // 17 oct (Cristian): en «0. Agendas General» salen siempre todos los canales y «Sin canal»; en el resto, los que hay
+  const esGeneral = pipeline?.nombre.trim().toLowerCase() === PIPELINE_GENERAL.toLowerCase();
+  const canales = useMemo(
+    () => (esGeneral ? CANALES.map(etiquetaCanal) : [...new Set(leadsIniciales.flatMap((l) => l.etiquetas.filter((e) => e.startsWith(PREFIJO_ETIQUETA))))].sort()),
+    [leadsIniciales, esGeneral]
+  );
   const leads = useMemo(() => {
     const t = q.trim().toLowerCase();
     return leadsIniciales
       .map((l) => (moviendo[l.id] ? { ...l, etapa_id: moviendo[l.id] } : l))
-      .filter((l) => !canal || l.etiquetas.includes(canal))
+      .filter((l) => !canal || (canal === SIN_CANAL ? !l.etiquetas.some((e) => e.startsWith(PREFIJO_ETIQUETA)) : l.etiquetas.includes(canal)))
       .filter(
         (l) =>
           !t ||
@@ -337,6 +342,7 @@ export function TableroCrm({
           <Desplegable aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value)} className="campo w-auto min-w-40" title="Canal de la cita (por el UTM de la página donde reservó)">
             <option value="">Todos los canales</option>
             {canales.map((c) => <option key={c} value={c}>{c.slice(PREFIJO_ETIQUETA.length)}</option>)}
+            {esGeneral && <option value={SIN_CANAL}>Sin canal</option>}
           </Desplegable>
         )}
         {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">

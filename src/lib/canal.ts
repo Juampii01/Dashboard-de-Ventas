@@ -18,21 +18,9 @@ export const NOMBRE_CANAL: Record<Canal, string> = {
   otro: "Otro",
 };
 
-// Fase 4 (Cristian, 16 oct): cada cita va a «Agendan» del pipeline de su canal y, además, a «0. Agendas General»
-// (todas las citas, separadas por la etiqueta «Canal: …» y el filtro). «Otro» va solo a General.
+// Cristian, 17 oct: un solo pipeline de agendas. Todas las citas van a «Agendan» de «0. Agendas General»; el canal
+// se ve por la etiqueta «Canal: …» y el filtro (antes, 16 oct, cada cita iba además al pipeline de su canal).
 export const PIPELINE_GENERAL = "0. Agendas General";
-export const PIPELINE_CANAL: Record<Canal, string | null> = {
-  callers: "0. Agendas Callers",
-  yt: "0. Agendas YT",
-  ig: "0. Agendas IG",
-  p1: "0. Agendas P1", // Píldora 1 (como en GHL, 16 oct)
-  email: "0. Agendas Email",
-  biblioteca: "0. Agendas Biblioteca",
-  webinar: "0. Agendas Webinar",
-  dfy: "0. Agendas DFY",
-  directo: "0. Agendas Orgánico",
-  otro: null,
-};
 export const PREFIJO_ETIQUETA = "Canal: ";
 export const SIN_CANAL = "sin_canal"; // valor del filtro para las citas sin canal (las de antes del 13 oct)
 export const etiquetaCanal = (c: Canal) => `${PREFIJO_ETIQUETA}${NOMBRE_CANAL[c]}`;

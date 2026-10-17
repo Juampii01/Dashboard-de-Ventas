@@ -3,7 +3,7 @@ import { db } from "@/lib/datos";
 import { descifrar } from "@/lib/cifrado";
 import { columnaCitasGhl, datosAgendaGhl, guardarLeads, moverAAgendadosOrganico, pipelineCitaGhl, telefonoClave } from "@/lib/leads";
 import { contactoGhl, estadoCitaGhl, estadoDesdeGhl, eventosGhl, nombreCalendarioGhl, nuevoEstado, type ContactoGhl } from "@/lib/ghl";
-import { PIPELINE_CANAL, PIPELINE_GENERAL, canalDeOrigen, etiquetaCanal, limpiarUrl, type Canal } from "@/lib/canal";
+import { PIPELINE_GENERAL, canalDeOrigen, etiquetaCanal, limpiarUrl } from "@/lib/canal";
 import { mismoNombre } from "@/lib/formato";
 import type { Proyecto } from "@/lib/tipos";
 import { ABIERTAS } from "@/lib/llamadas";
@@ -80,19 +80,16 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
     }
     return base;
   };
-  // Fase 4: «Agendan» de cada pipeline de origen, para mandar la cita a su canal y a General (solo si existen)
-  let agendan: Map<string, { pipeline_id: string; id: string; nombre: string }> | null = null;
-  const columnasCanal = async (canal: Canal | null) => {
+  // Cristian, 17 oct: todas las citas a «Agendan» de «0. Agendas General» (el canal va en la etiqueta)
+  let agendan: { pipeline_id: string; id: string; nombre: string }[] | null = null;
+  const columnasCanal = async () => {
     if (!agendan) {
       const { data } = await db().from("pipelines").select("id, nombre, etapas(id, nombre)").eq("proyecto_id", proyecto.id).eq("tipo", "normal");
-      agendan = new Map();
-      for (const p of data ?? []) {
-        const e = ((p.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan"));
-        if (e) agendan.set(p.nombre.trim().toLowerCase(), { pipeline_id: p.id, id: e.id, nombre: p.nombre });
-      }
+      const p = (data ?? []).find((x) => x.nombre.trim().toLowerCase() === PIPELINE_GENERAL.toLowerCase());
+      const e = ((p?.etapas ?? []) as { id: string; nombre: string }[]).find((x) => mismoNombre(x.nombre, "Agendan"));
+      agendan = p && e ? [{ pipeline_id: p.id, id: e.id, nombre: p.nombre }] : [];
     }
-    const nombresDestino = [canal ? PIPELINE_CANAL[canal] : null, PIPELINE_GENERAL].filter((x): x is string => !!x);
-    return nombresDestino.map((n) => agendan!.get(n.toLowerCase())).filter((x): x is NonNullable<typeof x> => !!x);
+    return agendan;
   };
   const pipelinesCita = new Map<string, string | null>();
   const vienen = new Set<string>();
@@ -177,11 +174,11 @@ export async function sincronizarCalendarios(proyectoId: string, opciones: { fet
         continue;
       }
 
-      // Por calendario (fase 4): la cita va a su canal y a General. Por closer (como antes, 13 oct): al pipeline donde
+      // Por calendario: la cita va a General (Cristian, 17 oct). Por closer (como antes, 13 oct): al pipeline donde
       // GHL tiene su oportunidad en «Agendan» (una vez por contacto).
       const calendario = calendarioId ? await nombreCalendario(calendarioId) : null;
       const origen = calendario ? await origenDe(ev.contactId) : null;
-      const destinosCanal = calendario ? await columnasCanal(origen?.canal ?? null) : [];
+      const destinosCanal = calendario ? await columnasCanal() : [];
       if (!calendario && abierta && ev.contactId && !pipelinesCita.has(ev.contactId)) pipelinesCita.set(ev.contactId, await pipelineCitaGhl(proyecto, ev.contactId, fetchImpl));
       const pipelineCita = !calendario && abierta && ev.contactId ? pipelinesCita.get(ev.contactId) ?? null : null;
       const destinoCita = destinosCanal[0] ?? (pipelineCita ? await columnaCitasGhl(proyecto.id, pipelineCita) : (await datosBase()).destinoCitas);
