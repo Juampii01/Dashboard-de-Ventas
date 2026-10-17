@@ -24,9 +24,12 @@ export default async function FunnelPage({ searchParams }: PageProps<"/funnel">)
     ...(typeof sp.desde === "string" && typeof sp.hasta === "string" ? { p: "rango", desde: sp.desde, hasta: sp.hasta } : { p: periodo === "hoy" ? "dia" : periodo === "semana" ? "semana" : "mes" }),
   }).toString()}`;
 
-  const base = await cargarBase(proyecto);
+  // Velocidad (17 oct 2026): los productos, a la vez que el resto (antes, después)
+  const [base, { data: productosData }] = await Promise.all([
+    cargarBase(proyecto),
+    db().from("productos").select("id, nombre").eq("proyecto_id", proyecto.id).order("orden"),
+  ]);
   const vendedor = base.gente.find((g) => g.id === sp.vendedor) ?? null;
-  const { data: productosData } = await db().from("productos").select("id, nombre").eq("proyecto_id", proyecto.id).order("orden");
   const productos = productosData ?? [];
   const producto = productos.find((p) => p.id === sp.producto) ?? null;
   const m = calcularFunnel(base, rango, vendedor, proyecto.zona_horaria, producto?.id ?? null);

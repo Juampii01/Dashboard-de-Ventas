@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CalendarRange, Search } from "lucide-react";
@@ -28,17 +29,23 @@ export function Filtros({
   const ruta = usePathname();
   const params = useSearchParams();
   const [cargando, iniciar] = useTransition();
-  const periodo = params.get("periodo") ?? periodoPorDefecto;
+  // Velocidad (17 oct 2026, Cristian: «en Funnel, de Mes a Todo se siente lento»): el periodo pulsado se marca al
+  // momento, sin esperar al servidor (vale mientras no cambie la dirección)
+  const [yendo, setYendo] = useState<{ a: string; desde: string } | null>(null);
+  const periodo = (yendo && yendo.desde === params.toString() ? yendo.a : null) ?? params.get("periodo") ?? periodoPorDefecto;
   const [verFechas, setVerFechas] = useState(periodo === "rango");
   const [q, setQ] = useState(params.get("q") ?? "");
 
-  function poner(cambios: Record<string, string | null>) {
+  function conCambios(cambios: Record<string, string | null>) {
     const p = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(cambios)) {
       if (v === null || v === "") p.delete(k);
       else p.set(k, v);
     }
-    iniciar(() => router.replace(`${ruta}?${p.toString()}`, { scroll: false }));
+    return `${ruta}?${p.toString()}`;
+  }
+  function poner(cambios: Record<string, string | null>) {
+    iniciar(() => router.replace(conCambios(cambios), { scroll: false }));
   }
 
   return (
@@ -75,18 +82,23 @@ export function Filtros({
       )}
       <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
         {PERIODOS.map((p) => (
-          <button
+          // Velocidad (17 oct 2026): enlaces con precarga completa (antes, botones que esperaban al servidor al pulsar)
+          <Link
             key={p.v}
+            href={conCambios({ periodo: p.v, desde: null, hasta: null })}
+            prefetch={true}
+            replace
+            scroll={false}
             onClick={() => {
               setVerFechas(false);
-              poner({ periodo: p.v, desde: null, hasta: null });
+              if (p.v !== periodo) setYendo({ a: p.v, desde: params.toString() });
             }}
             className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
               periodo === p.v ? "bg-primario text-white shadow-sm" : "text-texto-2 hover:text-texto"
             }`}
           >
             {p.t}
-          </button>
+          </Link>
         ))}
       </div>
       <button
