@@ -38,7 +38,7 @@ afterAll(async () => {
 
 describe("biblioteca_filas", () => {
   it("el resumen sale idéntico al de siempre", async () => {
-    const { data: todos } = await db.from("leads").select("id, telefono, etiquetas, respuestas, fuente, oferta").eq("proyecto_id", e.proyecto.id);
+    const { data: todos } = await db.from("leads").select("id, telefono, etiquetas, respuestas, fuente, oferta").eq("proyecto_id", e.proyecto.id).order("id");
     const { esDeBiblioteca } = await import("@/lib/oferta");
     const deBiblioteca = (todos ?? []).filter((l) => esDeBiblioteca(l));
     const antes = resumenBiblioteca(deBiblioteca.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));

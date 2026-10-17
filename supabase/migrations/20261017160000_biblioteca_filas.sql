@@ -90,9 +90,12 @@ as $$
     left join ultima u on u.id = b.id
     group by b.id, b.telefono, b.oferta
   )
+  -- Ordenados por la primera persona (por id) de cada grupo: así, al repartirlos en la app, cada país aparece por
+  -- primera vez en el mismo orden que con todos los leads ordenados por id (y los empates salen igual que antes)
   select situacion, experiencia, objetivo, tiempo, inversion, inicio, coalesce(pais, 'Otro'), oferta, count(*)
   from por_lead
-  group by situacion, experiencia, objetivo, tiempo, inversion, inicio, coalesce(pais, 'Otro'), oferta;
+  group by situacion, experiencia, objetivo, tiempo, inversion, inicio, coalesce(pais, 'Otro'), oferta
+  order by (array_agg(id order by id))[1];
 $$;
 revoke execute on function public.biblioteca_filas(uuid) from public, anon, authenticated;
 grant execute on function public.biblioteca_filas(uuid) to service_role;
