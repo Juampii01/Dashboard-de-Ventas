@@ -130,6 +130,15 @@ export function BarraLateral({
         </div>
       </div>
 
+      {/* Velocidad (17 oct 2026): Next solo precarga los enlaces que se ven; los últimos del menú (Finanzas, Clientes,
+          Administración) quedaban por debajo (medido). Esta copia invisible, siempre «a la vista», los precarga también */}
+      <div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 h-px w-px overflow-hidden opacity-0">
+        {menu.flatMap((g) => g.items).map((it) => (
+          <Link key={it.href} href={it.href} prefetch={true} tabIndex={-1}>
+            {it.texto}
+          </Link>
+        ))}
+      </div>
       <nav className="mt-5 flex-1 space-y-5 overflow-y-auto px-3">
         {menu.map((g) => (
           <div key={g.grupo}>
