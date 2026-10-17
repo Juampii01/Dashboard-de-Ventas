@@ -3,6 +3,7 @@ import { getSesion, esJefe, puedeAdmin } from "@/lib/auth";
 import { BarraLateral, type ItemMenu } from "@/components/barra-lateral";
 import { ProveedorToasts } from "@/components/toasts";
 import { Dialogos } from "@/components/dialogos";
+import { AvisosEnVivo } from "@/components/avisos-en-vivo";
 import { db } from "@/lib/datos";
 import { proyectoParaMenu } from "@/lib/formato";
 import { seccionesPermitidas, SECCIONES, type Seccion } from "@/lib/permisos";
@@ -76,6 +77,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
         <div className="min-w-0 flex-1">{children}</div>
       </div>
       <Dialogos />
+      <AvisosEnVivo proyectoId={proyecto.id} />
     </ProveedorToasts>
   );
 }
