@@ -68,6 +68,15 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
     invertir: (respuestas ?? []).find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta ?? null,
   });
 
+  // Velocidad (17 oct 2026): los números de las pestañas en una consulta (función crm_conteos, migración
+  // 20261017140000). Si la función aún no existe o falla, se cuenta como antes (una consulta por pipeline).
+  const conteosRpc = t.medir(
+    "crm_conteos",
+    Promise.resolve(db().rpc("crm_conteos", { p_proyecto: proyecto.id, p_persona: persona?.id ?? null })).then(({ data, error }) =>
+      error || !data ? null : new Map((data as { pipeline_id: string; leads: number; tarjetas: number }[]).map((r) => [r.pipeline_id, r]))
+    )
+  );
+
   // Lo del pipeline elegido, también a la vez
   const [leadsCrudos, conteos, extraLeads, extraPorPipeline, closers] = await Promise.all([
     pipeline && pipeline.tipo !== "closers"
@@ -85,6 +94,8 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
           if (agendadasPor) q = q.eq("agendada_por", agendadasPor);
           return [p.id, (await q).count ?? 0] as const;
         }
+        const rapido = await conteosRpc;
+        if (rapido) return [p.id, Number(rapido.get(p.id)?.leads ?? 0)] as const;
         const base = db().from("leads").select("id", { count: "exact", head: true }).eq("proyecto_id", proyecto.id);
         const { count } = await deLaPersona(p.tipo === "callers" ? base.not("caller_id", "is", null) : base.eq("pipeline_id", p.id));
         return [p.id, count ?? 0] as const;
@@ -96,7 +107,12 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
           filas.filter((x) => x.leads && esDeLaPersona(x.leads)).map((x) => ({ ...aTarjeta(x.leads!), etapa_id: x.etapa_id, otroPipeline: true }))
         ))
       : Promise.resolve([]),
-    jefe && !persona ? t.medir("contarTarjetas", contarTarjetas(pipelines.filter((p) => p.tipo === "normal").map((p) => p.id))) : Promise.resolve({} as Record<string, number>),
+    jefe && !persona
+      ? conteosRpc.then((rapido) => {
+          const ids = pipelines.filter((p) => p.tipo === "normal").map((p) => p.id);
+          return rapido ? Object.fromEntries(ids.map((id) => [id, Number(rapido.get(id)?.tarjetas ?? 0)])) : contarTarjetas(ids);
+        })
+      : Promise.resolve({} as Record<string, number>),
     pipeline?.tipo === "closers"
       ? cargarCitasVentas(proyecto.id, deCloser, agendadasPor).then(({ citas, ventas }) =>
           columnasCloser(etapas, citas, ventas, { proyecto, jefe, nombrePersona: (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? "—" })
