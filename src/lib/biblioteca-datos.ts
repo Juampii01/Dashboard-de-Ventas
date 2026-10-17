@@ -64,8 +64,12 @@ export async function recalcularOfertas(leads: FilaBiblioteca[]) {
 // 20261017160000): llegan las personas agrupadas por lo que respondieron. Si la función no existe o falla, se calcula
 // como antes, con todos los leads (plan B). Las cuentas son las mismas en los dos casos (resumenDeFilas).
 export async function resumenDeLaBiblioteca(proyectoId: string) {
-  const { data, error } = await db().rpc("biblioteca_filas", { p_proyecto: proyectoId });
-  if (!error && data) return resumenDeFilas(filasDeGrupos(data as GrupoBiblioteca[]));
+  // DESACTIVADO (17 oct 2026): con los datos reales no salía igual (faltaban personas). Hasta arreglarlo, como antes.
+  const usarBase = false as boolean;
+  if (usarBase) {
+    const { data, error } = await db().rpc("biblioteca_filas", { p_proyecto: proyectoId });
+    if (!error && data) return resumenDeFilas(filasDeGrupos(data as GrupoBiblioteca[]));
+  }
   const leads = await cargarResumenBiblioteca(proyectoId);
   return resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
 }
