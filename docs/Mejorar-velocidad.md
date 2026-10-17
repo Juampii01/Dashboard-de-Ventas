@@ -117,6 +117,12 @@ Aparte: los arranques «en frío» de ~2 s se podrían reducir con Vercel Pro (y
 - `9e86920` y `bdc8f28`: copia invisible del menú (cada enlace en el mismo píxel) para que se precarguen también Finanzas, Clientes y Administración, que quedaban por debajo de lo visible del menú (medido: y=775–892 con el menú hasta y=751). Medido: 16 de 16 precargadas; menú de golpe: 30–236 ms.
 - Sin arreglar (no se pueden precargar con sentido): desplegables (closer, producto, vendedor), buscadores y «Fechas» personalizadas. Las flechas ◀ ▶ pulsadas muy seguidas esperan al servidor (~1 s) porque el periodo siguiente aún no está precargado.
 
+**Cuarta vuelta: la primera vez (17 oct, Cristian: «falta la carga de la primera vez»):**
+- `b1f74d8`: el login va directo a su sección (antes a «/», que volvía a mandarla) y el enlace de acceso también; la bienvenida dura lo que tarda en cargar (mín. 0,8 s, con la sección precargada detrás; antes 3 s fijos, decisión de Cristian del 17 oct). Medido: del enlace a ver la sección, 1,45 s (antes ≈ 4+ s, sin medir exacto). **El login con contraseña no lo probó Claude** (no puede escribir la contraseña): pendiente que lo pruebe Cristian.
+- Primer pintado: el primer trozo de la página (menú + grises) llega a ~0,35 s y los datos a ~0,6 s; no hay nada que bloquee (1 CSS y 1 fuente, ya guardados). Adelantar los grises a ~0,1 s se descartó por poco útil (no adelanta los datos).
+- Alguien nuevo descarga ~486 KB (418 de código, 12 de estilos, 51 de fuentes, 5 de imágenes; medido en el CRM); después se guardan 1 año. Normal para la app; no se toca.
+- Arranque en frío: sin forma de medirlo en los registros de Vercel. Hipótesis (sin verificar): la lectura de GHL cada 30 s (desde el 16 oct) ya mantiene despierto el servidor; el arranque de ~1,6–2 s se midió el 13 oct, antes de eso. Comprobarlo la primera vez del día.
+
 **Mejoras para después:** bajar la espera del tiempo real de 1,5 a 0,5 s · la tabla de la Biblioteca (KPIs) se pide en cada visita (~0,9 s) · un clic de golpe sin pasar el ratón sigue esperando al servidor (~0,3–0,6 s) · nivel B (guardado en disco) solo si al recargar se sigue notando lento.
 
 **Ojo con la sesión:** con `getClaims` una sesión cerrada en otro sitio vale hasta que caduca (~1 h). Desactivar a alguien sigue cortando al momento (`perfil.activo` en `getSesion`).
