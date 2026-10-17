@@ -27,6 +27,9 @@ export const PIPELINE_ETIQUETA: { etiqueta: string; pipeline: string }[] = [
   { etiqueta: "biblioteca recursos", pipeline: "1. Biblioteca Recursos" },
   { etiqueta: "webinar1", pipeline: "2. Webinar 1" },
 ];
+export function tieneEtiquetaDePipeline(tags: string[] | undefined) {
+  return (tags ?? []).some((t) => PIPELINE_ETIQUETA.some((x) => x.etiqueta === String(t).trim().toLowerCase()));
+}
 export function pipelinesDeEtiquetas(tags: string[] | undefined) {
   const t = (tags ?? []).map((x) => String(x).trim().toLowerCase());
   const p = PIPELINE_ETIQUETA.filter((r) => t.includes(r.etiqueta)).map((r) => r.pipeline);
@@ -36,6 +39,10 @@ export function pipelinesDeEtiquetas(tags: string[] | undefined) {
 const MIN = 60_000;
 const MARGEN = 2 * MIN; // se relee un poco hacia atrás por si GHL tarda en indexar alguno (los ya vistos no se repiten)
 const MAX_POR_LECTURA = 30; // el resto, en la siguiente (a los 30 s)
+// 17 oct (Cristian): GHL crea el contacto y le pone la etiqueta unos segundos después (visto con un lead real de la
+// Biblioteca: leído a los 4 s, sin etiqueta, acabó en General). Un contacto sin etiqueta de pipeline se espera 2 min
+// antes de mandarlo a General.
+const ESPERA_SIN_ETIQUETA = 2 * MIN;
 const RELEER = 10 * MIN; // las respuestas pueden llegar un poco después: se releen durante 10 min
 const MAX_RELEER = 10;
 const GUARDAR_VISTOS = 3 * 24 * 60 * MIN;
@@ -80,6 +87,8 @@ export async function leerLeadsGhl(proyecto: Proyecto & { ghl_location_id: strin
   // sigue desde ese contacto.
   let nuevoHasta = hasta;
   for (const c of pendientes) {
+    // Sin etiqueta todavía y recién creado: se para aquí (sin marcarlo visto) y la lectura siguiente sigue desde él
+    if (!tieneEtiquetaDePipeline(c.tags) && ahora - fecha(c) < ESPERA_SIN_ETIQUETA) break;
     const { lead } = leadDeContactoGhl(c.id, c, campos, { fuente: c.source ?? null, creadoEn: c.dateAdded ?? null });
     try {
       const g = await meterEnPipelines(proyecto, lead, pipelinesDeEtiquetas(c.tags), pipesApp, r);
@@ -185,7 +194,7 @@ async function cambiosEnGhl(
   for (const c of cambiados) {
     const ya = leads.find((l) => l.ghl_contact_id === c.id);
     const esta = new Set([ya?.pipeline_id, ...(tarjetas ?? []).filter((t) => t.lead_id === ya?.id).map((t) => t.pipeline_id)].filter(Boolean) as string[]);
-    const conEtiqueta = (c.tags ?? []).some((t) => PIPELINE_ETIQUETA.some((x) => x.etiqueta === String(t).trim().toLowerCase()));
+    const conEtiqueta = tieneEtiquetaDePipeline(c.tags);
     const faltan = conEtiqueta
       ? pipelinesDeEtiquetas(c.tags).filter((nombre) => {
           const p = pipesApp.find((x) => mismoNombre(x.nombre, nombre));

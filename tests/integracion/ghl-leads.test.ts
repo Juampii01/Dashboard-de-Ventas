@@ -81,7 +81,8 @@ describe("Leads nuevos de GHL por la API (contactos)", () => {
     contactos.push(
       contacto("bib", "2026-10-17T10:00:10.000Z", { tags: ["biblioteca recursos"], customFields: [{ id: "f1", value: "Tengo un negocio" }, { id: "f3", value: "yt" }] }),
       contacto("dos", "2026-10-17T10:00:20.000Z", { tags: ["biblioteca recursos", "webinar1", "form completado"], source: "landing-codigo-maestria" }),
-      contacto("sin", "2026-10-17T10:00:30.000Z", { tags: [] }),
+      // Sin etiqueta: se espera 2 min a que GHL se la ponga (este ya lleva más de 2 min creado)
+      contacto("sin", "2026-10-17T09:58:30.000Z", { tags: [] }),
       // LeadA ya estaba en la app (mismo email): no se duplica ni se mueve de su pipeline; gana su tarjeta en la Biblioteca
       { id: `${e.pref}-cA`, dateAdded: "2026-10-17T10:00:40.000Z", firstName: "LeadA", email: `${e.pref}-la@x.test`, tags: ["biblioteca recursos"], customFields: [{ id: "f2", value: "Ya mismo" }] }
     );
@@ -197,5 +198,21 @@ describe("Leads nuevos de GHL por la API (contactos)", () => {
     // Sin nada nuevo más que su nombre o teléfono, no se escribe
     bib.dateUpdated = "2026-10-17T10:36:00.000Z";
     expect((await leer(mas(37))).puestosAlDia).toBe(0);
+  });
+
+  it("un contacto sin etiqueta espera 2 min: si GHL se la pone, va a su pipeline y no a General (Cristian, 17 oct)", async () => {
+    contactos.push(contacto("espera", "2026-10-17T10:40:00.000Z", { tags: [] }), contacto("general", "2026-10-17T10:40:05.000Z", { tags: [] }));
+    const t = (hhmmss: string) => new Date(`2026-10-17T${hhmmss}.000Z`);
+    expect((await leer(t("10:40:30"))).nuevos).toBe(0);
+    expect(await leadPorContacto("espera")).toBeNull();
+    contactos.find((c) => c.id === `${e.pref}-espera`)!.tags = ["biblioteca recursos"];
+    expect((await leer(t("10:41:00"))).nuevos).toBe(1);
+    const espera = await leadPorContacto("espera");
+    expect(espera!.pipeline_id).toBe(pipes["1. Biblioteca Recursos"].id);
+    const { data: te } = await db.from("tarjetas_extra").select("pipeline_id").eq("lead_id", espera!.id);
+    expect(te).toEqual([]);
+    expect(await leadPorContacto("general")).toBeNull(); // aún no lleva 2 min
+    expect((await leer(t("10:42:10"))).nuevos).toBe(1);
+    expect(await leadPorContacto("general")).toMatchObject({ pipeline_id: pipes["0. Agendas General"].id, etapa_id: pipes["0. Agendas General"].etapas.Form });
   });
 });
