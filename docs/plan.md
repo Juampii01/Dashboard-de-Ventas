@@ -1,6 +1,6 @@
 # Plan · Dashboard de ventas (app Eternity)
 
-> Al día: 17 oct 2026, 12:30 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
+> Al día: 17 oct 2026, 13:50 (hora de España). **Solo lo que falta.** Lo hecho, con todo su detalle (qué, commit y cómo se probó), está en las versiones anteriores de este plan en git (`git show 607d901:docs/plan.md` hasta el 13 oct; `git show 333a636:docs/plan.md`, el del 13 oct por la noche); lo más antiguo, en `plan-historial-10oct.md` y `plan-historial-11oct.md`. **Lo de los canales de las citas (16 oct), en `plan-GHL.md`.**
 
 **Índice:** 1. Dónde estamos · 2. Lo que falta · 3. Decisiones vigentes · 4. Riesgos · 5. Dónde está cada cosa
 
@@ -26,11 +26,11 @@
 
 ## 2. Lo que falta (en este orden)
 
-**0 · Ahora: un solo pipeline de agendas, «0. Agendas General»** (Cristian, 17 oct; solo en la app, GHL no se toca)
-- [ ] La app deja de mandar cada cita a su pipeline de canal: todas van solo a «0. Agendas General» (columna «Agendan»); el canal se ve por la etiqueta «Canal: …» y el filtro.
-- [ ] En General, el filtro de canales enseña **siempre todos** (Callers, YouTube, Instagram, P1, Email, Biblioteca, Webinar, DFY, Directo, Otro y «Sin canal»).
-- [ ] Pasar a General los leads de los 9 pipelines de canal (Callers, YT, Orgánico, IG, P1, Email, Biblioteca, Webinar, DFY). Si ya estaba en General, **se queda la columna de General** (decisión de Cristian; ojo: 21 leads que el equipo movió en «Orgánico» a No confirman, No show, Seguimiento… vuelven a verse en «Agendan» de General). Si no estaba, entra en la columna del mismo nombre. Copia de lo de antes en un archivo para poder deshacerlo.
-- [ ] Comprobar que los 9 pipelines quedan vacíos; **Cristian los borra** desde el CRM.
+**0 · Un solo pipeline de agendas, «0. Agendas General»** (Cristian, 17 oct; solo en la app, GHL no se toca)
+- [x] Todas las citas van solo a «0. Agendas General → Agendan»; el canal, en la etiqueta «Canal: …» y el filtro (`ff34b49`, tests de GitHub en verde).
+- [x] En General, el filtro de canales enseña siempre todos y «Sin canal». *Sin verlo en pantalla (Claude no tiene sesión en la app).*
+- [x] Leads pasados a General (17 oct, 13:41): 50 afectados · 23 cambian su pipeline principal a General (ya tenían tarjeta allí: se queda su columna de General) · 26 tarjetas de canal sobraban (ya estaban en General) · 13 tarjetas de canal pasan a General con la misma columna. Columna de citas del proyecto → General «Agendan». **Copia de lo de antes:** `scripts/salida/copia-agendas-17oct.json` (fuera de git). *Comprobado:* los 9 pipelines de canal, con 0 leads y 0 tarjetas; General, 51 (Form 14 · Agendan 37); por canal: Callers 8 · YouTube 3 · Directo 3 · Email 1 · Biblioteca 1 · Sin canal 35 (sobre todo las citas de antes del 13 oct). Como decidió Cristian, los 21 que el equipo había movido en «Orgánico» (No confirman, No show, Seguimiento…) ahora están en «Agendan».
+- [ ] **Cristian borra** desde el CRM los 9 pipelines vacíos (Callers, YT, Orgánico, IG, P1, Email, Biblioteca, Webinar, DFY).
 
 **1 · Ahora: velocidad** (Cristian, 16 oct: «carga súper lento», lo primero) · *17 oct: Cristian la lleva en otra sesión (ya hay commits: `3e271b0` números del CRM en una consulta, `14ec216`, `fb61232`, `71d96bb` tiempo real). Lo de esa sesión se apunta allí.*
 - [ ] **Mejorar velocidad:** que la app se sienta casi instantánea al navegar. Todo en `docs/Mejorar-velocidad.md`: lo hecho el 13 oct, lo medido, cómo lo hacen los SaaS «pro», la propuesta (A recomendada, B, C) y el orden (medir todas las secciones → lo visto al instante → precarga del menú → servidor más rápido → tiempo real → medir otra vez). Incluye quitar la medición temporal (`src/lib/tiempos.ts`).
