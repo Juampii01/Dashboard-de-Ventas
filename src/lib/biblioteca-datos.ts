@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { db, todas } from "@/lib/datos";
 import { calcularOferta, esDeBiblioteca, normalizarRespuestas } from "@/lib/oferta";
 import type { Respuesta } from "@/lib/tipos";
@@ -16,18 +17,25 @@ export type FilaBiblioteca = {
   fuente: string | null;
   oferta: string | null;
   caller_id: string | null;
-  closer_id: string | null;
-  estado_caller: string;
 };
 
 export async function cargarBiblioteca(proyectoId: string) {
+  // Velocidad (18 oct 2026): solo las columnas que usa la tabla (antes también closer_id y estado_caller)
   const filas = await todas<FilaBiblioteca>((a, b) =>
-    db().from("leads").select("id, nombre, apellido, email, telefono, creado_en, etiquetas, respuestas, fuente, oferta, caller_id, closer_id, estado_caller").eq("proyecto_id", proyectoId).order("id").range(a, b)
+    db().from("leads").select("id, nombre, apellido, email, telefono, creado_en, etiquetas, respuestas, fuente, oferta, caller_id").eq("proyecto_id", proyectoId).order("id").range(a, b)
   );
-  const t1 = performance.now(); // MEDICIÓN TEMPORAL (18 oct 2026): se quita al acabar
   const deBiblioteca = filas.filter((l) => esDeBiblioteca(l));
-  await recalcularOfertas(deBiblioteca);
-  console.log(`[tiempos] tabla-biblioteca · ofertas ${Math.round(performance.now() - t1)}`);
+  // Velocidad (18 oct 2026): el repaso de ofertas va después de responder (medido: 58–111 ms por carga de la tabla).
+  // Los leads ya guardan su oferta al entrar (leads.ts); esto solo corrige las que cambien si cambia la regla, y
+  // la tabla lo enseña bien desde la visita siguiente.
+  const copia = deBiblioteca.map((l) => ({ ...l }));
+  after(async () => {
+    try {
+      await recalcularOfertas(copia);
+    } catch (e) {
+      console.error("[biblioteca] repasar ofertas", e);
+    }
+  });
   return deBiblioteca;
 }
 
