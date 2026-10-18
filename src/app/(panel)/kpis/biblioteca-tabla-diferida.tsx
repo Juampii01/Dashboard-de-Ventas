@@ -27,7 +27,8 @@ export function TablaBibliotecaDiferida({ total }: { total: number }) {
   if (error) return <p className="text-sm text-mal">{error}</p>;
   if (!datos)
     return (
-      <div className="animate-pulse space-y-2" aria-busy="true">
+      // data-datos-pendientes: llega en el HTML desde el principio; mientras está, el menú no precarga (lib/pantalla-lista.ts)
+      <div className="animate-pulse space-y-2" aria-busy="true" data-datos-pendientes="">
         <p className="text-sm text-texto-3">Cargando los {total.toLocaleString("es-ES")} leads…</p>
         {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-9 rounded-lg bg-panel-2" />)}
       </div>
