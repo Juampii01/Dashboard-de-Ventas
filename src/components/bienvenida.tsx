@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { alCambiarPendientes, hayDatosPendientes } from "@/lib/pantalla-lista";
 
 // Velocidad (17 oct 2026, Cristian: «todos deberían tener esa pantalla de carga; cargará en segundo plano la app»).
 // Al abrir la app en una pestaña (o tras iniciar sesión), una capa con la marca tapa la app mientras se precargan
@@ -49,13 +50,19 @@ export function Bienvenida({ nombre, rutas }: { nombre: string; rutas: string[] 
         setLlegadas((x) => x + 1);
         if (n >= 2) faltan.delete(r);
       }
-      if (faltan.size === 0) acabar();
+      siTodoListo();
     };
+    // «Todo» = la precarga del menú y los datos de la pantalla en la que se entra (18 oct 2026)
+    const siTodoListo = () => {
+      if (faltan.size === 0 && !hayDatosPendientes()) acabar();
+    };
+    const quitarOyente = alCambiarPendientes(siTodoListo);
     const observador = new PerformanceObserver((l) => mirar(l.getEntries()));
     observador.observe({ type: "resource", buffered: true });
-    if (faltan.size === 0) acabar();
+    siTodoListo();
     const tope = setTimeout(() => acabar(), MAXIMO_MS);
     return () => {
+      quitarOyente();
       observador.disconnect();
       clearTimeout(tope);
     };

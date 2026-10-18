@@ -33,6 +33,7 @@ import { cerrarSesion } from "@/app/login/acciones";
 import { iniciales, ETIQUETA_ROL, type ProyectoMenu } from "@/lib/formato";
 import type { Perfil } from "@/lib/tipos";
 import { Desplegable } from "@/components/eleccion";
+import { usePantallaLista } from "@/lib/pantalla-lista";
 
 const ICONOS = {
   funnel: BarChart3,
@@ -85,6 +86,8 @@ export function BarraLateral({
   // (staleTimes en next.config.ts); el 12 oct se repetían porque caducaban al momento. Los cambios las borran al
   // instante (revalidatePath y avisos-en-vivo.tsx), así que no enseñan datos viejos.
   // Al pulsar, el botón se marca al momento (sin esperar al servidor); vale mientras no cambie la ruta
+  // 18 oct 2026: la precarga empieza cuando la pantalla en la que se entra ya tiene sus datos (lib/pantalla-lista.ts)
+  const precargar = usePantallaLista();
   const [yendo, setYendo] = useState<{ a: string; desde: string } | null>(null);
   const destino = yendo && yendo.desde === ruta ? yendo.a : null;
   const [abierto, setAbierto] = useState(false);
@@ -135,7 +138,7 @@ export function BarraLateral({
           Va aquí, dentro del menú: medido el 17 oct, fuera del menú (en el panel) la precarga dejaba de completarse */}
       <div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0">
         {menu.flatMap((g) => g.items).map((it) => (
-          <Link key={it.href} href={it.href} prefetch={true} tabIndex={-1} className="absolute inset-0 block overflow-hidden">
+          <Link key={it.href} href={it.href} prefetch={precargar} tabIndex={-1} className="absolute inset-0 block overflow-hidden">
             {it.texto}
           </Link>
         ))}
@@ -154,7 +157,7 @@ export function BarraLateral({
                   <li key={it.href}>
                     <Link
                       href={it.href}
-                      prefetch={true}
+                      prefetch={precargar}
                       onClick={() => {
                         setAbierto(false);
                         if (it.href !== ruta) setYendo({ a: it.href, desde: ruta });
@@ -184,7 +187,7 @@ export function BarraLateral({
       <div className="border-t border-borde p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           {/* Bloque 1 de 1.0: tocar tu nombre abre «Mi perfil» */}
-          <Link href="/perfil" prefetch={true} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
+          <Link href="/perfil" prefetch={precargar} onClick={() => setAbierto(false)} className={`-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 hover:bg-panel-2 ${ruta === "/perfil" ? "bg-panel-2" : ""}`} title="Mi perfil" aria-label="Mi perfil">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primario-suave text-xs font-semibold text-primario">
               {iniciales(perfil.nombre)}
             </div>

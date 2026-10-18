@@ -43,13 +43,16 @@ const ESCALERA: { clave: "membresia" | "grupal" | "vip" | "dfy"; producto: strin
 // Fase 2 (Cristian, 12 oct 2026): las filas de la tabla ya no van dentro de la página (eran ~700 KB con 1.188
 // personas); la tabla las pide justo después de pintar la página (`cargarTablaBiblioteca`).
 export async function filasDeBiblioteca(proyecto: Proyecto): Promise<{ filas: FilaTabla[]; callers: { id: string; nombre: string }[] }> {
+  const t0 = performance.now(); // MEDICIÓN TEMPORAL (18 oct 2026): se quita al acabar
   const [leads, gente] = await Promise.all([cargarBiblioteca(proyecto.id), equipo(proyecto.id)]);
+  const t1 = performance.now();
   const callers = gente.filter((g) => g.rol === "caller").map((g) => ({ id: g.id, nombre: g.nombre }));
   const nombre = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? null;
   const filas: FilaTabla[] = leads.map((l) => {
     const x = respuestasBiblioteca(l.respuestas);
     return { id: l.id, nombre: `${l.nombre} ${l.apellido ?? ""}`.trim(), telefono: l.telefono, email: l.email, pais: paisDeTelefono(l.telefono), alta: l.creado_en, ...x, etiquetas: l.etiquetas ?? [], oferta: l.oferta as Oferta | null, caller: nombre(l.caller_id) };
   });
+  console.log(`[tiempos] tabla-biblioteca · leads+ofertas+equipo ${Math.round(t1 - t0)} · filas ${Math.round(performance.now() - t1)} · ${filas.length} filas · ${Math.round(JSON.stringify(filas).length / 1024)} KB`);
   return { filas, callers };
 }
 

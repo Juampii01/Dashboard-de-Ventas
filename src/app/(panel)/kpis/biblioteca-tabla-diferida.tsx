@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cargandoDatos } from "@/lib/pantalla-lista";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { cargarTablaBiblioteca } from "./acciones";
 import { TablaBiblioteca, type FilaTabla } from "./biblioteca-tabla";
@@ -12,11 +13,15 @@ export function TablaBibliotecaDiferida({ total }: { total: number }) {
   const [error, setError] = useState("");
   useEffect(() => {
     let vivo = true;
+    // Velocidad (18 oct 2026): mientras llega la tabla, la precarga del menú espera (lib/pantalla-lista.ts)
+    const listo = cargandoDatos();
     exigirOk(cargarTablaBiblioteca())
       .then((d) => vivo && setDatos(d))
-      .catch((e) => vivo && setError(e instanceof Error ? e.message : "No se pudieron cargar los leads."));
+      .catch((e) => vivo && setError(e instanceof Error ? e.message : "No se pudieron cargar los leads."))
+      .finally(listo);
     return () => {
       vivo = false;
+      listo();
     };
   }, []);
   if (error) return <p className="text-sm text-mal">{error}</p>;

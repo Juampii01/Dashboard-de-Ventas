@@ -24,8 +24,10 @@ export async function cargarBiblioteca(proyectoId: string) {
   const filas = await todas<FilaBiblioteca>((a, b) =>
     db().from("leads").select("id, nombre, apellido, email, telefono, creado_en, etiquetas, respuestas, fuente, oferta, caller_id, closer_id, estado_caller").eq("proyecto_id", proyectoId).order("id").range(a, b)
   );
+  const t1 = performance.now(); // MEDICIÓN TEMPORAL (18 oct 2026): se quita al acabar
   const deBiblioteca = filas.filter((l) => esDeBiblioteca(l));
   await recalcularOfertas(deBiblioteca);
+  console.log(`[tiempos] tabla-biblioteca · ofertas ${Math.round(performance.now() - t1)}`);
   return deBiblioteca;
 }
 
