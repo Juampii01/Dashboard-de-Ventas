@@ -34,28 +34,35 @@ export function alCambiarPendientes(f: () => void) {
   };
 }
 
-const ESPERA_MAX_MS = 1500;
-// Tras montar, se espera un momento a que los componentes de la pantalla registren lo que cargan (sus efectos van
-// después del menú) y luego a que terminen. Una vez lista, se queda lista (al navegar dentro de la app no vuelve atrás).
+const ESPERA_MAX_MS = 2500;
+// Se espera a que la página esté cargada del todo (evento «load»: han llegado todos sus trozos y los componentes ya
+// han avisado de lo que cargan; medido el 18 oct: esperar 100 ms tras montar no bastaba, la tabla de la Biblioteca
+// llega después) y luego a que terminen. Tope: ESPERA_MAX_MS desde que se monta el menú. Una vez lista, se queda lista.
 export function usePantallaLista() {
   const [lista, setLista] = useState(false);
   useEffect(() => {
     let fuera = false;
     let quitar = () => {};
+    let arranque: ReturnType<typeof setTimeout> | undefined;
     const ponerLista = () => {
       if (!fuera) setLista(true);
     };
     const tope = setTimeout(ponerLista, ESPERA_MAX_MS);
-    const arranque = setTimeout(() => {
-      if (!hayDatosPendientes()) return ponerLista();
-      quitar = alCambiarPendientes(() => {
-        if (!hayDatosPendientes()) ponerLista();
-      });
-    }, 100);
+    const empezar = () => {
+      arranque = setTimeout(() => {
+        if (!hayDatosPendientes()) return ponerLista();
+        quitar = alCambiarPendientes(() => {
+          if (!hayDatosPendientes()) ponerLista();
+        });
+      }, 50);
+    };
+    if (document.readyState === "complete") empezar();
+    else window.addEventListener("load", empezar, { once: true });
     return () => {
       fuera = true;
       clearTimeout(tope);
       clearTimeout(arranque);
+      window.removeEventListener("load", empezar);
       quitar();
     };
   }, []);
