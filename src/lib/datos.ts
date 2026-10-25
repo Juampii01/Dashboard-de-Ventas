@@ -16,15 +16,15 @@ export async function escribir<T extends { error: { message: string } | null }>(
 export async function todas<T>(
   consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
 ): Promise<T[]> {
-  // Paso G (10 oct 2026): las páginas de 1000 filas se piden de 8 en 8 a la vez (antes, de una en una).
-  // Mismas filas y en el mismo orden: se juntan por su número de página y se para en la primera incompleta.
+  // 25 oct 2026 (Cristian, la base se saturó con el equipo trabajando): primero UNA página y, solo si viene llena,
+  // las siguientes de 2 en 2. Antes se pedían 8 a la vez siempre (Paso G, 10 oct): casi todas volvían vacías y eran
+  // la mayoría de las peticiones a Supabase. Mismas filas y en el mismo orden; se para en la primera incompleta.
   const out: T[] = [];
   const paso = 1000;
-  const aLaVez = 8;
-  for (let ola = 0; ; ola += aLaVez) {
+  for (let pagina = 0, aLaVez = 1; ; pagina += aLaVez, aLaVez = 2) {
     const paginas = await Promise.all(
       Array.from({ length: aLaVez }, (_, k) => {
-        const i = (ola + k) * paso;
+        const i = (pagina + k) * paso;
         return consulta(i, i + paso - 1);
       })
     );

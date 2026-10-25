@@ -8,7 +8,6 @@ import { cargarCitasVentas, columnasCloser } from "@/lib/tablero-closers";
 import { ABIERTAS } from "@/lib/llamadas";
 import { Cabecera, Contenido } from "@/components/ui";
 import { FiltroUrl } from "@/components/barra-periodo";
-import { Refresco } from "@/components/refresco";
 import { TableroCrm, type LeadTarjeta } from "./tablero";
 import type { Etapa, Pipeline, Producto, Respuesta } from "@/lib/tipos";
 
@@ -156,7 +155,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
         }
       />
       <Contenido>
-        {!jefe && <Refresco segundos={60} />}
+        {/* 25 oct 2026 (Cristian): sin refresco automático cada 60 s; la base se saturaba con el equipo trabajando */}
         <TableroCrm
           pipelines={pipelines}
           pipeline={pipeline}

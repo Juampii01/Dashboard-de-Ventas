@@ -12,7 +12,6 @@ import type { Pesos } from "@/lib/cualificacion";
 import { colaCaller } from "@/lib/cola";
 import { Cabecera, Contenido, Kpi, Seccion, Insignia, Vacio, Avatar } from "@/components/ui";
 import { AccionesLead } from "@/components/acciones-lead";
-import { Refresco } from "@/components/refresco";
 import type { Lead, Producto } from "@/lib/tipos";
 
 const PESTANAS = [
@@ -97,7 +96,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
         }
       />
       <Contenido>
-        <Refresco segundos={60} />
+        {/* 25 oct 2026 (Cristian): sin refresco automático cada 60 s; la base se saturaba con el equipo trabajando */}
         <PanelObjetivos panel={panel} dinero={(n: number) => dinero(n, proyecto)} celebrar={jefe ? null : `${caller.id}-${hoyEnZona(proyecto.zona_horaria)}`} />
         {vencidos.length > 0 && (
           <Link href={`/caller?${new URLSearchParams({ ...(jefe ? { caller: caller.id } : {}), vista: "llamar", lead: vencidos[0].id })}`} className="flex items-center gap-3 rounded-xl border border-aviso/40 bg-aviso-suave px-4 py-3 text-sm text-aviso hover:brightness-105">
