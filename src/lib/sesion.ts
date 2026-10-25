@@ -33,11 +33,29 @@ export async function sesionDe(userId: string): Promise<Sesion> {
   // todas las páginas). Se piden los dos tipos de proyectos y se usa el que toca según el rol: mismo resultado y orden.
   // 25 oct 2026: los proyectos se guardan 1 minuto en memoria (lib/memoria.ts); el perfil se lee siempre al momento
   // (así desactivar a alguien o terminar el onboarding se aplican enseguida)
-  const [{ data: perfil }, todos, suyos] = await Promise.all([
-    db.from("perfiles").select("*").eq("id", userId).single<Perfil>(),
-    enMemoria("proyectos", UN_MINUTO, async () => (await db.from("proyectos").select("*").order("creado_en")).data),
-    enMemoria(`proyectos-de:${userId}`, UN_MINUTO, async () => (await db.from("miembros_proyecto").select("proyectos(*)").eq("perfil_id", userId)).data),
-  ]);
+  // 25 oct 2026 (Cristian): con la base caída salía «Tu usuario está desactivado» (o «sin proyecto»). Si la base no
+  // responde, se dice eso; «desactivado» solo cuando la base contesta y el perfil no existe (PGRST116 = ninguna fila)
+  // o está apagado. Un fallo de los proyectos no se guarda en la memoria (lanza error).
+  const sinFallo = <T,>({ data, error }: { data: T; error: { message: string } | null }) => {
+    if (error) throw new Error(error.message);
+    return data;
+  };
+  let leido;
+  try {
+    leido = await Promise.all([
+      db.from("perfiles").select("*").eq("id", userId).single<Perfil>(),
+      enMemoria("proyectos", UN_MINUTO, async () => sinFallo(await db.from("proyectos").select("*").order("creado_en"))),
+      enMemoria(`proyectos-de:${userId}`, UN_MINUTO, async () => sinFallo(await db.from("miembros_proyecto").select("proyectos(*)").eq("perfil_id", userId))),
+    ]);
+  } catch (e) {
+    console.error("[sesión] no se pudieron leer los proyectos:", e instanceof Error ? e.message : e);
+    redirect("/login?error=sin-conexion");
+  }
+  const [{ data: perfil, error }, todos, suyos] = leido;
+  if (error && error.code !== "PGRST116") {
+    console.error("[sesión] no se pudo leer el perfil:", error.message);
+    redirect("/login?error=sin-conexion");
+  }
   if (!perfil || !perfil.activo) redirect("/login?error=sin-acceso");
 
   const proyectos: Proyecto[] =
