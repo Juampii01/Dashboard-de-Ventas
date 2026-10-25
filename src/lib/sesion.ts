@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSessionClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enMemoria, UN_MINUTO } from "@/lib/memoria";
 import type { Perfil, Proyecto } from "@/lib/tipos";
 
 // Sesión del usuario: separada de los permisos para poder simularla en los tests.
@@ -30,10 +31,12 @@ export async function sesionDe(userId: string): Promise<Sesion> {
   const db = createAdminClient();
   // Velocidad (17 oct 2026): las 3 consultas a la vez (antes, perfil y después sus proyectos; medido 41–100 ms en
   // todas las páginas). Se piden los dos tipos de proyectos y se usa el que toca según el rol: mismo resultado y orden.
-  const [{ data: perfil }, { data: todos }, { data: suyos }] = await Promise.all([
+  // 25 oct 2026: los proyectos se guardan 1 minuto en memoria (lib/memoria.ts); el perfil se lee siempre al momento
+  // (así desactivar a alguien o terminar el onboarding se aplican enseguida)
+  const [{ data: perfil }, todos, suyos] = await Promise.all([
     db.from("perfiles").select("*").eq("id", userId).single<Perfil>(),
-    db.from("proyectos").select("*").order("creado_en"),
-    db.from("miembros_proyecto").select("proyectos(*)").eq("perfil_id", userId),
+    enMemoria("proyectos", UN_MINUTO, async () => (await db.from("proyectos").select("*").order("creado_en")).data),
+    enMemoria(`proyectos-de:${userId}`, UN_MINUTO, async () => (await db.from("miembros_proyecto").select("proyectos(*)").eq("perfil_id", userId)).data),
   ]);
   if (!perfil || !perfil.activo) redirect("/login?error=sin-acceso");
 

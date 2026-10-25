@@ -3,6 +3,7 @@
 import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { exigir, puedeRecursos } from "@/lib/auth";
 import { db, escribir } from "@/lib/datos";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
@@ -109,6 +110,7 @@ export async function guardarLinksPago(productoId: string, links: unknown) {
     if (entraron > lista.length) throw new ErrorUsuario("Algún link no es válido o está repetido: tienen que empezar por https://");
     const { error } = await db().from("productos").update({ links_pago: lista }).eq("id", productoId).eq("proyecto_id", proyecto.id);
     if (error) throw new ErrorUsuario(/links_pago/.test(error.message) ? "Falta aplicar la migración de la base (links de pago)." : error.message);
+    olvidarTodo(); // 25 oct 2026: borrar la memoria compartida (lib/memoria.ts)
     revalidatePath("/", "layout");
   });
 }
@@ -120,6 +122,7 @@ export async function guardarLinkReserva(url: string) {
     if (limpio && !esHttps(limpio)) throw new ErrorUsuario("Pon un enlace válido que empiece por https://");
     const { error } = await db().from("proyectos").update({ link_reserva: limpio || null }).eq("id", proyecto.id);
     if (error) throw new ErrorUsuario(/link_reserva/.test(error.message) ? "Falta aplicar la migración de la base (links de pago)." : error.message);
+    olvidarTodo(); // 25 oct 2026: borrar la memoria compartida (lib/memoria.ts)
     revalidatePath("/", "layout");
   });
 }

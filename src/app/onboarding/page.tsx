@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { getSesion } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ETIQUETA_ROL } from "@/lib/formato";
@@ -45,6 +46,7 @@ async function completar(formData: FormData) {
     .from("perfiles")
     .update({ nombre, telefono: telefono || null, whatsapp: whatsapp || null, onboarding_completo: true })
     .eq("id", perfil.id);
+  olvidarTodo(); // 25 oct 2026: borrar la memoria compartida (lib/memoria.ts)
   revalidatePath("/", "layout");
   redirect("/"); // H5: «/» elige la primera sección permitida
 }

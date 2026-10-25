@@ -1,12 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { getSesion, puedeAdmin } from "@/lib/auth";
 import { db, escribir } from "@/lib/datos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { horarioValido } from "@/lib/horarios";
 
-const refrescar = () => revalidatePath("/", "layout");
+// 25 oct 2026: también borra la memoria compartida (lib/memoria.ts), para que lo guardado se vea al momento
+const refrescar = () => {
+  olvidarTodo();
+  revalidatePath("/", "layout");
+};
 
 // «Mi perfil» (bloque 1 de 1.0): cada persona cambia sus datos, su contraseña y su horario
 export async function guardarMiPerfil(datos: { nombre: string; telefono: string; whatsapp: string }) {

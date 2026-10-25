@@ -1,4 +1,5 @@
 import "server-only";
+import { enMemoria, UN_MINUTO } from "@/lib/memoria";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/datos";
@@ -26,9 +27,10 @@ export function calcularPermisos(rol: Perfil["rol"], deRol: Fila[], dePersona: F
 // Una vez por petición (el menú y la página la piden a la vez)
 export const seccionesPermitidas = cache(async (perfil: Perfil, proyectoId: string): Promise<Set<Seccion>> => {
   if (perfil.rol === "ceo") return calcularPermisos("ceo", [], []);
-  const [{ data: deRol }, { data: dePersona }] = await Promise.all([
-    db().from("permisos_seccion").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("rol", perfil.rol),
-    db().from("permisos_persona").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("perfil_id", perfil.id),
+  // 25 oct 2026: las filas de permisos se guardan 1 minuto en memoria (lib/memoria.ts); se borra al guardar permisos
+  const [deRol, dePersona] = await Promise.all([
+    enMemoria(`permisos-rol:${proyectoId}:${perfil.rol}`, UN_MINUTO, async () => (await db().from("permisos_seccion").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("rol", perfil.rol)).data),
+    enMemoria(`permisos-persona:${proyectoId}:${perfil.id}`, UN_MINUTO, async () => (await db().from("permisos_persona").select("seccion, permitido").eq("proyecto_id", proyectoId).eq("perfil_id", perfil.id)).data),
   ]);
   return calcularPermisos(perfil.rol, deRol ?? [], dePersona ?? []);
 });

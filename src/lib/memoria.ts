@@ -25,3 +25,9 @@ export function enMemoria<T>(clave: string, ms: number, cargar: () => Promise<T>
 }
 
 export const UN_MINUTO = 60_000;
+
+// Al guardar perfiles, miembros, permisos o ajustes del proyecto se borra todo lo guardado (esta copia del servidor),
+// para que esos cambios se vean al momento
+export function olvidarTodo() {
+  guardado.clear();
+}

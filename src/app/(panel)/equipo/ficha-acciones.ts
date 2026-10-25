@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { exigir, puedeAdmin } from "@/lib/auth";
 import { db, escribir } from "@/lib/datos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
@@ -12,7 +13,11 @@ import type { Perfil, TipoPipeline } from "@/lib/tipos";
 
 // Ficha completa de cada persona (bloque 5 de 1.0, Cristian 11 oct 2026). Lo que va más allá de «datos y comisión»
 // (acceso, permisos, horario, integraciones) es solo para el CEO y los directores con Administración.
-const refrescar = () => revalidatePath("/", "layout");
+// 25 oct 2026: también borra la memoria compartida (lib/memoria.ts), para que lo guardado se vea al momento
+const refrescar = () => {
+  olvidarTodo();
+  revalidatePath("/", "layout");
+};
 
 async function personaDelProyecto(perfilId: string) {
   const sesion = await exigir(puedeAdmin);

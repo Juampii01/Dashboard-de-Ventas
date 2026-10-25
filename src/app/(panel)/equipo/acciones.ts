@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { db, escribir } from "@/lib/datos";
 import { exigirSeccion } from "@/lib/permisos";
@@ -9,7 +10,11 @@ import type { Rol } from "@/lib/tipos";
 import { leerNumero } from "@/lib/numero";
 import { exigirCambiarComisionPersona, exigirCambiarComisionRol, exigirPuedeDarRol } from "@/lib/auth";
 
-const refrescar = () => revalidatePath("/", "layout");
+// 25 oct 2026: también borra la memoria compartida (lib/memoria.ts), para que lo guardado se vea al momento
+const refrescar = () => {
+  olvidarTodo();
+  revalidatePath("/", "layout");
+};
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
 
 function pct(v: unknown, campo: string) {

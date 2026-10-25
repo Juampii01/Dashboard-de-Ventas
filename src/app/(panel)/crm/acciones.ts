@@ -4,6 +4,7 @@ import { exigirSeccion } from "@/lib/permisos";
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { after } from "next/server";
 import { exigir, esJefe, puedeAdmin, getSesion } from "@/lib/auth";
 import { CLAVES_CLOSER } from "@/lib/llamadas";
@@ -15,7 +16,11 @@ import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 import { moverTarjeta, tarjetaDe } from "@/lib/tarjetas";
 
-const refrescar = () => revalidatePath("/", "layout");
+// 25 oct 2026: también borra la memoria compartida (lib/memoria.ts), para que lo guardado se vea al momento
+const refrescar = () => {
+  olvidarTodo();
+  revalidatePath("/", "layout");
+};
 
 // ---------- Importar CSV ----------
 // Enlace firmado para que el navegador suba el CSV directo a Supabase (sin pasar por Vercel)

@@ -1,4 +1,5 @@
 import "server-only";
+import { enMemoria, UN_MINUTO } from "@/lib/memoria";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Perfil } from "@/lib/tipos";
 
@@ -38,7 +39,12 @@ export async function todas<T>(
 
 // 1.0 (Cristian, 11 oct): los perfiles de prueba no salen en el equipo (cifras, reparto, liquidaciones,
 // Equipo y filtros); `conPrueba` los incluye, para que un perfil de prueba vea a los otros de prueba.
-export async function equipo(proyectoId: string, conPrueba = false): Promise<Perfil[]> {
+// 25 oct 2026: el equipo se guarda 1 minuto en memoria (lib/memoria.ts); se borra al guardar en Equipo o Administración
+export function equipo(proyectoId: string, conPrueba = false): Promise<Perfil[]> {
+  return enMemoria(`equipo:${proyectoId}:${conPrueba}`, UN_MINUTO, () => equipoDeLaBase(proyectoId, conPrueba));
+}
+
+async function equipoDeLaBase(proyectoId: string, conPrueba: boolean): Promise<Perfil[]> {
   const { data, error } = await db()
     .from("miembros_proyecto")
     .select("orden, perfiles(*)")

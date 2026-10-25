@@ -2,6 +2,7 @@
 
 import { ErrorUsuario, seguro } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
+import { olvidarTodo } from "@/lib/memoria";
 import { exigir, exigirCambiarComisionRol, puedeAdmin, puedeCrearProyectos } from "@/lib/auth";
 import { tramosDe, tramosValidos } from "@/lib/comisiones";
 import { preguntasValidas } from "@/lib/reportes";
@@ -16,7 +17,11 @@ import { mandarEnlace } from "@/lib/acceso";
 
 const ROLES: Rol[] = ["ceo", "director", "closer", "caller"];
 type Res = { ok?: string; error?: string } | null;
-const refrescar = () => revalidatePath("/", "layout");
+// 25 oct 2026: también borra la memoria compartida (lib/memoria.ts), para que lo guardado se vea al momento
+const refrescar = () => {
+  olvidarTodo();
+  revalidatePath("/", "layout");
+};
 const texto = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
 // ---------- Equipo ----------
