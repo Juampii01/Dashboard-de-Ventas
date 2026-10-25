@@ -32,8 +32,14 @@ async function tokenDeSesion() {
   return token;
 }
 
+// APAGADO (25 oct 2026, Cristian): con 10 personas trabajando, cada cambio hacía que todas las pestañas recargaran
+// su pantalla y volvieran a precargar las 16 secciones (refrescarTodo): hasta 10.700 peticiones a Supabase cada
+// 5 min y la base del plan gratis se quedó colgada. Vuelve el refresco de antes (cada 60 s en CRM y Callers).
+const ACTIVO = false;
+
 export function AvisosEnVivo({ proyectoId }: { proyectoId: string }) {
   useEffect(() => {
+    if (!ACTIVO) return;
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { accessToken: tokenDeSesion });
     let temporizador: ReturnType<typeof setTimeout> | null = null;
     let pendiente = false;
