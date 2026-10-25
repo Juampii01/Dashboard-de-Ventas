@@ -1,4 +1,5 @@
 import "server-only";
+import { enMemoria, UN_MINUTO } from "@/lib/memoria";
 import { db, todas, equipo, conBajas } from "@/lib/datos";
 import { rangoDe, porcentaje, hoyEnZona, sumarDias, type Rango } from "@/lib/formato";
 import { cashNeto, enRango, type Base } from "@/lib/metricas";
@@ -29,7 +30,12 @@ export type FilaObjetivo = {
 export type Lanzamiento = { id: string; nombre: string; inicio: string; fin: string; evento: string | null };
 
 // `enFecha`: solo carga los leads de los lanzamientos en curso ese día (los únicos que se usan). Sin fecha, todos.
-export async function cargarObjetivos(proyectoId: string, enFecha?: string) {
+// 25 oct 2026: compartido 1 minuto entre todo el equipo (lib/memoria.ts)
+export function cargarObjetivos(proyectoId: string, enFecha?: string) {
+  return enMemoria(`objetivos:${proyectoId}:${enFecha ?? "todo"}`, UN_MINUTO, () => cargarObjetivosDeLaBase(proyectoId, enFecha));
+}
+
+async function cargarObjetivosDeLaBase(proyectoId: string, enFecha?: string) {
   const [filas, lanzamientos] = await Promise.all([
     todas<FilaObjetivo>((a, b) =>
       db().from("objetivos").select("id, rol, perfil_id, periodo, lanzamiento_id, cifra, valor, dias, creado_en").eq("proyecto_id", proyectoId).order("id").range(a, b)
@@ -47,7 +53,7 @@ export async function cargarObjetivos(proyectoId: string, enFecha?: string) {
   }
   return { filas: filas.map((f) => ({ ...f, valor: f.valor === null ? null : Number(f.valor) })), lanzamientos, leadsEvento };
 }
-export type DatosObjetivos = Awaited<ReturnType<typeof cargarObjetivos>>;
+export type DatosObjetivos = Awaited<ReturnType<typeof cargarObjetivosDeLaBase>>;
 
 const clave = (f: FilaObjetivo) => [f.rol ?? "", f.perfil_id ?? "", f.periodo, f.lanzamiento_id ?? "", f.cifra].join("|");
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { enMemoria, UN_MINUTO } from "@/lib/memoria";
 import { db, todas, equipo, conBajas, idsDePrueba, deVerdad } from "@/lib/datos";
 import { porcentaje, type Rango } from "@/lib/formato";
 import type { Perfil, Proyecto } from "@/lib/tipos";
@@ -24,7 +25,12 @@ function cambioPct(actual: number, previo: number) {
 // Carga lo necesario del proyecto una vez y calcula todo en memoria.
 // Con el volumen actual (miles de filas) es rápido y sencillo.
 // `conPrueba`: un perfil de prueba que mira lo suyo (sin él, lo de los perfiles de prueba no cuenta; 1.0)
-export async function cargarBase(proyecto: Proyecto, conPrueba = false) {
+// 25 oct 2026: compartido 1 minuto entre todo el equipo (lib/memoria.ts); antes, una carga entera por persona y clic
+export function cargarBase(proyecto: Proyecto, conPrueba = false) {
+  return enMemoria(`base:${proyecto.id}:${conPrueba}`, UN_MINUTO, () => cargarBaseDeLaBase(proyecto, conPrueba));
+}
+
+async function cargarBaseDeLaBase(proyecto: Proyecto, conPrueba: boolean) {
   const pid = proyecto.id;
   const [leads, citasT, ventasT, actividadesT, pagosT, gente, prueba] = await Promise.all([
     todas<LeadMin>((a, b) => db().from("leads").select("id, creado_en, caller_id, closer_id").eq("proyecto_id", pid).order("id").range(a, b)),
@@ -52,7 +58,7 @@ export async function cargarBase(proyecto: Proyecto, conPrueba = false) {
   return { leads, citas, ventas: ventas.map((v) => ({ ...v, facturacion: Number(v.facturacion), cash_collected: Number(v.cash_collected) })), actividades, pagos: pagos.map((p) => ({ ...p, importe: Number(p.importe) })), gente: genteHistorica };
 }
 
-export type Base = Awaited<ReturnType<typeof cargarBase>>;
+export type Base = Awaited<ReturnType<typeof cargarBaseDeLaBase>>;
 
 // Cash neto de un grupo de ventas en el periodo, igual que Finanzas y Agendas (arreglos 5 y 7):
 // lo cobrado al vender (ventas del periodo) + cuotas cobradas en el periodo − devoluciones del periodo.
