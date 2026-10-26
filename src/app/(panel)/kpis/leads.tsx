@@ -115,7 +115,7 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
         <Kpi titulo="Compraron" valor={c.compran.n.toLocaleString("es-ES")} icono={ShoppingCart} tono="oro" detalle={`${pct(c.compran.pct)} del total`} />
       </div>
 
-      {/* Uno debajo de otro: al lado de la tabla, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
+      {/* La tabla sola a todo el ancho: al lado de ella, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
       <div className="space-y-5">
         <Seccion titulo="Cómo rinde cada fuente">
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
@@ -139,14 +139,16 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
           </div>
           <p className="mt-2 text-xs text-texto-3">De los leads de cada fuente (con sus 🔗), cuántos llegaron a cada paso hasta hoy. «Todos» cuenta a cada persona una vez. Clic en una fila para elegirla.</p>
         </Seccion>
-        <Seccion titulo="Embudo">
-          <EmbudoVidrio pasos={embudo(visibles).map((p, i) => ({ t: p.t, n: p.n, d: DETALLE_PASO[i] }))} />
-          <p className="mt-2 text-xs text-texto-3">La misma tanda de arriba abajo: de estos leads, cuántos se contactaron, contestaron, agendaron, asistieron y compraron hasta hoy. No es el embudo de «Por persona», que cuenta lo que pasó en el periodo.</p>
-        </Seccion>
       </div>
 
-      {/* L4 y L5: gráficos y mapa de lo elegido */}
+      {/* L4 y L5: gráficos y mapa de lo elegido. El embudo va en la misma tarjeta que los leads por día (Cristian, 26 oct) */}
       <GraficosLeads
+        embudo={
+          <>
+            <EmbudoVidrio pasos={embudo(visibles).map((p, i) => ({ t: p.t, n: p.n, d: DETALLE_PASO[i] }))} />
+            <p className="mt-2 text-xs text-texto-3">La misma tanda de arriba abajo: de estos leads, cuántos se contactaron, contestaron, agendaron, asistieron y compraron hasta hoy. No es el embudo de «Por persona», que cuenta lo que pasó en el periodo.</p>
+          </>
+        }
         leads={visibles}
         pipelines={pipelines}
         etapas={etapas}

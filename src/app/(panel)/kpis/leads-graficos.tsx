@@ -15,7 +15,7 @@ import { Desplegable } from "@/components/eleccion";
 type Nombrado = { id: string; nombre: string };
 
 // 1c · L4 (Cristian, 26 oct 2026): los gráficos de la pestaña «Leads», de lo elegido arriba (fuente, periodo, país…)
-export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, desde, hasta, mapa }: { leads: LeadVista[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; zona: string; desde: number | null; hasta: number | null; mapa: React.ReactNode }) {
+export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, desde, hasta, embudo, mapa }: { leads: LeadVista[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; zona: string; desde: number | null; hasta: number | null; embudo: React.ReactNode; mapa: React.ReactNode }) {
   const nombre = useMemo(() => {
     const m = new Map([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
     return (id: string | null) => (id ? m.get(id) ?? "—" : null);
@@ -36,13 +36,23 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
 
   return (
     <div className="space-y-5">
-      <Seccion titulo={serie.porHoras ? "Leads por hora de alta" : "Leads por día de alta"}>
-        <GraficoLeads puntos={serie.puntos} porHoras={serie.porHoras} />
-        {conWhatsApp && (
-          <p className="mt-2 text-xs text-texto-3">
-            Los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, hacia las 04:00 UTC: justo a medianoche en Nueva York, por eso salen repartidos entre el 25 y el 26 oct). Ese pico no es el día en que entraron al grupo.
-          </p>
-        )}
+      {/* Embudo y leads por día lado a lado en una sola tarjeta (Cristian, 26 oct); en móvil, uno debajo del otro */}
+      <Seccion>
+        <div className="grid gap-5 lg:grid-cols-2 lg:gap-0">
+          <div className="min-w-0 lg:pr-6">
+            <h2 className="titulo-seccion mb-4">Embudo</h2>
+            {embudo}
+          </div>
+          <div className="min-w-0 border-t border-borde pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+            <h2 className="titulo-seccion mb-4">{serie.porHoras ? "Leads por hora de alta" : "Leads por día de alta"}</h2>
+            <GraficoLeads puntos={serie.puntos} porHoras={serie.porHoras} />
+            {conWhatsApp && (
+              <p className="mt-2 text-xs text-texto-3">
+                Los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, hacia las 04:00 UTC: justo a medianoche en Nueva York, por eso salen repartidos entre el 25 y el 26 oct). Ese pico no es el día en que entraron al grupo.
+              </p>
+            )}
+          </div>
+        </div>
       </Seccion>
 
       {/* El mapa, a todo el ancho (lleva su ranking al lado) */}
