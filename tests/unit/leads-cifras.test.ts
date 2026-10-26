@@ -1,6 +1,6 @@
 // 1c (26 oct 2026): filtros y cifras de la pestaña «Leads» de KPIs.
 import { describe, expect, it } from "vitest";
-import { cifras, compararFuentes, embudo, filtrarLeads, porDia, preguntasDe, repartir, respuestasA, type FiltroLeads } from "@/lib/leads-cifras";
+import { cifras, compararFuentes, embudo, filtrarLeads, preguntasDe, repartir, respuestasA, serieLeads, type FiltroLeads } from "@/lib/leads-cifras";
 import { MARCA, type LeadVista } from "@/lib/leads-vista";
 
 const lead = (x: Partial<LeadVista> & { id: string }): LeadVista => ({
@@ -68,9 +68,21 @@ describe("cifras y embudo (la misma tanda)", () => {
     const filas = compararFuentes(leads, [{ id: "wsp", nombre: "Leads WhatsApp" }, { id: "bib", nombre: "Biblioteca" }]);
     expect(filas.map((f) => [f.nombre, f.pasos[0].n, f.sinCaller, f.pasos[3].n])).toEqual([["Todos", 5, 3, 2], ["Leads WhatsApp", 3, 1, 1], ["Biblioteca", 2, 1, 2]]);
   });
-  it("leads por día: cada día del periodo, también los de 0, en la zona del proyecto", () => {
-    const p = porDia(leads, "Europe/Madrid", Date.parse("2026-10-24T22:00:00Z"), Date.parse("2026-10-27T23:00:00Z"), Date.parse("2026-10-26T12:00:00Z"));
-    expect(p).toEqual([{ dia: "25/10", valor: 0 }, { dia: "26/10", valor: 2 }]); // hasta hoy, no hasta el final del periodo
+  const fuente = (l: LeadVista) => l.pipelineId ?? "—";
+  it("leads por día: cada día del periodo, también los de 0, en la zona del proyecto, con su fuente", () => {
+    const s = serieLeads(leads, "Europe/Madrid", Date.parse("2026-10-23T22:00:00Z"), Date.parse("2026-10-27T23:00:00Z"), fuente, Date.parse("2026-10-26T12:00:00Z"));
+    expect(s.porHoras).toBe(false);
+    expect(s.puntos).toEqual([
+      { corto: "24/10", largo: "sáb 24 oct 2026", total: 0, fuentes: [] },
+      { corto: "25/10", largo: "dom 25 oct 2026", total: 0, fuentes: [] },
+      { corto: "26/10", largo: "lun 26 oct 2026", total: 2, fuentes: [{ t: "wsp", n: 2 }] }, // hasta hoy, no hasta el final del periodo
+    ]);
+  });
+  it("con un periodo de un día («Hoy»), por horas", () => {
+    const s = serieLeads(leads, "Europe/Madrid", Date.parse("2026-10-25T23:00:00Z"), Date.parse("2026-10-26T23:00:00Z"), fuente, Date.parse("2026-10-26T06:30:00Z"));
+    expect(s.porHoras).toBe(true);
+    expect(s.puntos.map((p) => [p.corto, p.total])).toEqual([["00:00", 0], ["01:00", 0], ["02:00", 0], ["03:00", 0], ["04:00", 0], ["05:00", 2], ["06:00", 0], ["07:00", 0]]);
+    expect(s.puntos[5].largo).toBe("lun 26 oct · 05:00–05:59"); // 04:00 UTC = 05:00 en Madrid
   });
   it("preguntas y respuestas de los formularios (con su nombre único; solo quien respondió)", () => {
     const conForm = [

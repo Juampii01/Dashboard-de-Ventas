@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { porDia, preguntasDe, repartir, respuestasA } from "@/lib/leads-cifras";
+import { preguntasDe, repartir, respuestasA, serieLeads } from "@/lib/leads-cifras";
+import { GraficoLeads } from "@/components/grafico-leads";
 import type { LeadVista } from "@/lib/leads-vista";
 import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais } from "@/lib/formato";
 import { ETIQUETA_OFERTA, PREGUNTAS_BIBLIOTECA, preguntaCanonica, type Oferta } from "@/lib/oferta";
 import { PREFIJO_ETIQUETA } from "@/lib/canal";
-import { GraficoDiario, Seccion } from "@/components/ui";
+import { Seccion } from "@/components/ui";
 import { Barras } from "@/components/barras";
 import { AnilloPartes } from "@/components/anillo-partes";
 import { Desplegable } from "@/components/eleccion";
@@ -19,7 +20,7 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
     const m = new Map([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
     return (id: string | null) => (id ? m.get(id) ?? "—" : null);
   }, [pipelines, etapas, gente]);
-  const puntos = useMemo(() => porDia(leads, zona, desde, hasta), [leads, zona, desde, hasta]);
+  const serie = useMemo(() => serieLeads(leads, zona, desde, hasta, (l) => nombre(l.pipelineId) ?? "Sin pipeline"), [leads, zona, desde, hasta, nombre]);
   const conWhatsApp = leads.some((l) => l.etiquetas.includes("leads whatsapp"));
   const columna = (l: LeadVista) => (!fuente ? null : l.pipelineId === fuente ? nombre(l.etapaId) : nombre(l.tarjetas.find((t) => t.pipelineId === fuente)?.etapaId ?? null));
   const canal = (l: LeadVista) => l.etiquetas.find((e) => e.startsWith(PREFIJO_ETIQUETA))?.slice(PREFIJO_ETIQUETA.length) ?? null;
@@ -35,21 +36,20 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
 
   return (
     <div className="space-y-5">
-      <Seccion titulo="Leads por día de alta">
-        <GraficoDiario puntos={puntos} formato={(n) => `${n.toLocaleString("es-ES")} leads`} />
+      <Seccion titulo={serie.porHoras ? "Leads por hora de alta" : "Leads por día de alta"}>
+        <GraficoLeads puntos={serie.puntos} porHoras={serie.porHoras} />
         {conWhatsApp && <p className="mt-2 text-xs text-texto-3">Los de WhatsApp se importaron el 26 oct 2026: ese pico no es el día en que entraron al grupo.</p>}
       </Seccion>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {mapa}
-        <Seccion titulo="De dónde vienen">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            {!fuente && <AnilloPartes titulo="Por fuente" partes={repartir(leads, (l) => nombre(l.pipelineId), "Sin pipeline")} />}
-            <AnilloPartes titulo="Por país" partes={repartir(leads, (l) => nombrePais(l.pais), SIN_PAIS)} />
-            <AnilloPartes titulo="Canal de la cita" partes={repartir(leads.filter(canal), canal)} />
-          </div>
-        </Seccion>
-      </div>
+      {/* El mapa, a todo el ancho (lleva su ranking al lado) */}
+      {mapa}
+      <Seccion titulo="De dónde vienen">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {!fuente && <AnilloPartes titulo="Por fuente" partes={repartir(leads, (l) => nombre(l.pipelineId), "Sin pipeline")} />}
+          <AnilloPartes titulo="Por país" partes={repartir(leads, (l) => nombrePais(l.pais), SIN_PAIS)} />
+          <AnilloPartes titulo="Canal de la cita" partes={repartir(leads.filter(canal), canal)} />
+        </div>
+      </Seccion>
 
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         {fuente && (

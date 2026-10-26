@@ -79,22 +79,47 @@ export function compararFuentes(leads: LeadVista[], pipelines: PipelineVista[]) 
   return [fila(null, "Todos", leads), ...pipelines.map((p) => fila(p.id, p.nombre, leads.filter((l) => enPipeline(l, p.id))))];
 }
 
-// L4: leads por día de alta, en la zona del proyecto. Sin «desde», desde el primero; sin «hasta», hasta hoy (máx. 400 días)
-export function porDia(leads: LeadVista[], zona: string, desde: number | null, hasta: number | null, ahora = Date.now()) {
-  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: zona });
-  const dia = (ms: number) => fmt.format(new Date(ms));
-  const cuenta = new Map<string, number>();
-  for (const l of leads) cuenta.set(dia(l.alta), (cuenta.get(dia(l.alta)) ?? 0) + 1);
-  const inicio = desde ?? (leads.length ? Math.min(...leads.map((l) => l.alta)) : ahora);
-  const ultimo = dia(Math.min((hasta ?? ahora + 1) - 1, ahora));
-  const d = new Date(`${dia(inicio)}T12:00:00Z`);
-  const puntos: { dia: string; valor: number }[] = [];
-  while (d.toISOString().slice(0, 10) <= ultimo && puntos.length < 400) {
-    const k = d.toISOString().slice(0, 10);
-    puntos.push({ dia: `${k.slice(8, 10)}/${k.slice(5, 7)}`, valor: cuenta.get(k) ?? 0 });
-    d.setUTCDate(d.getUTCDate() + 1);
+// L4 (Cristian, 26 oct: «al pasar el ratón tienen que salir los días o las horas»): leads por día de alta, en la zona
+// del proyecto, con su reparto por fuente; si el periodo es de 2 días o menos («Hoy»), por horas. Sin «desde», desde el
+// primero; sin «hasta», hasta ahora (máx. 400 puntos).
+export type PuntoSerie = { corto: string; largo: string; total: number; fuentes: { t: string; n: number }[] };
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const DIAS_SEMANA = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+export function serieLeads(leads: LeadVista[], zona: string, desde: number | null, hasta: number | null, fuenteDe: (l: LeadVista) => string, ahora = Date.now()) {
+  const porHoras = desde !== null && hasta !== null && hasta - desde <= 2 * 86_400_000;
+  const fmtDia = new Intl.DateTimeFormat("en-CA", { timeZone: zona });
+  const fmtHora = new Intl.DateTimeFormat("en-GB", { timeZone: zona, hour: "2-digit", hourCycle: "h23" });
+  const clave = (ms: number) => (porHoras ? `${fmtDia.format(new Date(ms))}T${fmtHora.format(new Date(ms))}` : fmtDia.format(new Date(ms)));
+  const cuenta = new Map<string, LeadVista[]>();
+  for (const l of leads) cuenta.set(clave(l.alta), [...(cuenta.get(clave(l.alta)) ?? []), l]);
+  const fin = Math.min((hasta ?? ahora + 1) - 1, ahora);
+  const claves: string[] = [];
+  if (porHoras) {
+    for (let t = desde!; t <= fin && claves.length < 400; t += 3_600_000) if (!claves.includes(clave(t))) claves.push(clave(t));
+  } else {
+    const inicio = desde ?? (leads.length ? Math.min(...leads.map((l) => l.alta)) : ahora);
+    const d = new Date(`${fmtDia.format(new Date(inicio))}T12:00:00Z`);
+    const ultimo = fmtDia.format(new Date(fin));
+    while (d.toISOString().slice(0, 10) <= ultimo && claves.length < 400) {
+      claves.push(d.toISOString().slice(0, 10));
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
   }
-  return puntos;
+  return {
+    porHoras,
+    puntos: claves.map((k): PuntoSerie => {
+      const ls = cuenta.get(k) ?? [];
+      const dia = k.slice(0, 10);
+      const semana = DIAS_SEMANA[new Date(`${dia}T12:00:00Z`).getUTCDay()];
+      const fecha = `${Number(dia.slice(8, 10))} ${MESES[Number(dia.slice(5, 7)) - 1]}`;
+      return {
+        corto: porHoras ? `${k.slice(11, 13)}:00` : `${dia.slice(8, 10)}/${dia.slice(5, 7)}`,
+        largo: porHoras ? `${semana} ${fecha} · ${k.slice(11, 13)}:00–${k.slice(11, 13)}:59` : `${semana} ${fecha} ${dia.slice(0, 4)}`,
+        total: ls.length,
+        fuentes: repartir(ls, fuenteDe).map(({ t, n }) => ({ t, n })),
+      };
+    }),
+  };
 }
 
 // L4: las preguntas de los formularios de estos leads (con su nombre único), de la más respondida a la menos

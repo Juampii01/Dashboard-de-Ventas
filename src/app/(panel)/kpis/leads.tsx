@@ -11,7 +11,17 @@ import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais, pct } from "@/lib/formato
 import { PREGUNTAS_BIBLIOTECA, preguntaCanonica, respuestasBiblioteca } from "@/lib/oferta";
 import { PREFIJO_ETIQUETA } from "@/lib/canal";
 import { Kpi, Seccion } from "@/components/ui";
-import { Embudo } from "@/components/embudo";
+import { EmbudoVidrio } from "@/components/embudo-vidrio";
+
+// Qué cuenta cada paso del embudo (sale al pasar el ratón); las reglas son las de KPIs (lib/leads-vista.ts → marcasEmbudo)
+const DETALLE_PASO = [
+  "Los leads elegidos arriba (fuente, periodo, país…).",
+  "Tienen una llamada o un WhatsApp apuntado, o agendaron.",
+  "Contestaron una llamada (no «no contesta»), o agendaron.",
+  "Tienen al menos una cita (también si luego se canceló).",
+  "Fueron a la llamada: cita cerrada, en seguimiento o perdida.",
+  "Tienen al menos una venta.",
+];
 import { Desplegable } from "@/components/eleccion";
 import { OfertaChip } from "@/components/oferta-chip";
 import { PopupLead } from "@/components/popup-lead";
@@ -130,7 +140,7 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
           <p className="mt-2 text-xs text-texto-3">De los leads de cada fuente (con sus 🔗), cuántos llegaron a cada paso hasta hoy. «Todos» cuenta a cada persona una vez. Clic en una fila para elegirla.</p>
         </Seccion>
         <Seccion titulo="Embudo">
-          <Embudo titulo="Embudo de los leads elegidos" pasos={embudo(visibles).map((p) => ({ t: p.t, n: p.n }))} />
+          <EmbudoVidrio pasos={embudo(visibles).map((p, i) => ({ t: p.t, n: p.n, d: DETALLE_PASO[i] }))} />
           <p className="mt-2 text-xs text-texto-3">La misma tanda de arriba abajo: de estos leads, cuántos se contactaron, contestaron, agendaron, asistieron y compraron hasta hoy. No es el embudo de «Por persona», que cuenta lo que pasó en el periodo.</p>
         </Seccion>
       </div>
