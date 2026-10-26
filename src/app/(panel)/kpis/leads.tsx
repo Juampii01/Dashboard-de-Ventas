@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, Flame, PhoneCall, Search, ShoppingCart, UserX, Users, Wallet } from "lucide-react";
-import { resumenBiblioteca, type EscalonOferta } from "@/lib/biblioteca";
+import { RANGO, resumenBiblioteca, type EscalonOferta } from "@/lib/biblioteca";
 import { cargandoDatos } from "@/lib/pantalla-lista";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { cargarLeadsPestana } from "./acciones";
@@ -184,10 +184,21 @@ function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; 
         acciones={
           <div className="flex flex-wrap items-center gap-2">
             {csv}
-            <AccionesLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} />
+            <AccionesLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} repartir={oferta ? `Repartir ${ETIQUETA_OFERTA[oferta as Oferta]}` : "Repartir lo que ves"} />
           </div>
         }
       >
+        {/* Las fichas de oferta de la tabla de la Biblioteca (Cristian, 26 oct): el mismo filtro que el desplegable de arriba */}
+        <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Oferta">
+          <button type="button" role="tab" aria-selected={!oferta} onClick={() => setOferta("")} className={`chip ${!oferta ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>
+            Todos <small className="ml-1 tabular-nums opacity-80">{porOferta.reduce((s, p) => s + p.n, 0).toLocaleString("es-ES")}</small>
+          </button>
+          {OFERTAS.map((o) => (
+            <button key={o.v} type="button" role="tab" aria-selected={oferta === o.v} onClick={() => setOferta(o.v)} className={`chip ${oferta === o.v ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>
+              {o.t} <small className="ml-1 tabular-nums opacity-80">{(porOferta.find((p) => p.t === o.v)?.n ?? 0).toLocaleString("es-ES")}</small>
+            </button>
+          ))}
+        </div>
         <TablaLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} />
       </Seccion>
     </div>
@@ -198,14 +209,19 @@ const POR_PAGINA = 100;
 // Títulos cortos (CORTO, en leads-acciones.tsx), como en la tabla de la Biblioteca; la pregunta entera, al pasar el ratón
 const NOMBRE_PREGUNTA = Object.fromEntries(PREGUNTAS_BIBLIOTECA.map((p) => [p.clave, p.texto]));
 const DE_BIBLIOTECA = new Set(PREGUNTAS_BIBLIOTECA.map((p) => p.texto));
+// Las 6 del formulario en el orden de la tabla de la Biblioteca
+const PREGUNTAS_COLUMNAS = (["situacion", "experiencia", "objetivo", "tiempo", "inversion", "inicio"] as const).map((k) => PREGUNTAS_BIBLIOTECA.find((p) => p.clave === k)!);
+const ORDEN_OFERTA = Object.fromEntries(OFERTAS.map((o) => [o.v, o.orden])) as Record<Oferta, number>;
+const TONO_INV: Record<string, string> = { "Sí, ahora": "bg-ok", "En los próximos meses": "bg-aviso", "No por ahora": "bg-mal" };
+const pesoEtiquetas = (t: string[]) => (t.includes("agendado dfy") ? 0 : t.includes("agenda llamada") ? 1 : t.includes("webinar1") ? 2 : 3);
 
 function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVista[]; pipelines: Vista["pipelines"]; etapas: Vista["etapas"]; gente: Vista["gente"]; fuente: string | null }) {
   const nombre = useMemo(() => {
     const m = new Map<string, string>([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
     return (id: string | null) => (id ? m.get(id) ?? "—" : "—");
   }, [pipelines, etapas, gente]);
-  const [col, setCol] = useState("alta");
-  const [dir, setDir] = useState(-1);
+  const [col, setCol] = useState("oferta");
+  const [dir, setDir] = useState(1);
   const [limite, setLimite] = useState(POR_PAGINA);
   const [ficha, setFicha] = useState<LeadVista | null>(null);
 
@@ -227,23 +243,35 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
     [leads, fuente, nombre]
   );
   type Fila = (typeof filas)[number];
+  // Orden de columnas y de filas como la tabla de la Biblioteca (Cristian, 26 oct): oferta primero, el formulario
+  // después de Caller, y «Puede invertir», «Tiempo» y «Cuándo empezar» de más a menos listo (RANGO)
   const COLS: { k: string; t: string; d?: string; v: (f: Fila) => string | number | null }[] = [
+    { k: "oferta", t: "Oferta", v: (f) => (f.l.oferta ? ORDEN_OFERTA[f.l.oferta as Oferta] ?? 9 : null) },
     { k: "nombre", t: "Nombre", v: (f) => f.l.nombre || null },
     { k: "telefono", t: "Teléfono", v: (f) => f.l.telefono },
     { k: "pais", t: "País", v: (f) => nombrePais(f.l.pais) },
     { k: "email", t: "Email", v: (f) => f.l.email },
-    { k: "pipeline", t: "Pipeline → columna", v: (f) => `${f.d.pipeline} ${f.d.columna}` },
+    { k: "alta", t: "Alta", v: (f) => f.l.alta },
     { k: "caller", t: "Caller", v: (f) => (f.l.callerId ? nombre(f.l.callerId) : null) },
+    ...PREGUNTAS_COLUMNAS.map((p) => ({
+      k: p.clave,
+      t: CORTO[p.clave],
+      d: NOMBRE_PREGUNTA[p.clave],
+      v: (f: Fila) => {
+        const x = f.r[p.clave];
+        const rango = RANGO[p.clave];
+        return !x ? null : rango ? rango[x] ?? 9 : x;
+      },
+    })),
+    { k: "pipeline", t: "Pipeline → columna", v: (f) => `${f.d.pipeline} ${f.d.columna}` },
     { k: "closer", t: "Closer", v: (f) => (f.l.closerId ? nombre(f.l.closerId) : null) },
     { k: "estado", t: "Estado", v: (f) => ETIQUETA_ESTADO_CALLER[f.l.estado] ?? f.l.estado },
     { k: "estrellas", t: "★", v: (f) => f.l.estrellas },
-    { k: "oferta", t: "Oferta", v: (f) => f.l.oferta },
     { k: "canal", t: "Canal", v: (f) => f.canal },
     { k: "fuente", t: "Origen", v: (f) => f.l.fuente },
-    { k: "alta", t: "Alta", v: (f) => f.l.alta },
-    ...PREGUNTAS_BIBLIOTECA.map((p) => ({ k: p.clave, t: CORTO[p.clave], d: NOMBRE_PREGUNTA[p.clave], v: (f: Fila) => f.r[p.clave] || null })),
     { k: "otras", t: "Otras respuestas", v: (f) => f.otras || null },
-    { k: "etiquetas", t: "Etiquetas", v: (f) => f.l.etiquetas.join(", ") || null },
+    // Primero quien ya agendó (DFY y llamada) y luego quien está en webinar1, como la Biblioteca
+    { k: "etiquetas", t: "Etiquetas", v: (f) => (f.l.etiquetas.length ? pesoEtiquetas(f.l.etiquetas) : null) },
   ];
   const ordenadas = useMemo(() => {
     const c = COLS.find((x) => x.k === col) ?? COLS[0];
@@ -286,20 +314,24 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
           <tbody>
             {ordenadas.slice(0, limite).map(({ l, r, otras, canal, d }) => (
               <tr key={l.id} tabIndex={0} className="cursor-pointer hover:bg-panel-2" onClick={(e) => !(e.target as HTMLElement).closest("a") && setFicha(l)} onKeyDown={(e) => e.key === "Enter" && setFicha(l)}>
+                <td><OfertaChip oferta={l.oferta} /></td>
                 <td className="whitespace-nowrap font-medium">{l.nombre || <span className="text-texto-3">Sin nombre</span>}</td>
                 <td className="whitespace-nowrap">{l.telefono ?? "—"}</td>
                 <td className="whitespace-nowrap">{nombrePais(l.pais)}</td>
                 <td>{l.email ? <a href={`mailto:${l.email}`} className="text-primario hover:underline">{l.email}</a> : "—"}</td>
-                <td className="whitespace-nowrap text-texto-2">{d.pipeline} → {d.columna}{l.tarjetas.length > 0 && !fuente ? <span className="text-texto-3" title={l.tarjetas.map((t) => nombre(t.pipelineId)).join(" · ")}> · 🔗{l.tarjetas.length}</span> : null}</td>
+                <td className="whitespace-nowrap tabular-nums">{new Date(l.alta).toLocaleDateString("es-ES")}</td>
                 <td className="whitespace-nowrap text-texto-2">{l.callerId ? nombre(l.callerId) : "—"}</td>
+                {PREGUNTAS_COLUMNAS.map((p) => (
+                  <td key={p.clave} className="whitespace-nowrap">
+                    {p.clave === "inversion" && r.inversion ? <span className="inline-flex items-center gap-1.5"><i className={`h-2 w-2 rounded-full ${TONO_INV[r.inversion] ?? "bg-texto-3"}`} />{r.inversion}</span> : r[p.clave] || "—"}
+                  </td>
+                ))}
+                <td className="whitespace-nowrap text-texto-2">{d.pipeline} → {d.columna}{l.tarjetas.length > 0 && !fuente ? <span className="text-texto-3" title={l.tarjetas.map((t) => nombre(t.pipelineId)).join(" · ")}> · 🔗{l.tarjetas.length}</span> : null}</td>
                 <td className="whitespace-nowrap text-texto-2">{l.closerId ? nombre(l.closerId) : "—"}</td>
                 <td className="whitespace-nowrap">{ETIQUETA_ESTADO_CALLER[l.estado] ?? l.estado}</td>
                 <td className="tabular-nums">{l.estrellas ?? "—"}</td>
-                <td><OfertaChip oferta={l.oferta} /></td>
                 <td className="whitespace-nowrap">{canal ?? "—"}</td>
                 <td className="whitespace-nowrap text-texto-2">{l.fuente ?? "—"}</td>
-                <td className="whitespace-nowrap tabular-nums">{new Date(l.alta).toLocaleDateString("es-ES")}</td>
-                {PREGUNTAS_BIBLIOTECA.map((p) => <td key={p.clave} className="whitespace-nowrap">{r[p.clave] || "—"}</td>)}
                 <td className="tabular-nums">{otras || "—"}</td>
                 <td><div className="flex gap-1 whitespace-nowrap">{l.etiquetas.map((t) => <span key={t} className="chip bg-panel-2 text-texto-3">{t}</span>)}</div></td>
               </tr>

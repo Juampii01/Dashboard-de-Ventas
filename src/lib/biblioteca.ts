@@ -42,6 +42,12 @@ export const OPCIONES: Record<keyof RespuestasBiblioteca, { v: string; t: string
     { v: "Más de 20 h", t: "Más de 20 h" },
   ],
 };
+// Para ordenar la tabla de más a menos listo (no por orden alfabético), como la vista (la usa KPIs → «Leads»)
+export const RANGO: Partial<Record<keyof RespuestasBiblioteca, Record<string, number>>> = {
+  inversion: { "Sí, ahora": 1, "En los próximos meses": 2, "No por ahora": 3 },
+  tiempo: { "Más de 20 h": 1, "10 a 20 h": 2, "5 a 10 h": 3, "Menos de 5 h": 4 },
+  inicio: { "Ya mismo": 1, "Este mes": 2, "Más adelante": 3 },
+};
 // 1b (Cristian, 26 oct 2026): el país es el que se guarda en el lead (sacado de su teléfono al guardarlo; lib/pais.ts).
 // Antes salía de una lista de prefijos que metía a República Dominicana y Puerto Rico en «EE. UU./Canadá».
 export type LeadBiblioteca = { id: string; respuestas: Respuesta[]; pais: string | null; oferta?: Oferta | null };

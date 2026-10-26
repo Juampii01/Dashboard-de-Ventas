@@ -17,7 +17,7 @@ const si = (l: LeadVista, m: number) => ((l.marcas & m) === m ? "Sí" : "No");
 // 1c · L6 (Cristian, 26 oct 2026): sobre lo que se ve en la pestaña «Leads» (fuente, periodo, país, sin caller y búsqueda):
 // «Repartir lo que ves» reparte exactamente esos leads (también los de las 🔗; el reparto por pipeline del CRM no los
 // coge) y «Exportar CSV» los descarga con todas sus columnas.
-export function AccionesLeads({ leads, pipelines, etapas, gente, fuente, callers }: { leads: LeadVista[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; callers: Nombrado[] }) {
+export function AccionesLeads({ leads, pipelines, etapas, gente, fuente, callers, repartir = "Repartir lo que ves" }: { leads: LeadVista[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; callers: Nombrado[]; repartir?: string }) {
   const nombre = new Map([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
   const n = (id: string | null) => (id ? nombre.get(id) ?? "" : "");
 
@@ -67,7 +67,7 @@ export function AccionesLeads({ leads, pipelines, etapas, gente, fuente, callers
       <button type="button" className="btn-secundario" onClick={exportar} disabled={!leads.length} title="Descarga los leads que ves, con todas sus columnas">
         <Download className="h-4 w-4" /> Exportar CSV ({leads.length.toLocaleString("es-ES")})
       </button>
-      {leads.length > 0 && <RepartirLeads callers={callers} fijo={{ leadIds: leads.map((l) => l.id) }} etiqueta="Repartir lo que ves" />}
+      {leads.length > 0 && <RepartirLeads callers={callers} fijo={{ leadIds: leads.map((l) => l.id) }} etiqueta={repartir} />}
     </div>
   );
 }
