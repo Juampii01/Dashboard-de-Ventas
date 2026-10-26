@@ -13,6 +13,8 @@ const PERIODOS = [
   { v: "todo", t: "Todo" },
 ];
 
+const CAMPO_LIGERO = "campo min-w-0 flex-1 px-2.5 py-1 text-[13px] sm:w-44 sm:flex-none";
+
 // Barra de filtros: vendedor, periodo, fechas y búsqueda. Todo va en la URL.
 export function Filtros({
   vendedores,
@@ -53,10 +55,12 @@ export function Filtros({
 
   return (
     <div className={`flex flex-wrap items-center ${ligero ? "gap-0.5" : "tarjeta gap-2 p-2.5"} ${cargando ? "opacity-70" : ""}`}>
+      {/* ligero: vendedor y producto juntos en una línea y más pequeños (en el móvil, mitad y mitad; Cristian, 26 oct) */}
+      <div className={ligero ? "flex w-full min-w-0 gap-1.5 sm:w-auto" : "contents"}>
       {vendedores && (
         <Desplegable
           aria-label="Vendedor"
-          className="campo w-auto min-w-44"
+          className={ligero ? CAMPO_LIGERO : "campo w-auto min-w-44"}
           value={params.get("vendedor") ?? ""}
           onChange={(e) => poner({ vendedor: e.target.value })}
         >
@@ -71,7 +75,7 @@ export function Filtros({
       {productos && (
         <Desplegable
           aria-label="Producto"
-          className="campo w-auto min-w-44"
+          className={ligero ? CAMPO_LIGERO : "campo w-auto min-w-44"}
           value={params.get("producto") ?? ""}
           onChange={(e) => poner({ producto: e.target.value })}
         >
@@ -83,6 +87,7 @@ export function Filtros({
           ))}
         </Desplegable>
       )}
+      </div>
       <div className={ligero ? "flex gap-0.5" : "flex rounded-lg border border-borde bg-panel-2 p-0.5"}>
         {PERIODOS.map((p) => (
           // Velocidad (17 oct 2026): enlaces con precarga completa (antes, botones que esperaban al servidor al pulsar)
