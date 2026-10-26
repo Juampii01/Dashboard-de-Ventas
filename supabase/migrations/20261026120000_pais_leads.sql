@@ -21,3 +21,23 @@ begin
 end $$;
 create trigger leads_pais_del_telefono before insert or update of telefono, pais, pais_de on public.leads
   for each row execute function public.lead_pais_del_telefono();
+
+-- P3 · rellenar los leads que ya hay (scripts/rellenar-pais.mjs): un mismo país a una tanda de leads en una sola
+-- escritura, cada uno con su propio teléfono como «pais_de» (así no hacen falta 3.345 escrituras). Solo los que siguen
+-- sin país y con el mismo teléfono con el que se calculó (si cambió entretanto, se queda sin calcular). Devuelve
+-- cuántos cambió. Solo la clave secreta.
+create or replace function public.rellenar_pais(p_ids uuid[], p_telefonos text[], p_pais text)
+returns integer
+language sql
+set search_path = public
+as $$
+  with hechos as (
+    update public.leads l set pais = p_pais, pais_de = l.telefono
+    from unnest(p_ids, p_telefonos) as u(id, telefono)
+    where l.id = u.id and l.telefono = u.telefono and l.pais is null
+    returning 1
+  )
+  select count(*)::integer from hechos
+$$;
+revoke execute on function public.rellenar_pais(uuid[], text[], text) from public, anon, authenticated;
+grant execute on function public.rellenar_pais(uuid[], text[], text) to service_role;

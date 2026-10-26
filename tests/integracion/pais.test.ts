@@ -58,3 +58,25 @@ describe("Al cambiar el teléfono", () => {
     expect((await porEmail(email)).pais).toBeNull();
   });
 });
+
+describe("P3 · rellenar_pais (la usa scripts/rellenar-pais.mjs)", () => {
+  it("pone el país a una tanda en una escritura, cada uno con su teléfono; no toca los que ya tienen país ni los que cambiaron de teléfono", async () => {
+    // Creados directamente en la base, como los leads de antes de guardar el país
+    const filas = [["a", "+34 600 11 22 33"], ["b", "+34 611 22 33 44"], ["c", "+34 622 33 44 55"]].map(([x, telefono]) => ({ proyecto_id: e.proyecto.id, nombre: `Viejo ${x}`, email: `${e.pref}-viejo-${x}@x.test`, telefono }));
+    const { data: creados } = await db.from("leads").insert(filas).select("id, telefono, pais");
+    expect(creados!.map((l) => l.pais)).toEqual([null, null, null]);
+    const [a, b, c] = creados!;
+    await db.from("leads").update({ telefono: "+57 300 123 4567" }).eq("id", c.id); // cambió de teléfono después de leerlo
+    const { data: n, error } = await db.rpc("rellenar_pais", { p_ids: [a.id, b.id, c.id], p_telefonos: [a.telefono, b.telefono, c.telefono], p_pais: "ES" });
+    expect(error).toBeNull();
+    expect(n).toBe(2);
+    const despues = async (id: string) => (await db.from("leads").select("pais, pais_de, telefono").eq("id", id).single()).data!;
+    expect(await despues(a.id)).toMatchObject({ pais: "ES", pais_de: "+34 600 11 22 33" });
+    expect(await despues(b.id)).toMatchObject({ pais: "ES", pais_de: "+34 611 22 33 44" });
+    expect(await despues(c.id)).toMatchObject({ pais: null });
+    // Otra vez: ya tienen país, no cambia ninguno
+    const { data: otra } = await db.rpc("rellenar_pais", { p_ids: [a.id], p_telefonos: [a.telefono], p_pais: "MX" });
+    expect(otra).toBe(0);
+    expect((await despues(a.id)).pais).toBe("ES");
+  });
+});
