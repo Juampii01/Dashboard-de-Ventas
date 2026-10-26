@@ -79,13 +79,15 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       <>
         <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Leads · ${rango.etiqueta}`} />
         <Contenido>
-          {/* Pestañas y periodo en una sola barra (Cristian, 26 oct) */}
-          <div className="tarjeta flex flex-wrap items-center gap-2 p-1.5">
-            {listaPestanas}
-            <span className="mx-1 hidden h-6 w-px bg-borde sm:block" aria-hidden />
-            <Filtros periodoPorDefecto="todo" />
-          </div>
-          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} ofertas={ofertas} csv={csv} />
+          {/* Pestañas y periodo en una sola barra, dentro de la misma tarjeta que los filtros de la pestaña (Cristian, 26 oct) */}
+          <PestanaLeads
+            barra={
+              <div className="flex flex-wrap items-center gap-2">
+                {listaPestanas}
+                <span className="mx-1 hidden h-6 w-px bg-borde sm:block" aria-hidden />
+                <Filtros periodoPorDefecto="todo" />
+              </div>
+            } desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} ofertas={ofertas} csv={csv} />
         </Contenido>
       </>
     );

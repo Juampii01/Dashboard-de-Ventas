@@ -33,7 +33,7 @@ import { AccionesLeads, CORTO } from "./leads-acciones";
 // 1c (Cristian, 26 oct 2026): KPIs → «Leads». Todos los leads del proyecto para decidir a quién llamar, ver cómo rinde
 // cada fuente (pipeline, con sus 🔗) y conocer al público. Los datos llegan compactos justo después de pintar
 // (lib/leads-kpis.ts) y todo lo demás se calcula aquí: cambiar un filtro no pide nada a la base.
-export function PestanaLeads({ desde, hasta, zona, ofertas, csv }: { desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
+export function PestanaLeads({ barra, desde, hasta, zona, ofertas, csv }: { barra: React.ReactNode; desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
   const [datos, setDatos] = useState<LeadsCompactos | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -50,22 +50,32 @@ export function PestanaLeads({ desde, hasta, zona, ofertas, csv }: { desde: numb
     };
   }, []);
   const vista = useMemo(() => (datos ? descompactarLeads(datos) : null), [datos]);
-  if (error) return <p className="text-sm text-mal">{error}</p>;
+  // Mientras cargan (o si fallan), las pestañas y el periodo siguen arriba para poder cambiar de pestaña
+  if (error)
+    return (
+      <>
+        <div className="tarjeta p-1.5">{barra}</div>
+        <p className="text-sm text-mal">{error}</p>
+      </>
+    );
   if (!vista)
     return (
-      // data-datos-pendientes: llega en el HTML desde el principio; mientras está, el menú no precarga (lib/pantalla-lista.ts)
-      <div className="animate-pulse space-y-3" aria-busy="true" data-datos-pendientes="">
-        <p className="text-sm text-texto-3">Cargando todos los leads…</p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-panel-2" />)}</div>
-        {[0, 1, 2, 3].map((i) => <div key={i} className="h-9 rounded-lg bg-panel-2" />)}
-      </div>
+      <>
+        <div className="tarjeta p-1.5">{barra}</div>
+        {/* data-datos-pendientes: llega en el HTML desde el principio; mientras está, el menú no precarga (lib/pantalla-lista.ts) */}
+        <div className="animate-pulse space-y-3" aria-busy="true" data-datos-pendientes="">
+          <p className="text-sm text-texto-3">Cargando todos los leads…</p>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-panel-2" />)}</div>
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-9 rounded-lg bg-panel-2" />)}
+        </div>
+      </>
     );
-  return <Contenido vista={vista} desde={desde} hasta={hasta} zona={zona} ofertas={ofertas} csv={csv} />;
+  return <Contenido barra={barra} vista={vista} desde={desde} hasta={hasta} zona={zona} ofertas={ofertas} csv={csv} />;
 }
 
 type Vista = ReturnType<typeof descompactarLeads>;
 
-function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
+function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: React.ReactNode; vista: Vista; desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
   const { pipelines, etapas, gente, leads } = vista;
   const [fuente, setFuente] = useState<string | null>(null);
   const [pais, setPais] = useState("");
@@ -90,6 +100,7 @@ function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; 
     <div className="space-y-5">
       {/* Qué ver: fuente (con su número), país, sin caller y búsqueda */}
       <div className="tarjeta space-y-3 p-3">
+        {barra}
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Fuente">
           {fuentes.map((f) => (
             <button key={f.id ?? "todos"} type="button" role="tab" aria-selected={fuente === f.id} onClick={() => setFuente(f.id)} className={`chip ${fuente === f.id ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>
