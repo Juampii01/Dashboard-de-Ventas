@@ -41,8 +41,8 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? (sp.vista === "biblioteca" ? "biblioteca" : "leads") : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
-  const pestanas = (
-    <div className="tarjeta flex gap-1 p-1.5" role="tablist">
+  const listaPestanas = (
+    <div className="flex gap-1" role="tablist">
       {[
         ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }, { v: "biblioteca", t: "Biblioteca", href: "/kpis?vista=biblioteca" }] : []),
         { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
@@ -54,6 +54,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       ))}
     </div>
   );
+  const pestanas = <div className="tarjeta p-1.5">{listaPestanas}</div>;
 
   if (vista === "leads") {
     // Aquí no se lee nada pesado: la precarga del menú prepara esta página al pasar el ratón por «KPIs». Los leads los
@@ -64,8 +65,10 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       <>
         <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Leads · ${rango.etiqueta}`} />
         <Contenido>
-          {pestanas}
-          <div className="tarjeta p-2.5">
+          {/* Pestañas y periodo en una sola barra (Cristian, 26 oct) */}
+          <div className="tarjeta flex flex-wrap items-center gap-2 p-1.5">
+            {listaPestanas}
+            <span className="mx-1 hidden h-6 w-px bg-borde sm:block" aria-hidden />
             <Filtros periodoPorDefecto="todo" />
           </div>
           <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} />

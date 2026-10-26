@@ -36,6 +36,8 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
 
   return (
     <div className="space-y-5">
+      {/* El mapa, a todo el ancho (lleva su ranking al lado), antes del embudo (Cristian, 26 oct) */}
+      {mapa}
       {/* Embudo y leads por día lado a lado en una sola tarjeta (Cristian, 26 oct); en móvil, uno debajo del otro */}
       <Seccion>
         <div className="grid gap-5 lg:grid-cols-2 lg:gap-0">
@@ -55,8 +57,6 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
         </div>
       </Seccion>
 
-      {/* El mapa, a todo el ancho (lleva su ranking al lado) */}
-      {mapa}
       <Seccion titulo="De dónde vienen">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {!fuente && <AnilloPartes titulo="Por fuente" partes={repartir(leads, (l) => nombre(l.pipelineId), "Sin pipeline")} />}

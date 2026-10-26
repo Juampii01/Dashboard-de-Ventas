@@ -14,8 +14,8 @@ const COLORES = ["var(--primario)", "var(--marca-eternity)", "var(--oro)", "var(
 // vidrio con las luces de la app (azul Maestria y granate Eternity), un punto de luz por país (más grande cuantos más
 // leads; los 5 primeros laten), cifras flotando sobre los 5 primeros, 3 datos grandes, un ranking con barras y, al
 // pasar el ratón por un país, su cuadro. Sin líneas entre países (no hay ningún dato que los una). El dibujo
-// (world-atlas 110m) y las librerías (d3-geo, topojson-client) se cargan solo en esta pestaña. Lo que no se ve en un
-// mapa de este detalle (islas pequeñas) y «Sin país» van en la lista de debajo.
+// (world-atlas 110m) y las librerías (d3-geo, topojson-client) se cargan solo en esta pestaña. Las islas pequeñas y
+// «Sin país» no salen en el mapa; la lista de debajo con ellos se quitó (Cristian, 26 oct).
 export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }) {
   const [formas, setFormas] = useState<Forma[] | null>(null);
   const [error, setError] = useState(false);
@@ -59,8 +59,6 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
   const n = new Map(paises.map((p) => [p.pais, p.n]));
   const max = Math.max(1, ...conPais.map((p) => p.n));
   const top = conPais.slice(0, 5).map((p) => p.pais);
-  const enMapa = new Set((formas ?? []).map((f) => f.alfa));
-  const fuera = formas ? paises.filter((p) => !enMapa.has(p.pais)).sort((a, b) => b.n - a.n) : [];
   const pct = (x: number) => `${total ? Math.round((x / total) * 1000) / 10 : 0} %`.replace(".", ",");
   // Tamaño y brillo del punto: raíz cuadrada (si no, España taparía a todos los demás)
   const radio = (x: number) => 2.5 + 11 * Math.sqrt(x / max);
@@ -163,9 +161,6 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
             </div>
           )}
         </div>
-        {fuera.length > 0 && (
-          <p className="text-xs text-texto-3">No se ven en el mapa: {fuera.map((p) => `${nombrePais(p.pais)} ${p.n.toLocaleString("es-ES")}`).join(" · ")}</p>
-        )}
       </div>
 
       {/* Ranking */}

@@ -137,7 +137,6 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-texto-3">De los leads de cada fuente (con sus 🔗), cuántos llegaron a cada paso hasta hoy. «Todos» cuenta a cada persona una vez. Clic en una fila para elegirla.</p>
         </Seccion>
       </div>
 
