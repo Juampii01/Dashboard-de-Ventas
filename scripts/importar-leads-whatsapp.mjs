@@ -147,7 +147,7 @@ for (const { p, l } of cambianEtiquetas) {
 let tarjetas = 0;
 for (let i = 0; i < conTarjeta.length; i += 500) {
   const trozo = conTarjeta.slice(i, i + 500);
-  const data = await must(db.from("tarjetas_extra").upsert(trozo.map(({ p, l }) => ({ lead_id: l.id, pipeline_id: pipeline.id, etapa_id: etapaDe(p.columna) })), { onConflict: "lead_id,pipeline_id", ignoreDuplicates: true }).select("lead_id"), "tarjetas");
+  const data = await must(db.from("tarjetas_extra").upsert(trozo.map(({ p, l }) => ({ proyecto_id: proyecto.id, lead_id: l.id, pipeline_id: pipeline.id, etapa_id: etapaDe(p.columna) })), { onConflict: "lead_id,pipeline_id", ignoreDuplicates: true }).select("lead_id"), "tarjetas");
   await must(db.from("actividades").insert(data.map((d) => ({ proyecto_id: proyecto.id, lead_id: d.lead_id, tipo: "nota", nota: `Añadido a «${PIPELINE}» (grupos de WhatsApp)` }))), "historial de tarjetas");
   tarjetas += data.length;
   await pausa(250);
