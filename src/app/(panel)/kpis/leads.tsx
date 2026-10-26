@@ -366,44 +366,18 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
   );
 }
 
-// Cristian (26 oct 2026): clic en un país del mapa o del ranking → las personas de ese país (con los filtros de arriba),
-// ordenadas por oferta. Clic en una persona → su ficha. Exportar y repartir, solo los de ese país.
+// Cristian (26 oct 2026): clic en un país del mapa o del ranking → las personas de ese país (con los filtros de arriba)
+// en la misma tabla que «Todos los datos»: oferta primero, el formulario, clic en un título para ordenar y clic en una
+// persona para ver su ficha. Exportar y repartir, solo los de ese país.
 function VentanaPais({ pais, leads, pipelines, etapas, gente, fuente, onCerrar }: { pais: string; leads: LeadVista[]; pipelines: Vista["pipelines"]; etapas: Vista["etapas"]; gente: Vista["gente"]; fuente: string | null; onCerrar: () => void }) {
-  const [limite, setLimite] = useState(POR_PAGINA);
-  const [ficha, setFicha] = useState<LeadVista | null>(null);
-  const nombre = useMemo(() => {
-    const m = new Map<string, string>([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
-    return (id: string | null) => (id ? m.get(id) ?? "—" : "—");
-  }, [pipelines, etapas, gente]);
-  const ordenados = useMemo(
-    () => [...leads].sort((a, b) => (a.oferta ? ORDEN_OFERTA[a.oferta as Oferta] ?? 9 : 99) - (b.oferta ? ORDEN_OFERTA[b.oferta as Oferta] ?? 9 : 99) || b.alta - a.alta),
-    [leads]
-  );
   return (
-    <Modal titulo={`${nombrePais(pais)} · ${leads.length.toLocaleString("es-ES")} ${leads.length === 1 ? "lead" : "leads"}`} onCerrar={onCerrar} ancho="max-w-3xl">
+    <Modal titulo={`${nombrePais(pais)} · ${leads.length.toLocaleString("es-ES")} ${leads.length === 1 ? "lead" : "leads"}`} onCerrar={onCerrar} ancho="max-w-6xl">
       <div className="mb-3 flex flex-wrap justify-end gap-2">
         <AccionesLeads leads={leads} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} repartir={`Repartir ${nombrePais(pais)}`} />
       </div>
-      <div className="-mx-5 max-h-[60vh] overflow-auto">
-        <table className="tabla [&_td]:py-1.5 [&_td]:text-[13px] [&_th]:py-1.5 [&_th]:text-[10px]">
-          <thead className="sticky top-0 z-10 bg-[var(--fondo)]">
-            <tr><th>Oferta</th><th>Nombre</th><th>Teléfono</th><th>Caller</th><th>Pipeline → columna</th></tr>
-          </thead>
-          <tbody>
-            {ordenados.slice(0, limite).map((l) => (
-              <tr key={l.id} tabIndex={0} className="cursor-pointer hover:bg-panel-2" onClick={() => setFicha(l)} onKeyDown={(e) => e.key === "Enter" && setFicha(l)}>
-                <td><OfertaChip oferta={l.oferta} /></td>
-                <td className="whitespace-nowrap font-medium">{l.nombre || <span className="text-texto-3">Sin nombre</span>}</td>
-                <td className="whitespace-nowrap">{l.telefono ?? "—"}</td>
-                <td className="whitespace-nowrap text-texto-2">{l.callerId ? nombre(l.callerId) : "—"}</td>
-                <td className="whitespace-nowrap text-texto-2">{nombre(l.pipelineId)} → {nombre(l.etapaId)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="-mx-5 max-h-[65vh] overflow-y-auto px-5">
+        <TablaLeads leads={leads} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} />
       </div>
-      {ordenados.length > limite && <button onClick={() => setLimite((x) => x + POR_PAGINA)} className="mt-2 w-full rounded-lg py-2 text-sm text-primario hover:bg-panel-2">Ver {Math.min(POR_PAGINA, ordenados.length - limite)} más</button>}
-      {ficha && <PopupLead leadId={ficha.id} nombre={ficha.nombre} onCerrar={() => setFicha(null)} />}
     </Modal>
   );
 }
