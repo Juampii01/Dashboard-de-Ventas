@@ -161,12 +161,7 @@ function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; 
 
       {/* L4 y L5: gráficos y mapa de lo elegido. El embudo va en la misma tarjeta que los leads por día (Cristian, 26 oct) */}
       <GraficosLeads
-        embudo={
-          <>
-            <EmbudoVidrio pasos={embudo(visibles).map((p, i) => ({ t: p.t, n: p.n, d: DETALLE_PASO[i] }))} />
-            <p className="mt-2 text-xs text-texto-3">La misma tanda de arriba abajo: de estos leads, cuántos se contactaron, contestaron, agendaron, asistieron y compraron hasta hoy. No es el embudo de «Por persona», que cuenta lo que pasó en el periodo.</p>
-          </>
-        }
+        embudo={<EmbudoVidrio pasos={embudo(visibles).map((p, i) => ({ t: p.t, n: p.n, d: DETALLE_PASO[i] }))} />}
         leads={visibles}
         formulario={formulario}
         ofertas={ofertas}

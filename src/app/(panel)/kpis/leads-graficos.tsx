@@ -22,7 +22,6 @@ export function GraficosLeads({ leads, formulario, ofertas, pipelines, etapas, g
     return (id: string | null) => (id ? m.get(id) ?? "—" : null);
   }, [pipelines, etapas, gente]);
   const serie = useMemo(() => serieLeads(leads, zona, desde, hasta, (l) => nombre(l.pipelineId) ?? "Sin pipeline"), [leads, zona, desde, hasta, nombre]);
-  const conWhatsApp = leads.some((l) => l.etiquetas.includes("leads whatsapp"));
   const columna = (l: LeadVista) => (!fuente ? null : l.pipelineId === fuente ? nombre(l.etapaId) : nombre(l.tarjetas.find((t) => t.pipelineId === fuente)?.etapaId ?? null));
   const canal = (l: LeadVista) => l.etiquetas.find((e) => e.startsWith(PREFIJO_ETIQUETA))?.slice(PREFIJO_ETIQUETA.length) ?? null;
   const barras = (lista: { t: string; n: number; pct: number }[], max = 10) => lista.slice(0, max);
@@ -48,11 +47,6 @@ export function GraficosLeads({ leads, formulario, ofertas, pipelines, etapas, g
           <div className="min-w-0 border-t border-borde pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             <h2 className="titulo-seccion mb-4">{serie.porHoras ? "Leads por hora de alta" : "Leads por día de alta"}</h2>
             <GraficoLeads puntos={serie.puntos} porHoras={serie.porHoras} />
-            {conWhatsApp && (
-              <p className="mt-2 text-xs text-texto-3">
-                Los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, hacia las 04:00 UTC: justo a medianoche en Nueva York, por eso salen repartidos entre el 25 y el 26 oct). Ese pico no es el día en que entraron al grupo.
-              </p>
-            )}
           </div>
         </div>
       </Seccion>
