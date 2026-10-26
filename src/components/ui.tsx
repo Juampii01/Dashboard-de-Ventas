@@ -37,6 +37,8 @@ export function Kpi({
   detalle,
   cambio,
   destacado,
+  compacto,
+  ayuda,
 }: {
   titulo: string;
   valor: ReactNode;
@@ -45,26 +47,42 @@ export function Kpi({
   detalle?: ReactNode;
   cambio?: number | null;
   destacado?: boolean;
+  compacto?: boolean; // a mitad de tamaño (KPIs → «Leads», Cristian, 26 oct 2026)
+  ayuda?: string; // texto al pasar el ratón
 }) {
   return (
     <div
-      className={`tarjeta relative overflow-hidden p-4 ${
+      title={ayuda}
+      className={`tarjeta relative overflow-hidden ${compacto ? "px-3 py-2.5" : "p-4"} ${
         destacado ? "border-oro/40 bg-gradient-to-br from-oro-suave to-panel" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {compacto ? (
+        // A mitad de tamaño: el icono pequeño al lado del título y la cifra debajo
         <div className="min-w-0">
-          <div className="titulo-seccion">{titulo}</div>
-          <div className={`mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${destacado ? "text-oro" : ""}`}>{valor}</div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${TONO_ICONO[tono]}`}>
+              <Icono className="h-3 w-3" />
+            </span>
+            <div className="titulo-seccion truncate text-[10px]">{titulo}</div>
+          </div>
+          <div className={`mt-1 text-xl font-semibold tracking-tight tabular-nums ${destacado ? "text-oro" : ""}`}>{valor}</div>
         </div>
-        <span className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full sm:flex ${TONO_ICONO[tono]}`}>
-          <Icono className="h-5 w-5" />
-        </span>
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="titulo-seccion">{titulo}</div>
+            <div className={`mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${destacado ? "text-oro" : ""}`}>{valor}</div>
+          </div>
+          <span className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full sm:flex ${TONO_ICONO[tono]}`}>
+            <Icono className="h-5 w-5" />
+          </span>
+        </div>
+      )}
       {(detalle || cambio !== undefined) && (
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-texto-3">
+        <div className={`flex items-center gap-1.5 text-texto-3 ${compacto ? "mt-0.5 min-w-0 text-[11px]" : "mt-2 text-xs"}`}>
           {cambio !== undefined && cambio !== null && <Cambio valor={cambio} />}
-          {detalle}
+          {compacto ? <span className="truncate">{detalle}</span> : detalle}
         </div>
       )}
     </div>

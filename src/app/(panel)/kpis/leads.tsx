@@ -121,15 +121,16 @@ function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; 
       </div>
 
       <div className={`grid grid-cols-2 gap-3 ${formulario.total ? "sm:grid-cols-4 xl:grid-cols-7" : "lg:grid-cols-5"}`}>
-        <Kpi titulo="Leads" valor={c.total.toLocaleString("es-ES")} icono={Users} detalle={fuente ? pipelines.find((p) => p.id === fuente)?.nombre : "Todas las fuentes"} />
-        <Kpi titulo="Sin caller" valor={c.sinCaller.n.toLocaleString("es-ES")} icono={UserX} tono="aviso" detalle={`${pct(c.sinCaller.pct)} del total`} />
-        <Kpi titulo="Contactados" valor={c.contactados.n.toLocaleString("es-ES")} icono={PhoneCall} detalle={`${pct(c.contactados.pct)} · llamada, WhatsApp o agenda`} />
-        <Kpi titulo="Agendados" valor={c.agendados.n.toLocaleString("es-ES")} icono={CalendarCheck} tono="ok" detalle={`${pct(c.agendados.pct)} del total`} />
-        <Kpi titulo="Compraron" valor={c.compran.n.toLocaleString("es-ES")} icono={ShoppingCart} tono="oro" detalle={`${pct(c.compran.pct)} del total`} />
+        {/* A mitad de tamaño (Cristian, 26 oct): textos cortos; el entero, al pasar el ratón */}
+        <Kpi compacto titulo="Leads" valor={c.total.toLocaleString("es-ES")} icono={Users} detalle={fuente ? pipelines.find((p) => p.id === fuente)?.nombre : "Todas las fuentes"} />
+        <Kpi compacto titulo="Sin caller" valor={c.sinCaller.n.toLocaleString("es-ES")} icono={UserX} tono="aviso" detalle={`${pct(c.sinCaller.pct)} del total`} />
+        <Kpi compacto titulo="Contactados" valor={c.contactados.n.toLocaleString("es-ES")} icono={PhoneCall} detalle={`${pct(c.contactados.pct)} del total`} ayuda="Con una llamada o un WhatsApp apuntado, o que agendaron" />
+        <Kpi compacto titulo="Agendados" valor={c.agendados.n.toLocaleString("es-ES")} icono={CalendarCheck} tono="ok" detalle={`${pct(c.agendados.pct)} del total`} />
+        <Kpi compacto titulo="Compraron" valor={c.compran.n.toLocaleString("es-ES")} icono={ShoppingCart} tono="oro" detalle={`${pct(c.compran.pct)} del total`} />
         {formulario.total > 0 && (
           <>
-            <Kpi titulo="Pueden invertir ya" valor={pct(formulario.invierteYa.pct)} icono={Wallet} tono="ok" detalle={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")} del formulario dicen «Sí, ahora»`} />
-            <Kpi titulo="Calientes" valor={pct(formulario.caliente.pct)} icono={Flame} tono="oro" detalle={`${formulario.caliente.n.toLocaleString("es-ES")}: buscan ingresos + invierten ya + empiezan ya o este mes`} />
+            <Kpi compacto titulo="Invierten ya" valor={pct(formulario.invierteYa.pct)} icono={Wallet} tono="ok" detalle={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")}`} ayuda={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")} del formulario de la Biblioteca dicen «Sí, ahora»`} />
+            <Kpi compacto titulo="Calientes" valor={pct(formulario.caliente.pct)} icono={Flame} tono="oro" detalle={`${formulario.caliente.n.toLocaleString("es-ES")} personas`} ayuda={`${formulario.caliente.n.toLocaleString("es-ES")}: buscan ingresos + invierten ya + empiezan ya o este mes`} />
           </>
         )}
       </div>
