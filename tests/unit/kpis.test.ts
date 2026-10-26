@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { calcularKpis } from "@/lib/kpis";
 import type { Base } from "@/lib/metricas";
 import { rangoDe } from "@/lib/formato";
@@ -8,11 +8,11 @@ const NY = "America/New_York";
 const persona = (id: string, rol: Perfil["rol"]): Perfil => ({ id, nombre: id, email: `${id}@t`, rol, telefono: null, whatsapp: null, admin_activo: false, onboarding_completo: true, activo: true });
 const octubre = rangoDe("rango", NY, "2026-10-01", "2026-10-31");
 
-// «Hoy» fijo: 15 oct 2026 (las citas de antes ya pasaron; la del 25, no)
-beforeAll(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-10-15T16:00:00Z"));
-});
+// «Hoy» fijo: 15 oct 2026 (las citas de antes ya pasaron; la del 25, no). Se fija al cargar el archivo y no en
+// beforeAll: los KPIs se calculan dentro de cada describe, que corre antes que beforeAll (desde el 26 oct, con la
+// fecha real, la cita del 25 ya contaba como pasada).
+vi.useFakeTimers();
+vi.setSystemTime(new Date("2026-10-15T16:00:00Z"));
 afterAll(() => vi.useRealTimers());
 
 const llamada = (perfil: string, lead: string, resultado: string, dia: string) => ({ lead_id: lead, perfil_id: perfil, tipo: "llamada", resultado, creado_en: `2026-${dia}T15:00:00Z` });
