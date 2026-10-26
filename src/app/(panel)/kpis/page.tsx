@@ -12,7 +12,7 @@ import { Cabecera, Contenido, Seccion, Vacio } from "@/components/ui";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
 import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamiento } from "./objetivos-cliente";
-import { ActualizarCsv } from "./biblioteca-csv";
+import { ActualizarCsv } from "./subir-csv";
 import { ESCALERA, type EscalonOferta } from "@/lib/biblioteca";
 import type { Pipeline, Producto } from "@/lib/tipos";
 import { Embudo } from "@/components/embudo";
