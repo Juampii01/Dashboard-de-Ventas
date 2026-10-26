@@ -125,13 +125,18 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
                 })}
             </svg>
           )}
-          {/* Cifras flotando sobre los 5 primeros */}
+          {/* Cifras flotando sobre los 5 primeros. Si dos se pisarían (países vecinos, como Colombia y Venezuela), la
+              segunda sale debajo de su punto */}
           {formas &&
-            top.map((alfa) => {
+            top.map((alfa, k) => {
               const f = formas.find((x) => x.alfa === alfa);
               if (!f) return null;
+              const pisa = top.slice(0, k).some((otro) => {
+                const g = formas.find((x) => x.alfa === otro);
+                return g && Math.abs(g.x - f.x) < 70 && Math.abs(g.y - f.y) < 45;
+              });
               return (
-                <div key={alfa} className="vidrio pointer-events-none absolute -translate-x-1/2 -translate-y-[135%] rounded-xl border border-borde px-2 py-1 text-center leading-tight" style={{ left: `${(f.x / ANCHO) * 100}%`, top: `${(f.y / ALTO) * 100}%` }}>
+                <div key={alfa} className={`vidrio pointer-events-none absolute -translate-x-1/2 rounded-xl border border-borde px-2 py-1 text-center leading-tight ${pisa ? "translate-y-[35%]" : "-translate-y-[135%]"}`} style={{ left: `${(f.x / ANCHO) * 100}%`, top: `${(f.y / ALTO) * 100}%` }}>
                   <div className="text-xs font-semibold tabular-nums sm:text-sm">{(n.get(alfa) ?? 0).toLocaleString("es-ES")}</div>
                   <div className="hidden text-[10px] text-texto-2 sm:block">{nombrePais(alfa)}</div>
                 </div>

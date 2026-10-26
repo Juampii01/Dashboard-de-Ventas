@@ -103,7 +103,7 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
           <label className="flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
         </div>
         {hayWhatsApp && (desde !== null || hasta !== null) && (
-          <p className="text-xs text-texto-3">Ojo: los de WhatsApp se importaron el 26 oct 2026 y esa es su fecha de alta (no el día en que entraron al grupo).</p>
+          <p className="text-xs text-texto-3">Ojo: los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, 03:59 UTC), no el día en que entraron al grupo.</p>
         )}
       </div>
 

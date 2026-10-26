@@ -38,7 +38,11 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
     <div className="space-y-5">
       <Seccion titulo={serie.porHoras ? "Leads por hora de alta" : "Leads por día de alta"}>
         <GraficoLeads puntos={serie.puntos} porHoras={serie.porHoras} />
-        {conWhatsApp && <p className="mt-2 text-xs text-texto-3">Los de WhatsApp se importaron el 26 oct 2026: ese pico no es el día en que entraron al grupo.</p>}
+        {conWhatsApp && (
+          <p className="mt-2 text-xs text-texto-3">
+            Los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, hacia las 04:00 UTC: justo a medianoche en Nueva York, por eso salen repartidos entre el 25 y el 26 oct). Ese pico no es el día en que entraron al grupo.
+          </p>
+        )}
       </Seccion>
 
       {/* El mapa, a todo el ancho (lleva su ranking al lado) */}
