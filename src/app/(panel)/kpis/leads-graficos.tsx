@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { preguntasDe, repartir, respuestasA, serieLeads } from "@/lib/leads-cifras";
 import { GraficoLeads } from "@/components/grafico-leads";
 import type { LeadVista } from "@/lib/leads-vista";
-import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais } from "@/lib/formato";
+import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais, pct } from "@/lib/formato";
 import { ETIQUETA_OFERTA, PREGUNTAS_BIBLIOTECA, preguntaCanonica, type Oferta } from "@/lib/oferta";
+import type { EscalonOferta, resumenBiblioteca } from "@/lib/biblioteca";
 import { PREFIJO_ETIQUETA } from "@/lib/canal";
 import { Seccion } from "@/components/ui";
 import { Barras } from "@/components/barras";
@@ -15,7 +16,7 @@ import { Desplegable } from "@/components/eleccion";
 type Nombrado = { id: string; nombre: string };
 
 // 1c · L4 (Cristian, 26 oct 2026): los gráficos de la pestaña «Leads», de lo elegido arriba (fuente, periodo, país…)
-export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, desde, hasta, embudo, mapa }: { leads: LeadVista[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; zona: string; desde: number | null; hasta: number | null; embudo: React.ReactNode; mapa: React.ReactNode }) {
+export function GraficosLeads({ leads, formulario, ofertas, pipelines, etapas, gente, fuente, zona, desde, hasta, embudo, mapa }: { leads: LeadVista[]; formulario: ReturnType<typeof resumenBiblioteca>; ofertas: EscalonOferta[]; pipelines: Nombrado[]; etapas: Nombrado[]; gente: Nombrado[]; fuente: string | null; zona: string; desde: number | null; hasta: number | null; embudo: React.ReactNode; mapa: React.ReactNode }) {
   const nombre = useMemo(() => {
     const m = new Map([...pipelines, ...etapas, ...gente].map((x) => [x.id, x.nombre]));
     return (id: string | null) => (id ? m.get(id) ?? "—" : null);
@@ -32,7 +33,6 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
   const otras = preguntas.filter((p) => !DE_BIBLIOTECA.has(p.pregunta));
   const [elegida, setElegida] = useState("");
   const pregunta = otras.some((p) => p.pregunta === elegida) ? elegida : otras[0]?.pregunta ?? "";
-  const conBiblioteca = preguntas.find((p) => DE_BIBLIOTECA.has(p.pregunta))?.n ?? 0;
 
   return (
     <div className="space-y-5">
@@ -82,12 +82,49 @@ export function GraficosLeads({ leads, pipelines, etapas, gente, fuente, zona, d
         </Seccion>
       </div>
 
-      {conBiblioteca > 0 && (
-        <Seccion titulo={`Formulario de la Biblioteca (${conBiblioteca.toLocaleString("es-ES")} lo rellenaron)`}>
-          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-            {PREGUNTAS_BIBLIOTECA.map((p) => {
-              const r = respuestasA(leads, p.texto, preguntaCanonica, 8);
-              return r.total ? <Barras key={p.clave} titulo={`${p.texto} (${r.total})`} filas={r.filas} numero /> : null;
+      {/* Lo que tenía la pestaña «Biblioteca» (quitada el 26 oct, Cristian): el formulario con nombres cortos, las
+          opciones marcadas y sus notas, y la escalera de ofertas. % sobre quien rellenó el formulario. */}
+      {formulario.total > 0 && (
+        <Seccion titulo={`Formulario de la Biblioteca (${formulario.total.toLocaleString("es-ES")} lo rellenaron)`}>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-5">
+              <h3 className="text-sm font-semibold">¿Quiénes son?</h3>
+              <Barras titulo="Situación" filas={formulario.situacion} numero />
+              <Barras titulo="Experiencia con AI" filas={formulario.experiencia} numero />
+            </div>
+            <div className="space-y-5">
+              <h3 className="text-sm font-semibold">¿Qué quieren?</h3>
+              <Barras titulo="Objetivo a 90 días" filas={formulario.objetivo} marcadas={["Llegar a 5.000 $/mes", "Cerrar su primer cliente en USA"]} numero />
+              <p className="-mt-3 text-xs text-texto-3">{pct(formulario.buscaIngresos)} busca ingresos (las dos barras marcadas).</p>
+              <Barras titulo="¿Cuándo quieren empezar?" filas={formulario.inicio} numero />
+            </div>
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">¿Pueden invertir?</h3>
+              <Barras titulo="Si encuentran el programa correcto" filas={formulario.inversion} marcadas={["Sí, ahora"]} numero />
+              <p className="mt-2 text-xs text-texto-3">El {pct(formulario.sinInversion)} restante no respondió.</p>
+            </div>
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">¿Cuánto tiempo tienen?</h3>
+              <Barras titulo="Por semana" filas={formulario.tiempo} numero />
+              <p className="mt-2 text-xs text-texto-3">El programa pide mínimo 4 h al día. Solo el {pct(formulario.masDe10h)} dice tener más de 10 h a la semana.</p>
+            </div>
+          </div>
+        </Seccion>
+      )}
+      {formulario.total > 0 && (
+        <Seccion titulo="Escalera de ofertas">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {ofertas.map((o) => {
+              const dato = formulario.escalera[o.clave];
+              return (
+                <div key={o.clave} className="rounded-xl border border-borde p-4">
+                  <div className="text-sm font-semibold">{o.nombre}</div>
+                  <div className="mt-1 text-lg font-semibold tabular-nums">{o.precio}</div>
+                  {o.descripcion && <div className="mt-1 text-xs text-texto-3">{o.descripcion}</div>}
+                  <div className="mt-3 text-sm text-texto-2">{o.quien}{o.clave === "dfy" ? `. Primero los ${formulario.escalera.dfy.inviertenYa} que invierten ya` : ""}</div>
+                  <div className="mt-1 text-xs text-texto-3">{pct(dato.pct)} · {dato.n.toLocaleString("es-ES")} personas</div>
+                </div>
+              );
             })}
           </div>
         </Seccion>

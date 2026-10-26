@@ -10,6 +10,7 @@ export type FiltroLeads = {
   pais: string; // "" = todos; un código («ES») o «Sin país» (también los aún sin calcular)
   sinCaller: boolean;
   q: string;
+  oferta?: string; // "" o sin poner = todas; si no, la oferta de la Biblioteca («vip», «grupal»…)
 };
 
 export const enPipeline = (l: LeadVista, pipelineId: string) => l.pipelineId === pipelineId || l.tarjetas.some((t) => t.pipelineId === pipelineId);
@@ -25,6 +26,7 @@ export function filtrarSinFuente(leads: LeadVista[], f: Omit<FiltroLeads, "pipel
       (f.hasta === null || l.alta < f.hasta) &&
       (!f.pais || paisDe(l) === f.pais) &&
       (!f.sinCaller || !l.callerId) &&
+      (!f.oferta || l.oferta === f.oferta) &&
       (!t ||
         l.nombre.toLowerCase().includes(t) ||
         (l.email ?? "").toLowerCase().includes(t) ||

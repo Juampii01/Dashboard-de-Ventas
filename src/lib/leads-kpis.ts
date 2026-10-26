@@ -4,6 +4,9 @@ import { db, todas, equipo, conBajas } from "@/lib/datos";
 import { ASISTIDAS, cargarBase } from "@/lib/metricas";
 import { CAMPOS_LEAD, compactarLeads, marcasEmbudo, type LeadDeLaBase, type Tarjeta } from "@/lib/leads-vista";
 import type { Proyecto } from "@/lib/tipos";
+import { after } from "next/server";
+import { esDeBiblioteca } from "@/lib/oferta";
+import { recalcularOfertas } from "@/lib/biblioteca-datos";
 
 // 1c (Cristian, 26 oct 2026): todos los leads del proyecto para la pestaña «Leads» de KPIs, compactos (lib/leads-vista.ts).
 // Solo se pide al abrir la pestaña (no con la precarga del menú) y se guarda 1 minuto compartido entre CEO y directores
@@ -30,6 +33,16 @@ async function cargarDeLaBase(proyecto: Proyecto) {
     equipo(pid),
     cargarBase(proyecto),
   ]);
+  // Lo que hacía la tabla de la Biblioteca (quitada el 26 oct): repasar después de responder las ofertas de los
+  // leads del formulario por si cambió la regla. Los leads ya guardan su oferta al entrar (leads.ts).
+  const delFormulario = leads.filter((l) => esDeBiblioteca(l)).map((l) => ({ id: l.id, etiquetas: l.etiquetas, respuestas: l.respuestas, fuente: l.fuente, oferta: l.oferta }));
+  after(async () => {
+    try {
+      await recalcularOfertas(delFormulario);
+    } catch (e) {
+      console.error("[leads-kpis] repasar ofertas", e);
+    }
+  });
   // Quien ya no está sigue saliendo como caller o closer de sus leads, con «(baja)» (como en el resto de la app)
   const personas = await conBajas(gente, leads.flatMap((l) => [l.caller_id, l.closer_id]));
   return compactarLeads({

@@ -42,17 +42,20 @@ export const OPCIONES: Record<keyof RespuestasBiblioteca, { v: string; t: string
     { v: "Más de 20 h", t: "Más de 20 h" },
   ],
 };
-// Para ordenar la tabla de más a menos listo (no por orden alfabético), como la vista
-export const RANGO: Partial<Record<keyof RespuestasBiblioteca, Record<string, number>>> = {
-  inversion: { "Sí, ahora": 1, "En los próximos meses": 2, "No por ahora": 3 },
-  tiempo: { "Más de 20 h": 1, "10 a 20 h": 2, "5 a 10 h": 3, "Menos de 5 h": 4 },
-  inicio: { "Ya mismo": 1, "Este mes": 2, "Más adelante": 3 },
-};
-
 // 1b (Cristian, 26 oct 2026): el país es el que se guarda en el lead (sacado de su teléfono al guardarlo; lib/pais.ts).
 // Antes salía de una lista de prefijos que metía a República Dominicana y Puerto Rico en «EE. UU./Canadá».
 export type LeadBiblioteca = { id: string; respuestas: Respuesta[]; pais: string | null; oferta?: Oferta | null };
 export const BUSCA_INGRESOS = ["Llegar a $5,000 al mes", "Cerrar mi primer cliente en USA"];
+
+// Qué encaja en cada escalón de la escalera (texto de la vista de Cristian). Con la pestaña «Biblioteca» quitada
+// (Cristian, 26 oct 2026), la escalera se ve en KPIs → «Leads».
+export const ESCALERA: { clave: "membresia" | "grupal" | "vip" | "dfy"; producto: string; quien: string }[] = [
+  { clave: "membresia", producto: "Membresía", quien: "No puede invertir ahora o lo hará en unos meses" },
+  { clave: "grupal", producto: "Grupal", quien: "Puede invertir ya, no encaja en VIP ni Empresas" },
+  { clave: "vip", producto: "VIP", quien: "Invierte ya, quiere empezar ya y tiene negocio o experiencia en AI" },
+  { clave: "dfy", producto: "DFY", quien: "Tiene negocio y quiere automatizarlo" },
+];
+export type EscalonOferta = { clave: (typeof ESCALERA)[number]["clave"]; nombre: string; precio: string; descripcion: string | null; quien: string };
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0);
 

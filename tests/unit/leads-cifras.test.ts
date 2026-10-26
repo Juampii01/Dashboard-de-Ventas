@@ -43,6 +43,12 @@ describe("filtros", () => {
     expect(ids({ desde: Date.parse("2026-10-26T00:00:00Z") })).toEqual(["wsp1", "wsp2"]);
     expect(ids({ hasta: Date.parse("2026-10-01T00:00:00Z") })).toEqual(["web1"]);
   });
+  it("por oferta de la Biblioteca (26 oct): solo esa oferta; vacío = todas", () => {
+    const conOferta = [lead({ id: "v1", oferta: "vip" }), lead({ id: "g1", oferta: "grupal" }), lead({ id: "n1" })];
+    const de = (oferta: string) => filtrarLeads(conOferta, { ...todo, oferta }).map((l) => l.id);
+    expect(de("vip")).toEqual(["v1"]);
+    expect(de("")).toEqual(["v1", "g1", "n1"]);
+  });
   it("por país: «Sin país» incluye los aún sin calcular", () => {
     expect(ids({ pais: "ES" })).toEqual(["wsp1", "bib1"]);
     expect(ids({ pais: "Sin país" })).toEqual(["bib2"]);

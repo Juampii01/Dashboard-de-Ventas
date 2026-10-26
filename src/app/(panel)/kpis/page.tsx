@@ -12,7 +12,9 @@ import { Cabecera, Contenido, Seccion, Vacio } from "@/components/ui";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
 import { FormObjetivo, BotonQuitarObjetivo, FormLanzamiento, BotonBorrarLanzamiento } from "./objetivos-cliente";
-import { Biblioteca } from "./biblioteca";
+import { ActualizarCsv } from "./biblioteca-csv";
+import { ESCALERA, type EscalonOferta } from "@/lib/biblioteca";
+import type { Pipeline, Producto } from "@/lib/tipos";
 import { Embudo } from "@/components/embudo";
 import { TarjetasKpis, type PersonaKpi } from "@/components/tarjetas-kpis";
 import { TarjetaObjetivos } from "@/components/tarjeta-objetivos";
@@ -35,16 +37,17 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   // H5: a un caller o closer con «KPIs», solo su fila y sin la pestaña Objetivos (no puede poner objetivos)
   const propio = soloLoSuyo(perfil, "kpis");
   // Bloque A (Cristian, 11 oct 2026): «Biblioteca», solo para director y CEO
-  // 1c (Cristian, 26 oct 2026): la primera es «Leads» (todos los leads); la Biblioteca pasa a ?vista=biblioteca
+  // 1c (Cristian, 26 oct 2026): la primera es «Leads» (todos los leads). La pestaña «Biblioteca» se quitó: lo suyo
+  // (escalera de ofertas, «pueden invertir», «calientes», el formulario y «Actualizar con CSV») está en «Leads».
   const jefe = esJefe(perfil);
   const vista =
-    !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? (sp.vista === "biblioteca" ? "biblioteca" : "leads") : "personas";
+    !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "leads" : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
   const listaPestanas = (
     <div className="flex gap-1" role="tablist">
       {[
-        ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }, { v: "biblioteca", t: "Biblioteca", href: "/kpis?vista=biblioteca" }] : []),
+        ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }] : []),
         { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
         { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
       ].map((p) => (
@@ -61,6 +64,17 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     // pide la pestaña después de pintar (PestanaLeads → cargarLeadsPestana). Periodo por la fecha de alta, «Todo» por defecto.
     const periodo = (typeof sp.periodo === "string" ? sp.periodo : "todo") as Periodo;
     const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string | undefined, sp.hasta as string | undefined);
+    // Lo que venía de la Biblioteca: precios de la escalera y los pipelines de «Actualizar con CSV» (dos lecturas pequeñas)
+    const [{ data: productos }, { data: pipes }] = await Promise.all([
+      db().from("productos").select("*").eq("proyecto_id", proyecto.id).order("orden"),
+      db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
+    ]);
+    const pipelines = (pipes ?? []) as Pipeline[];
+    const ofertas: EscalonOferta[] = ESCALERA.map((e) => {
+      const p = ((productos ?? []) as Producto[]).find((x) => x.nombre.toLowerCase() === e.producto.toLowerCase());
+      return { clave: e.clave, nombre: p?.nombre ?? e.producto, precio: p?.precio ? `${$(Number(p.precio))}${p.modo_pago === "mensual" ? " / mes" : ""}` : "A medida", descripcion: p?.descripcion ?? null, quien: e.quien };
+    });
+    const csv = <ActualizarCsv pipelines={pipelines} pipelineId={pipelines.find((p) => p.nombre.toLowerCase().includes("biblioteca"))?.id} />;
     return (
       <>
         <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Leads · ${rango.etiqueta}`} />
@@ -71,19 +85,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             <span className="mx-1 hidden h-6 w-px bg-borde sm:block" aria-hidden />
             <Filtros periodoPorDefecto="todo" />
           </div>
-          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} />
-        </Contenido>
-      </>
-    );
-  }
-
-  if (vista === "biblioteca") {
-    return (
-      <>
-        <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Biblioteca`} />
-        <Contenido>
-          {pestanas}
-          <Biblioteca proyecto={proyecto} />
+          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} ofertas={ofertas} csv={csv} />
         </Contenido>
       </>
     );

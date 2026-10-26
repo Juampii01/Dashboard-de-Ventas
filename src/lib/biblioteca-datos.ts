@@ -1,58 +1,14 @@
 import "server-only";
-import { after } from "next/server";
-import { db, todas } from "@/lib/datos";
-import { calcularOferta, esDeBiblioteca, normalizarRespuestas } from "@/lib/oferta";
+import { db } from "@/lib/datos";
+import { calcularOferta, normalizarRespuestas } from "@/lib/oferta";
 import type { Respuesta } from "@/lib/tipos";
 
-// Bloque A: los leads de la Biblioteca de un proyecto, con lo que enseña su tabla
-export type FilaBiblioteca = {
-  id: string;
-  nombre: string;
-  apellido: string;
-  email: string | null;
-  telefono: string | null;
-  pais: string | null; // 1b
-  creado_en: string;
-  etiquetas: string[];
-  respuestas: Respuesta[];
-  fuente: string | null;
-  oferta: string | null;
-  caller_id: string | null;
-};
-
-export async function cargarBiblioteca(proyectoId: string) {
-  // Velocidad (18 oct 2026): solo las columnas que usa la tabla (antes también closer_id y estado_caller)
-  const filas = await todas<FilaBiblioteca>((a, b) =>
-    db().from("leads").select("id, nombre, apellido, email, telefono, pais, creado_en, etiquetas, respuestas, fuente, oferta, caller_id").eq("proyecto_id", proyectoId).order("id").range(a, b)
-  );
-  const deBiblioteca = filas.filter((l) => esDeBiblioteca(l));
-  // Velocidad (18 oct 2026): el repaso de ofertas va después de responder (medido: 58–111 ms por carga de la tabla).
-  // Los leads ya guardan su oferta al entrar (leads.ts); esto solo corrige las que cambien si cambia la regla, y
-  // la tabla lo enseña bien desde la visita siguiente.
-  const copia = deBiblioteca.map((l) => ({ ...l }));
-  after(async () => {
-    try {
-      await recalcularOfertas(copia);
-    } catch (e) {
-      console.error("[biblioteca] repasar ofertas", e);
-    }
-  });
-  return deBiblioteca;
-}
-
-// Velocidad (17 oct 2026): para el resumen de la página (KPIs → Biblioteca), solo las columnas que usa y sin repasar
-// las ofertas (medido: 68 ms por visita para 0 cambios). Las repasa la tabla, que se pide en la misma visita
-// justo después de pintar (cargarBiblioteca), así que la regla de las ofertas se sigue aplicando.
-export type FilaResumenBiblioteca = Pick<FilaBiblioteca, "id" | "pais" | "etiquetas" | "respuestas" | "fuente" | "oferta">;
-export async function cargarResumenBiblioteca(proyectoId: string) {
-  const filas = await todas<FilaResumenBiblioteca>((a, b) =>
-    db().from("leads").select("id, pais, etiquetas, respuestas, fuente, oferta").eq("proyecto_id", proyectoId).order("id").range(a, b)
-  );
-  return filas.filter((l) => esDeBiblioteca(l));
-}
+// Bloque A: lo que hace falta de un lead para repasar su oferta. Desde que se quitó la pestaña «Biblioteca»
+// (26 oct 2026), el repaso lo lanza la pestaña «Leads» (lib/leads-kpis.ts).
+export type FilaBiblioteca = { id: string; etiquetas: string[] | null; respuestas: Respuesta[] | null; fuente: string | null; oferta: string | null };
 
 // Pone al día la oferta (y el nombre único de las preguntas) de los que no la tengan bien: así los leads que ya
-// estaban antes de existir la oferta, o si la regla cambia, se ordenan solos al abrir la Biblioteca
+// estaban antes de existir la oferta, o si la regla cambia, se ordenan solos al abrir KPIs → «Leads»
 export async function recalcularOfertas(leads: FilaBiblioteca[]) {
   const cambiar = leads
     .map((l) => ({ l, oferta: calcularOferta(l), respuestas: normalizarRespuestas(l.respuestas ?? []) }))

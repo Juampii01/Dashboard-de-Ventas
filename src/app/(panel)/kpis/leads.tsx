@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, PhoneCall, Search, ShoppingCart, UserX, Users } from "lucide-react";
+import { CalendarCheck, Flame, PhoneCall, Search, ShoppingCart, UserX, Users, Wallet } from "lucide-react";
+import { resumenBiblioteca, type EscalonOferta } from "@/lib/biblioteca";
 import { cargandoDatos } from "@/lib/pantalla-lista";
 import { exigirOk } from "@/lib/resultado-cliente";
 import { cargarLeadsPestana } from "./acciones";
 import { descompactarLeads, type LeadsCompactos, type LeadVista } from "@/lib/leads-vista";
 import { cifras, compararFuentes, embudo, filtrarLeads, filtrarSinFuente, paisDe, repartir } from "@/lib/leads-cifras";
 import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais, pct } from "@/lib/formato";
-import { PREGUNTAS_BIBLIOTECA, preguntaCanonica, respuestasBiblioteca } from "@/lib/oferta";
+import { ETIQUETA_OFERTA, OFERTAS, PREGUNTAS_BIBLIOTECA, esDeBiblioteca, preguntaCanonica, respuestasBiblioteca, type Oferta } from "@/lib/oferta";
 import { PREFIJO_ETIQUETA } from "@/lib/canal";
 import { Kpi, Seccion } from "@/components/ui";
 import { EmbudoVidrio } from "@/components/embudo-vidrio";
@@ -32,7 +33,7 @@ import { AccionesLeads, CORTO } from "./leads-acciones";
 // 1c (Cristian, 26 oct 2026): KPIs → «Leads». Todos los leads del proyecto para decidir a quién llamar, ver cómo rinde
 // cada fuente (pipeline, con sus 🔗) y conocer al público. Los datos llegan compactos justo después de pintar
 // (lib/leads-kpis.ts) y todo lo demás se calcula aquí: cambiar un filtro no pide nada a la base.
-export function PestanaLeads({ desde, hasta, zona }: { desde: number | null; hasta: number | null; zona: string }) {
+export function PestanaLeads({ desde, hasta, zona, ofertas, csv }: { desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
   const [datos, setDatos] = useState<LeadsCompactos | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -59,19 +60,20 @@ export function PestanaLeads({ desde, hasta, zona }: { desde: number | null; has
         {[0, 1, 2, 3].map((i) => <div key={i} className="h-9 rounded-lg bg-panel-2" />)}
       </div>
     );
-  return <Contenido vista={vista} desde={desde} hasta={hasta} zona={zona} />;
+  return <Contenido vista={vista} desde={desde} hasta={hasta} zona={zona} ofertas={ofertas} csv={csv} />;
 }
 
 type Vista = ReturnType<typeof descompactarLeads>;
 
-function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number | null; hasta: number | null; zona: string }) {
+function Contenido({ vista, desde, hasta, zona, ofertas, csv }: { vista: Vista; desde: number | null; hasta: number | null; zona: string; ofertas: EscalonOferta[]; csv: React.ReactNode }) {
   const { pipelines, etapas, gente, leads } = vista;
   const [fuente, setFuente] = useState<string | null>(null);
   const [pais, setPais] = useState("");
+  const [oferta, setOferta] = useState("");
   const [sinCaller, setSinCaller] = useState(false);
   const [q, setQ] = useState("");
 
-  const base = useMemo(() => ({ desde, hasta, pais, sinCaller, q }), [desde, hasta, pais, sinCaller, q]);
+  const base = useMemo(() => ({ desde, hasta, pais, oferta, sinCaller, q }), [desde, hasta, pais, oferta, sinCaller, q]);
   const sinFuente = useMemo(() => filtrarSinFuente(leads, base), [leads, base]);
   const visibles = useMemo(() => filtrarLeads(leads, { ...base, pipelineId: fuente }), [leads, base, fuente]);
   // El filtro de país enseña los países de lo elegido sin contar el propio país (si no, solo saldría el elegido)
@@ -79,6 +81,10 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
   const c = cifras(visibles);
   const fuentes = useMemo(() => compararFuentes(sinFuente, pipelines), [sinFuente, pipelines]);
   const hayWhatsApp = visibles.some((l) => l.etiquetas.includes("leads whatsapp"));
+  // Como el de país: las ofertas de lo elegido sin contar la propia oferta
+  const porOferta = useMemo(() => repartir(filtrarLeads(leads, { ...base, oferta: "", pipelineId: fuente }), (l) => l.oferta), [leads, base, fuente]);
+  // Lo que venía de la pestaña «Biblioteca» (quitada el 26 oct): las cifras del formulario, de los elegidos que lo rellenaron
+  const formulario = useMemo(() => resumenBiblioteca(visibles.filter(esDeBiblioteca).map((l) => ({ id: l.id, respuestas: l.respuestas, pais: l.pais, oferta: l.oferta as Oferta | null }))), [visibles]);
 
   return (
     <div className="space-y-5">
@@ -100,6 +106,13 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
             <option value="">Todos los países</option>
             {paises.map((p) => <option key={p.t} value={p.t}>{`${nombrePais(p.t)} (${p.n})`}</option>)}
           </Desplegable>
+          <Desplegable aria-label="Oferta" value={oferta} onChange={(e) => setOferta(e.target.value)} className="campo w-auto min-w-40" title="La oferta que le toca por el formulario de la Biblioteca">
+            <option value="">Todas las ofertas</option>
+            {OFERTAS.map((o) => {
+              const n = porOferta.find((p) => p.t === o.v)?.n ?? 0;
+              return n || oferta === o.v ? <option key={o.v} value={o.v}>{`${ETIQUETA_OFERTA[o.v]} (${n})`}</option> : null;
+            })}
+          </Desplegable>
           <label className="flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
         </div>
         {hayWhatsApp && (desde !== null || hasta !== null) && (
@@ -107,12 +120,18 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className={`grid grid-cols-2 gap-3 ${formulario.total ? "sm:grid-cols-4 xl:grid-cols-7" : "lg:grid-cols-5"}`}>
         <Kpi titulo="Leads" valor={c.total.toLocaleString("es-ES")} icono={Users} detalle={fuente ? pipelines.find((p) => p.id === fuente)?.nombre : "Todas las fuentes"} />
         <Kpi titulo="Sin caller" valor={c.sinCaller.n.toLocaleString("es-ES")} icono={UserX} tono="aviso" detalle={`${pct(c.sinCaller.pct)} del total`} />
         <Kpi titulo="Contactados" valor={c.contactados.n.toLocaleString("es-ES")} icono={PhoneCall} detalle={`${pct(c.contactados.pct)} · llamada, WhatsApp o agenda`} />
         <Kpi titulo="Agendados" valor={c.agendados.n.toLocaleString("es-ES")} icono={CalendarCheck} tono="ok" detalle={`${pct(c.agendados.pct)} del total`} />
         <Kpi titulo="Compraron" valor={c.compran.n.toLocaleString("es-ES")} icono={ShoppingCart} tono="oro" detalle={`${pct(c.compran.pct)} del total`} />
+        {formulario.total > 0 && (
+          <>
+            <Kpi titulo="Pueden invertir ya" valor={pct(formulario.invierteYa.pct)} icono={Wallet} tono="ok" detalle={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")} del formulario dicen «Sí, ahora»`} />
+            <Kpi titulo="Calientes" valor={pct(formulario.caliente.pct)} icono={Flame} tono="oro" detalle={`${formulario.caliente.n.toLocaleString("es-ES")}: buscan ingresos + invierten ya + empiezan ya o este mes`} />
+          </>
+        )}
       </div>
 
       {/* La tabla sola a todo el ancho: al lado de ella, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
@@ -149,6 +168,8 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
           </>
         }
         leads={visibles}
+        formulario={formulario}
+        ofertas={ofertas}
         pipelines={pipelines}
         etapas={etapas}
         gente={gente}
@@ -163,7 +184,15 @@ function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number 
         }
       />
 
-      <Seccion titulo="Todos los datos" acciones={<AccionesLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} />}>
+      <Seccion
+        titulo="Todos los datos"
+        acciones={
+          <div className="flex flex-wrap items-center gap-2">
+            {csv}
+            <AccionesLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} />
+          </div>
+        }
+      >
         <TablaLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} />
       </Seccion>
     </div>
