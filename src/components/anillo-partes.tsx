@@ -33,7 +33,7 @@ export function AnilloPartes({ titulo, partes, max = 6 }: { titulo: string; part
               <li key={p.t} className="flex items-center gap-2">
                 <i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COLORES[i % COLORES.length] }} />
                 <span className="truncate text-texto-2" title={p.t}>{p.t}</span>
-                <span className="ml-auto tabular-nums">{Math.round((p.n / total) * 100)} %</span>
+                <span className="ml-auto shrink-0 whitespace-nowrap tabular-nums">{Math.round((p.n / total) * 100)} %</span>
               </li>
             ))}
           </ul>
