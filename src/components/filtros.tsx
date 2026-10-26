@@ -19,11 +19,14 @@ export function Filtros({
   productos,
   conBusqueda = false,
   periodoPorDefecto = "mes",
+  ligero = false,
 }: {
   vendedores?: { id: string; nombre: string; rol: string }[];
   productos?: { id: string; nombre: string }[];
   conBusqueda?: boolean;
   periodoPorDefecto?: string;
+  // Sin tarjeta propia y con el periodo como texto (KPIs → «Leads», boceto B elegido por Cristian el 26 oct 2026)
+  ligero?: boolean;
 }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -49,7 +52,7 @@ export function Filtros({
   }
 
   return (
-    <div className={`tarjeta flex flex-wrap items-center gap-2 p-2.5 ${cargando ? "opacity-70" : ""}`}>
+    <div className={`flex flex-wrap items-center ${ligero ? "gap-0.5" : "tarjeta gap-2 p-2.5"} ${cargando ? "opacity-70" : ""}`}>
       {vendedores && (
         <Desplegable
           aria-label="Vendedor"
@@ -80,7 +83,7 @@ export function Filtros({
           ))}
         </Desplegable>
       )}
-      <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
+      <div className={ligero ? "flex gap-0.5" : "flex rounded-lg border border-borde bg-panel-2 p-0.5"}>
         {PERIODOS.map((p) => (
           // Velocidad (17 oct 2026): enlaces con precarga completa (antes, botones que esperaban al servidor al pulsar)
           <Link
@@ -93,9 +96,11 @@ export function Filtros({
               setVerFechas(false);
               if (p.v !== periodo) setYendo({ a: p.v, desde: params.toString() });
             }}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-              periodo === p.v ? "bg-primario text-white shadow-sm" : "text-texto-2 hover:text-texto"
-            }`}
+            className={
+              ligero
+                ? `rounded-full px-2.5 py-1 text-[13px] font-medium transition-colors ${periodo === p.v ? "bg-primario-suave text-primario" : "text-texto-3 hover:text-texto"}`
+                : `rounded-md px-3 py-1.5 text-sm transition-colors ${periodo === p.v ? "bg-primario text-white shadow-sm" : "text-texto-2 hover:text-texto"}`
+            }
           >
             {p.t}
           </Link>
@@ -103,9 +108,13 @@ export function Filtros({
       </div>
       <button
         onClick={() => setVerFechas((v) => !v)}
-        className={`btn-secundario ${periodo === "rango" ? "border-primario text-primario" : ""}`}
+        className={
+          ligero
+            ? `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium transition-colors ${periodo === "rango" || verFechas ? "bg-primario-suave text-primario" : "text-texto-3 hover:text-texto"}`
+            : `btn-secundario ${periodo === "rango" ? "border-primario text-primario" : ""}`
+        }
       >
-        <CalendarRange className="h-4 w-4" /> Fechas
+        <CalendarRange className={ligero ? "h-3.5 w-3.5" : "h-4 w-4"} /> Fechas
       </button>
       {verFechas && (
         <form

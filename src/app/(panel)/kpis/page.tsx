@@ -44,20 +44,27 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "leads" : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
-  const listaPestanas = (
-    <div className="flex gap-1" role="tablist">
+  // subrayado: la de «Leads» (boceto B, Cristian 26 oct): texto con una línea azul debajo de la pestaña activa
+  const listaPestanas = (subrayado = false) => (
+    <div className={subrayado ? "flex gap-6" : "flex gap-1"} role="tablist">
       {[
         ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }] : []),
         { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
         { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
       ].map((p) => (
-        <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`}>
+        <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={
+            subrayado
+              ? `relative py-3 text-sm font-medium transition-colors ${vista === p.v ? "text-texto" : "text-texto-3 hover:text-texto"}`
+              : `rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`
+          }
+        >
           {p.t}
+          {subrayado && vista === p.v && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primario" aria-hidden />}
         </Link>
       ))}
     </div>
   );
-  const pestanas = <div className="tarjeta p-1.5">{listaPestanas}</div>;
+  const pestanas = <div className="tarjeta p-1.5">{listaPestanas()}</div>;
 
   if (vista === "leads") {
     // Aquí no se lee nada pesado: la precarga del menú prepara esta página al pasar el ratón por «KPIs». Los leads los
@@ -82,10 +89,11 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           {/* Pestañas y periodo en una sola barra, dentro de la misma tarjeta que los filtros de la pestaña (Cristian, 26 oct) */}
           <PestanaLeads
             barra={
-              <div className="flex flex-wrap items-center gap-2">
-                {listaPestanas}
-                <span className="mx-1 hidden h-6 w-px bg-borde sm:block" aria-hidden />
-                <Filtros periodoPorDefecto="todo" />
+              <div className="-mx-4 flex flex-wrap items-center justify-between gap-x-4 border-b border-borde px-4">
+                {listaPestanas(true)}
+                <div className="py-1.5">
+                  <Filtros periodoPorDefecto="todo" ligero />
+                </div>
               </div>
             } desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} ofertas={ofertas} csv={csv} />
         </Contenido>

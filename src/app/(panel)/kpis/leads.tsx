@@ -54,14 +54,14 @@ export function PestanaLeads({ barra, desde, hasta, zona, ofertas, csv }: { barr
   if (error)
     return (
       <>
-        <div className="tarjeta p-1.5">{barra}</div>
+        <div className="tarjeta px-4">{barra}</div>
         <p className="text-sm text-mal">{error}</p>
       </>
     );
   if (!vista)
     return (
       <>
-        <div className="tarjeta p-1.5">{barra}</div>
+        <div className="tarjeta px-4">{barra}</div>
         {/* data-datos-pendientes: llega en el HTML desde el principio; mientras está, el menú no precarga (lib/pantalla-lista.ts) */}
         <div className="animate-pulse space-y-3" aria-busy="true" data-datos-pendientes="">
           <p className="text-sm text-texto-3">Cargando todos los leads…</p>
@@ -90,7 +90,6 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
   const paises = useMemo(() => repartir(filtrarLeads(leads, { ...base, pais: "", pipelineId: fuente }), paisDe, SIN_PAIS), [leads, base, fuente]);
   const c = cifras(visibles);
   const fuentes = useMemo(() => compararFuentes(sinFuente, pipelines), [sinFuente, pipelines]);
-  const hayWhatsApp = visibles.some((l) => l.etiquetas.includes("leads whatsapp"));
   // Como el de país: las ofertas de lo elegido sin contar la propia oferta
   const porOferta = useMemo(() => repartir(filtrarLeads(leads, { ...base, oferta: "", pipelineId: fuente }), (l) => l.oferta), [leads, base, fuente]);
   // Lo que venía de la pestaña «Biblioteca» (quitada el 26 oct): las cifras del formulario, de los elegidos que lo rellenaron
@@ -99,12 +98,20 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
   return (
     <div className="space-y-5">
       {/* Qué ver: fuente (con su número), país, sin caller y búsqueda */}
-      <div className="tarjeta space-y-3 p-3">
+      {/* Boceto B (Cristian, 26 oct): pestañas y fuentes con subrayado, el periodo ligero a la derecha */}
+      <div className="tarjeta space-y-3 px-4 pb-3.5">
         {barra}
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Fuente">
+        <div className="flex flex-wrap gap-x-4 gap-y-1" role="tablist" aria-label="Fuente">
           {fuentes.map((f) => (
-            <button key={f.id ?? "todos"} type="button" role="tab" aria-selected={fuente === f.id} onClick={() => setFuente(f.id)} className={`chip ${fuente === f.id ? "bg-primario text-white" : "bg-panel-2 text-texto-2 hover:text-texto"}`}>
-              {f.nombre} <small className="ml-1 tabular-nums opacity-80">{f.pasos[0].n.toLocaleString("es-ES")}</small>
+            <button
+              key={f.id ?? "todos"}
+              type="button"
+              role="tab"
+              aria-selected={fuente === f.id}
+              onClick={() => setFuente(f.id)}
+              className={`border-b-[1.5px] py-1 text-[13px] transition-colors ${fuente === f.id ? "border-primario font-semibold text-primario" : "border-transparent text-texto-2 hover:text-texto"}`}
+            >
+              {f.nombre} <small className="ml-0.5 text-[11px] font-normal tabular-nums text-texto-3">{f.pasos[0].n.toLocaleString("es-ES")}</small>
             </button>
           ))}
         </div>
@@ -126,9 +133,6 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
           </Desplegable>
           <label className="flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
         </div>
-        {hayWhatsApp && (desde !== null || hasta !== null) && (
-          <p className="text-xs text-texto-3">Ojo: los de WhatsApp tienen como fecha de alta el momento en que se importaron (26 oct 2026, 03:59 UTC), no el día en que entraron al grupo.</p>
-        )}
       </div>
 
       <div className={`grid grid-cols-2 gap-3 ${formulario.total ? "sm:grid-cols-4 xl:grid-cols-7" : "lg:grid-cols-5"}`}>
@@ -149,8 +153,9 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
       {/* La tabla sola a todo el ancho: al lado de ella, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
       <div className="space-y-5">
         <Seccion titulo="Cómo rinde cada fuente">
-          <div className="-mx-4 overflow-x-auto sm:-mx-5">
-            <table className="tabla">
+          {/* Más compacta (Cristian, 26 oct): filas y letra más pequeñas, mismo estilo */}
+          <div className="-mx-4 -mt-2 -mb-2 overflow-x-auto sm:-mx-5">
+            <table className="tabla [&_td]:py-1.5 [&_td]:text-[13px] [&_th]:py-1.5 [&_th]:text-[10px]">
               <thead>
                 <tr><th>Fuente</th><th className="text-right">Leads</th><th className="text-right">Sin caller</th><th className="text-right">Contactados</th><th className="text-right">Contestan</th><th className="text-right">Agendan</th><th className="text-right">Asisten</th><th className="text-right">Compran</th></tr>
               </thead>
