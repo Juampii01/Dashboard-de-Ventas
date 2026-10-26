@@ -72,7 +72,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     const pipelines = (pipes ?? []) as Pipeline[];
     const ofertas: EscalonOferta[] = ESCALERA.map((e) => {
       const p = ((productos ?? []) as Producto[]).find((x) => x.nombre.toLowerCase() === e.producto.toLowerCase());
-      return { clave: e.clave, nombre: p?.nombre ?? e.producto, precio: p?.precio ? `${$(Number(p.precio))}${p.modo_pago === "mensual" ? " / mes" : ""}` : "A medida", descripcion: p?.descripcion ?? null, quien: e.quien };
+      return { clave: e.clave, nombre: p?.nombre ?? e.producto, precio: p?.precio ? `${$(Number(p.precio))}${p.modo_pago === "mensual" ? " / mes" : ""}` : "A medida", quien: e.quien };
     });
     const csv = <ActualizarCsv pipelines={pipelines} pipelineId={pipelines.find((p) => p.nombre.toLowerCase().includes("biblioteca"))?.id} />;
     return (

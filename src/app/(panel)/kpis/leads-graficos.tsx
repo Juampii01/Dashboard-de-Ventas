@@ -120,7 +120,6 @@ export function GraficosLeads({ leads, formulario, ofertas, pipelines, etapas, g
                 <div key={o.clave} className="rounded-xl border border-borde p-4">
                   <div className="text-sm font-semibold">{o.nombre}</div>
                   <div className="mt-1 text-lg font-semibold tabular-nums">{o.precio}</div>
-                  {o.descripcion && <div className="mt-1 text-xs text-texto-3">{o.descripcion}</div>}
                   <div className="mt-3 text-sm text-texto-2">{o.quien}{o.clave === "dfy" ? `. Primero los ${formulario.escalera.dfy.inviertenYa} que invierten ya` : ""}</div>
                   <div className="mt-1 text-xs text-texto-3">{pct(dato.pct)} · {dato.n.toLocaleString("es-ES")} personas</div>
                 </div>

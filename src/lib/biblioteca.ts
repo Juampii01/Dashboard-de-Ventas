@@ -55,7 +55,7 @@ export const ESCALERA: { clave: "membresia" | "grupal" | "vip" | "dfy"; producto
   { clave: "vip", producto: "VIP", quien: "Invierte ya, quiere empezar ya y tiene negocio o experiencia en AI" },
   { clave: "dfy", producto: "DFY", quien: "Tiene negocio y quiere automatizarlo" },
 ];
-export type EscalonOferta = { clave: (typeof ESCALERA)[number]["clave"]; nombre: string; precio: string; descripcion: string | null; quien: string };
+export type EscalonOferta = { clave: (typeof ESCALERA)[number]["clave"]; nombre: string; precio: string; quien: string };
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0);
 
