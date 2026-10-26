@@ -40,10 +40,10 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       grupo: "Ventas",
       // Paso H5: cada entrada sale solo si la persona tiene esa sección (por su rol o por su ficha)
       items: [
-        ...(jefe && tiene("funnel") ? [{ href: "/funnel", texto: "Funnel", icono: "funnel" as const }] : []),
         // H8: «Mi Funnel» (a un caller o closer con «Funnel», es lo mismo: sus números)
         ...(!jefe && (tiene("mi_funnel") || tiene("funnel")) ? [{ href: "/mi-funnel", texto: "Mi Funnel", icono: "funnel" as const }] : []),
-        ...(tiene("kpis") ? [{ href: "/kpis", texto: jefe ? "KPIs" : "Mis KPIs", icono: "kpis" as const }] : []),
+        // 26 oct 2026 (Cristian): el Funnel es una pestaña de KPIs; un jefe con solo «Funnel» entra por aquí
+        ...(tiene("kpis") || (jefe && tiene("funnel")) ? [{ href: "/kpis", texto: jefe ? "KPIs" : "Mis KPIs", icono: "kpis" as const }] : []),
         // H7: un solo CRM («Mi CRM» para caller y closer, con sus leads)
         ...(tiene("crm") ? [{ href: "/crm", texto: jefe ? "CRM" : "Mi CRM", icono: "crm" as const }] : []),
         ...(tiene("cola") ? [{ href: "/caller", texto: jefe ? "Callers" : "Mis leads", icono: "caller" as const, exacto: true, insignia: vencidos }] : []),

@@ -71,6 +71,15 @@ describe("Inicio cuando quitan secciones", () => {
     for (const s of ["mi_funnel", "crm", "grabadas", "ranking", "recursos", "reportes"]) await ok(guardarPermisoPersona(e.p.callerB.id, s, false));
     expect(await rutaInicio(e.p.callerB, e.proyecto.id)).toBe("/sin-acceso");
   });
+
+  it("26 oct: el CEO y los directores empiezan en KPIs; un director sin «KPIs» pero con «Funnel», en su pestaña", async () => {
+    como(e, e.p.ceo);
+    expect(await rutaInicio(e.p.ceo, e.proyecto.id)).toBe("/kpis");
+    expect(await rutaInicio(e.p.director, e.proyecto.id)).toBe("/kpis");
+    await ok(guardarPermisoPersona(e.p.director.id, "kpis", false));
+    expect(await rutaInicio(e.p.director, e.proyecto.id)).toBe("/kpis?vista=funnel");
+    await ok(guardarPermisoPersona(e.p.director.id, "kpis", true));
+  });
 });
 
 describe("«Lo suyo» (casos confirmados por Cristian)", () => {

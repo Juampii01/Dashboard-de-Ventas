@@ -54,10 +54,11 @@ export function soloLoSuyo(perfil: Perfil, seccion: Seccion) {
 
 // Página de inicio: la de su rol si la tiene; si no, la primera sección que tenga permitida
 const RUTA: Record<Seccion, string> = {
-  funnel: "/funnel", mi_funnel: "/mi-funnel", kpis: "/kpis", crm: "/crm", cola: "/caller", agendas: "/closer", grabadas: "/caller/grabadas",
+  funnel: "/kpis?vista=funnel", mi_funnel: "/mi-funnel", kpis: "/kpis", crm: "/crm", cola: "/caller", agendas: "/closer", grabadas: "/caller/grabadas",
   ventas: "/ventas", ranking: "/ranking", recursos: "/recursos", reportes: "/reportes", equipo: "/equipo", programas: "/programas", finanzas: "/finanzas", clientes: "/clientes",
 };
-const INICIO: Record<Perfil["rol"], Seccion> = { ceo: "funnel", director: "funnel", closer: "agendas", caller: "cola" };
+// 26 oct 2026 (Cristian): el CEO y los directores entran en KPIs → Leads (antes, en el Funnel)
+const INICIO: Record<Perfil["rol"], Seccion> = { ceo: "kpis", director: "kpis", closer: "agendas", caller: "cola" };
 export async function rutaInicio(perfil: Perfil, proyectoId: string) {
   const tiene = await seccionesPermitidas(perfil, proyectoId);
   if (tiene.has(INICIO[perfil.rol])) return RUTA[INICIO[perfil.rol]];

@@ -39,10 +39,3 @@ export async function exigir(roles: Rol[] | ((p: Perfil) => boolean)) {
   if (!ok) throw new ErrorUsuario("No tienes permiso para esto.");
   return sesion;
 }
-
-export const RUTA_INICIO: Record<Rol, string> = {
-  ceo: "/funnel",
-  director: "/funnel",
-  closer: "/closer",
-  caller: "/caller",
-};

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { CalendarRange, Target } from "lucide-react";
+import { redirect } from "next/navigation";
+import { CalendarRange, Target, Wallet } from "lucide-react";
 import { exigirPagina, soloLoSuyo } from "@/lib/permisos";
-import { cargarBase, enRango } from "@/lib/metricas";
+import { cargarBase, calcularFunnel, enRango } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
@@ -16,6 +17,7 @@ import { ActualizarCsv } from "./subir-csv";
 import { ESCALERA, type EscalonOferta } from "@/lib/biblioteca";
 import type { Pipeline, Producto } from "@/lib/tipos";
 import { Embudo } from "@/components/embudo";
+import { CuerpoFunnel } from "@/components/cuerpo-funnel";
 import { TarjetasKpis, type PersonaKpi } from "@/components/tarjetas-kpis";
 import { TarjetaObjetivos } from "@/components/tarjeta-objetivos";
 import { esJefe } from "@/lib/auth";
@@ -32,25 +34,36 @@ import { CANALES, NOMBRE_CANAL, SIN_CANAL } from "@/lib/canal";
 
 // KPIs de cada caller y closer (Paso H2) y sus objetivos (Paso H3). Solo director y CEO (decisión de Cristian, 10 oct 2026).
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
-  const { perfil, proyecto } = await exigirPagina("kpis"); // H5 (a un caller o closer, solo lo suyo: parte 2)
+  // 26 oct 2026 (Cristian): el Funnel es una pestaña de KPIs; con «KPIs» o con «Funnel» se entra
+  const { perfil, proyecto, tiene } = await exigirPagina("kpis", "funnel"); // H5 (a un caller o closer, solo lo suyo: parte 2)
   const sp = await searchParams;
+  const jefe = esJefe(perfil);
+  const conKpis = tiene.has("kpis");
+  // El permiso «Funnel» abre su pestaña a los jefes; a un caller o closer le da «Mi Funnel» (sus números)
+  const conFunnel = jefe && tiene.has("funnel");
+  if (!conKpis && !jefe) redirect("/mi-funnel");
   // H5: a un caller o closer con «KPIs», solo su fila y sin la pestaña Objetivos (no puede poner objetivos)
   const propio = soloLoSuyo(perfil, "kpis");
-  // Bloque A (Cristian, 11 oct 2026): «Biblioteca», solo para director y CEO
   // 1c (Cristian, 26 oct 2026): la primera es «Leads» (todos los leads). La pestaña «Biblioteca» se quitó: lo suyo
   // (escalera de ofertas, «pueden invertir», «calientes», el formulario y «Actualizar con CSV») está en «Leads».
-  const jefe = esJefe(perfil);
   const vista =
-    !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "leads" : "personas";
+    (sp.vista === "funnel" && conFunnel) || !conKpis
+      ? "funnel"
+      : !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "leads" : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
   // subrayado: la de «Leads» (boceto B, Cristian 26 oct): texto con una línea azul debajo de la pestaña activa
   const listaPestanas = (subrayado = false) => (
     <div className={subrayado ? "flex gap-6" : "flex gap-1"} role="tablist">
       {[
-        ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }] : []),
-        { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
-        { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
+        ...(jefe && conKpis ? [{ v: "leads", t: "Leads", href: "/kpis" }] : []),
+        ...(conFunnel ? [{ v: "funnel", t: "Funnel", href: "/kpis?vista=funnel" }] : []),
+        ...(conKpis
+          ? [
+              { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
+              { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
+            ]
+          : []),
       ].map((p) => (
         <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={
             subrayado
@@ -101,6 +114,48 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     );
   }
   const base = await cargarBase(proyecto);
+
+  if (vista === "funnel") {
+    // Lo que era la página «Funnel» (26 oct, Cristian): las cifras de dinero y de actividad del periodo, por vendedor y
+    // producto. Sin la tabla «KPIs por persona»: está en la pestaña de al lado.
+    const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
+    const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
+    const { data: productosData } = await db().from("productos").select("id, nombre").eq("proyecto_id", proyecto.id).order("orden");
+    const productos = productosData ?? [];
+    const vendedor = base.gente.find((g) => g.id === sp.vendedor) ?? null;
+    const producto = productos.find((p) => p.id === sp.producto) ?? null;
+    const m = calcularFunnel(base, rango, vendedor, proyecto.zona_horaria, producto?.id ?? null);
+    const vendedores = base.gente.filter((g) => g.rol === "caller" || g.rol === "closer").map((g) => ({ id: g.id, nombre: g.nombre, rol: ETIQUETA_ROL[g.rol] }));
+    return (
+      <>
+        <Cabecera
+          titulo="KPIs"
+          subtitulo={
+            <>
+              {proyecto.nombre} · Funnel · {rango.etiqueta}
+              {vendedor && <> · {vendedor.nombre}</>}
+              {producto && <> · solo ventas de «{producto.nombre}»</>}
+            </>
+          }
+        />
+        <Contenido>
+          {/* La misma barra que «Leads»: pestañas subrayadas y, al lado, vendedor, producto y periodo */}
+          <div className="tarjeta px-4 pb-1">
+            <div className="-mx-4 flex flex-wrap items-center justify-between gap-x-4 px-4">
+              {listaPestanas(true)}
+              <div className="py-1.5">
+                <Filtros vendedores={vendedores} productos={productos} ligero />
+              </div>
+            </div>
+          </div>
+          <CuerpoFunnel m={m} dinero={$} />
+          <div className="flex items-center gap-2 text-xs text-texto-3">
+            <Wallet className="h-3.5 w-3.5" /> Facturación = valor total de los contratos cerrados. Cash collected = dinero ya cobrado (pagos iniciales + cuotas cobradas en el periodo − devoluciones del periodo).
+          </div>
+        </Contenido>
+      </>
+    );
+  }
 
   if (vista === "personas") {
     // 13 oct (Cristian): se fusiona Agendas → Métricas aquí: misma barra (Individual/Comparativa, closer, producto y

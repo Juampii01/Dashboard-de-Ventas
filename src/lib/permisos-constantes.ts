@@ -1,7 +1,7 @@
 // Listas fijas de permisos (Paso H5). Sin «server-only»: las usan también las pantallas de Administración.
 
 export const SECCIONES_TODAS = [
-  { v: "funnel", t: "Funnel", d: "Cifras del equipo (a un caller o closer, solo las suyas)", grupo: "Ventas" },
+  { v: "funnel", t: "Funnel", d: "Pestaña Funnel de KPIs: cifras del equipo (a un caller o closer, «Mi Funnel»)", grupo: "Ventas" },
   { v: "mi_funnel", t: "Mi Funnel", d: "Sus números y sus objetivos", grupo: "Ventas" },
   { v: "kpis", t: "KPIs", d: "KPIs y objetivos (a un caller o closer, solo los suyos)", grupo: "Ventas" },
   { v: "crm", t: "CRM", d: "Leads por columnas (cada uno ve los suyos)", grupo: "Ventas" },

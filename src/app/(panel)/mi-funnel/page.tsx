@@ -14,7 +14,7 @@ import { PanelObjetivos } from "@/components/barras-objetivos";
 // Arriba sus objetivos, después sus KPIs en tarjetas y debajo el Funnel de siempre filtrado a él.
 export default async function MiFunnelPage({ searchParams }: PageProps<"/mi-funnel">) {
   const { perfil, proyecto } = await exigirPagina("mi_funnel", "funnel"); // H5
-  if (perfil.rol !== "caller" && perfil.rol !== "closer") redirect("/funnel"); // los jefes ya tienen el Funnel entero
+  if (perfil.rol !== "caller" && perfil.rol !== "closer") redirect("/kpis?vista=funnel"); // los jefes ya tienen el Funnel entero (pestaña de KPIs)
   const sp = await searchParams;
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "mes") as Periodo;
   const zona = proyecto.zona_horaria;

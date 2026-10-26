@@ -14,7 +14,7 @@ export default async function RankingPage({ searchParams }: PageProps<"/ranking"
   const periodo = (typeof sp.periodo === "string" ? sp.periodo : "semana") as Periodo;
   const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string, sp.hasta as string);
   const base = await cargarBase(proyecto);
-  // Mismas reglas que «KPIs por persona» del Funnel (Cristian, 11 oct): un solo número por persona
+  // Mismas reglas que KPIs → «Por persona» (Cristian, 11 oct): un solo número por persona
   const { callers, closers } = calcularKpis(base, rango, proyecto.zona_horaria);
   const rCallers = [...callers].sort((a, b) => b.agendados - a.agendados || b.cerrados - a.cerrados || b.llamadas - a.llamadas);
   const rClosers = [...closers].sort((a, b) => b.facturacion - a.facturacion || (b.cierreSobreAsistencia ?? 0) - (a.cierreSobreAsistencia ?? 0));
