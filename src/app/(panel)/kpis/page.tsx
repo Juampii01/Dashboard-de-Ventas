@@ -5,7 +5,9 @@ import { cargarBase, enRango } from "@/lib/metricas";
 import { calcularKpis } from "@/lib/kpis";
 import { cargarObjetivos, calcularAvances, avancesDelEquipo, vigentes, CIFRAS, PERIODOS, DIAS, type RolObjetivo } from "@/lib/objetivos";
 import { db, todas } from "@/lib/datos";
-import { dinero, pct, hoyEnZona, sumarDias, ETIQUETA_ROL } from "@/lib/formato";
+import { dinero, pct, hoyEnZona, sumarDias, rangoDe, ETIQUETA_ROL, type Periodo } from "@/lib/formato";
+import { Filtros } from "@/components/filtros";
+import { PestanaLeads } from "./leads";
 import { Cabecera, Contenido, Seccion, Vacio } from "@/components/ui";
 import { TablasKpis, ExplicacionKpis } from "@/components/tablas-kpis";
 import { BarrasObjetivos } from "@/components/barras-objetivos";
@@ -32,15 +34,17 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const sp = await searchParams;
   // H5: a un caller o closer con «KPIs», solo su fila y sin la pestaña Objetivos (no puede poner objetivos)
   const propio = soloLoSuyo(perfil, "kpis");
-  // Bloque A (Cristian, 11 oct 2026): «Biblioteca» es lo primero, solo para director y CEO
+  // Bloque A (Cristian, 11 oct 2026): «Biblioteca», solo para director y CEO
+  // 1c (Cristian, 26 oct 2026): la primera es «Leads» (todos los leads); la Biblioteca pasa a ?vista=biblioteca
   const jefe = esJefe(perfil);
-  const vista = !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "biblioteca" : "personas";
+  const vista =
+    !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? (sp.vista === "biblioteca" ? "biblioteca" : "leads") : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
   const pestanas = (
     <div className="tarjeta flex gap-1 p-1.5" role="tablist">
       {[
-        ...(jefe ? [{ v: "biblioteca", t: "Biblioteca", href: "/kpis" }] : []),
+        ...(jefe ? [{ v: "leads", t: "Leads", href: "/kpis" }, { v: "biblioteca", t: "Biblioteca", href: "/kpis?vista=biblioteca" }] : []),
         { v: "personas", t: "Por persona", href: "/kpis?vista=personas" },
         { v: "objetivos", t: "Objetivos", href: "/kpis?vista=objetivos" },
       ].map((p) => (
@@ -50,6 +54,25 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       ))}
     </div>
   );
+
+  if (vista === "leads") {
+    // Aquí no se lee nada pesado: la precarga del menú prepara esta página al pasar el ratón por «KPIs». Los leads los
+    // pide la pestaña después de pintar (PestanaLeads → cargarLeadsPestana). Periodo por la fecha de alta, «Todo» por defecto.
+    const periodo = (typeof sp.periodo === "string" ? sp.periodo : "todo") as Periodo;
+    const rango = rangoDe(periodo, proyecto.zona_horaria, sp.desde as string | undefined, sp.hasta as string | undefined);
+    return (
+      <>
+        <Cabecera titulo="KPIs" subtitulo={`${proyecto.nombre} · Leads · ${rango.etiqueta}`} />
+        <Contenido>
+          {pestanas}
+          <div className="tarjeta p-2.5">
+            <Filtros periodoPorDefecto="todo" />
+          </div>
+          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} />
+        </Contenido>
+      </>
+    );
+  }
 
   if (vista === "biblioteca") {
     return (
