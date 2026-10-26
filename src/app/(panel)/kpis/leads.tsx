@@ -98,23 +98,10 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
   return (
     <div className="space-y-5">
       {/* Qué ver: fuente (con su número), país, sin caller y búsqueda */}
-      {/* Boceto B (Cristian, 26 oct): pestañas y fuentes con subrayado, el periodo ligero a la derecha */}
+      {/* Boceto B (Cristian, 26 oct): pestañas con subrayado y el periodo ligero a la derecha. La fuente se elige en
+          «Cómo rinde cada fuente» (las fichas de fuente de aquí se quitaron: repetían esa tabla) */}
       <div className="tarjeta space-y-3 px-4 pb-3.5">
         {barra}
-        <div className="flex flex-wrap gap-x-4 gap-y-1" role="tablist" aria-label="Fuente">
-          {fuentes.map((f) => (
-            <button
-              key={f.id ?? "todos"}
-              type="button"
-              role="tab"
-              aria-selected={fuente === f.id}
-              onClick={() => setFuente(f.id)}
-              className={`border-b-[1.5px] py-1 text-[13px] transition-colors ${fuente === f.id ? "border-primario font-semibold text-primario" : "border-transparent text-texto-2 hover:text-texto"}`}
-            >
-              {f.nombre} <small className="ml-0.5 text-[11px] font-normal tabular-nums text-texto-3">{f.pasos[0].n.toLocaleString("es-ES")}</small>
-            </button>
-          ))}
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
