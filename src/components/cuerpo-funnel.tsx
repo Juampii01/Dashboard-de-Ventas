@@ -13,19 +13,23 @@ export function CuerpoFunnel({ m, dinero: $ }: { m: ReturnType<typeof calcularFu
 
   return (
     <>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <Kpi titulo="Facturación" valor={$(m.facturacion)} icono={DollarSign} tono="oro" destacado detalle={<>Cash collected: <b className="text-texto">{$(m.cash)}</b></>} />
-          <Kpi titulo="Ventas cerradas" valor={m.ventas} icono={ShoppingCart} detalle={m.ventas ? <>Ticket medio {$(m.facturacion / m.ventas)}</> : "Sin ventas en el periodo"} />
-          <Kpi titulo="Llamadas realizadas" valor={m.llamadas} icono={Phone} detalle={<>{m.llamadasCaller} de callers · {m.citasHechas} citas hechas</>} />
-          <Kpi titulo="Media lead → venta" valor={m.mediaDias === null ? "—" : `${m.mediaDias} d`} icono={BarChart3} detalle="Desde que entra hasta que compra" />
+        {/* Tarjetas compactas, como las de KPIs → Leads (Cristian, 26 oct) */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Kpi compacto titulo="Facturación" valor={$(m.facturacion)} icono={DollarSign} tono="oro" destacado detalle={<>Cash collected: <b className="text-texto">{$(m.cash)}</b></>} />
+          <Kpi compacto titulo="Ventas cerradas" valor={m.ventas} icono={ShoppingCart} detalle={m.ventas ? <>Ticket medio {$(m.facturacion / m.ventas)}</> : "Sin ventas en el periodo"} />
+          <Kpi compacto titulo="Llamadas realizadas" valor={m.llamadas} icono={Phone} detalle={<>{m.llamadasCaller} de callers · {m.citasHechas} citas hechas</>} />
+          <Kpi compacto titulo="Media lead → venta" valor={m.mediaDias === null ? "—" : `${m.mediaDias} d`} icono={BarChart3} detalle="Desde que entra hasta que compra" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-          <Kpi titulo="Total leads" valor={m.totalLeads} icono={Users} cambio={m.cambioLeads} detalle={m.cambioLeads !== null ? "vs periodo anterior" : undefined} />
-          <Kpi titulo="Agendados" valor={m.agendados} icono={CalendarDays} cambio={m.cambioAgendados} detalle={m.cambioAgendados !== null ? "vs periodo anterior" : undefined} />
-          <Kpi titulo="Seguimiento" valor={m.seguimiento} icono={ListChecks} tono="aviso" detalle="Citas pendientes de decidir" />
-          <Kpi titulo="No show" valor={m.noShow} icono={UserX} tono="mal" detalle="No se presentaron" />
-          <Kpi titulo="Perdidos" valor={m.perdidos} icono={XCircle} tono="mal" detalle="Perdidos o no califican" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <Kpi compacto titulo="Total leads" valor={m.totalLeads} icono={Users} cambio={m.cambioLeads} detalle={m.cambioLeads !== null ? "vs periodo anterior" : undefined} />
+          <Kpi compacto titulo="Agendados" valor={m.agendados} icono={CalendarDays} cambio={m.cambioAgendados} detalle={m.cambioAgendados !== null ? "vs periodo anterior" : undefined} />
+          <Kpi compacto titulo="Seguimiento" valor={m.seguimiento} icono={ListChecks} tono="aviso" detalle="Citas pendientes de decidir" />
+          <Kpi compacto titulo="No show" valor={m.noShow} icono={UserX} tono="mal" detalle="No se presentaron" />
+          {/* En el móvil (2 por fila) es la quinta: a todo el ancho para que no quede un hueco */}
+          <div className="col-span-2 md:col-span-1">
+            <Kpi compacto titulo="Perdidos" valor={m.perdidos} icono={XCircle} tono="mal" detalle="Perdidos o no califican" />
+          </div>
         </div>
 
         <Seccion titulo="Tasas de conversión">

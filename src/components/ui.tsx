@@ -82,7 +82,7 @@ export function Kpi({
       {(detalle || cambio !== undefined) && (
         <div className={`flex items-center gap-1.5 text-texto-3 ${compacto ? "mt-0.5 min-w-0 text-[11px]" : "mt-2 text-xs"}`}>
           {cambio !== undefined && cambio !== null && <Cambio valor={cambio} />}
-          {compacto ? <span className="truncate">{detalle}</span> : detalle}
+          {compacto ? <span className="line-clamp-2">{detalle}</span> : detalle}
         </div>
       )}
     </div>

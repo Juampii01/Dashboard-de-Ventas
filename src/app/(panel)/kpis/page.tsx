@@ -52,9 +52,9 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       : !propio && sp.vista === "objetivos" ? "objetivos" : !propio && sp.vista === "personas" ? "personas" : jefe && !propio ? "leads" : "personas";
   const $ = (n: number) => dinero(n, proyecto);
 
-  // subrayado: la de «Leads» (boceto B, Cristian 26 oct): texto con una línea azul debajo de la pestaña activa
-  const listaPestanas = (subrayado = false) => (
-    <div className={subrayado ? "flex gap-6" : "flex gap-1"} role="tablist">
+  // Boceto B (Cristian, 26 oct): texto con una línea azul debajo de la pestaña activa, en las 4 pestañas
+  const listaPestanas = () => (
+    <div className="flex gap-6" role="tablist">
       {[
         ...(jefe && conKpis ? [{ v: "leads", t: "Leads", href: "/kpis" }] : []),
         ...(conFunnel ? [{ v: "funnel", t: "Funnel", href: "/kpis?vista=funnel" }] : []),
@@ -65,19 +65,16 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             ]
           : []),
       ].map((p) => (
-        <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={
-            subrayado
-              ? `relative py-3 text-sm font-medium transition-colors ${vista === p.v ? "text-texto" : "text-texto-3 hover:text-texto"}`
-              : `rounded-lg px-3 py-1.5 text-sm font-medium ${vista === p.v ? "bg-primario text-white" : "text-texto-2 hover:bg-panel-2"}`
-          }
+        <Link prefetch={true} key={p.v} href={p.href} role="tab" aria-selected={vista === p.v} className={`relative shrink-0 py-3 text-sm font-medium transition-colors ${vista === p.v ? "text-texto" : "text-texto-3 hover:text-texto"}`}
         >
           {p.t}
-          {subrayado && vista === p.v && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primario" aria-hidden />}
+          {vista === p.v && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primario" aria-hidden />}
         </Link>
       ))}
     </div>
   );
-  const pestanas = <div className="tarjeta p-1.5">{listaPestanas()}</div>;
+  // Por persona y Objetivos, con la misma barra subrayada que Leads y Funnel (Cristian, 26 oct)
+  const pestanas = <div className="tarjeta px-4">{listaPestanas()}</div>;
 
   if (vista === "leads") {
     // Aquí no se lee nada pesado: la precarga del menú prepara esta página al pasar el ratón por «KPIs». Los leads los
@@ -103,7 +100,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <PestanaLeads
             barra={
               <div className="-mx-4 flex flex-wrap items-center justify-between gap-x-4 border-b border-borde px-4">
-                {listaPestanas(true)}
+                {listaPestanas()}
                 <div className="py-1.5">
                   <Filtros periodoPorDefecto="todo" ligero />
                 </div>
@@ -142,7 +139,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           {/* La misma barra que «Leads»: pestañas subrayadas y, al lado, vendedor, producto y periodo */}
           <div className="tarjeta px-4 pb-1">
             <div className="-mx-4 flex flex-wrap items-center justify-between gap-x-4 px-4">
-              {listaPestanas(true)}
+              {listaPestanas()}
               <div className="py-1.5">
                 <Filtros vendedores={vendedores} productos={productos} ligero />
               </div>

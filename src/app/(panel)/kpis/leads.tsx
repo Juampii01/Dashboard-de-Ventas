@@ -104,23 +104,28 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
           «Cómo rinde cada fuente» (las fichas de fuente de aquí se quitaron: repetían esa tabla) */}
       <div className="tarjeta space-y-3 px-4 pb-3.5">
         {barra}
+        {/* Móvil (Cristian, 26 oct): buscador y «Sin caller» en una línea; país y oferta, mitad y mitad en la siguiente */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-48 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, email, teléfono, país o etiqueta…" className="campo pl-9" aria-label="Buscar leads" />
+          <div className="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre, email, teléfono…" title="Busca por nombre, email, teléfono, país o etiqueta" className="campo pl-9" aria-label="Buscar leads" />
+            </div>
+            <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm text-texto-2 sm:order-last"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
           </div>
-          <Desplegable aria-label="País" value={pais} onChange={(e) => setPais(e.target.value)} className="campo w-auto min-w-44" title="País del lead (por el código de su teléfono)">
+          <div className="flex w-full min-w-0 gap-2 sm:w-auto">
+          <Desplegable aria-label="País" value={pais} onChange={(e) => setPais(e.target.value)} className="campo min-w-0 flex-1 sm:w-44 sm:flex-none" title="País del lead (por el código de su teléfono)">
             <option value="">Todos los países</option>
             {paises.map((p) => <option key={p.t} value={p.t}>{`${nombrePais(p.t)} (${p.n})`}</option>)}
           </Desplegable>
-          <Desplegable aria-label="Oferta" value={oferta} onChange={(e) => setOferta(e.target.value)} className="campo w-auto min-w-40" title="La oferta que le toca por el formulario de la Biblioteca">
+          <Desplegable aria-label="Oferta" value={oferta} onChange={(e) => setOferta(e.target.value)} className="campo min-w-0 flex-1 sm:w-40 sm:flex-none" title="La oferta que le toca por el formulario de la Biblioteca">
             <option value="">Todas las ofertas</option>
             {OFERTAS.map((o) => {
               const n = porOferta.find((p) => p.t === o.v)?.n ?? 0;
               return n || oferta === o.v ? <option key={o.v} value={o.v}>{`${ETIQUETA_OFERTA[o.v]} (${n})`}</option> : null;
             })}
           </Desplegable>
-          <label className="flex items-center gap-1.5 text-sm text-texto-2"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
+          </div>
         </div>
       </div>
 
