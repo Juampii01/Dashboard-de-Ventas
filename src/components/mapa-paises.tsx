@@ -64,9 +64,20 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
   const radio = (x: number) => 2.5 + 11 * Math.sqrt(x / max);
 
   if (error) return <p className="text-sm text-mal">No se pudo cargar el mapa.</p>;
+  const datos = [
+    { v: total.toLocaleString("es-ES"), t: "leads" },
+    { v: conPais.length.toLocaleString("es-ES"), t: "países" },
+    ...(conPais[0] ? [{ v: pct(conPais[0].n), t: nombrePais(conPais[0].pais) }] : []),
+  ].map((d) => (
+    <div key={d.t} className="vidrio rounded-xl border border-borde px-2.5 py-1.5 leading-tight">
+      <div className="text-sm font-semibold tabular-nums sm:text-lg">{d.v}</div>
+      <div className="text-[10px] uppercase tracking-wider text-texto-3">{d.t}</div>
+    </div>
+  ));
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
       <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 sm:hidden">{datos}</div>
         <div
           ref={caja}
           className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-borde"
@@ -140,19 +151,8 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
                 </div>
               );
             })}
-          {/* 3 datos grandes */}
-          <div className="pointer-events-none absolute left-2 top-2 flex flex-wrap gap-2 sm:left-3 sm:top-3">
-            {[
-              { v: total.toLocaleString("es-ES"), t: "leads" },
-              { v: conPais.length.toLocaleString("es-ES"), t: "países" },
-              ...(conPais[0] ? [{ v: pct(conPais[0].n), t: nombrePais(conPais[0].pais) }] : []),
-            ].map((d) => (
-              <div key={d.t} className="vidrio rounded-xl border border-borde px-2.5 py-1.5 leading-tight">
-                <div className="text-sm font-semibold tabular-nums sm:text-lg">{d.v}</div>
-                <div className="text-[10px] uppercase tracking-wider text-texto-3">{d.t}</div>
-              </div>
-            ))}
-          </div>
+          {/* 3 datos grandes (en móvil van encima del mapa: aquí tapaban las cifras de los países) */}
+          <div className="pointer-events-none absolute left-3 top-3 hidden flex-wrap gap-2 sm:flex">{datos}</div>
           {/* Cuadro del país bajo el ratón */}
           {sobre && (
             <div className="tarjeta ventana pointer-events-none absolute z-10 px-3 py-2 text-sm" style={{ left: sobre.x, top: sobre.y, transform: `translate(${sobre.derecha ? "calc(-100% - 12px)" : "12px"}, -50%)` }} role="status">

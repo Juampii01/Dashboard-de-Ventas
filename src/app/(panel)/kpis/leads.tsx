@@ -132,7 +132,10 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
         {formulario.total > 0 && (
           <>
             <Kpi compacto titulo="Invierten ya" valor={pct(formulario.invierteYa.pct)} icono={Wallet} tono="ok" detalle={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")}`} ayuda={`${formulario.invierteYa.n.toLocaleString("es-ES")} de ${formulario.total.toLocaleString("es-ES")} del formulario de la Biblioteca dicen «Sí, ahora»`} />
-            <Kpi compacto titulo="Calientes" valor={pct(formulario.caliente.pct)} icono={Flame} tono="oro" detalle={`${formulario.caliente.n.toLocaleString("es-ES")} ${formulario.caliente.n === 1 ? "persona" : "personas"}`} ayuda={`${formulario.caliente.n.toLocaleString("es-ES")}: buscan ingresos + invierten ya + empiezan ya o este mes`} />
+            {/* En móvil (2 por fila) es la séptima: a todo el ancho para que no quede un hueco */}
+            <div className="col-span-2 sm:col-span-1">
+              <Kpi compacto titulo="Calientes" valor={pct(formulario.caliente.pct)} icono={Flame} tono="oro" detalle={`${formulario.caliente.n.toLocaleString("es-ES")} ${formulario.caliente.n === 1 ? "persona" : "personas"}`} ayuda={`${formulario.caliente.n.toLocaleString("es-ES")}: buscan ingresos + invierten ya + empiezan ya o este mes`} />
+            </div>
           </>
         )}
       </div>

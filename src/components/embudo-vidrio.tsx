@@ -47,7 +47,7 @@ export function EmbudoVidrio({ pasos }: { pasos: Paso[] }) {
               onFocus={() => setActivo(i)}
               onBlur={() => setActivo(null)}
               onClick={() => setActivo(abierto ? null : i)}
-              className={`vidrio relative mx-auto min-w-[9rem] max-w-full cursor-default overflow-hidden rounded-xl border transition-all duration-200 ${abierto ? "scale-[1.01] border-primario/50" : "border-borde"}`}
+              className={`vidrio relative mx-auto min-w-[10.5rem] max-w-full cursor-default overflow-hidden rounded-xl border transition-all duration-200 ${abierto ? "scale-[1.01] border-primario/50" : "border-borde"}`}
               style={{ width: `${ancho}%` }}
               title={p.d}
             >

@@ -38,7 +38,7 @@ export function GraficoLeads({ puntos, porHoras }: { puntos: PuntoSerie[]; porHo
     <div>
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3">
         <span className="text-2xl font-semibold tabular-nums">{total.toLocaleString("es-ES")} leads</span>
-        <span className="text-xs text-texto-3">{porHoras ? "por hora" : "por día"} · pasa el ratón por la gráfica para ver cada {porHoras ? "hora" : "día"}</span>
+        <span className="text-xs text-texto-3">{porHoras ? "por hora" : "por día"} · toca o pasa el ratón por la gráfica para ver cada {porHoras ? "hora" : "día"}</span>
       </div>
       <div
         ref={caja}
