@@ -8,6 +8,7 @@ import { anadirTarjetas } from "@/lib/tarjetas";
 import { mismoNombre } from "@/lib/formato";
 import { descifrar } from "@/lib/cifrado";
 import { pipelinesAgendanGhl } from "@/lib/ghl";
+import { conPais } from "@/lib/pais";
 
 // «+34 600-11-22-33», «34600112233» y «600 11 22 33» son el mismo teléfono: con 9 cifras o más
 // se comparan las últimas 9 (así el prefijo del país no cuenta). Decisión de Cristian, 9 oct 2026 (V2-12).
@@ -146,6 +147,7 @@ export async function guardarLeads(
       apellido: e.apellido,
       email: e.email,
       telefono: e.telefono,
+      ...conPais(e.telefono),
       etiquetas: e.etiquetas,
       respuestas: normalizarRespuestas(e.respuestas),
       oferta: calcularOferta({ etiquetas: e.etiquetas, fuente: e.extra?.fuente, respuestas: e.respuestas }),
@@ -221,7 +223,7 @@ export async function guardarLeads(
     const oferta = calcularOferta({ etiquetas, fuente: antes?.fuente || e.extra?.fuente, respuestas });
     if (oferta !== (antes?.oferta ?? null)) cambianOferta++;
     const cambios: Record<string, unknown> = { etiquetas, respuestas, oferta };
-    if (e.telefono) cambios.telefono = e.telefono;
+    if (e.telefono) Object.assign(cambios, { telefono: e.telefono, ...conPais(e.telefono) });
     if (e.email && !antes?.email) cambios.email = e.email;
     if (e.nombre) cambios.nombre = e.nombre;
     if (e.apellido) cambios.apellido = e.apellido;

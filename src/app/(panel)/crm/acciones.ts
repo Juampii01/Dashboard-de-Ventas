@@ -12,6 +12,7 @@ import { exigirNivel } from "@/lib/pipelines";
 import type { EstadoCaller, TipoPipeline } from "@/lib/tipos";
 import { db, registrarActividad, escribir } from "@/lib/datos";
 import { guardarLeads, primeraEtapa } from "@/lib/leads";
+import { conPais } from "@/lib/pais";
 import { filaALead, mapaValido } from "@/lib/csv";
 import { borrarSubida, leerSubida, prepararSubida } from "@/lib/subidas";
 import { moverTarjeta, tarjetaDe } from "@/lib/tarjetas";
@@ -388,7 +389,7 @@ export async function crearLeadManual(formData: FormData) {
     const etapaId = pipelineId ? await primeraEtapa(pipelineId) : null;
     const { data, error } = await db()
       .from("leads")
-      .insert({ proyecto_id: proyecto.id, nombre: n, apellido: resto.join(" "), email, telefono, origen: "manual", pipeline_id: pipelineId, etapa_id: etapaId })
+      .insert({ proyecto_id: proyecto.id, nombre: n, apellido: resto.join(" "), email, telefono, ...conPais(telefono), origen: "manual", pipeline_id: pipelineId, etapa_id: etapaId })
       .select("id")
       .single();
     if (error) throw new ErrorUsuario(error.code === "23505" ? "Ya existe un lead con ese email." : error.message);

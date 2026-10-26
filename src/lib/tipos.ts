@@ -53,6 +53,7 @@ export type Lead = {
   apellido: string;
   email: string | null;
   telefono: string | null;
+  pais?: string | null; // 1b: código del país sacado del teléfono («ES») o «Sin país»; null = aún sin calcular
   etiquetas: string[];
   respuestas: Respuesta[];
   origen: "csv" | "ghl" | "manual";

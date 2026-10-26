@@ -204,3 +204,16 @@ export function mismoNombre(a: string | null | undefined, b: string | null | und
   const n = (s: string | null | undefined) => (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/^\d+\.\s*/, "").trim().toLowerCase();
   return n(a) === n(b);
 }
+
+// 1b (Cristian, 26 oct 2026): el país del lead se guarda como código («ES», «DO»…) o «Sin país»; vacío = aún sin
+// calcular, y se enseña igual que «Sin país». El nombre, en español («Estados Unidos», «República Dominicana»).
+export const SIN_PAIS = "Sin país";
+const NOMBRES_PAIS = new Intl.DisplayNames(["es"], { type: "region" });
+export function nombrePais(pais: string | null | undefined) {
+  if (!pais || pais === SIN_PAIS) return SIN_PAIS;
+  try {
+    return NOMBRES_PAIS.of(pais) ?? pais;
+  } catch {
+    return pais;
+  }
+}

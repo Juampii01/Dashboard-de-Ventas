@@ -7,6 +7,7 @@ import { exigirSeccion, soloLoSuyo } from "@/lib/permisos";
 import { clientesSuyos } from "./cargar";
 import { esJefe } from "@/lib/auth";
 import { telefonoClave } from "@/lib/leads";
+import { conPais } from "@/lib/pais";
 import { registrarVenta } from "@/app/(panel)/leads/acciones";
 import { ESTADOS_CLIENTE, type EstadoCliente } from "@/lib/clientes";
 
@@ -130,7 +131,7 @@ export async function nuevoCliente(formData: FormData) {
       const { data: etapa } = pipe ? await db().from("etapas").select("id").eq("pipeline_id", pipe.id).order("orden").limit(1).maybeSingle() : { data: null };
       const { data: nuevo, error } = await db()
         .from("leads")
-        .insert({ proyecto_id: proyecto.id, nombre, apellido, email: email || null, telefono: telefono || null, origen: "manual", pipeline_id: pipe?.id ?? null, etapa_id: etapa?.id ?? null, ...(esJefe(perfil) ? {} : perfil.rol === "closer" ? { closer_id: perfil.id } : { caller_id: perfil.id }) })
+        .insert({ proyecto_id: proyecto.id, nombre, apellido, email: email || null, telefono: telefono || null, ...conPais(telefono || null), origen: "manual", pipeline_id: pipe?.id ?? null, etapa_id: etapa?.id ?? null, ...(esJefe(perfil) ? {} : perfil.rol === "closer" ? { closer_id: perfil.id } : { caller_id: perfil.id }) })
         .select("id")
         .single();
       if (error) throw new ErrorUsuario(error.message);
