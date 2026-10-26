@@ -16,7 +16,8 @@ const COLORES = ["var(--primario)", "var(--marca-eternity)", "var(--oro)", "var(
 // pasar el ratón por un país, su cuadro. Sin líneas entre países (no hay ningún dato que los una). El dibujo
 // (world-atlas 110m) y las librerías (d3-geo, topojson-client) se cargan solo en esta pestaña. Las islas pequeñas y
 // «Sin país» no salen en el mapa; la lista de debajo con ellos se quitó (Cristian, 26 oct).
-export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }) {
+// alElegir (Cristian, 26 oct): clic en un país del mapa o del ranking abre la lista de sus personas
+export function MapaPaises({ paises, alElegir }: { paises: { pais: string; n: number }[]; alElegir?: (pais: string) => void }) {
   const [formas, setFormas] = useState<Forma[] | null>(null);
   const [error, setError] = useState(false);
   const [sobre, setSobre] = useState<{ alfa: string; x: number; y: number; derecha: boolean } | null>(null);
@@ -106,6 +107,8 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
                     fill={leads ? `color-mix(in srgb, var(--primario) ${Math.round(18 + 42 * Math.sqrt(leads / max))}%, transparent)` : "color-mix(in srgb, var(--texto-3) 14%, transparent)"}
                     stroke={sobre?.alfa === f.alfa && leads ? "var(--primario)" : "var(--borde-fuerte)"}
                     strokeWidth={sobre?.alfa === f.alfa && leads ? 1.2 : 0.5}
+                    className={leads && alElegir ? "cursor-pointer" : undefined}
+                    onClick={() => f.alfa && leads && alElegir?.(f.alfa)}
                     onMouseMove={(e) => {
                       if (!f.alfa || !leads) return setSobre(null);
                       const r = caja.current!.getBoundingClientRect();
@@ -169,6 +172,7 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
         <ul className="space-y-2">
           {conPais.slice(0, 8).map((p, i) => (
             <li key={p.pais} onMouseEnter={() => setSobre(null)}>
+              <button type="button" disabled={!alElegir} onClick={() => alElegir?.(p.pais)} className="block w-full rounded-lg text-left enabled:cursor-pointer enabled:hover:opacity-80">
               <div className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="truncate text-texto-2">{nombrePais(p.pais)}</span>
                 <span className="shrink-0 tabular-nums">{p.n.toLocaleString("es-ES")} <small className="text-texto-3">{pct(p.n)}</small></span>
@@ -176,6 +180,7 @@ export function MapaPaises({ paises }: { paises: { pais: string; n: number }[] }
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-panel-2">
                 <div className="h-full rounded-full" style={{ width: `${(p.n / max) * 100}%`, background: COLORES[i % COLORES.length], boxShadow: `0 0 10px color-mix(in srgb, ${COLORES[i % COLORES.length]} 60%, transparent)` }} />
               </div>
+              </button>
             </li>
           ))}
         </ul>
