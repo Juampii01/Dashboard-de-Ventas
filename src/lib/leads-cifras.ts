@@ -79,14 +79,51 @@ export function compararFuentes(leads: LeadVista[], pipelines: PipelineVista[]) 
   return [fila(null, "Todos", leads), ...pipelines.map((p) => fila(p.id, p.nombre, leads.filter((l) => enPipeline(l, p.id))))];
 }
 
-// Reparto por una clave (país, estado, caller…): de más a menos, con su %; «vacio» al final
-export function repartir(leads: LeadVista[], clave: (l: LeadVista) => string | null, vacio = "—") {
+// L4: leads por día de alta, en la zona del proyecto. Sin «desde», desde el primero; sin «hasta», hasta hoy (máx. 400 días)
+export function porDia(leads: LeadVista[], zona: string, desde: number | null, hasta: number | null, ahora = Date.now()) {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: zona });
+  const dia = (ms: number) => fmt.format(new Date(ms));
+  const cuenta = new Map<string, number>();
+  for (const l of leads) cuenta.set(dia(l.alta), (cuenta.get(dia(l.alta)) ?? 0) + 1);
+  const inicio = desde ?? (leads.length ? Math.min(...leads.map((l) => l.alta)) : ahora);
+  const ultimo = dia(Math.min((hasta ?? ahora + 1) - 1, ahora));
+  const d = new Date(`${dia(inicio)}T12:00:00Z`);
+  const puntos: { dia: string; valor: number }[] = [];
+  while (d.toISOString().slice(0, 10) <= ultimo && puntos.length < 400) {
+    const k = d.toISOString().slice(0, 10);
+    puntos.push({ dia: `${k.slice(8, 10)}/${k.slice(5, 7)}`, valor: cuenta.get(k) ?? 0 });
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return puntos;
+}
+
+// L4: las preguntas de los formularios de estos leads (con su nombre único), de la más respondida a la menos
+export function preguntasDe(leads: LeadVista[], canonica: (p: string) => string) {
   const m = new Map<string, number>();
-  for (const l of leads) {
-    const k = clave(l) ?? vacio;
+  for (const l of leads) for (const p of new Set(l.respuestas.filter((r) => r.respuesta).map((r) => canonica(r.pregunta)))) m.set(p, (m.get(p) ?? 0) + 1);
+  return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([pregunta, n]) => ({ pregunta, n }));
+}
+
+// L4: qué respondieron a una pregunta (solo quien la respondió); como mucho `max` respuestas y el resto en «Otras»
+export function respuestasA(leads: LeadVista[], pregunta: string, canonica: (p: string) => string, max = 12) {
+  const con = leads.flatMap((l) => {
+    const r = l.respuestas.find((x) => x.respuesta && canonica(x.pregunta) === pregunta);
+    return r ? [r.respuesta.trim()] : [];
+  });
+  const filas = repartir(con, (t) => t);
+  if (filas.length <= max) return { total: con.length, filas };
+  const resto = filas.slice(max - 1).reduce((s, f) => s + f.n, 0);
+  return { total: con.length, filas: [...filas.slice(0, max - 1), { t: "Otras", n: resto, pct: Math.round((resto / con.length) * 1000) / 10 }] };
+}
+
+// Reparto por una clave (país, estado, caller…): de más a menos, con su %; «vacio» al final
+export function repartir<T>(lista: T[], clave: (x: T) => string | null, vacio = "—") {
+  const m = new Map<string, number>();
+  for (const x of lista) {
+    const k = clave(x) ?? vacio;
     m.set(k, (m.get(k) ?? 0) + 1);
   }
   return [...m]
     .sort((a, b) => (a[0] === vacio ? 1 : b[0] === vacio ? -1 : b[1] - a[1] || a[0].localeCompare(b[0])))
-    .map(([t, n]) => ({ t, n, pct: pct(n, leads.length) ?? 0 }));
+    .map(([t, n]) => ({ t, n, pct: pct(n, lista.length) ?? 0 }));
 }

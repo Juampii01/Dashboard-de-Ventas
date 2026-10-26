@@ -1,6 +1,6 @@
 // 1c (26 oct 2026): filtros y cifras de la pestaña «Leads» de KPIs.
 import { describe, expect, it } from "vitest";
-import { cifras, compararFuentes, embudo, filtrarLeads, repartir, type FiltroLeads } from "@/lib/leads-cifras";
+import { cifras, compararFuentes, embudo, filtrarLeads, porDia, preguntasDe, repartir, respuestasA, type FiltroLeads } from "@/lib/leads-cifras";
 import { MARCA, type LeadVista } from "@/lib/leads-vista";
 
 const lead = (x: Partial<LeadVista> & { id: string }): LeadVista => ({
@@ -67,6 +67,21 @@ describe("cifras y embudo (la misma tanda)", () => {
   it("comparar fuentes: «Todos» cuenta a cada persona una vez; cada fuente, con sus 🔗", () => {
     const filas = compararFuentes(leads, [{ id: "wsp", nombre: "Leads WhatsApp" }, { id: "bib", nombre: "Biblioteca" }]);
     expect(filas.map((f) => [f.nombre, f.pasos[0].n, f.sinCaller, f.pasos[3].n])).toEqual([["Todos", 5, 3, 2], ["Leads WhatsApp", 3, 1, 1], ["Biblioteca", 2, 1, 2]]);
+  });
+  it("leads por día: cada día del periodo, también los de 0, en la zona del proyecto", () => {
+    const p = porDia(leads, "Europe/Madrid", Date.parse("2026-10-24T22:00:00Z"), Date.parse("2026-10-27T23:00:00Z"), Date.parse("2026-10-26T12:00:00Z"));
+    expect(p).toEqual([{ dia: "25/10", valor: 0 }, { dia: "26/10", valor: 2 }]); // hasta hoy, no hasta el final del periodo
+  });
+  it("preguntas y respuestas de los formularios (con su nombre único; solo quien respondió)", () => {
+    const conForm = [
+      lead({ id: "f1", respuestas: [{ pregunta: "Inversión", respuesta: "Sí, ahora" }, { pregunta: "Perfil", respuesta: "" }] }),
+      lead({ id: "f2", respuestas: [{ pregunta: "inversion", respuesta: "No por ahora" }] }),
+      lead({ id: "f3", respuestas: [{ pregunta: "Inversión", respuesta: "Sí, ahora" }] }),
+    ];
+    const canonica = (p: string) => p.toLowerCase().replace("ó", "o");
+    expect(preguntasDe(conForm, canonica)).toEqual([{ pregunta: "inversion", n: 3 }]);
+    expect(respuestasA(conForm, "inversion", canonica)).toEqual({ total: 3, filas: [{ t: "Sí, ahora", n: 2, pct: 66.7 }, { t: "No por ahora", n: 1, pct: 33.3 }] });
+    expect(respuestasA(conForm, "inversion", canonica, 1).filas).toEqual([{ t: "Otras", n: 3, pct: 100 }]);
   });
   it("repartir por una clave, de más a menos y el vacío al final", () => {
     expect(repartir(leads, (l) => l.pais, "Sin país")).toEqual([{ t: "ES", n: 2, pct: 40 }, { t: "AR", n: 1, pct: 20 }, { t: "MX", n: 1, pct: 20 }, { t: "Sin país", n: 1, pct: 20 }]);

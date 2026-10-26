@@ -5,6 +5,7 @@ import { resumenBiblioteca } from "@/lib/biblioteca";
 import { respuestasBiblioteca, type Oferta } from "@/lib/oferta";
 import { dinero, nombrePais, pct as formatoPct } from "@/lib/formato";
 import { Kpi, Seccion, Vacio } from "@/components/ui";
+import { Barras } from "@/components/barras";
 import { TablaBibliotecaDiferida } from "./biblioteca-tabla-diferida";
 import type { FilaTabla } from "./biblioteca-tabla";
 import { ActualizarCsv } from "./biblioteca-csv";
@@ -12,25 +13,7 @@ import type { Pipeline, Producto, Proyecto } from "@/lib/tipos";
 
 // Bloque A (Cristian, 11 oct 2026): «Biblioteca», la primera pestaña de KPIs (director y CEO). Como su vista de
 // ventas (vista-ventas.html), con los leads de la app: se pone al día con cada CSV y, con GHL, sola.
-type Barra = { t: string; n: number; pct: number };
-
-function Barras({ titulo, filas, marcadas = [] }: { titulo: string; filas: Barra[]; marcadas?: string[] }) {
-  const max = Math.max(1, ...filas.map((f) => f.pct));
-  return (
-    <div>
-      <div className="mb-2 text-sm font-medium">{titulo}</div>
-      <ul className="space-y-1.5">
-        {filas.map((f) => (
-          <li key={f.t} className="grid grid-cols-[minmax(0,10rem)_1fr_3.5rem] items-center gap-2 text-sm">
-            <span className="truncate text-texto-2" title={f.t}>{f.t}</span>
-            <span className="h-2.5 overflow-hidden rounded-full bg-panel-2"><span className={`block h-full rounded-full ${marcadas.includes(f.t) ? "bg-oro" : "bg-primario"}`} style={{ width: `${(f.pct / max) * 100}%` }} /></span>
-            <span className="text-right tabular-nums">{formatoPct(f.pct)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+// Las barras están en components/barras.tsx (1c, 26 oct 2026: también las usa la pestaña «Leads»)
 
 // Qué encaja en cada escalón de la escalera (texto de la vista de Cristian)
 const ESCALERA: { clave: "membresia" | "grupal" | "vip" | "dfy"; producto: string; quien: string }[] = [

@@ -15,11 +15,14 @@ import { Embudo } from "@/components/embudo";
 import { Desplegable } from "@/components/eleccion";
 import { OfertaChip } from "@/components/oferta-chip";
 import { PopupLead } from "@/components/popup-lead";
+import { MapaPaises } from "@/components/mapa-paises";
+import { GraficosLeads } from "./leads-graficos";
+import { AccionesLeads, CORTO } from "./leads-acciones";
 
 // 1c (Cristian, 26 oct 2026): KPIs → «Leads». Todos los leads del proyecto para decidir a quién llamar, ver cómo rinde
 // cada fuente (pipeline, con sus 🔗) y conocer al público. Los datos llegan compactos justo después de pintar
 // (lib/leads-kpis.ts) y todo lo demás se calcula aquí: cambiar un filtro no pide nada a la base.
-export function PestanaLeads({ desde, hasta }: { desde: number | null; hasta: number | null }) {
+export function PestanaLeads({ desde, hasta, zona }: { desde: number | null; hasta: number | null; zona: string }) {
   const [datos, setDatos] = useState<LeadsCompactos | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -46,12 +49,12 @@ export function PestanaLeads({ desde, hasta }: { desde: number | null; hasta: nu
         {[0, 1, 2, 3].map((i) => <div key={i} className="h-9 rounded-lg bg-panel-2" />)}
       </div>
     );
-  return <Contenido vista={vista} desde={desde} hasta={hasta} />;
+  return <Contenido vista={vista} desde={desde} hasta={hasta} zona={zona} />;
 }
 
 type Vista = ReturnType<typeof descompactarLeads>;
 
-function Contenido({ vista, desde, hasta }: { vista: Vista; desde: number | null; hasta: number | null }) {
+function Contenido({ vista, desde, hasta, zona }: { vista: Vista; desde: number | null; hasta: number | null; zona: string }) {
   const { pipelines, etapas, gente, leads } = vista;
   const [fuente, setFuente] = useState<string | null>(null);
   const [pais, setPais] = useState("");
@@ -132,7 +135,24 @@ function Contenido({ vista, desde, hasta }: { vista: Vista; desde: number | null
         </Seccion>
       </div>
 
-      <Seccion titulo="Todos los datos">
+      {/* L4 y L5: gráficos y mapa de lo elegido */}
+      <GraficosLeads
+        leads={visibles}
+        pipelines={pipelines}
+        etapas={etapas}
+        gente={gente}
+        fuente={fuente}
+        zona={zona}
+        desde={desde}
+        hasta={hasta}
+        mapa={
+          <Seccion titulo="Mapa">
+            <MapaPaises paises={repartir(visibles, paisDe, SIN_PAIS).map((p) => ({ pais: p.t, n: p.n }))} />
+          </Seccion>
+        }
+      />
+
+      <Seccion titulo="Todos los datos" acciones={<AccionesLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} callers={gente.filter((g) => g.rol === "caller" && !g.baja)} />}>
         <TablaLeads leads={visibles} pipelines={pipelines} etapas={etapas} gente={gente} fuente={fuente} />
       </Seccion>
     </div>
@@ -140,8 +160,7 @@ function Contenido({ vista, desde, hasta }: { vista: Vista; desde: number | null
 }
 
 const POR_PAGINA = 100;
-// Títulos cortos, como en la tabla de la Biblioteca (la pregunta entera, al pasar el ratón)
-const CORTO: Record<string, string> = { situacion: "Situación", experiencia: "Experiencia con AI", objetivo: "Objetivo 90 días", tiempo: "Tiempo / semana", inversion: "Puede invertir", inicio: "Cuándo empezar" };
+// Títulos cortos (CORTO, en leads-acciones.tsx), como en la tabla de la Biblioteca; la pregunta entera, al pasar el ratón
 const NOMBRE_PREGUNTA = Object.fromEntries(PREGUNTAS_BIBLIOTECA.map((p) => [p.clave, p.texto]));
 const DE_BIBLIOTECA = new Set(PREGUNTAS_BIBLIOTECA.map((p) => p.texto));
 

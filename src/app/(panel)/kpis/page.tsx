@@ -68,7 +68,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <div className="tarjeta p-2.5">
             <Filtros periodoPorDefecto="todo" />
           </div>
-          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} />
+          <PestanaLeads desde={rango.desde?.getTime() ?? null} hasta={rango.hasta?.getTime() ?? null} zona={proyecto.zona_horaria} />
         </Contenido>
       </>
     );

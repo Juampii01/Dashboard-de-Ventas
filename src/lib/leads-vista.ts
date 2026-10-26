@@ -29,7 +29,7 @@ export const CAMPOS_LEAD = "id, nombre, apellido, email, telefono, pais, etiquet
 export type Tarjeta = { lead_id: string; pipeline_id: string; etapa_id: string | null };
 export type PipelineVista = { id: string; nombre: string };
 export type EtapaVista = { id: string; nombre: string; pipeline_id: string; color: string };
-export type PersonaVista = { id: string; nombre: string; rol: string };
+export type PersonaVista = { id: string; nombre: string; rol: string; baja?: boolean }; // baja: ya no está en el equipo
 
 // Hasta dónde llegó cada lead (embudo de la misma tanda; reglas de KPIs). Se guarda como suma de estos números.
 export const MARCA = { contactado: 1, contesta: 2, agendado: 4, asistio: 8, compro: 16 } as const;

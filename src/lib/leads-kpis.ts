@@ -37,7 +37,7 @@ async function cargarDeLaBase(proyecto: Proyecto) {
     tarjetas,
     pipelines,
     etapas,
-    gente: personas.map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol })),
+    gente: personas.map((p) => ({ id: p.id, nombre: p.nombre, rol: p.rol, ...("baja" in p && p.baja ? { baja: true } : {}) })),
     marcas: marcasEmbudo(base.actividades, base.citas, base.ventas, ASISTIDAS),
   });
 }
