@@ -41,13 +41,14 @@ export function IndividualAgendas({ m, moneda: $ }: { m: MetricasAgendas; moneda
       </Seccion>
 
       <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
-          <Kpi titulo="% cierre / asist." valor={`${pct(m.pctCierre)}`} icono={Target} tono="ok" detalle={`Call/close ${pct(m.pctCallClose)}`} />
-          <Kpi titulo="Ticket medio" valor={$(m.ticketMedio)} icono={Ticket} tono="oro" detalle="por venta cerrada" />
-          <Kpi titulo="Calificados 4★+" valor={m.calificados} icono={Star} tono="morado" detalle={`${m.con5} con 5★`} />
-          <Kpi titulo="Media estrellas" valor={m.mediaEstrellasCloser ?? "—"} icono={Star} tono="oro" detalle={`del closer · caller ${m.mediaEstrellasCaller ?? "—"}`} />
-          <Kpi titulo="Pendientes" valor={m.pendientes} icono={Hourglass} tono="aviso" detalle={`${m.perdidas} perd. · ${m.canceladas} canc.`} />
-          <Kpi titulo="Devoluciones" valor={m.devoluciones} icono={Undo2} tono="mal" detalle={`${pct(m.pctDevoluciones)} de las ventas · ${$(m.devuelto)}`} />
+        {/* Compactas y de 3 en 3 (Cristian, 26 oct): de 6 en una fila, los títulos se pisaban con el icono */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Kpi compacto titulo="% cierre / asist." valor={`${pct(m.pctCierre)}`} icono={Target} tono="ok" detalle={`Call/close ${pct(m.pctCallClose)}`} />
+          <Kpi compacto titulo="Ticket medio" valor={$(m.ticketMedio)} icono={Ticket} tono="oro" detalle="por venta cerrada" />
+          <Kpi compacto titulo="Calificados 4★+" valor={m.calificados} icono={Star} tono="morado" detalle={`${m.con5} con 5★`} />
+          <Kpi compacto titulo="Media estrellas" valor={m.mediaEstrellasCloser ?? "—"} icono={Star} tono="oro" detalle={`del closer · caller ${m.mediaEstrellasCaller ?? "—"}`} />
+          <Kpi compacto titulo="Pendientes" valor={m.pendientes} icono={Hourglass} tono="aviso" detalle={`${m.perdidas} perd. · ${m.canceladas} canc.`} />
+          <Kpi compacto titulo="Devoluciones" valor={m.devoluciones} icono={Undo2} tono="mal" detalle={`${pct(m.pctDevoluciones)} de las ventas · ${$(m.devuelto)}`} />
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <Seccion titulo="Agendas por fuente">
