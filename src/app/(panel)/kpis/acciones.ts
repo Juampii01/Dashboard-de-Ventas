@@ -108,6 +108,17 @@ export async function borrarLanzamiento(id: string) {
   });
 }
 
+// 1c (Cristian, 26 oct 2026): la pestaña «Leads» pide aquí todos los leads, compactos, justo después de pintar la
+// página (así la precarga del menú no los lee). Solo director y CEO, como la Biblioteca.
+export async function cargarLeadsPestana() {
+  return seguro(async () => {
+    await exigirSeccion("kpis");
+    const { proyecto } = await exigir(esJefe);
+    const { cargarLeadsKpis } = await import("@/lib/leads-kpis");
+    return cargarLeadsKpis(proyecto);
+  });
+}
+
 // Fase 2 (Cristian, 12 oct 2026): la tabla «Todos los leads por oferta» de la Biblioteca pide sus filas aparte,
 // para que la página salga antes (con las filas dentro pesaba ~770 KB). Solo director y CEO, como la pestaña.
 export async function cargarTablaBiblioteca() {
