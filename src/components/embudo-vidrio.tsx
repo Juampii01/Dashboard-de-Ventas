@@ -7,8 +7,17 @@ import { useState } from "react";
 // asistencia; oro: compra). Al pasar el ratón (o tocar) un paso: cuántos, % del total, % del paso anterior y cuántos
 // se pierden. Colores de la app (cambian solos en modo oscuro). Lo usa la pestaña «Leads»; «Por persona» sigue con el suyo.
 // 26 oct (Cristian: «que vuelva la anterior y a mitad de tamaño»): la mitad de ancho, de alto y de letra.
+// 26 oct (Cristian): azul para contacto (3 tonos), amarillo para agenda y asistencia (2 tonos) y verde solo para la
+// compra; dentro de cada color, más claro cuanto más lejos de la compra.
 type Paso = { t: string; n: number; d?: string };
-const TONO = ["var(--primario)", "var(--primario)", "var(--primario-2)", "var(--ok)", "var(--ok)", "var(--oro)"];
+const TONO = [
+  "color-mix(in srgb, var(--primario) 65%, white)",
+  "var(--primario-2)",
+  "var(--primario)",
+  "color-mix(in srgb, var(--oro) 70%, white)",
+  "var(--oro)",
+  "var(--ok)",
+];
 
 export function EmbudoVidrio({ pasos }: { pasos: Paso[] }) {
   const [activo, setActivo] = useState<number | null>(null);
