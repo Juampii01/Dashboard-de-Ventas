@@ -109,7 +109,7 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
           <div className="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre, email, teléfono…" title="Busca por nombre, email, teléfono, país o etiqueta" className="campo pl-9" aria-label="Buscar leads" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead…" title="Busca por nombre, email, teléfono, país o etiqueta" className="campo pl-9" aria-label="Buscar leads" />
             </div>
             <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm text-texto-2 sm:order-last"><input type="checkbox" className="interruptor" checked={sinCaller} onChange={(e) => setSinCaller(e.target.checked)} /> Sin caller</label>
           </div>
