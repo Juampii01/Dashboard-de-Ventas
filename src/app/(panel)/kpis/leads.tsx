@@ -139,9 +139,9 @@ function Contenido({ barra, vista, desde, hasta, zona, ofertas, csv }: { barra: 
 
       {/* La tabla sola a todo el ancho: al lado de ella, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
       <div className="space-y-5">
-        <Seccion titulo="Cómo rinde cada fuente">
-          {/* Más compacta (Cristian, 26 oct): filas y letra más pequeñas, mismo estilo */}
-          <div className="-mx-4 -mt-2 -mb-2 overflow-x-auto sm:-mx-5">
+        {/* Cómo rinde cada fuente. Más compacta y sin título (Cristian, 26 oct): filas y letra más pequeñas, mismo estilo */}
+        <Seccion>
+          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-5">
             <table className="tabla [&_td]:py-1.5 [&_td]:text-[13px] [&_th]:py-1.5 [&_th]:text-[10px]">
               <thead>
                 <tr><th>Fuente</th><th className="text-right">Leads</th><th className="text-right">Sin caller</th><th className="text-right">Contactados</th><th className="text-right">Contestan</th><th className="text-right">Agendan</th><th className="text-right">Asisten</th><th className="text-right">Compran</th></tr>
