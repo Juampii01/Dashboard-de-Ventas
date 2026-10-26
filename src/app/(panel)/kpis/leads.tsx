@@ -102,7 +102,8 @@ function Contenido({ vista, desde, hasta }: { vista: Vista; desde: number | null
         <Kpi titulo="Compraron" valor={c.compran.n.toLocaleString("es-ES")} icono={ShoppingCart} tono="oro" detalle={`${pct(c.compran.pct)} del total`} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[3fr_2fr]">
+      {/* Uno debajo de otro: al lado de la tabla, el embudo quedaba estrecho y cortaba los pasos pequeños («Co…») */}
+      <div className="space-y-5">
         <Seccion titulo="Cómo rinde cada fuente">
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
             <table className="tabla">
@@ -139,6 +140,8 @@ function Contenido({ vista, desde, hasta }: { vista: Vista; desde: number | null
 }
 
 const POR_PAGINA = 100;
+// Títulos cortos, como en la tabla de la Biblioteca (la pregunta entera, al pasar el ratón)
+const CORTO: Record<string, string> = { situacion: "Situación", experiencia: "Experiencia con AI", objetivo: "Objetivo 90 días", tiempo: "Tiempo / semana", inversion: "Puede invertir", inicio: "Cuándo empezar" };
 const NOMBRE_PREGUNTA = Object.fromEntries(PREGUNTAS_BIBLIOTECA.map((p) => [p.clave, p.texto]));
 const DE_BIBLIOTECA = new Set(PREGUNTAS_BIBLIOTECA.map((p) => p.texto));
 
@@ -170,7 +173,7 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
     [leads, fuente, nombre]
   );
   type Fila = (typeof filas)[number];
-  const COLS: { k: string; t: string; v: (f: Fila) => string | number | null }[] = [
+  const COLS: { k: string; t: string; d?: string; v: (f: Fila) => string | number | null }[] = [
     { k: "nombre", t: "Nombre", v: (f) => f.l.nombre || null },
     { k: "telefono", t: "Teléfono", v: (f) => f.l.telefono },
     { k: "pais", t: "País", v: (f) => nombrePais(f.l.pais) },
@@ -184,7 +187,7 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
     { k: "canal", t: "Canal", v: (f) => f.canal },
     { k: "fuente", t: "Origen", v: (f) => f.l.fuente },
     { k: "alta", t: "Alta", v: (f) => f.l.alta },
-    ...PREGUNTAS_BIBLIOTECA.map((p) => ({ k: p.clave, t: NOMBRE_PREGUNTA[p.clave], v: (f: Fila) => f.r[p.clave] || null })),
+    ...PREGUNTAS_BIBLIOTECA.map((p) => ({ k: p.clave, t: CORTO[p.clave], d: NOMBRE_PREGUNTA[p.clave], v: (f: Fila) => f.r[p.clave] || null })),
     { k: "otras", t: "Otras respuestas", v: (f) => f.otras || null },
     { k: "etiquetas", t: "Etiquetas", v: (f) => f.l.etiquetas.join(", ") || null },
   ];
@@ -219,7 +222,7 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
             <tr>
               {COLS.map((c) => (
                 <th key={c.k} aria-sort={col === c.k ? (dir === 1 ? "ascending" : "descending") : "none"}>
-                  <button type="button" className="flex items-center gap-1 whitespace-nowrap" onClick={() => ordenar(c.k)}>
+                  <button type="button" className="flex items-center gap-1 whitespace-nowrap" title={c.d} onClick={() => ordenar(c.k)}>
                     {c.t}<span className="text-texto-3">{col === c.k ? (dir === 1 ? "▲" : "▼") : "↕"}</span>
                   </button>
                 </th>
@@ -242,9 +245,9 @@ function TablaLeads({ leads, pipelines, etapas, gente, fuente }: { leads: LeadVi
                 <td className="whitespace-nowrap">{canal ?? "—"}</td>
                 <td className="whitespace-nowrap text-texto-2">{l.fuente ?? "—"}</td>
                 <td className="whitespace-nowrap tabular-nums">{new Date(l.alta).toLocaleDateString("es-ES")}</td>
-                {PREGUNTAS_BIBLIOTECA.map((p) => <td key={p.clave} className="min-w-40">{r[p.clave] || "—"}</td>)}
+                {PREGUNTAS_BIBLIOTECA.map((p) => <td key={p.clave} className="whitespace-nowrap">{r[p.clave] || "—"}</td>)}
                 <td className="tabular-nums">{otras || "—"}</td>
-                <td><div className="flex flex-wrap gap-1">{l.etiquetas.map((t) => <span key={t} className="chip bg-panel-2 text-texto-3">{t}</span>)}</div></td>
+                <td><div className="flex gap-1 whitespace-nowrap">{l.etiquetas.map((t) => <span key={t} className="chip bg-panel-2 text-texto-3">{t}</span>)}</div></td>
               </tr>
             ))}
             {ordenadas.length === 0 && <tr><td colSpan={COLS.length} className="py-6 text-center text-texto-3">No hay leads con esos filtros.</td></tr>}
