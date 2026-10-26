@@ -17,7 +17,7 @@ export function CuerpoFunnel({ m, dinero: $ }: { m: ReturnType<typeof calcularFu
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Kpi compacto titulo="Facturación" valor={$(m.facturacion)} icono={DollarSign} tono="oro" destacado detalle={<>Cash collected: <b className="text-texto">{$(m.cash)}</b></>} />
           <Kpi compacto titulo="Ventas cerradas" valor={m.ventas} icono={ShoppingCart} detalle={m.ventas ? <>Ticket medio {$(m.facturacion / m.ventas)}</> : "Sin ventas en el periodo"} />
-          <Kpi compacto titulo="Llamadas realizadas" valor={m.llamadas} icono={Phone} detalle={<>{m.llamadasCaller} de callers · {m.citasHechas} citas hechas</>} />
+          <Kpi compacto titulo="Llamadas" valor={m.llamadas} icono={Phone} detalle={<>{m.llamadasCaller} de callers · {m.citasHechas} citas hechas</>} />
           <Kpi compacto titulo="Media lead → venta" valor={m.mediaDias === null ? "—" : `${m.mediaDias} d`} icono={BarChart3} detalle="Desde que entra hasta que compra" />
         </div>
 
