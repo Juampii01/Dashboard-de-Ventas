@@ -8,6 +8,7 @@ import { OfertaChip } from "@/components/oferta-chip";
 import { VerEstrellas } from "@/components/estrellas";
 import { TelefonoCopiable } from "@/components/telefono-copiable";
 import { resumenLead, type ResumenLead } from "@/app/(panel)/leads/resumen";
+import { nombrePais } from "@/lib/formato";
 
 // Popup de la card del lead (Cristian, 13 oct 2026): sus datos básicos y las respuestas del formulario, con el botón
 // «Ver toda la info» a su ficha. Lo abren las cards del CRM (todos los tableros) y las filas de la Biblioteca.
@@ -42,6 +43,7 @@ export function PopupLead({ leadId, nombre, onCerrar }: { leadId: string; nombre
                 </TelefonoCopiable>
               ) : "—"}
             </Dato>
+            <Dato k="País">{nombrePais(datos.pais)}</Dato>
             <Dato k="Email">{datos.email || "—"}</Dato>
           </Bloque>
           <Bloque titulo="Dónde está">

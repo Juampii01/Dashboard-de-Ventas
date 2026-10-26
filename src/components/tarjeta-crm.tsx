@@ -3,6 +3,7 @@
 import { useState, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { Phone, Mail } from "lucide-react";
 import { PopupLead } from "@/components/popup-lead";
+import { nombrePais } from "@/lib/formato";
 
 // Tarjeta común del CRM (Fase 4, como GHL): la misma en los pipelines de origen, «Callers» y «Closers».
 // Arriba el nombre y la casilla para las acciones masivas; debajo teléfono y email; después las
@@ -13,6 +14,7 @@ export function TarjetaCrm({
   leadId,
   nombre,
   telefono,
+  pais,
   email,
   arriba,
   chips,
@@ -26,6 +28,7 @@ export function TarjetaCrm({
   leadId: string;
   nombre: string;
   telefono?: string | null;
+  pais?: string | null; // 1b: el país del lead (sale junto al teléfono); sin pasarlo, no se enseña
   email?: string | null;
   arriba?: ReactNode; // a la derecha del nombre (closer, importe…)
   chips?: ReactNode;
@@ -75,7 +78,7 @@ export function TarjetaCrm({
       </div>
       {(telefono || email) && (
         <div className="space-y-0.5 text-xs text-texto-3">
-          {telefono && <div className="flex items-center gap-1.5"><Phone className="h-3 w-3" />{telefono}</div>}
+          {telefono && <div className="flex items-center gap-1.5"><Phone className="h-3 w-3" />{telefono}{pais !== undefined && <span className="truncate">· {nombrePais(pais)}</span>}</div>}
           {email && <div className="flex items-center gap-1.5 truncate"><Mail className="h-3 w-3" />{email}</div>}
         </div>
       )}

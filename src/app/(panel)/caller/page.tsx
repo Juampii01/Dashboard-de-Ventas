@@ -6,7 +6,7 @@ import { exigirPagina } from "@/lib/permisos";
 import { panelObjetivos } from "@/lib/objetivos";
 import { PanelObjetivos } from "@/components/barras-objetivos";
 import { db, todas, equipo } from "@/lib/datos";
-import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs, pct, dinero, hoyEnZona } from "@/lib/formato";
+import { rangoDe, fechaHora, ETIQUETA_ESTADO_CALLER, porcentaje, ahoraMs, pct, dinero, hoyEnZona, nombrePais } from "@/lib/formato";
 import { nivel } from "@/lib/prioridad";
 import type { Pesos } from "@/lib/cualificacion";
 import { colaCaller } from "@/lib/cola";
@@ -138,7 +138,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                         <Insignia tono={n.tono}>{n.texto}</Insignia>
                       </div>
                       <div className="mt-0.5 flex items-center justify-between text-xs text-texto-3">
-                        <span>{l.telefono}</span>
+                        <span>{l.telefono}{l.telefono && ` · ${nombrePais(l.pais)}`}</span>
                         <span>{l.estado_caller === "llamar_luego" && l.llamar_en ? `⏰ ${fechaHora(l.llamar_en, proyecto)}` : l.estado_caller === "link_enviado" && l.llamar_en ? `🔗 Link enviado · insistir ${fechaHora(l.llamar_en, proyecto)}` : ETIQUETA_ESTADO_CALLER[l.estado_caller]}</span>
                       </div>
                     </Link>
@@ -154,7 +154,7 @@ export default async function CallerPage({ searchParams }: PageProps<"/caller">)
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-2xl font-semibold">{`${seleccionado.nombre} ${seleccionado.apellido}`.trim()}</h2>
-                    <p className="text-sm text-texto-2">{seleccionado.telefono} · {seleccionado.email}</p>
+                    <p className="text-sm text-texto-2">{seleccionado.telefono} · {nombrePais(seleccionado.pais)} · {seleccionado.email}</p>
                     <p className="mt-1 text-xs text-texto-3">Entró el {fechaHora(seleccionado.creado_en, proyecto)} · {seleccionado.etiquetas.join(", ")}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">

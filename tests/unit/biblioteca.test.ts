@@ -3,15 +3,16 @@
 import { describe, expect, it } from "vitest";
 import casosJson from "../apoyo/biblioteca-1005.json";
 import { calcularOferta, esDeBiblioteca, normalizarRespuestas, ofertaDe, PREGUNTAS_BIBLIOTECA, preguntaCanonica, respuestasBiblioteca, type ClavePregunta, type Oferta } from "@/lib/oferta";
-import { paisDeTelefono, resumenBiblioteca } from "@/lib/biblioteca";
+import { resumenBiblioteca } from "@/lib/biblioteca";
 
 type Caso = Record<ClavePregunta, string> & { pais: string; etiquetas: string[]; oferta: Oferta };
 const casos = (casosJson as { casos: Caso[] }).casos;
 const texto = Object.fromEntries(PREGUNTAS_BIBLIOTECA.map((p) => [p.clave, p.texto])) as Record<ClavePregunta, string>;
 const respuestas = (c: Caso) => (Object.keys(texto) as ClavePregunta[]).map((k) => ({ pregunta: texto[k], respuesta: c[k] }));
-// Un teléfono inventado con el prefijo de su país (solo para contar países)
-const PREF: Record<string, string> = { España: "+34", "EE. UU./Canadá": "+1", Argentina: "+54", Colombia: "+57", Venezuela: "+58", México: "+52", Chile: "+56", Perú: "+51", Cuba: "+53", Ecuador: "+593", Panamá: "+507", "Costa Rica": "+506", Guatemala: "+502", "El Salvador": "+503", Honduras: "+504", Nicaragua: "+505", Bolivia: "+591", Paraguay: "+595", Uruguay: "+598" };
-const telefono = (c: Caso) => `${PREF[c.pais] ?? "+33"} 000000`;
+// 1b (26 oct 2026): el lead ya trae su país guardado (código). Los casos son de la vista vieja, que juntaba
+// «EE. UU./Canadá» (aquí, todos «US») y no reconocía el resto («Otro» = «Sin país»).
+const CODIGO: Record<string, string> = { España: "ES", "EE. UU./Canadá": "US", Argentina: "AR", Colombia: "CO", Venezuela: "VE", México: "MX", Chile: "CL", Perú: "PE", Cuba: "CU", Ecuador: "EC", Panamá: "PA", "Costa Rica": "CR", Guatemala: "GT", "El Salvador": "SV", Honduras: "HN", Nicaragua: "NI", Bolivia: "BO", Paraguay: "PY", Uruguay: "UY" };
+const pais = (c: Caso) => CODIGO[c.pais] ?? "Sin país";
 
 describe("Oferta", () => {
   it("las 1.005 personas salen con la misma oferta que en la vista", () => {
@@ -47,7 +48,7 @@ describe("Oferta", () => {
 });
 
 describe("Cifras de la Biblioteca (las mismas que la vista)", () => {
-  const r = resumenBiblioteca(casos.map((c, i) => ({ id: String(i), respuestas: respuestas(c), telefono: telefono(c) })));
+  const r = resumenBiblioteca(casos.map((c, i) => ({ id: String(i), respuestas: respuestas(c), pais: pais(c) })));
   const pcts = (xs: { pct: number }[]) => xs.map((x) => x.pct);
   it("resumen", () => {
     expect(r.total).toBe(1005);
@@ -66,17 +67,14 @@ describe("Cifras de la Biblioteca (las mismas que la vista)", () => {
     expect(pcts(r.tiempo)).toEqual([45.8, 32.6, 7.3, 11.9]);
   });
   it("países y escalera de ofertas", () => {
-    expect(r.paises.slice(0, 8).map((p) => [p.pais, p.pct])).toEqual([["España", 18.6], ["EE. UU./Canadá", 16.1], ["Argentina", 13.3], ["Colombia", 10.6], ["Venezuela", 9.7], ["México", 7.2], ["Chile", 5.5], ["Perú", 3.9]]);
+    expect(r.paises.slice(0, 8).map((p) => [p.pais, p.pct])).toEqual([["España", 18.6], ["Estados Unidos", 16.1], ["Argentina", 13.3], ["Colombia", 10.6], ["Venezuela", 9.7], ["México", 7.2], ["Chile", 5.5], ["Perú", 3.9]]);
     expect(r.escalera.membresia).toEqual({ n: 627, pct: 62.4 });
     expect(r.escalera.grupal).toEqual({ n: 242, pct: 24.1 });
     expect(r.escalera.vip).toEqual({ n: 96, pct: 9.6 });
     expect(r.escalera.dfy).toEqual({ n: 65, pct: 6.5, inviertenYa: 29 });
   });
-  it("país por prefijo", () => {
-    expect(paisDeTelefono("+34 611 75 39 94")).toBe("España");
-    expect(paisDeTelefono("+5491162192081")).toBe("Argentina");
-    expect(paisDeTelefono("+50688706577")).toBe("Costa Rica");
-    expect(paisDeTelefono("+33 1243 6997")).toBe("Otro");
-    expect(paisDeTelefono("611 75 39 94")).toBe("Otro");
+  it("«Sin país» no sale en el gráfico", () => {
+    expect(r.paises.some((p) => p.pais === "Sin país")).toBe(false);
+    expect(r.paises.reduce((s, p) => s + p.n, 0)).toBe(1000); // 1.005 menos los 5 «Otro» de la vista
   });
 });

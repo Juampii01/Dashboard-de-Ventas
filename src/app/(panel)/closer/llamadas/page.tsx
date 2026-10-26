@@ -3,7 +3,7 @@ import { Inbox, Download, ChevronLeft, ChevronRight, List, CalendarDays, Columns
 import { esJefe } from "@/lib/auth";
 import { exigirPagina } from "@/lib/permisos";
 import { db, equipo } from "@/lib/datos";
-import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
+import { dinero, fechaHora, fecha as soloFecha, ahoraMs, hoyEnZona, inicioDia, ETIQUETA_ESTADO_CITA, nombrePais } from "@/lib/formato";
 import { closersVisibles } from "@/lib/agendas-datos";
 import { ABIERTAS, SUB_POSTCALL, celdasMes, coincide, diaEnZona, enPostcall, esColumnaVentas, esPrecall, partirCloser, ventasPostcall, type SubPostcall } from "@/lib/llamadas";
 import { cargarCitasVentas, columnasCloser, etapasCloser, nombreDe, type CitaFila } from "@/lib/tablero-closers";
@@ -391,7 +391,7 @@ export default async function LlamadasPage({ searchParams }: PageProps<"/closer/
             </div>
             <div className="min-w-48 flex-1">
               <a href={`/leads/${c.lead_id}`} className="font-medium hover:text-primario">{nombreDe(c.leads)}</a>
-              <div className="text-xs text-texto-3">{[c.leads?.telefono, c.leads?.email].filter(Boolean).join(" · ")}</div>
+              <div className="text-xs text-texto-3">{[c.leads?.telefono, c.leads?.telefono ? nombrePais(c.leads.pais) : null, c.leads?.email].filter(Boolean).join(" · ")}</div>
               {c.nota && <div className="mt-0.5 text-xs text-texto-2">📝 {c.nota}</div>}
               {(c.estrellas_caller || c.estrellas_closer) && (
                 <div className="mt-0.5 flex flex-wrap gap-3">{c.estrellas_caller ? <span className="text-xs">Caller <VerEstrellas n={c.estrellas_caller} quien="caller" /></span> : null}{c.estrellas_closer ? <span className="text-xs">Closer <VerEstrellas n={c.estrellas_closer} quien="closer" /></span> : null}</div>

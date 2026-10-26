@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { cargarGuion, rolDelGuion } from "@/lib/guiones-datos";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Tag, FileText, History, CalendarDays, ShoppingCart, Compass } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Globe, Tag, FileText, History, CalendarDays, ShoppingCart, Compass } from "lucide-react";
 import { getSesion, esJefe } from "@/lib/auth";
 import { db, equipo } from "@/lib/datos";
-import { dinero, fechaHora, ETIQUETA_ESTADO_CALLER, ETIQUETA_ESTADO_CITA } from "@/lib/formato";
+import { dinero, fechaHora, ETIQUETA_ESTADO_CALLER, ETIQUETA_ESTADO_CITA, nombrePais } from "@/lib/formato";
 import { Cabecera, Contenido, Seccion, Insignia, Vacio } from "@/components/ui";
 import { OfertaChip } from "@/components/oferta-chip";
 import { AccionesLead } from "@/components/acciones-lead";
@@ -170,6 +170,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             <Seccion titulo="Datos">
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-texto-3" />{lead.telefono ?? "—"}</li>
+                <li className="flex items-center gap-2"><Globe className="h-4 w-4 text-texto-3" />{nombrePais(lead.pais)}</li>
                 <li className="flex items-center gap-2 break-all"><Mail className="h-4 w-4 shrink-0 text-texto-3" />{lead.email ?? "—"}</li>
                 <li className="flex flex-wrap items-center gap-1.5"><Tag className="h-4 w-4 text-texto-3" />{lead.etiquetas.length ? lead.etiquetas.map((t) => <Insignia key={t}>{t}</Insignia>) : "—"}</li>
                 {lead.llamar_en && <li className="text-aviso">Llamar el {fechaHora(lead.llamar_en, proyecto)}</li>}

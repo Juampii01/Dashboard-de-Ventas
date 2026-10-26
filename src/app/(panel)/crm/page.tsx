@@ -73,7 +73,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
 
   // La card solo necesita la respuesta de «invertir» (el popup pide el resto): menos datos que mandar al navegador
   type Fila = Omit<LeadTarjeta, "invertir"> & { etapa_callers_id: string | null; respuestas: Respuesta[] | null };
-  const CAMPOS = "id, nombre, apellido, email, telefono, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta";
+  const CAMPOS = "id, nombre, apellido, email, telefono, pais, etapa_id, etapa_callers_id, caller_id, closer_id, estado_caller, creado_en, etiquetas, respuestas, oferta";
   const aTarjeta = ({ respuestas, ...l }: Fila): LeadTarjeta & { etapa_callers_id: string | null } => ({
     ...l,
     invertir: (respuestas ?? []).find((r) => r.pregunta.toLowerCase().includes("invertir"))?.respuesta ?? null,

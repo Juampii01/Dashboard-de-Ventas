@@ -1,9 +1,9 @@
 import { Users, Wallet, Flame, BookOpen } from "lucide-react";
 import { db, equipo } from "@/lib/datos";
 import { cargarBiblioteca, cargarResumenBiblioteca } from "@/lib/biblioteca-datos";
-import { paisDeTelefono, resumenBiblioteca } from "@/lib/biblioteca";
+import { resumenBiblioteca } from "@/lib/biblioteca";
 import { respuestasBiblioteca, type Oferta } from "@/lib/oferta";
-import { dinero, pct as formatoPct } from "@/lib/formato";
+import { dinero, nombrePais, pct as formatoPct } from "@/lib/formato";
 import { Kpi, Seccion, Vacio } from "@/components/ui";
 import { TablaBibliotecaDiferida } from "./biblioteca-tabla-diferida";
 import type { FilaTabla } from "./biblioteca-tabla";
@@ -48,7 +48,7 @@ export async function filasDeBiblioteca(proyecto: Proyecto): Promise<{ filas: Fi
   const nombre = (id: string | null) => gente.find((g) => g.id === id)?.nombre ?? null;
   const filas: FilaTabla[] = leads.map((l) => {
     const x = respuestasBiblioteca(l.respuestas);
-    return { id: l.id, nombre: `${l.nombre} ${l.apellido ?? ""}`.trim(), telefono: l.telefono, email: l.email, pais: paisDeTelefono(l.telefono), alta: l.creado_en, ...x, etiquetas: l.etiquetas ?? [], oferta: l.oferta as Oferta | null, caller: nombre(l.caller_id) };
+    return { id: l.id, nombre: `${l.nombre} ${l.apellido ?? ""}`.trim(), telefono: l.telefono, email: l.email, pais: nombrePais(l.pais), alta: l.creado_en, ...x, etiquetas: l.etiquetas ?? [], oferta: l.oferta as Oferta | null, caller: nombre(l.caller_id) };
   });
   return { filas, callers };
 }
@@ -60,7 +60,7 @@ export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
     db().from("pipelines").select("*").eq("proyecto_id", proyecto.id).eq("tipo", "normal").order("orden"),
   ]);
   const pipelines = (pipes ?? []) as Pipeline[];
-  const r = resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, telefono: l.telefono, oferta: l.oferta as Oferta | null })));
+  const r = resumenBiblioteca(leads.map((l) => ({ id: l.id, respuestas: l.respuestas, pais: l.pais, oferta: l.oferta as Oferta | null })));
   const prod = (n: string) => ((productos ?? []) as Producto[]).find((p) => p.nombre.toLowerCase() === n.toLowerCase());
   const barras = (xs: { t: string; n: number; pct: number }[]) => xs.map((x) => ({ t: x.t, n: x.n, pct: x.pct }));
   const csv = <ActualizarCsv pipelines={pipelines} pipelineId={pipelines.find((p) => p.nombre.toLowerCase().includes("biblioteca"))?.id} />;

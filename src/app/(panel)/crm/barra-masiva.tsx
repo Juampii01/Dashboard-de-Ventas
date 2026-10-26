@@ -7,7 +7,7 @@ import { asignarLeads, borrarLeads, cambiarEtiquetas, moverLeads } from "./accio
 import { Desplegable } from "@/components/eleccion";
 import { confirmar } from "@/components/dialogos";
 import { exigirOk } from "@/lib/resultado-cliente";
-import { ETIQUETA_ESTADO_CALLER } from "@/lib/formato";
+import { ETIQUETA_ESTADO_CALLER, nombrePais } from "@/lib/formato";
 import type { LeadTarjeta } from "./tablero";
 
 type Persona = { id: string; nombre: string };
@@ -53,6 +53,7 @@ export function BarraMasiva({
       Apellido: l.apellido,
       Email: l.email ?? "",
       Teléfono: l.telefono ?? "",
+      País: nombrePais(l.pais),
       Columna: l.etapa_id ? etapaNombre[l.etapa_id] ?? "" : "",
       Caller: l.caller_id ? nombrePorId[l.caller_id] ?? "" : "",
       Closer: l.closer_id ? nombrePorId[l.closer_id] ?? "" : "",

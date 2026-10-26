@@ -12,6 +12,7 @@ export type ResumenLead = {
   id: string;
   nombre: string;
   telefono: string | null;
+  pais: string | null; // 1b: código del país o «Sin país»
   email: string | null;
   donde: { pipeline: string; columna: string }[]; // el principal primero; después sus tarjetas 🔗
   entro: string;
@@ -42,6 +43,7 @@ export async function resumenLead(leadId: string) {
       id: lead.id,
       nombre: `${lead.nombre} ${lead.apellido ?? ""}`.trim(),
       telefono: lead.telefono,
+      pais: lead.pais ?? null,
       email: lead.email,
       donde: tarjetas.map((t) => ({ pipeline: nombreDe(pipes, t.pipeline_id), columna: nombreDe(etapas, t.etapa_id) })),
       entro: fechaHora(lead.creado_en, proyecto),

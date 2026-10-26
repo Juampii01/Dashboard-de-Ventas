@@ -7,7 +7,7 @@ import type { Cita, Etapa, Lead, Proyecto } from "@/lib/tipos";
 import { origenCitaGhl } from "@/lib/canal";
 
 // Datos del tablero «Closers» (Paso 0): lo usan el CRM y Agendas → Llamadas (Pre-call y Post-call).
-type LeadCita = Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "email" | "seguimiento">;
+type LeadCita = Pick<Lead, "id" | "nombre" | "apellido" | "telefono" | "pais" | "email" | "seguimiento">;
 export type CitaFila = Cita & { etapa_closers_id: string | null; leads: LeadCita | null };
 export type VentaFila = { id: string; lead_id: string; vendedor_id: string | null; facturacion: number; cash_collected: number; tipo_pago: string; num_cuotas: number | null; fecha: string; devuelto: number | null; pagos: { importe: number }[]; leads: { nombre: string; apellido: string } | null; productos: { nombre: string } | null };
 const NADIE = "00000000-0000-0000-0000-000000000000";
@@ -17,7 +17,7 @@ export async function cargarCitasVentas(proyectoId: string, closerIds: string[],
   const ids = closerIds.length ? closerIds : [NADIE];
   const [citas, ventasTodas] = await Promise.all([
     todas<CitaFila>((a, b) => {
-      const q = db().from("citas").select("*, leads(id, nombre, apellido, telefono, email, seguimiento)").eq("proyecto_id", proyectoId).in("closer_id", ids);
+      const q = db().from("citas").select("*, leads(id, nombre, apellido, telefono, pais, email, seguimiento)").eq("proyecto_id", proyectoId).in("closer_id", ids);
       return (agendadasPor ? q.eq("agendada_por", agendadasPor) : q).order("fecha").order("id").range(a, b);
     }),
     todas<VentaFila>((a, b) => db().from("ventas").select("*, pagos(importe), leads(nombre, apellido), productos(nombre)").eq("proyecto_id", proyectoId).in("vendedor_id", ids).order("id").range(a, b)),
@@ -61,6 +61,7 @@ export function columnasCloser(
           natural: claveNatural(c, ahora),
           nombre: nombreDe(c.leads),
           telefono: c.leads?.telefono ?? null,
+          pais: c.leads?.pais ?? null,
           fechaTxt: fechaHora(c.fecha, proyecto),
           quien: c.origen === "ghl" ? origenCitaGhl(c) : `Agendó ${nombrePersona(c.agendada_por)}`,
           nota: c.nota,

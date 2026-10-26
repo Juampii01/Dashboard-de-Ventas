@@ -30,6 +30,7 @@ export type TarjetaCitaC = {
   natural: ClaveCloser | null; // la columna que le toca por su estado
   nombre: string;
   telefono: string | null;
+  pais: string | null; // 1b: el país del lead
   fechaTxt: string;
   quien: string; // «Agendó X» o «Calendario GHL»
   nota: string | null;
@@ -324,6 +325,7 @@ function TarjetaCita({ c, origen, soloMirar }: { c: TarjetaCitaC; origen: string
       leadId={c.lead_id}
       nombre={c.nombre}
       telefono={c.telefono}
+      pais={c.pais}
       arriba={c.closer ? <span className="chip shrink-0 bg-panel-2 text-texto-3">{c.closer}</span> : undefined}
       arrastrable={!soloMirar}
       onArrastrar={(e) => e.dataTransfer.setData("text/plain", JSON.stringify({ clase: "cita", id: c.id, origen }))}

@@ -2,6 +2,7 @@
 // Cristian (vista-ventas.html). Sin base de datos.
 import { OFERTAS, ofertaDe, respuestasBiblioteca, type Oferta, type RespuestasBiblioteca } from "@/lib/oferta";
 import type { Respuesta } from "@/lib/tipos";
+import { SIN_PAIS, nombrePais } from "@/lib/formato";
 
 // Opciones de cada pregunta, en el orden de la vista (lo que no está aquí cuenta como «Otro»)
 export const OPCIONES: Record<keyof RespuestasBiblioteca, { v: string; t: string }[]> = {
@@ -48,21 +49,9 @@ export const RANGO: Partial<Record<keyof RespuestasBiblioteca, Record<string, nu
   inicio: { "Ya mismo": 1, "Este mes": 2, "Más adelante": 3 },
 };
 
-// País por el prefijo del teléfono (los de la vista; el resto, «Otro»). Primero los prefijos más largos.
-const PREFIJOS: [string, string][] = [
-  ["593", "Ecuador"], ["591", "Bolivia"], ["595", "Paraguay"], ["598", "Uruguay"], ["502", "Guatemala"], ["503", "El Salvador"],
-  ["504", "Honduras"], ["505", "Nicaragua"], ["506", "Costa Rica"], ["507", "Panamá"],
-  ["34", "España"], ["54", "Argentina"], ["57", "Colombia"], ["58", "Venezuela"], ["52", "México"], ["56", "Chile"], ["51", "Perú"], ["53", "Cuba"],
-  ["1", "EE. UU./Canadá"],
-];
-export function paisDeTelefono(tel: string | null | undefined) {
-  const d = (tel ?? "").trim();
-  if (!d.startsWith("+")) return "Otro";
-  const n = d.replace(/\D/g, "");
-  return PREFIJOS.find(([p]) => n.startsWith(p))?.[1] ?? "Otro";
-}
-
-export type LeadBiblioteca = { id: string; respuestas: Respuesta[]; telefono: string | null; oferta?: Oferta | null };
+// 1b (Cristian, 26 oct 2026): el país es el que se guarda en el lead (sacado de su teléfono al guardarlo; lib/pais.ts).
+// Antes salía de una lista de prefijos que metía a República Dominicana y Puerto Rico en «EE. UU./Canadá».
+export type LeadBiblioteca = { id: string; respuestas: Respuesta[]; pais: string | null; oferta?: Oferta | null };
 export const BUSCA_INGRESOS = ["Llegar a $5,000 al mes", "Cerrar mi primer cliente en USA"];
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0);
@@ -70,7 +59,7 @@ const pct = (n: number, total: number) => (total ? Math.round((n / total) * 1000
 // Todas las cifras del resumen y de la escalera de ofertas
 export function resumenBiblioteca(leads: LeadBiblioteca[]) {
   const total = leads.length;
-  const filas = leads.map((l) => ({ r: respuestasBiblioteca(l.respuestas), pais: paisDeTelefono(l.telefono), oferta: l.oferta ?? ofertaDe(respuestasBiblioteca(l.respuestas)) }));
+  const filas = leads.map((l) => ({ r: respuestasBiblioteca(l.respuestas), pais: nombrePais(l.pais), oferta: l.oferta ?? ofertaDe(respuestasBiblioteca(l.respuestas)) }));
   const reparto = (clave: keyof RespuestasBiblioteca) =>
     OPCIONES[clave].map((o) => {
       const n = filas.filter((f) => f.r[clave] === o.v).length;
@@ -82,7 +71,7 @@ export function resumenBiblioteca(leads: LeadBiblioteca[]) {
   const sinInversion = cuenta((f) => !f.r.inversion);
   const paises = [...new Map(filas.map((f) => [f.pais, 0])).keys()]
     .map((p) => ({ pais: p, n: cuenta((f) => f.pais === p) }))
-    .filter((x) => x.pais !== "Otro")
+    .filter((x) => x.pais !== SIN_PAIS)
     .sort((a, b) => b.n - a.n)
     .map((x) => ({ ...x, pct: pct(x.n, total) }));
   const porOferta = Object.fromEntries(OFERTAS.map((o) => [o.v, cuenta((f) => f.oferta === o.v)])) as Record<Oferta, number>;

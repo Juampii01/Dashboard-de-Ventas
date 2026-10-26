@@ -38,7 +38,7 @@ import { registrarLlamada, volverANuevo } from "@/app/(panel)/leads/acciones";
 import { VentanaEstado, type DestinoConVentana } from "./ventanas-estado";
 import { CLAVES_CLOSER } from "@/lib/llamadas";
 import { TableroClosers, type ColumnaC } from "@/app/(panel)/closer/llamadas/tablero-closers";
-import { ETIQUETA_ESTADO_CALLER } from "@/lib/formato";
+import { ETIQUETA_ESTADO_CALLER, SIN_PAIS, nombrePais } from "@/lib/formato";
 import { OfertaChip } from "@/components/oferta-chip";
 import { RepartirLeads } from "@/components/repartir-leads";
 import { Modal } from "@/components/modal";
@@ -61,6 +61,7 @@ export type LeadTarjeta = {
   apellido: string;
   email: string | null;
   telefono: string | null;
+  pais: string | null; // 1b: código del país («ES») o «Sin país»; null = sin calcular (se enseña «Sin país»)
   etapa_id: string | null;
   caller_id: string | null;
   closer_id: string | null;
@@ -161,19 +162,29 @@ export function TableroCrm({
     () => (esGeneral ? CANALES.map(etiquetaCanal) : [...new Set(leadsIniciales.flatMap((l) => l.etiquetas.filter((e) => e.startsWith(PREFIJO_ETIQUETA))))].sort()),
     [leadsIniciales, esGeneral]
   );
+  // 1b (Cristian, 26 oct): filtro por país (sacado del teléfono), con cuántos hay de cada uno en este pipeline;
+  // «Sin país» al final. Como el de canal, no cambia los números de las pestañas.
+  const [pais, setPais] = useState("");
+  const paises = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const l of leadsIniciales) n.set(l.pais ?? SIN_PAIS, (n.get(l.pais ?? SIN_PAIS) ?? 0) + 1);
+    return [...n].sort((a, b) => (a[0] === SIN_PAIS ? 1 : b[0] === SIN_PAIS ? -1 : b[1] - a[1] || nombrePais(a[0]).localeCompare(nombrePais(b[0]))));
+  }, [leadsIniciales]);
   const leads = useMemo(() => {
     const t = q.trim().toLowerCase();
     return leadsIniciales
       .map((l) => (moviendo[l.id] ? { ...l, etapa_id: moviendo[l.id] } : l))
       .filter((l) => !canal || (canal === SIN_CANAL ? !l.etiquetas.some((e) => e.startsWith(PREFIJO_ETIQUETA)) : l.etiquetas.includes(canal)))
+      .filter((l) => !pais || (l.pais ?? SIN_PAIS) === pais)
       .filter(
         (l) =>
           !t ||
           `${l.nombre} ${l.apellido}`.toLowerCase().includes(t) ||
           (l.email ?? "").includes(t) ||
-          (l.telefono ?? "").replace(/\s/g, "").includes(t.replace(/\s/g, ""))
+          (l.telefono ?? "").replace(/\s/g, "").includes(t.replace(/\s/g, "")) ||
+          nombrePais(l.pais).toLowerCase().includes(t)
       );
-  }, [leadsIniciales, moviendo, q, canal]);
+  }, [leadsIniciales, moviendo, q, canal, pais]);
 
   const toast = useToast();
   function ejecutar(fn: () => Promise<unknown>, mensaje?: string) {
@@ -336,13 +347,19 @@ export function TableroCrm({
         )}
         <div className="relative min-w-40 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-texto-3" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email o teléfono…" className="campo pl-9" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar lead por nombre, email, teléfono o país…" className="campo pl-9" />
         </div>
         {(canales.length > 0 || canal) && (
           <Desplegable aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value)} className="campo w-auto min-w-40" title="Canal de la cita (por el UTM de la página donde reservó)">
             <option value="">Todos los canales</option>
             {canales.map((c) => <option key={c} value={c}>{c.slice(PREFIJO_ETIQUETA.length)}</option>)}
             {esGeneral && <option value={SIN_CANAL}>Sin canal</option>}
+          </Desplegable>
+        )}
+        {tipo !== "closers" && (paises.length > 0 || pais) && (
+          <Desplegable aria-label="País" value={pais} onChange={(e) => setPais(e.target.value)} className="campo w-auto min-w-40" title="País del lead (por el código de su teléfono)">
+            <option value="">Todos los países</option>
+            {paises.map(([p, n]) => <option key={p} value={p}>{`${nombrePais(p)} (${n})`}</option>)}
           </Desplegable>
         )}
         {jefe && tipo !== "closers" && <div className="flex rounded-lg border border-borde bg-panel-2 p-0.5">
@@ -582,6 +599,7 @@ function Tarjeta({
       leadId={lead.id}
       nombre={`${lead.nombre} ${lead.apellido}`.trim()}
       telefono={lead.telefono}
+      pais={lead.pais}
       email={lead.email}
       arriba={
         <span className="flex shrink-0 items-center gap-1 text-[11px] text-texto-3">
@@ -751,7 +769,7 @@ function VistaLista({
                   aria-label="Seleccionar todos"
                 />
               </th>
-              <th>Lead</th><th>Teléfono</th><th>Columna</th><th>Caller</th><th>Closer</th><th>Estado</th><th>Entró</th>
+              <th>Lead</th><th>Teléfono</th><th>País</th><th>Columna</th><th>Caller</th><th>Closer</th><th>Estado</th><th>Entró</th>
             </tr>
           </thead>
           <tbody>
@@ -774,6 +792,7 @@ function VistaLista({
                   </td>
                   <td><Link href={`/leads/${l.id}`} className="font-medium hover:text-primario">{`${l.nombre} ${l.apellido}`.trim()}</Link><div className="text-xs text-texto-3">{l.email}</div></td>
                   <td className="whitespace-nowrap text-texto-2">{l.telefono}</td>
+                  <td className="whitespace-nowrap text-texto-2">{nombrePais(l.pais)}</td>
                   <td>{e ? <span className="chip" style={{ background: `${e.color}22`, color: e.color }}>{e.nombre}</span> : "—"}</td>
                   <td className="text-texto-2">{l.caller_id ? nombrePorId[l.caller_id] : "—"}</td>
                   <td className="text-texto-2">{l.closer_id ? nombrePorId[l.closer_id] : "—"}</td>
