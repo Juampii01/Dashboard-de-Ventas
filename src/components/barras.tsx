@@ -1,6 +1,6 @@
 import { pct as formatoPct } from "@/lib/formato";
 
-// Barras horizontales con su % (Bloque A, la Biblioteca de KPIs). 1c (26 oct 2026): las usa también la pestaña «Leads»;
+// Barras horizontales con su % (Bloque A). Las usa KPIs → «Leads» (la pestaña «Biblioteca» se quitó el 26 oct 2026);
 // `numero` añade cuántos son al lado del %.
 export type Barra = { t: string; n: number; pct: number };
 

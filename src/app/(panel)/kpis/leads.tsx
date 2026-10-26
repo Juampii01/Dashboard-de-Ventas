@@ -39,7 +39,7 @@ export function PestanaLeads({ barra, desde, hasta, zona, ofertas, csv }: { barr
   const [error, setError] = useState("");
   useEffect(() => {
     let vivo = true;
-    // Mientras llegan, la precarga del menú espera (lib/pantalla-lista.ts), como la tabla de la Biblioteca
+    // Mientras llegan, la precarga del menú espera (lib/pantalla-lista.ts)
     const listo = cargandoDatos();
     exigirOk(cargarLeadsPestana())
       .then((d) => vivo && setDatos(d as LeadsCompactos))

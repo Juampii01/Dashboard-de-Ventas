@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 // Velocidad (18 oct 2026, medido: con la precarga de las ~32 peticiones del menú a la vez, la tabla de la Biblioteca
 // tardaba 1,2 s en el servidor; sola, 0,6 s). Primero los datos de la pantalla en la que se entra; después la precarga
-// del resto. Un componente que carga datos tras pintar (p. ej. la tabla de la Biblioteca) avisa con cargandoDatos();
+// del resto. Un componente que carga datos tras pintar (p. ej. KPIs → «Leads») avisa con cargandoDatos();
 // la precarga del menú (usePantallaLista) espera a que no quede ninguno, como mucho ESPERA_MAX_MS.
 let pendientes = 0;
 const oyentes = new Set<() => void>();

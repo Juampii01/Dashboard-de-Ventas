@@ -26,7 +26,7 @@ export function GraficosLeads({ leads, formulario, ofertas, pipelines, etapas, g
   const canal = (l: LeadVista) => l.etiquetas.find((e) => e.startsWith(PREFIJO_ETIQUETA))?.slice(PREFIJO_ETIQUETA.length) ?? null;
   const barras = (lista: { t: string; n: number; pct: number }[], max = 10) => lista.slice(0, max);
 
-  // Formularios: las 6 de la Biblioteca siempre que alguien las respondiera; el resto, eligiendo la pregunta
+  // Formularios: las 6 de la Biblioteca van en su bloque (con `formulario`); aquí, el resto, eligiendo la pregunta
   const preguntas = useMemo(() => preguntasDe(leads, preguntaCanonica), [leads]);
   const DE_BIBLIOTECA = new Set(PREGUNTAS_BIBLIOTECA.map((p) => p.texto));
   const otras = preguntas.filter((p) => !DE_BIBLIOTECA.has(p.pregunta));

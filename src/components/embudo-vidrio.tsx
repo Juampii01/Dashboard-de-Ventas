@@ -3,8 +3,7 @@
 import { useState } from "react";
 
 // 1c (Cristian, 26 oct 2026: «el embudo, con estilo glassmorphism, es lo único que no encaja con la app»): cada paso es
-// una franja de vidrio que se llena con el color de su etapa según cuántos llegan (azul: contacto; verde: agenda y
-// asistencia; oro: compra). Al pasar el ratón (o tocar) un paso: cuántos, % del total, % del paso anterior y cuántos
+// una franja de vidrio que se llena con el color de su etapa según cuántos llegan. Al pasar el ratón (o tocar) un paso: cuántos, % del total, % del paso anterior y cuántos
 // se pierden. Colores de la app (cambian solos en modo oscuro). Lo usa la pestaña «Leads»; «Por persona» sigue con el suyo.
 // 26 oct (Cristian: «que vuelva la anterior y a mitad de tamaño»): la mitad de ancho, de alto y de letra.
 // 26 oct (Cristian): azul para contacto (3 tonos), amarillo para agenda y asistencia (2 tonos) y verde solo para la
@@ -27,7 +26,7 @@ export function EmbudoVidrio({ pasos }: { pasos: Paso[] }) {
     <div className="mx-auto max-w-3xl space-y-0.5" role="list" aria-label="Embudo">
       {pasos.map((p, i) => {
         const tono = TONO[Math.min(i, TONO.length - 1)];
-        // Ancho: proporcional, pero cada franja se lee siempre (mínimo 13rem) y baja poco a poco como un embudo
+        // Ancho: proporcional, pero cada franja se lee siempre (mínimo 10,5rem, para que en el móvil no se corte «Agendan · 1,4 %») y baja poco a poco como un embudo
         const ancho = 30 + 70 * Math.sqrt(total ? p.n / total : 0);
         const anterior = i > 0 ? pasos[i - 1].n : null;
         const abierto = activo === i;
