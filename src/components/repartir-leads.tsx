@@ -9,30 +9,36 @@ import { MODOS_REPARTO, type ModoReparto } from "@/lib/reparto";
 import { OFERTAS } from "@/lib/oferta";
 import { previsualizarReparto, repartirLeads, type PeticionReparto } from "@/app/(panel)/crm/reparto";
 import { Desplegable, Pastillas } from "@/components/eleccion";
+import { SIN_PAIS, nombrePais } from "@/lib/formato";
 
 type Persona = { id: string; nombre: string };
-type Vista = { disponibles: number; total: number; porCaller: { id: string; nombre: string; n: number; carga: number | null }[] };
+type Vista = { porPais: Record<string, number>; disponibles: number; total: number; porCaller: { id: string; nombre: string; n: number; carga: number | null }[] };
 
 // Bloque A (Cristian, 11 oct 2026): «Repartir leads» a mano entre callers, con vista previa. En la Biblioteca y en el CRM.
 export function RepartirLeads({
   callers,
   fijo,
   ofertaInicial,
+  paisesIniciales,
   etiqueta = "Repartir leads", // vacía = solo el icono (CRM, Cristian 13 oct)
 }: {
   callers: Persona[];
   fijo?: Partial<PeticionReparto>; // filtros que vienen de la pantalla (p. ej. pipeline del CRM, solo Biblioteca)
   ofertaInicial?: string | null;
+  paisesIniciales?: string[]; // 1b: el filtro de país que tenga la pantalla al abrir (CRM)
   etiqueta?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [origen, setOrigen] = useState<"sin_asignar" | "reasignar">("sin_asignar");
   const [deCallers, setDeCallers] = useState<string[]>([]);
   const [oferta, setOferta] = useState(ofertaInicial ?? "");
+  const [paises, setPaises] = useState<string[]>(paisesIniciales ?? []);
   const [elegidos, setElegidos] = useState<string[]>(callers.map((c) => c.id));
   const [modo, setModo] = useState<ModoReparto>("equitativo");
   const [numero, setNumero] = useState("20");
   const [vista, setVista] = useState<Vista | null>(null);
+  // Los últimos recuentos por país: la lista no desaparece mientras se recalcula la vista previa
+  const [ultimosPaises, setUltimosPaises] = useState<Record<string, number> | null>(null);
   const [error, setError] = useState("");
   const [pendiente, iniciar] = useTransition();
   const toast = useToast();
@@ -42,6 +48,7 @@ export function RepartirLeads({
     origen,
     deCallers: origen === "reasignar" ? deCallers : undefined,
     oferta: oferta || null,
+    paises,
     callers: elegidos,
     modo,
     ...(modo === "fijo" ? { porPersona: Number(numero) } : modo === "tope" ? { tope: Number(numero) } : { n: Number(numero) }),
@@ -64,7 +71,10 @@ export function RepartirLeads({
       setError("");
       try {
         const v = (await exigirOk(previsualizarReparto(JSON.parse(clave) as PeticionReparto))) as Vista;
-        if (id === ultima.current) setVista(v); // solo la respuesta de la última petición
+        if (id === ultima.current) {
+          setVista(v); // solo la respuesta de la última petición
+          setUltimosPaises(v.porPais);
+        }
       } catch (e) {
         if (id === ultima.current) setError(e instanceof Error ? e.message : "Algo falló.");
       } finally {
@@ -86,6 +96,10 @@ export function RepartirLeads({
       }
     });
   };
+  // Los países con leads disponibles (más primero; «Sin país» al final) y los elegidos aunque ya no tengan ninguno
+  const opcionesPais = Object.entries({ ...Object.fromEntries(paises.map((p) => [p, 0])), ...(ultimosPaises ?? {}) }).sort((a, b) =>
+    a[0] === SIN_PAIS ? 1 : b[0] === SIN_PAIS ? -1 : b[1] - a[1] || nombrePais(a[0]).localeCompare(nombrePais(b[0]))
+  );
   const alternar = (lista: string[], id: string) => (lista.includes(id) ? lista.filter((x) => x !== id) : [...lista, id]);
   const textoNumero = modo === "fijo" ? "¿Cuántos a cada caller?" : modo === "tope" ? "Tope de leads sin trabajar por caller" : "¿Cuántos leads en total?";
 
@@ -98,6 +112,8 @@ export function RepartirLeads({
         onClick={() => {
           // Al abrir, el filtro de oferta que tenga la pantalla en ese momento (p. ej. el chip «VIP» de la Biblioteca)
           setOferta(ofertaInicial ?? "");
+          setPaises(paisesIniciales ?? []);
+          setUltimosPaises(null);
           setVista(null);
           setAbierto(true);
         }}
@@ -133,6 +149,19 @@ export function RepartirLeads({
                 {OFERTAS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
               </Desplegable>
             </label>
+            {/* 1b (Cristian, 26 oct): países (por el teléfono), con cuántos hay de cada uno con los demás filtros; ninguno = todos */}
+            <div>
+              <div className="etiqueta-campo">País {paises.length ? `(${paises.length} elegido${paises.length > 1 ? "s" : ""})` : "(todos)"}</div>
+              {opcionesPais.length ? (
+                <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+                  {opcionesPais.map(([p, n]) => (
+                    <label key={p} className="flex items-center gap-1.5 rounded-lg bg-panel-2 px-2 py-1"><input type="checkbox" checked={paises.includes(p)} onChange={() => cambiar(setPaises)(alternar(paises, p))} />{nombrePais(p)} <span className="text-xs text-texto-3 tabular-nums">{n}</span></label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-texto-3">{ultimosPaises ? "No hay leads con estos filtros." : "Calculando…"}</p>
+              )}
+            </div>
             <div>
               <div className="etiqueta-campo">Entre estos callers</div>
               <div className="flex flex-wrap gap-2">

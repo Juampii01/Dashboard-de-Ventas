@@ -3,6 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { borrarEscenario, como, crearEscenario, db, falla, ok, type Escenario } from "../apoyo/escenario";
 import { previsualizarReparto, repartirLeads } from "@/app/(panel)/crm/reparto";
+import { guardarLeads } from "@/lib/leads";
 
 let e: Escenario;
 let nuevos: string[];
@@ -46,5 +47,20 @@ describe("Repartir leads", () => {
   it("sin callers válidos, no", async () => {
     como(e, e.p.ceo);
     await falla(repartirLeads({ origen: "sin_asignar", callers: [e.p.callerC.id], modo: "equitativo", n: 1 }), /al menos un caller/);
+  });
+  it("1b: por país, solo los de los países elegidos (también «Sin país»), con cuántos hay de cada uno", async () => {
+    // Creados por la app, que les pone el país al guardarlos
+    const tels = ["+34 600 11 22 33", "+34 611 22 33 44", "+54 9 11 2345 6789", "+1 555 123 4567"];
+    const emails = tels.map((_, i) => `${e.pref}-pais-reparto${i}@x.test`);
+    await guardarLeads(e.proyecto, tels.map((telefono, i) => ({ ghl_contact_id: null, nombre: `P${i}`, apellido: "", email: emails[i], telefono, etiquetas: [], respuestas: [], creado_en: null })), { pipelineId: null, origen: "ghl", perfilId: null, repartir: false });
+    const ids = (await db.from("leads").select("id").in("email", emails).order("email")).data!.map((l) => l.id);
+    como(e, e.p.director);
+    const v = await ok(previsualizarReparto({ origen: "sin_asignar", leadIds: ids, paises: ["ES", "Sin país"], callers: [e.p.callerA.id], modo: "equitativo", n: 10 }));
+    expect(v.porPais).toEqual({ ES: 2, AR: 1, "Sin país": 1 }); // con los demás filtros, antes de elegir país
+    expect(v.total).toBe(3);
+    const r = await ok(repartirLeads({ origen: "sin_asignar", leadIds: ids, paises: ["ES", "Sin país"], callers: [e.p.callerA.id], modo: "equitativo", n: 10 }));
+    expect(r.repartidos).toBe(3);
+    const despues = new Map((await db.from("leads").select("id, caller_id").in("id", ids)).data!.map((l) => [l.id, l.caller_id]));
+    expect(ids.map((id) => despues.get(id))).toEqual([e.p.callerA.id, e.p.callerA.id, null, e.p.callerA.id]); // el argentino (P2), no
   });
 });
