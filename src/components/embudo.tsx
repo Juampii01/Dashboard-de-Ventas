@@ -21,7 +21,8 @@ export function Embudo({ pasos, titulo }: { pasos: PasoEmbudo[]; titulo?: string
               </div>
             )}
             <div
-              className="mx-auto flex items-center justify-between gap-3 rounded-xl px-8 py-2.5 text-white shadow-sm transition-[width]"
+              // 26 oct 2026: con un mínimo de 13rem se lee el nombre en el móvil (antes, «C.» en vez de «Contactados»)
+              className="mx-auto flex min-w-[13rem] max-w-full items-center justify-between gap-3 rounded-xl px-8 py-2.5 text-white shadow-sm transition-[width]"
               style={{ width: `${ancho}%`, background: COLORES[i % COLORES.length], clipPath: "polygon(0 0, 100% 0, 98% 100%, 2% 100%)" }}
               title={p.d}
             >
