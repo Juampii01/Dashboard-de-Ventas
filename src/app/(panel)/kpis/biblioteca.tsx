@@ -107,8 +107,8 @@ export async function Biblioteca({ proyecto }: { proyecto: Proyecto }) {
           <p className="mt-2 text-xs text-texto-3">El programa pide mínimo 4 h al día. Solo el {formatoPct(r.masDe10h)} dice tener más de 10 h a la semana.</p>
         </Seccion>
         <Seccion titulo="¿De dónde son?" className="lg:col-span-2">
+          {/* 1b (26 oct): el +1 ya sale separado (EE. UU., Canadá, R. Dominicana, Puerto Rico…); se quitó la nota que lo avisaba */}
           <Barras titulo="Por el prefijo del teléfono" filas={r.paises.slice(0, 8).map((p) => ({ t: p.pais, n: p.n, pct: p.pct }))} />
-          <p className="mt-2 text-xs text-texto-3">* El prefijo +1 también incluye República Dominicana y Puerto Rico.</p>
         </Seccion>
       </div>
 
